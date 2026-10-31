@@ -1,9 +1,12 @@
 import { useEffect, useState, useCallback } from 'react';
 import EmptyState from '../components/ui/EmptyState';
 import LoadFailed from '../components/ui/LoadFailed';
-import { Star, PaperPlaneTilt as Send, PencilSimple as Edit2, CircleNotch as Loader2 } from '../lib/icons';
+import {
+  Star, PaperPlaneTilt as Send, PencilSimple as Edit2, CircleNotch as Loader2, ImageSquare,
+} from '../lib/icons';
 import toast from 'react-hot-toast';
-import { Link, useSearchParams } from 'react-router-dom';
+import { Link, useOutletContext, useSearchParams } from 'react-router-dom';
+import ReviewPostSheet from '../components/seller/ReviewPostSheet';
 import axios from '../lib/axios';
 import { resolveImg, parseImages } from '../lib/media';
 import Skeleton from '../components/ui/Skeleton';
@@ -114,6 +117,9 @@ export default function SellerReviews() {
   const [replyDrafts, setReplyDrafts] = useState({});
   const [openReplyId, setOpenReplyId] = useState(null);
   const [savingReplyId, setSavingReplyId] = useState(null);
+  // "Make a post": the review being drawn as a picture to share.
+  const { store } = useOutletContext() || {};
+  const [postReview, setPostReview] = useState(null);
 
   const load = useCallback(async (page = 1) => {
     setIsLoading(true);
@@ -325,10 +331,22 @@ export default function SellerReviews() {
                     </button>
                   </div>
                 </div>
-              ) : !r.sellerReply && (
-                <button type="button" className="reviews-reply-trigger" onClick={() => startReply(r)}>
-                  <Send size={13} /> Reply
-                </button>
+              ) : (
+                <div className="reviews-item-actions">
+                  {!r.sellerReply && (
+                    <button type="button" className="reviews-reply-trigger" onClick={() => startReply(r)}>
+                      <Send size={13} /> Reply
+                    </button>
+                  )}
+                  <button
+                    type="button"
+                    className="reviews-post-trigger"
+                    onClick={() => setPostReview(r)}
+                    title="Make a picture of this review to share"
+                  >
+                    <ImageSquare size={14} /> Make a post
+                  </button>
+                </div>
               )}
             </li>
           ))}
@@ -375,6 +393,7 @@ export default function SellerReviews() {
 
         <div className="seller-card">{body}</div>
       </div>
+      <ReviewPostSheet review={postReview} store={store} onClose={() => setPostReview(null)} />
     </div>
   );
 }

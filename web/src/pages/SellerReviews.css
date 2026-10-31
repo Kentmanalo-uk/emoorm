@@ -226,3 +226,16 @@
     height: 64px;
   }
 }
+
+/* Under a review: Reply (until it has one) and Make a post, on one line. */
+.reviews-item-actions {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 8px 18px;
+  margin-top: 10px;
+}
+
+.reviews-item-actions .reviews-reply-trigger {
+  margin-top: 0;
+}

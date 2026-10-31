@@ -1,0 +1,306 @@
+/* "Post this review" (ReviewPostSheet.jsx): a dialog on computers, the
+   preview beside its choices; a bottom sheet on phones. */
+
+.rp-backdrop {
+  position: fixed;
+  inset: 0;
+  z-index: 1000;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  padding: 24px;
+  background: rgba(15, 23, 42, 0.5);
+}
+
+.rp-dialog {
+  display: flex;
+  flex-direction: column;
+  width: min(880px, 100%);
+  max-height: calc(100vh - 48px);
+  overflow: hidden;
+  border-radius: 16px;
+  background: var(--t-neutral-0, #fff);
+  box-shadow: 0 24px 60px rgba(15, 23, 42, 0.28);
+}
+
+.rp-head {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+  padding: 16px 20px;
+  border-bottom: 1px solid var(--t-neutral-100, #f1f5f9);
+}
+
+.rp-head h2 {
+  margin: 0;
+  color: var(--t-neutral-900, #0f172a);
+  font-size: 17px;
+  font-weight: 600;
+}
+
+.rp-close {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 36px;
+  height: 36px;
+  border: 0;
+  border-radius: 999px;
+  background: var(--t-neutral-100, #f1f5f9);
+  color: var(--t-neutral-600, #475569);
+  cursor: pointer;
+}
+
+.rp-close:hover {
+  background: var(--t-neutral-200, #e2e8f0);
+}
+
+.rp-body {
+  display: grid;
+  grid-template-columns: minmax(0, 1.15fr) minmax(0, 1fr);
+  gap: 24px;
+  min-height: 0;
+  padding: 20px;
+  overflow-y: auto;
+}
+
+/* The picture as it will look, on a soft grey so a white card shows its edge. */
+/* A set height, so every size (square to story) fits inside it whole. */
+.rp-preview {
+  display: flex;
+  box-sizing: border-box;
+  align-items: center;
+  justify-content: center;
+  height: min(62vh, 560px);
+  padding: 16px;
+  border-radius: 14px;
+  background: var(--t-neutral-100, #f1f5f9);
+}
+
+.rp-canvas {
+  display: block;
+  width: auto;
+  max-width: 100%;
+  height: auto;
+  max-height: 100%;
+  border-radius: 10px;
+  box-shadow: 0 6px 20px rgba(15, 23, 42, 0.14);
+}
+
+.rp-wait {
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+  color: var(--t-neutral-500, #64748b);
+  font-size: 13.5px;
+}
+
+.rp-options {
+  display: flex;
+  flex-direction: column;
+  gap: 18px;
+  min-width: 0;
+}
+
+.rp-group {
+  margin: 0;
+  padding: 0;
+  border: 0;
+}
+
+.rp-group legend {
+  margin-bottom: 8px;
+  padding: 0;
+  color: var(--t-neutral-700, #334155);
+  font-size: 13px;
+  font-weight: 600;
+}
+
+.rp-choices {
+  display: grid;
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+  gap: 8px;
+}
+
+.rp-choice {
+  display: grid;
+  justify-items: center;
+  gap: 4px;
+  padding: 12px 6px 10px;
+  border: 1px solid var(--t-neutral-200, #e2e8f0);
+  border-radius: 12px;
+  background: var(--t-neutral-0, #fff);
+  color: var(--t-neutral-700, #334155);
+  cursor: pointer;
+  text-align: center;
+}
+
+.rp-choice strong {
+  font-size: 13px;
+  font-weight: 600;
+}
+
+.rp-choice small {
+  color: var(--t-neutral-500, #64748b);
+  font-size: 11px;
+  line-height: 1.3;
+}
+
+.rp-choice.is-on {
+  border-color: var(--t-primary-600, #059669);
+  background: var(--t-primary-50, #ecfdf5);
+  color: var(--t-primary-800, #065f46);
+}
+
+/* Each size drawn as its own little frame. */
+.rp-shape {
+  display: block;
+  width: 22px;
+  margin-bottom: 4px;
+  border: 2px solid currentColor;
+  border-radius: 4px;
+  opacity: 0.8;
+}
+
+.rp-shape--square { height: 22px; }
+.rp-shape--portrait { height: 27px; }
+.rp-shape--story { width: 18px; height: 32px; }
+
+.rp-looks {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 14px;
+}
+
+.rp-look {
+  display: inline-flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 6px;
+  padding: 0;
+  border: 0;
+  background: none;
+  color: var(--t-neutral-600, #475569);
+  font-size: 12.5px;
+  cursor: pointer;
+}
+
+.rp-swatch {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 44px;
+  height: 44px;
+  border: 1px solid var(--t-neutral-200, #e2e8f0);
+  border-radius: 999px;
+}
+
+.rp-look.is-on {
+  color: var(--t-primary-800, #065f46);
+  font-weight: 600;
+}
+
+.rp-look.is-on .rp-swatch {
+  box-shadow: 0 0 0 2px var(--t-neutral-0, #fff), 0 0 0 4px var(--t-primary-600, #059669);
+}
+
+.rp-toggle {
+  display: flex;
+  align-items: flex-start;
+  gap: 10px;
+  color: var(--t-neutral-700, #334155);
+  font-size: 13.5px;
+  cursor: pointer;
+}
+
+.rp-toggle input {
+  width: 18px;
+  height: 18px;
+  margin: 1px 0 0;
+  accent-color: var(--t-primary-600, #059669);
+}
+
+.rp-toggle small {
+  color: var(--t-neutral-500, #64748b);
+}
+
+.rp-note {
+  margin: 0;
+  color: var(--t-neutral-500, #64748b);
+  font-size: 12.5px;
+  line-height: 1.5;
+}
+
+.rp-foot {
+  display: flex;
+  justify-content: flex-end;
+  gap: 10px;
+  padding: 14px 20px;
+  border-top: 1px solid var(--t-neutral-100, #f1f5f9);
+}
+
+.rp-btn {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: 8px;
+  min-width: 130px;
+}
+
+/* The review's own button that opens it (SellerReviews). */
+.reviews-post-trigger {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  padding: 0;
+  border: 0;
+  background: none;
+  color: var(--t-neutral-600, #475569);
+  font-size: 12.5px;
+  font-weight: 600;
+  cursor: pointer;
+}
+
+.reviews-post-trigger:hover {
+  color: var(--t-primary-600, #059669);
+  text-decoration: underline;
+}
+
+/* Phones: a bottom sheet, the preview on top, the buttons kept in reach. */
+@media (max-width: 768px) {
+  .rp-backdrop {
+    align-items: flex-end;
+    padding: 0;
+  }
+
+  .rp-dialog {
+    width: 100%;
+    max-height: 92vh;
+    border-radius: 20px 20px 0 0;
+  }
+
+  .rp-head {
+    padding: 14px 16px 12px;
+  }
+
+  .rp-body {
+    grid-template-columns: minmax(0, 1fr);
+    gap: 18px;
+    padding: 14px 16px;
+  }
+
+  .rp-preview {
+    height: min(46vh, 420px);
+    padding: 12px;
+  }
+
+  .rp-foot {
+    padding: 12px 16px calc(12px + env(safe-area-inset-bottom, 0px));
+  }
+
+  .rp-btn {
+    flex: 1 1 0;
+    min-height: 46px;
+  }
+}
