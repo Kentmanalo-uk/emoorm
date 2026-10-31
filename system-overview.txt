@@ -1,0 +1,2157 @@
+================================================================================
+E-MOORM: ELECTRONIC MARKETPLACE OF ORIENTAL MINDORO
+COMPREHENSIVE SYSTEM OVERVIEW
+================================================================================
+
+Prepared from a direct review of the existing system on 28 October 2026: the
+data model, the server's request handling and business rules, the web
+application's pages, the mobile application's screens, the background tasks,
+and the deployment configuration. Where something could not be confirmed from
+the system itself, it is stated as unverified (see Section 23).
+
+Status terms used throughout this document:
+
+  Implemented             Present in the system and working end to end.
+  Partially implemented   Present, but a part is missing, limited, or works
+                          on one platform only.
+  Planned                 Intended or prepared for, but not yet built.
+  Disabled or deprecated  Built, but switched off, superseded, or kept only
+                          for older data.
+  Unable to verify        Cannot be confirmed from the system as reviewed
+                          (for example, a production setting or a live
+                          service whose current state could not be checked).
+
+
+--------------------------------------------------------------------------------
+1. SYSTEM GENERAL INFORMATION
+--------------------------------------------------------------------------------
+
+1.1 System name
+  E-MOORM, short for "Electronic Marketplace of Oriental Mindoro".
+
+1.2 Type of system
+  A web-based and mobile hyperlocal electronic marketplace (multi-vendor
+  e-commerce platform) with government-assisted local administration. It
+  consists of a responsive web application that can be installed as a
+  Progressive Web App (PWA), a native mobile application for Android, and a
+  central server application with a relational database.
+
+1.3 Developers and institution
+  Developed by students of Mindoro State University, Bongabong Campus, as a
+  capstone project for the province: Mike Fernandez, Kent Manalo, and John
+  Paul Quisto, under the guidance of Christian I. Cabrera and Glenda Pacaul -
+  Binay (as named in the project's own user guide).
+
+1.4 Locale of operation
+  The province of Oriental Mindoro, Philippines. The system is organized
+  around all fifteen of its towns and cities: Baco, Bansud, Bongabong,
+  Bulalacao, Calapan City, Gloria, Mansalay, Naujan, Pinamalayan, Pola,
+  Puerto Galera, Roxas, San Teodoro, Socorro, and Victoria. Each account,
+  shop, product, address, report, and help-desk case belongs to one of these
+  municipalities. Barangays are recorded within each municipality for
+  addresses and delivery coverage. Prices are in Philippine pesos and times
+  follow Philippine Standard Time.
+
+1.5 Public address
+  The marketplace is published at emoorm.shop. A companion rider-delivery
+  service, MoorMove, operates as a separate system at moormove.emoorm.shop and
+  is connected to E-MOORM as a delivery option.
+
+1.6 Problem the system addresses
+  Many residents of Oriental Mindoro grow, catch, cook, raise, or make goods
+  for sale (vegetables, fruit, rice, fresh and dried fish, native delicacies,
+  honey, handicrafts, livestock, and cooked food). Buyers within the same
+  province often cannot easily find who sells these goods, at what price,
+  whether they are available today, and how to receive them. Large national
+  marketplaces are not organized around the province's towns and barangays,
+  charge seller fees, and do not handle local practices such as meeting in
+  person to buy live animals, cooking food to order, or paying the seller
+  directly through the seller's own GCash or QR Ph code. Local government
+  units also have no shared channel to oversee and support the sellers and
+  buyers in their towns.
+
+1.7 Purpose
+  To give the sellers and buyers of Oriental Mindoro one local marketplace in
+  which a seller can open a free shop and sell, a buyer can find, order, pay
+  for, and receive local goods, and each municipality can verify, moderate,
+  and assist the people trading within its jurisdiction.
+
+1.8 Distinguishing characteristics (as found in the system)
+  a. Local by design: every shop belongs to a town; delivery coverage and
+     fees are set per town, per barangay, or by road distance.
+  b. Free for sellers: the system records no listing fee and no commission.
+  c. The platform does not hold money. Buyers pay sellers directly in cash
+     (on delivery or at pickup) or by sending payment to the seller's own
+     GCash, QR Ph, or bank account and uploading proof; the seller confirms
+     the payment. The system records and tracks but does not collect funds.
+  d. Municipal oversight: each town has its own administrators who approve
+     sellers, moderate listings, handle reports, and answer help requests.
+  e. Product kinds suited to the province: regular goods, ready-to-eat food,
+     cook-to-order (paluto) food, livestock sold by negotiated price and
+     in-person meeting, bundled packages, and "Available Today" time-limited
+     selling windows.
+
+1.9 Target users
+  Buyers (residents and visitors of Oriental Mindoro), sellers (farmers,
+  fishers, cooks, artisans, small and home-based businesses), municipal
+  administrators (local government personnel assigned to a town), and the
+  platform's super administrator. Delivery riders are users of the separate
+  MoorMove system, not of E-MOORM.
+
+
+--------------------------------------------------------------------------------
+2. OBJECTIVES
+--------------------------------------------------------------------------------
+
+2.1 General objective
+  To design, develop, and deploy a web and mobile hyperlocal marketplace for
+  Oriental Mindoro that connects local sellers and buyers, supports local
+  selling practices and payment methods, and enables municipal governments to
+  verify, oversee, and assist the participants of the marketplace.
+
+2.2 Specific objectives (each corresponds to implemented functionality)
+  1. To provide buyers with a means to browse, search (by text, category,
+     town, and photo), compare, and order local products, and to track each
+     order from placement to completion.
+  2. To provide sellers with a free online shop in which they can list
+     products of several kinds, manage stock and selling windows, process
+     orders, arrange delivery or pickup, and view sales analytics.
+  3. To support the payment methods used locally (cash on delivery or at
+     pickup, GCash, QR Ph, and bank transfer) without the platform holding
+     funds, through payment-proof upload and seller confirmation.
+  4. To provide flexible fulfillment: shop pickup, shop delivery with fees by
+     town, barangay, or road distance, third-party couriers with tracking, and
+     on-demand riders through the MoorMove integration.
+  5. To support province-specific selling: livestock price negotiation with
+     in-person meeting, cook-to-order food, bundled packages, and same-day
+     "Available Today" listings.
+  6. To establish trust through seller application review with identity
+     documents, buyer identity verification by optical character recognition
+     (OCR) of a government ID, phone number verification, ratings and
+     reviews, reports, return and refund handling, and dispute resolution.
+  7. To provide municipal administrators with tools to review seller
+     applications, moderate products, reviews, and stores, handle reports and
+     disputes, respond to help-desk cases, publish announcements, and view
+     town-level analytics.
+  8. To provide the super administrator with platform-wide settings,
+     municipality and administrator management, categories, couriers,
+     banners, vouchers, feedback review, audit logs, and platform analytics.
+  9. To communicate in real time-like fashion through buyer-seller chat,
+     help-desk conversations, administrator team chat, in-app and web push
+     notifications, email, and SMS.
+  10. To secure accounts and personal data through strong password rules,
+      session controls, multi-factor authentication for administrators,
+      rate limiting, encrypted identity data, private media, and data
+      retention rules.
+  11. To make the system accessible in English, Tagalog, and Bisaya
+      (Cebuano), on phones and computers, and installable as an app.
+
+
+--------------------------------------------------------------------------------
+3. SCOPE AND DELIMITATIONS
+--------------------------------------------------------------------------------
+
+3.1 Scope
+  a. Geographic: the fifteen municipalities of Oriental Mindoro. Accounts,
+     shops, and administration are organized by municipality.
+  b. Users: buyers, sellers, municipal administrators (primary, added, and
+     temporary backup administrators), and one or more super administrators.
+  c. Platforms: a responsive web application (desktop and mobile browsers,
+     installable as a PWA) and a native Android application built from a
+     cross-platform codebase.
+  d. Commerce: product listing, search, cart, checkout, vouchers, order
+     processing, payment-proof verification, fulfillment (pickup, shop
+     delivery, courier, rider), returns, refunds, disputes, reviews, product
+     questions, wishlists, shop following, and price negotiation for
+     livestock.
+  e. Administration: seller approval, identity review, moderation, reports,
+     help desk, announcements, banners, vouchers, couriers, categories,
+     municipalities, administrator teams, audit logs, analytics, feedback,
+     and platform settings.
+  f. Communication: chat, help desk, team chat, notifications, email, SMS
+     verification codes, and web push.
+  g. Assistance: a guided assistant for sellers and buyers ("Ate Moormy") and
+     a Seller Academy and tutorial.
+
+3.2 Delimitations
+  a. The platform does not process or hold payments. There is no payment
+     gateway; online payments are made outside the system to the seller's
+     own account, and the seller confirms them using the buyer's uploaded
+     proof and reference number. Refunds are likewise made outside the
+     system and recorded in it.
+  b. The platform charges no commission or listing fee and therefore has no
+     billing, invoicing, or payout module.
+  c. Riders and the rider application are part of the separate MoorMove
+     system. E-MOORM only requests riders, receives job updates, and records
+     the outcome. Buyers cannot book a rider directly; only the seller calls
+     a rider for an order the buyer chose to have delivered by MoorMove.
+  d. Third-party couriers are integrated by record and tracking link only
+     (rates, tracking number, and tracking page address); there is no
+     automated booking with courier companies.
+  e. The mobile application has buyer and seller functions only. Municipal
+     and super administrators use the web application; an administrator who
+     signs in on the mobile application is directed to the website for
+     administration.
+  f. Livestock sales are negotiated in the system but completed in person;
+     the agreed sale is then recorded as an order.
+  g. Bisaya (Cebuano) and parts of Tagalog rely on automatic machine
+     translation; Tagalog has a curated translation for most interface text.
+  h. Buyer identity verification reads Philippine government IDs by OCR and
+     matches the name only, not the address or photograph.
+  i. The system is not designed for sellers or buyers outside Oriental
+     Mindoro; addresses and shops must belong to one of its municipalities.
+  j. An iOS build exists in the shared mobile codebase, but no distributed
+     iOS release could be confirmed (see Section 23).
+
+
+--------------------------------------------------------------------------------
+4. USER ROLES AND ACCESS CONTROL
+--------------------------------------------------------------------------------
+
+4.1 Role model
+  Every account has exactly one role: BUYER, SELLER, MUNICIPAL_ADMIN, or
+  SUPER_ADMIN. Every account is also tied to a home municipality. Access is
+  enforced on the server for every request: the request must carry a valid
+  session, and the session's role must be among the roles permitted for the
+  action. Municipal administrators are additionally limited to records of
+  their own municipality.
+
+4.2 Guest (not signed in)
+  May browse the home page, products, categories, shops, the shop map,
+  municipality pages and galleries, "Available Today" listings, public
+  profiles, product reviews and answered questions, help and legal pages,
+  and the app download page. May search by text and by photo. Must sign in
+  or register to add to cart, check out, chat, follow, review, ask, report,
+  or request help.
+
+4.3 Buyer
+  Every new account starts as a buyer.
+  Permissions:
+    - Manage profile, addresses (with map pin), password, language, and
+      saved accounts on the device.
+    - Verify phone number by SMS code and verify identity by government ID.
+    - Add to cart and wishlist, use vouchers, check out, pay, upload payment
+      proof, cancel eligible orders, confirm receipt, and download receipts.
+    - Make price offers on livestock and negotiate in chat.
+    - Chat with shops (including unsending own messages within five hours),
+      rate a shop's service, follow shops and manage shop notifications.
+    - Review purchased products (rating, text, photos, video), ask product
+      questions, report products, sellers, or buyers.
+    - Request returns and refunds, dispute a seller's decision.
+    - Open help-desk cases with the municipal administrators and rate them.
+    - Submit feedback about the system, use the buyer assistant.
+    - Export personal data and request account deletion.
+    - Apply to become a seller.
+  Restrictions:
+    - Cannot see other users' orders, private photos, or identity data.
+    - Limited number of unconfirmed orders at a time (see Section 14).
+    - If buyer identity verification is switched on by the super
+      administrator, checkout requires a verified identity.
+
+4.4 Seller
+  A buyer whose seller application has been approved by a municipal
+  administrator (or the super administrator). A seller keeps all buyer
+  abilities and gains a seller centre.
+  Permissions:
+    - Set up and decorate the shop (name, logo, cover, colours, home layout
+      and templates, tagline, opening hours, vacation mode, preparation
+      days, pickup address and instructions, map location).
+    - Configure payment details (QR code, account name and number, cash on
+      delivery acceptance), delivery modes and fees, service areas, couriers,
+      and whether MoorMove riders may deliver.
+    - Create, edit, archive, and bulk-manage products of every kind, set
+      variations, tiered prices, sale prices with dates, low-stock alerts,
+      return policy, weight, and 3D models; adjust stock with a movement log.
+    - Post "Available Today" selling windows, repeat or end them, and manage
+      a daily menu.
+    - Receive and process orders through each status, verify payments,
+      attach hand-over proof photos, ship with couriers, call and cancel
+      MoorMove riders, confirm returned rider cash and returned parcels, and
+      waive unpaid failed-trip fees.
+    - Answer product questions and reviews, respond to price offers, and
+      decide, receive, and refund returns.
+    - Create shop vouchers, send announcements to followers, print shop QR
+      posters, view shop analytics, health, and setup checklist.
+    - Use the seller assistant, Seller Academy, and tutorial; request help.
+  Restrictions:
+    - Can act only on the seller's own shop, products, orders, and returns.
+    - Cannot move rider-delivered or courier-shipped orders to delivered
+      manually; the rider or courier hand-over governs those steps.
+    - Cannot continue fulfillment of an online-paid order until the payment
+      is verified.
+
+4.5 Municipal administrator
+  An account assigned to one municipality by the super administrator, or
+  added to the town's administrator team by a permanent team member. Types:
+    - Primary administrator: the super administrator's assigned head of the
+      town's team.
+    - Added administrator: a permanent team member added by the team.
+    - Backup administrator: a temporary member whose access ends on a date
+      (up to 90 days), used to cover leave. When the date passes, the
+      account automatically reverts to a buyer.
+  Permissions (limited to the administrator's own municipality):
+    - Review seller applications (with identity documents and OCR results),
+      approve or reject with reasons, review buyer identity checks.
+    - Moderate products (approve, suspend, archive, restore), reviews,
+      product questions, stores (suspend and unsuspend), and returns.
+    - Handle reports and their conversations, resolve return disputes.
+    - Answer help-desk cases, start conversations with users, change case
+      status.
+    - Publish announcements to the town's users, view town analytics, audit
+      logs, an attention queue, and store health.
+    - Manage the town page (description, tagline, gallery) and the
+      administrator team (within the team cap), and chat with the team and
+      with the super administrator.
+  Restrictions:
+    - Administrator access requires multi-factor authentication at sign-in.
+    - Adding a team member requires the adder's authenticator code; a backup
+      administrator cannot add members.
+    - Only the primary administrator (or the super administrator) may remove
+      members not added by themselves; only the super administrator changes
+      the primary administrator.
+    - Cannot change platform-wide settings, categories, banners, couriers,
+      or platform vouchers.
+
+4.6 Super administrator
+  Platform owner role with access across all municipalities.
+  Permissions:
+    - All municipal administrator abilities, in every municipality.
+    - Platform settings (logo, placeholder image, theme, category style,
+      default delivery fee and free-delivery threshold, distance pricing,
+      buyer verification requirement, "Available Today" switch, 3D product
+      switch, MoorMove switch, administrator team size cap).
+    - Manage municipalities, assign and remove municipal administrators
+      (shown as "junior administrators" in the panel), user roles,
+      suspension, activation,
+      deletion, restoration, and permanent purge (with a preview).
+    - Manage categories, couriers, home banners and pop-ups, platform
+      vouchers, and review system feedback.
+    - View platform analytics, application install and download statistics,
+      MoorMove service health, and all audit logs.
+    - Start and close conversations with municipal administrators.
+  Restrictions:
+    - Administrator access requires multi-factor authentication.
+    - Personal identity data and private photos are shown only through
+      deliberate "reveal" actions that are logged.
+
+4.7 External actor: MoorMove rider
+  Not an E-MOORM account. Riders accept and complete jobs in the separate
+  MoorMove application; their progress reaches E-MOORM as signed events.
+
+
+--------------------------------------------------------------------------------
+5. MODULES AND SUBMODULES
+--------------------------------------------------------------------------------
+
+Each module below lists its purpose, users, main features, inputs, outputs,
+and processes.
+
+5.1 Authentication and Account Module
+  Purpose: Create accounts and control access.
+  Users: All.
+  Submodules and features:
+    a. Registration with full name, email, password, contact number, and
+       municipality; email verification by emailed link.
+    b. Sign-in with email and password; sign-in with Google (web and app).
+    c. QR code sign-in: a computer shows a QR code; a signed-in phone scans
+       and approves it; the computer is signed in. Codes last two minutes.
+    d. Multi-factor authentication (authenticator app codes with eight
+       one-time backup codes), mandatory for administrators.
+    e. Forgot and reset password by emailed link; change password (which
+       ends other sessions).
+    f. Session management: sign out, sign out of all devices, and saved
+       accounts that can be switched without re-entering a password.
+    g. Phone verification by a six-digit SMS code.
+    h. Account data export and account deletion request (erased after 30
+       days unless cancelled); super administrator restoration.
+  Inputs: credentials, verification codes, Google identity, QR approval.
+  Outputs: a signed-in session, verification status, emails and SMS.
+  Processes: password hashing and checking, lockout after repeated failures,
+  token issuing and rotation, revocation on password change or role change.
+
+5.2 Profile and Address Module
+  Purpose: Maintain personal information used for orders and verification.
+  Users: All signed-in users.
+  Features: profile photo, name, username, contact number, public profile
+  page, multiple delivery addresses with labels, default address, barangay,
+  street, and map pin (latitude and longitude); language preference.
+  Outputs: addresses offered at checkout, a public profile.
+
+5.3 Identity Verification Module
+  Purpose: Establish that buyers and sellers are real people.
+  Users: Buyers, sellers, municipal and super administrators.
+  Submodules:
+    a. Buyer ID verification: the buyer photographs a Philippine government
+       ID; the server reads it by OCR (several orientations and image
+       variants are tried) and matches the printed name against the
+       account's name. The ID image is processed in memory only; the
+       extracted data is stored encrypted, the ID number only as a one-way
+       hash. Limited to five attempts per day. Result: VERIFIED or FAILED
+       (with reason); PENDING only while a check is running. An
+       administrator may review a buyer's identity check and set it to
+       verified or rejected with a note.
+    b. Seller identity and business documents: ID front and back, selfie,
+       and optionally a business permit, collected in the seller application
+       and stored privately; viewable by administrators through signed,
+       time-limited links; deleted after the retention period.
+    c. Administrator identity review: approve or reject a pending identity
+       check with a note.
+  Outputs: verification status shown on the account and to administrators;
+  the checkout gate when buyer verification is required.
+
+5.4 Seller Application and Onboarding Module
+  Purpose: Convert a buyer into an approved seller.
+  Users: Buyers (applicants), municipal and super administrators.
+  Features: a multi-step application with a saved draft (shop name,
+  description, shop address, municipality and barangay, categories, business
+  type, permit number and photo, tax identification number, payout methods
+  and QR, fulfillment preference, identity documents, acceptance of seller
+  terms with version); application history; administrator approval or
+  rejection with reason; resubmission after rejection; a welcome page; a
+  setup checklist (shop readiness) after approval; a Seller Academy of
+  lessons and an interactive tutorial.
+  Outputs: an approved seller account and shop, notifications to the
+  applicant and to the town's administrators.
+
+5.5 Shop (Store) Management Module
+  Purpose: Present and configure each seller's shop.
+  Users: Sellers (own shop), buyers and guests (viewing), administrators.
+  Features:
+    a. Storefront page with a customizable home layout (sections, banners,
+       featured products), templates, colours, logo, cover, and tagline.
+    b. Opening hours by day, vacation mode with note, preparation days.
+    c. Shop location pin and shop map for buyers (all visible shops on a map).
+    d. Pickup address and instructions.
+    e. Payment settings: own QR code (GCash or QR Ph), account name and
+       number, instructions, cash-on-delivery switch.
+    f. Shop QR poster to print and display.
+    g. Shop health and an attention list (overdue orders, unanswered
+       questions, low stock, and similar items needing action).
+    h. Store deletion request and cancellation; administrator suspension.
+  Outputs: a public shop page, map entry, and shop QR.
+
+5.6 Product Catalog Module
+  Purpose: List, describe, and moderate products.
+  Users: Sellers, buyers, administrators.
+  Features:
+    a. Product types: REGULAR, READY_TO_EAT, COOK_TO_ORDER, LIVESTOCK, and
+       PACKAGE (a bundle of the shop's other products with quantities).
+    b. Categories of three kinds (goods, food, livestock), each with icon or
+       image, managed by the super administrator.
+    c. Name, description, images, price, sale price with optional start and
+       end, quantity price tiers, variations (such as size or flavour) with
+       their own pricing, stock, low-stock threshold, weight, fulfillment
+       mode (delivery, pickup, or both), return policy, and type-specific
+       details.
+    d. 3D model upload (GLB for viewing and USDZ for iPhone augmented
+       reality) shown in an interactive viewer, when switched on platform-
+       wide.
+    e. Inventory movements: every stock change is logged with reason,
+       resulting balance, and actor.
+    f. Bulk actions on the seller's products, product summary counts.
+    g. Moderation statuses: PENDING, APPROVED, HIDDEN, SUSPENDED, ARCHIVED.
+       Products of an active, unsuspended shop are approved immediately;
+       administrators may suspend, archive, and restore them.
+    h. Stored sold counts, average rating, and review counts for fast lists.
+    i. Product views recorded per day for analytics.
+  Outputs: product pages, lists, and search results.
+
+5.7 Search and Discovery Module
+  Purpose: Help buyers find products and shops.
+  Users: All.
+  Features: home page with banners, carousels, categories, and sections;
+  text search across product names, descriptions, shop names, and category
+  words; filters (category, town, price, product type) and sorting; category
+  pages with their own addresses; image search (a buyer uploads a photo and
+  visually similar products are found by perceptual image hashing); shop
+  directory and map; municipality showcase pages with galleries; recently
+  viewed products; product quick-view cards; "Available Today" page;
+  marketplace search suggestions.
+  Outputs: ranked product and shop lists.
+
+5.8 Available Today (Selling Windows) Module
+  Purpose: Sell food and goods available for a limited time on a given day.
+  Users: Sellers (posting), buyers (ordering). Switchable by the super
+  administrator.
+  Features: modes READY_NOW, MADE_TO_ORDER, and PRE_ORDER; quantity for the
+  window; order opening and closing times; ready-from and ready-until times;
+  preparation minutes; fulfillment; note; statuses SCHEDULED, LIVE, ENDED,
+  CANCELLED; quantity adjustment, early end, and repeat; a daily menu of the
+  shop's regular items; a clock that opens and ends windows on the minute;
+  follower notifications when a window goes live (no more than one per
+  three hours per shop); automatic cancellation of Today orders not
+  confirmed or paid within 45 minutes.
+
+5.9 Cart, Wishlist, and Checkout Module
+  Purpose: Collect items and place orders.
+  Users: Buyers (sellers may also buy).
+  Features:
+    a. Cart synchronized to the account (by product and variation),
+       wishlist, buy-now.
+    b. Checkout per shop: one order per shop, with address selection,
+       fulfillment choice (pickup or delivery), delivery option (shop
+       delivery, a courier, or a MoorMove rider), live fee quotation,
+       voucher entry, payment method, and payment proof upload with
+       reference number for online methods.
+    c. Duplicate-submission protection (a checkout key per attempt).
+    d. Estimated arrival window and the seller's response deadline.
+  Outputs: one or more orders, notifications to sellers.
+
+5.10 Order Management Module
+  Purpose: Carry each order through fulfillment.
+  Users: Buyers, sellers, administrators.
+  Features: order numbers; statuses (Section 14.2); status history with actor
+  and note; buyer tabs (to pay, to ship, to receive, to pick up, completed,
+  cancelled) and seller stages (new, unpaid, to ship, shipping, completed,
+  cancelled); payment verification; hand-over proof photo; courier shipping
+  with tracking number; buyer confirmation of receipt; automatic completion;
+  cancellation by buyer or seller with reasons; refund notes when a paid
+  order is cancelled; receipts; seller view of a buyer's record (history of
+  completed and cancelled orders with the shop); administrator order lists
+  and controlled reveal of personal details.
+
+5.11 Payment Module
+  Purpose: Record how each order is paid without holding funds.
+  Users: Buyers, sellers, administrators.
+  Methods: COD (cash on delivery or at pickup), GCASH, QRPH, BANK_TRANSFER.
+  Payment statuses: PENDING, PENDING_VERIFICATION, PAID, FAILED, EXPIRED,
+  REFUNDED, PARTIALLY_REFUNDED.
+  Process: for online methods, the buyer pays to the seller's displayed QR or
+  account, then submits the reference number and a proof photo; the seller
+  marks the payment as paid or failed. Cash orders become paid on delivery or
+  pickup (for rider deliveries, when the rider reports delivery).
+
+5.12 Delivery and Logistics Module
+  Purpose: Price and carry out delivery.
+  Users: Sellers, buyers, super administrator.
+  Submodules:
+    a. Shop delivery: fee modes FREE, FLAT, PER_TOWN, PER_BARANGAY, and
+       PER_KM (base fee, included kilometres, fee per kilometre, maximum
+       distance); service areas by town or barangay with their own fees;
+       platform default fee and free-delivery threshold.
+    b. Road distance: computed through an OSRM routing service between the
+       shop pin and the buyer's pin, with a recorded source (road route or
+       straight-line estimate).
+    c. Couriers: a platform list of couriers with logos, weight-based rates,
+       and tracking page links; each shop chooses which it uses; the buyer
+       chooses one at checkout; the seller ships with a tracking number.
+    d. MoorMove riders (Section 16.3).
+    e. Pickup: buyer collects at the shop's pickup address.
+    f. Arrival estimates from preparation and travel time.
+
+5.13 MoorMove Rider Delivery Module
+  Purpose: Request on-demand riders from the MoorMove system.
+  Users: Sellers (call a rider), buyers (choose and follow), super
+  administrator (switch and health).
+  Features: availability by shop and town; fee quotation at checkout held for
+  30 minutes; booking by the seller after the order is confirmed or packed;
+  cancellation before pickup; rider name, phone, vehicle, plate, and location
+  shown to the buyer and seller; automatic order updates on pickup, delivery
+  (with the rider's photo), and failure; return of failed parcels; cash-on-
+  delivery cash return with seller confirmation; failed-trip fee handling
+  and buyer unpaid fees; option for the seller to deliver personally
+  instead; platform and shop on/off switches; service health view.
+
+5.14 Price Offer (Livestock Negotiation) Module
+  Purpose: Sell livestock by negotiated price and in-person meeting.
+  Users: Buyers, sellers.
+  Features: offer price per head and quantity; counter-offers with no fixed
+  number of rounds (up to 30); acceptance; meeting time and place; recording
+  of the agreed sale (heads and total) by the seller; buyer confirmation or
+  objection; automatic confirmation after three days; a typical-price
+  estimate from recent sales; each step shown as a card in the chat.
+  Statuses: PENDING, COUNTERED, ACCEPTED, CONFIRMING, SOLD, DECLINED,
+  CANCELLED, EXPIRED.
+
+5.15 Voucher Module
+  Purpose: Discounts at checkout.
+  Users: Super administrator (platform vouchers), sellers (shop vouchers),
+  buyers (use).
+  Features: code, description, percent or fixed discount, minimum order
+  amount, maximum discount, total usage limit, per-user limit, start and
+  expiry dates, active switch; validation at checkout; redemption records
+  per order; public list of a shop's live vouchers.
+
+5.16 Returns, Refunds, and Disputes Module
+  Purpose: Resolve problems after delivery.
+  Users: Buyers, sellers, municipal and super administrators.
+  Features: return request with reason (DAMAGED, WRONG_ITEM,
+  NOT_AS_DESCRIBED, MISSING, OTHER), items and quantities, note, and photos;
+  per-product return policy snapshot; seller decision (approve with amount,
+  require the item to be sent back, or reject with note); receipt of the
+  returned item with optional restocking; refund recording with method
+  (COD_CASH, GCASH, BANK, MANUAL) and reference; cancellation and closing;
+  dispute by the buyer within seven days of a decision; dispute resolution by
+  an administrator; full history of each request.
+  Statuses: REQUESTED, APPROVED, AWAITING_SHIPMENT, RECEIVED, REFUNDED,
+  REJECTED, CANCELLED, CLOSED, DISPUTED.
+
+5.17 Reviews and Product Questions Module
+  Purpose: Share experience and information about products.
+  Users: Buyers, sellers, administrators.
+  Features: one review per purchased product with a 1 to 5 rating, comment,
+  photos, and a video; editing and deletion; seller reply; pending-review
+  reminders; product review pages; shop service rating from chat; product
+  questions (5 to 500 characters) and seller answers (up to 1,000), hidden by
+  the seller or an administrator when inappropriate.
+
+5.18 Messaging (Buyer-Seller Chat) Module
+  Purpose: Direct conversation between a buyer and a shop.
+  Users: Buyers, sellers.
+  Features: one conversation per buyer and shop; text, photos (private),
+  attached products and orders; price offer cards; read status and unread
+  counts; unsending one's own message within five hours (the message is
+  removed for both sides); service rating; a floating chat dock and a full
+  messenger page.
+
+5.19 Help Desk (Support) Module
+  Purpose: Let users ask their municipal administrators for help.
+  Users: All signed-in users; municipal and super administrators.
+  Features: help cases with category (ORDER, PAYMENT, DELIVERY, RETURN,
+  ACCOUNT, SELLER, IDENTITY_VERIFICATION, APP_EXPERIENCE, FEATURE_REQUEST,
+  OTHER), subject, and messages; routing to the user's municipality; an
+  administrator inbox with search and status (OPEN, RESOLVED, CLOSED);
+  administrator-initiated conversations with a user; read tracking; rating
+  of a resolved case with comment; quick replies for administrators; a
+  customer care page and help centre.
+
+5.20 Administrator Communication Module
+  Purpose: Coordination among administrators.
+  Users: Municipal and super administrators.
+  Features: town team chat (group thread and direct messages, with read
+  tracking and online presence); conversations between the super
+  administrator and municipal administrators with status.
+
+5.21 Notification Module
+  Purpose: Inform users of events.
+  Users: All.
+  Features: in-app notifications in three audiences (buyer, seller, admin)
+  covering orders, products, seller status, reports, announcements, shop
+  news and promotions, returns, support, admin messages, low stock, price
+  drops on wished items, product questions and answers, disputes, and price
+  offers (36 notification types); unread counts; mark read, mark all read,
+  delete; notification detail pages; web push notifications to subscribed
+  browsers; email for account events (welcome and verification, password
+  reset and change, seller application received, approved, or rejected,
+  addition to a town's administrator team, account closure) and for two
+  order events (a new order, to the seller; an accepted order, to the
+  buyer). Other order changes are announced in the app and by push.
+
+5.22 Announcements, Banners, and Marketing Module
+  Purpose: Publicize information and promotions.
+  Users: Administrators, sellers.
+  Features: municipal and platform announcements to users; home page
+  banners (carousel, sidebar top and bottom, pop-up) with order and link;
+  shop announcements to followers, optionally featuring a product; shop
+  following with per-shop notification switch; seller marketing page
+  (vouchers, announcements, sale prices).
+
+5.22a Administrator Email Module
+  Purpose: Let administrators email many users at once.
+  Users: Super administrator; municipal administrators.
+  Features:
+    - Super administrator audiences: all users, all buyers, all sellers, all
+      municipal administrators (the whole province or one chosen town), or
+      people picked by name.
+    - Municipal administrator audiences: everyone of the administrator's own
+      municipality (its buyers and sellers, including sellers whose shop is
+      in the town), or people of that municipality picked by name.
+    - A search for picking people by name, shop, or email (emails shown
+      masked), the number of recipients shown before sending, and a
+      confirmation step.
+    - Each recipient's copy greets them by name and is signed "The E-MOORM
+      team" or "The <town> municipal admin team".
+    - Copies are queued and sent gradually; a "Recently sent" list shows
+      how many have been sent, are still waiting, or could not be delivered.
+  Inputs: subject, message, audience, optional town, picked people.
+  Outputs: one email per recipient; a record of the send; an audit log entry.
+  Processes: audience resolution within the administrator's scope,
+  exclusion of inactive accounts and of accounts whose email address is not
+  confirmed, queuing, paced delivery with retries, progress counting.
+
+5.23 Reports and Moderation Module
+  Purpose: Keep the marketplace safe and honest.
+  Users: All users (reporting), municipal and super administrators.
+  Features: reports against a product, seller, or buyer with reason,
+  description, and evidence; statuses PENDING, UNDER_REVIEW, RESOLVED,
+  DISMISSED with resolution notes; a conversation view for reports about
+  chats; administrator moderation of products, reviews, product questions,
+  returns, stores, and identity checks; an attention queue and store health
+  for each town.
+
+5.24 Analytics and Reporting Module
+  Purpose: Summarize activity for decisions. See Section 15.
+
+5.25 Assistant Module ("Ate Moormy")
+  Purpose: Answer how-to and status questions for sellers and buyers.
+  Users: Sellers (seller assistant), buyers and sellers (buyer assistant).
+  Features: suggested questions answered from a curated guide combined with
+  the user's own live status (for example, setup steps still missing or
+  orders awaiting action); typed questions answered by a small open language
+  model hosted on Hugging Face, given only the matching guide topics and the
+  user's status; answers in English or Tagalog; off-topic questions declined;
+  fallback to the best-matching guide topic when the model is unavailable.
+
+5.26 Platform Administration Module
+  Purpose: Configure and oversee the whole platform.
+  Users: Super administrator (some parts municipal administrators).
+  Features: platform settings; municipalities (name, code, seal, tagline,
+  description, gallery, active switch); municipal administrator assignment
+  and backup administrators with end dates (the "junior administrators"
+  page); user
+  management (search, view, reveal, suspend, activate, set role, delete,
+  restore, purge with preview); categories; couriers; banners; platform
+  vouchers; feedback inbox with summary; audit logs; application installs
+  and downloads; MoorMove health; an administrator tools page.
+
+5.27 Feedback Module
+  Purpose: Collect opinions about the system itself.
+  Users: All signed-in users submit; super administrator reviews.
+  Features: category (USABILITY, PERFORMANCE, BUG, FEATURE_REQUEST, DESIGN,
+  PRAISE, OTHER), rating, message, page, role and municipality of the
+  sender; statuses NEW, REVIEWED, ARCHIVED with administrator notes; summary
+  view and export.
+
+5.28 Mobile Application and PWA Module
+  Purpose: Make the marketplace available as an app.
+  Users: Buyers and sellers.
+  Features: a native Android application (buyer tabs: home, cart, messages,
+  notifications, profile; a seller centre with its own tabs: dashboard,
+  products, messages, marketing, menu) offering the same buyer and seller
+  functions as the website, including camera-based image search, QR sign-in
+  approval by scanning, maps, and photo uploads; an app download page on the
+  website with version information; install and open statistics; an
+  installable PWA with offline-safe loading and update prompts.
+
+5.29 Language and Accessibility Module
+  Purpose: Serve users in their language and abilities.
+  Features: English, Tagalog (curated translations for most interface text,
+  with automatic translation for the rest), and Bisaya (automatic
+  translation); a language picker in the header, profile, and app menu;
+  keyboard operation of menus and dialogs with focus kept inside open
+  dialogs and closing with Escape; readable colour contrast; error messages
+  announced to screen readers.
+
+5.30 Content and Information Pages Module
+  Features: About, Help Centre, Customer Care, Terms of Service, Privacy
+  Policy, Cookie Policy, Sell landing page, app download page, and a "not
+  found" page; search-engine sitemap and robots rules; share images and page
+  descriptions for links shared on social media.
+
+
+--------------------------------------------------------------------------------
+6. END-TO-END WORKFLOWS
+--------------------------------------------------------------------------------
+
+6.1 Buyer registration and sign-in
+  Actors: Guest, system.
+  1. The guest opens Register and enters name, email, password, contact
+     number, and municipality (or continues with Google).
+  2. The system checks the password rules and that the email is unused,
+     creates a BUYER account, and emails a verification link.
+  3. The user opens the link; the email is marked verified.
+  4. On sign-in, the system checks the password. After repeated failures,
+     further attempts are refused for a period.
+  5. Administrators are asked for an authenticator code (or must set one up
+     on first sign-in) before administrator access is granted.
+  Exceptions: duplicate email; weak password; expired verification link
+  (a new one can be requested); locked out after too many attempts.
+
+6.2 QR code sign-in
+  1. The computer requests a sign-in QR code (valid two minutes).
+  2. A phone already signed in scans it (mobile app or website) and sees the
+     device description; the user approves or rejects.
+  3. On approval, the computer is signed in to that account.
+  Exceptions: expired code; rejected request.
+
+6.3 Seller application and approval
+  1. A buyer opens Sell or Seller Apply and fills in the application steps;
+     the draft is saved between visits.
+  2. The applicant uploads ID front and back, a selfie, and optionally a
+     business permit, and accepts the seller terms.
+  3. The system stores documents privately and notifies the town's
+     administrators.
+  4. A municipal administrator reviews the application and documents and
+     approves or rejects it with a reason.
+  5. On approval, the role becomes SELLER, the shop is created and becomes
+     visible once its setup is complete; the seller sees a welcome page and a
+     setup checklist. On rejection, the applicant may correct and resubmit.
+  6. After the retention period following the decision, the identity
+     documents are deleted automatically; the decision remains.
+
+6.4 Buyer identity verification
+  1. The buyer opens Verification and photographs a government ID.
+  2. The server reads the ID by OCR and compares the name to the account.
+  3. Match: VERIFIED. No match or unreadable: FAILED with reason (up to five
+     attempts per day). A municipal or super administrator may review the
+     check and set it to verified or rejected with a note.
+  4. When the super administrator requires buyer verification, checkout
+     is allowed only for verified buyers.
+
+6.5 Product listing
+  1. The seller chooses a product type and fills in details, images,
+     price, stock, variations, return policy, and fulfillment.
+  2. The system validates inputs, stores optimized images in several sizes,
+     computes an image hash for photo search, and saves the product.
+  3. If the shop is active and not suspended, the product is approved and
+     visible immediately; otherwise it waits as PENDING.
+  4. Administrators may later suspend, archive, or restore it; the seller is
+     notified.
+
+6.6 Regular purchase with shop delivery or pickup
+  1. The buyer adds items to the cart (choosing variations) and checks out.
+  2. The buyer chooses address, pickup or delivery, delivery option, voucher,
+     and payment method. The system quotes the delivery fee.
+  3. For GCash, QR Ph, or bank transfer, the buyer pays to the seller's
+     displayed details and uploads the proof and reference; for cash, no
+     payment is needed yet.
+  4. The system checks stock, limits, voucher, and fee again, reserves stock,
+     creates one order per shop (PENDING), and notifies the seller.
+  5. The seller confirms (CONFIRMED) or cancels with a reason. Unconfirmed
+     orders expire after 48 hours.
+  6. For online payments, the seller verifies the proof (PAID) or marks it
+     failed. Fulfillment cannot continue until it is paid.
+  7. Delivery path: PREPARING (optional) -> TO_SHIP -> OUT_FOR_DELIVERY ->
+     DELIVERED (with a hand-over proof photo). Pickup path: PREPARING
+     (optional) -> READY_FOR_PICKUP -> PICKED_UP.
+  8. The buyer confirms receipt (COMPLETED); otherwise the order completes
+     automatically seven days after hand-over.
+  9. The buyer may review the products and rate the shop.
+  Exceptions: out of stock at checkout; voucher invalid; buyer cancels while
+  PENDING or CONFIRMED (with limits while a payment proof is being checked);
+  seller cancels (out of stock, buyer did not show up at pickup, buyer
+  refused delivery); unpaid online orders expire after 48 hours.
+
+6.7 Courier shipping
+  1. At checkout the buyer chooses one of the shop's couriers; the fee is
+     calculated from the parcel weight and the courier's rates.
+  2. After confirmation and payment, the seller ships with a tracking number
+     (SHIPPED); the buyer sees a link to the courier's tracking page.
+  3. The buyer confirms receipt (COMPLETED), or it completes automatically.
+
+6.8 MoorMove rider delivery
+  1. At checkout the buyer chooses "MoorMove rider"; E-MOORM obtains a fee
+     quote from MoorMove for the distance and parcel size and holds it for
+     30 minutes.
+  2. After the order is confirmed (and paid, if online), the seller taps
+     "Call a rider". E-MOORM books the job with MoorMove.
+  3. MoorMove sends signed updates: searching, rider accepted, at pickup,
+     picked up (order becomes OUT_FOR_DELIVERY), at drop-off, delivered
+     (order becomes DELIVERED with the rider's photo; cash orders become
+     paid), cancelled, failed, or returning. E-MOORM also asks MoorMove for
+     the status of any booking it has not heard about for two minutes.
+  4. Cash on delivery: the rider collects the order total, keeps the rider
+     fee, and returns the rest to the shop; the seller confirms the cash.
+  5. Failed delivery: the rider brings the parcel back; the order returns to
+     TO_SHIP; the seller confirms the parcel's return. If the failure was the
+     buyer's fault (refused, absent, wrong address), the buyer owes the trip
+     fee; for cash orders this becomes an unpaid fee added to the buyer's
+     next order with the shop, which the seller or super administrator may
+     waive.
+  6. The seller may cancel the rider before pickup, or choose to deliver the
+     order personally.
+
+6.9 Livestock purchase by negotiated price
+  1. The buyer opens a livestock listing and makes an offer per head with a
+     quantity (between half of and the full asking price).
+  2. The seller accepts, declines, or counters; the turn alternates. Each
+     price must be answered within seven days.
+  3. On acceptance, either side proposes a meeting time and place to see the
+     animals; they settle the sale in person.
+  4. Within 14 days, the seller records the heads sold and total paid; this
+     creates a completed-in-person order and deducts the heads from stock.
+  5. The buyer confirms or objects (the record is undone and agreed again);
+     without response it is confirmed after three days (SOLD).
+
+6.10 Available Today
+  1. The seller posts a window: product, mode, quantity, ordering hours, and
+     ready hours.
+  2. The window opens at its time (LIVE) and followers are notified.
+  3. Buyers order while it is live and stock remains.
+  4. Orders must be confirmed (and paid, if online) within 45 minutes or are
+     cancelled. The window ends at its closing time or when ended early; it
+     may be repeated.
+
+6.11 Return and refund
+  1. Within the product's return window, the buyer requests a return with
+     items, reason, note, and photos.
+  2. The seller approves (with amount, and whether the item must be sent
+     back) or rejects with a note.
+  3. If the item must be sent back, the buyer ships it; the seller marks it
+     received (optionally restocking it).
+  4. The seller records the refund (method and reference); status REFUNDED,
+     then CLOSED.
+  5. Within seven days of a decision, either party may dispute it; a
+     municipal or super administrator resolves the dispute with a written
+     resolution.
+
+6.12 Help desk
+  1. The user opens a case with a category and subject.
+  2. The case goes to the administrators of the user's municipality.
+  3. Administrators reply; the user is notified; either side continues.
+  4. An administrator marks it RESOLVED or CLOSED; the user may rate it.
+
+6.13 Reporting and moderation
+  1. A user reports a product, seller, or buyer with a reason and evidence.
+  2. The town's administrators review it (UNDER_REVIEW), may examine the
+     related conversation, act (suspend product or store, deactivate user),
+     and mark it RESOLVED or DISMISSED with notes. The reporter is notified.
+
+6.14 Account deletion
+  1. The user reviews what deletion means (open orders block it) and
+     requests it.
+  2. The account is closed at once and erased 30 days later; within that
+     time the user or the super administrator can cancel or restore it.
+
+6.15 Municipal administrator team management
+  1. A permanent team member adds a person by account lookup, choosing
+     permanent or backup (with end date up to 90 days), confirming with an
+     authenticator code. The team size is capped by a platform setting.
+  2. The new member signs in with multi-factor authentication to gain access.
+  3. Backup access ends automatically on its date.
+
+
+--------------------------------------------------------------------------------
+7. FUNCTIONAL REQUIREMENTS
+--------------------------------------------------------------------------------
+
+Accounts and access
+  FR-001 The system shall allow a guest to register with name, email,
+         password, contact number, and municipality.
+  FR-002 The system shall verify an account's email address by an emailed
+         link and allow the link to be resent.
+  FR-003 The system shall allow sign-in by email and password and by Google.
+  FR-004 The system shall allow sign-in on a computer by approving a QR code
+         from a signed-in phone.
+  FR-005 The system shall require multi-factor authentication for municipal
+         and super administrators and support backup codes.
+  FR-006 The system shall allow password reset by emailed link and password
+         change by a signed-in user.
+  FR-007 The system shall allow users to sign out of one or all devices and
+         to switch between accounts saved on the device.
+  FR-008 The system shall verify a Philippine mobile number by SMS code.
+  FR-009 The system shall verify a buyer's identity by reading a government
+         ID and matching the name to the account.
+  FR-010 The system shall allow users to export their data and request
+         account deletion.
+
+Seller onboarding and shops
+  FR-011 The system shall allow a buyer to apply as a seller, save a draft,
+         upload identity and business documents, and accept seller terms.
+  FR-012 The system shall allow a municipal administrator to approve or
+         reject a seller application with a reason.
+  FR-013 The system shall allow a seller to configure the shop's profile,
+         appearance, home layout, hours, vacation, location, pickup, payment,
+         and delivery settings.
+  FR-014 The system shall show each seller a setup checklist and shop health.
+  FR-015 The system shall generate a printable shop QR poster.
+
+Products and discovery
+  FR-016 The system shall allow sellers to create, edit, archive, and
+         bulk-manage products of the types regular, ready-to-eat,
+         cook-to-order, livestock, and package.
+  FR-017 The system shall support variations, tiered prices, scheduled sale
+         prices, stock with a movement log, and low-stock alerts.
+  FR-018 The system shall support 3D product models when enabled.
+  FR-019 The system shall provide text search with filters and sorting,
+         category pages, and search by photo.
+  FR-020 The system shall show shops on a map and municipality pages with
+         galleries.
+  FR-021 The system shall allow sellers to post time-limited "Available
+         Today" selling windows and open and close them automatically.
+
+Ordering and payment
+  FR-022 The system shall keep a cart and wishlist per account.
+  FR-023 The system shall create one order per shop at checkout with the
+         chosen fulfillment, delivery option, voucher, and payment method.
+  FR-024 The system shall quote delivery fees by the shop's fee mode, by
+         courier rates, or by MoorMove quotation.
+  FR-025 The system shall accept payment proof and reference for online
+         payments and let the seller confirm or reject the payment.
+  FR-026 The system shall enforce the order status transitions for delivery
+         and pickup orders and record each change.
+  FR-027 The system shall expire unconfirmed and unpaid orders and complete
+         handed-over orders automatically after set periods.
+  FR-028 The system shall let buyers cancel eligible orders and sellers
+         cancel with a reason.
+  FR-029 The system shall produce a receipt for each order.
+  FR-030 The system shall validate and apply platform and shop vouchers.
+
+Delivery
+  FR-031 The system shall let sellers ship with a chosen courier and
+         tracking number.
+  FR-032 The system shall let sellers call, cancel, and follow MoorMove
+         riders and update orders from rider events.
+  FR-033 The system shall record rider cash returns, returned parcels, and
+         failed-trip fees, and carry unpaid fees to the buyer's next order.
+
+Negotiation, after-sales, and feedback
+  FR-034 The system shall support livestock price offers, counter-offers,
+         meetings, and recording of in-person sales.
+  FR-035 The system shall allow return requests, seller decisions, receipt,
+         refund recording, and disputes resolved by administrators.
+  FR-036 The system shall allow reviews of purchased products with media
+         and seller replies.
+  FR-037 The system shall allow product questions and seller answers.
+  FR-038 The system shall allow users to report products, sellers, and
+         buyers and administrators to resolve reports.
+  FR-039 The system shall collect system feedback for the super
+         administrator.
+
+Communication
+  FR-040 The system shall provide buyer-seller chat with photos, product and
+         order attachments, read status, and unsending within five hours.
+  FR-041 The system shall provide help-desk cases routed to the user's
+         municipality.
+  FR-042 The system shall provide administrator team chat and super
+         administrator to municipal administrator conversations.
+  FR-043 The system shall send in-app notifications, web push notifications,
+         and emails for relevant events.
+  FR-044 The system shall let sellers announce to followers and
+         administrators announce to users.
+  FR-045 The system shall let users follow shops and control shop
+         notifications.
+
+Administration and analytics
+  FR-046 The system shall provide municipal administrators moderation of
+         products, reviews, questions, returns, stores, and identity checks
+         within their municipality.
+  FR-047 The system shall let the super administrator manage platform
+         settings, municipalities, administrators, users, categories,
+         couriers, banners, and vouchers.
+  FR-048 The system shall let municipal administrator teams add permanent
+         and temporary members within a cap.
+  FR-049 The system shall record administrator and security actions in an
+         audit log viewable by administrators within their scope.
+  FR-050 The system shall provide seller, municipal, and platform analytics
+         with comparison periods and exports.
+  FR-051 The system shall provide sellers and buyers with a guided
+         assistant.
+  FR-052 The system shall offer the interface in English, Tagalog, and
+         Bisaya.
+  FR-053 The system shall be installable as an app on the web and provide an
+         Android application.
+  FR-054 The system shall let the super administrator email all users, all
+         buyers, all sellers, all municipal administrators (optionally of one
+         town), or picked people, and let a municipal administrator email
+         everyone or picked people of their own municipality only.
+  FR-055 The system shall show the number of recipients before an email is
+         sent and the delivery progress of each email afterwards.
+
+
+--------------------------------------------------------------------------------
+8. NON-FUNCTIONAL REQUIREMENTS
+--------------------------------------------------------------------------------
+
+8.1 Performance
+  - Pages of the web application load on demand (each page's code is fetched
+    only when opened), with frequently used pages loaded in advance.
+  - Photos are served in several sizes (approximately 320, 640, and 960
+    pixels wide, WebP format) so that phones download small copies.
+  - Frequently read data (product lists, categories, settings, banners,
+    shops) is cached on the server and cleared precisely when the underlying
+    records change; public responses carry browser caching instructions.
+  - Product sold counts, ratings, and a search text are stored with each
+    product so lists and search avoid heavy calculations; an hourly check
+    corrects any drift.
+  - Polling for unread counts is shared across the interface instead of
+    repeated by each component.
+  - Server connections are kept open to suit the hosting provider's proxy;
+    request bodies that arrive too slowly are dropped.
+
+8.2 Scalability
+  - The server is stateless apart from its cache; the cache can use Redis so
+    that several server instances share it. Rate-limit counters and job locks
+    are kept in the database so they hold across processes and restarts.
+  - Fan-out operations (announcements, follower notifications) are written
+    in batches.
+  - An overload guard rejects excess requests when the server is saturated.
+
+8.3 Security
+  See Section 12.
+
+8.4 Reliability and availability
+  - Background tasks run on schedules with database locks so a task runs
+    once even if more than one server process is active, and each task's
+    last run is visible in the health report.
+  - Emails that fail to send are queued and retried.
+  - Database operations that can conflict are retried; multi-step changes
+    (refunds, rider cancellations, order creation) run in transactions.
+  - The web application shows a recovery screen when a page fails, retries
+    loading after an update, and shows honest "could not load" messages with
+    a retry instead of empty pages.
+  - Daily backups of the database and uploads are made by the server.
+  - The startup process retries database migration with growing delays.
+
+8.5 Usability
+  - Design follows familiar marketplace patterns (tabs such as To Pay, To
+    Ship, To Receive), large touch targets, bottom sheets on phones, and a
+    seller centre styled as a phone app.
+  - Forms show hints and specific errors; empty and error states are
+    illustrated and explained.
+  - Guided setup, a Seller Academy, a tutorial, and an assistant help new
+    sellers.
+
+8.6 Accessibility
+  - Dialogs keep keyboard focus inside and close with Escape; menus work by
+    keyboard; errors are announced to screen readers; text colours meet
+    contrast guidance; the interface can be translated.
+
+8.7 Compatibility
+  - Modern desktop and mobile browsers; installable PWA; Android devices
+    through the native application. An iOS build target exists but is not
+    confirmed as distributed.
+
+8.8 Maintainability
+  - Layered server design (routes, controllers, services, data access) with
+    a single data model managed by versioned migrations.
+  - Automated tests: a backend test suite against a dedicated test database
+    and unit tests for the web application; linting; a continuous
+    integration workflow.
+  - Shared formatting rules for money and times across the web application.
+
+8.9 Data integrity
+  - Relational constraints between all records; stock changes logged;
+    order prices, product names, return policies, and package contents are
+    copied into the order at the time of purchase so later edits do not
+    change past orders.
+
+8.10 Privacy
+  - Personal and identity data minimized, encrypted, hidden behind reveal
+    actions, and deleted on schedule (Section 12).
+
+
+--------------------------------------------------------------------------------
+9. SYSTEM ARCHITECTURE
+--------------------------------------------------------------------------------
+
+9.1 Overall architecture
+  A three-tier client-server architecture:
+    a. Presentation tier: (1) a single-page web application running in the
+       browser, installable as a PWA with a service worker; (2) a native
+       mobile application for Android built with React Native and Expo.
+    b. Application tier: one Node.js server application exposing a REST
+       (JSON over HTTPS) interface. The same server also delivers the web
+       application's files, the search-engine sitemap, and the share
+       previews.
+    c. Data tier: a MySQL relational database accessed through the Prisma
+       object-relational mapper; files (product photos, shop images, review
+       media, 3D models) on the server's disk in a public area; sensitive
+       files (identity documents, payment proofs, chat photos) in a private
+       area served only through signed, expiring links.
+  An optional Redis cache may be added between the application and the
+  database.
+
+9.2 Server-side layers
+  - Middleware for security headers, compression, cross-origin rules,
+    request-origin checks, rate limits, overload protection, body limits,
+    authentication, authorization, input validation, uploads, caching
+    headers, and error handling.
+  - Routing that maps each address to a controller.
+  - Controllers that read the request and shape the response.
+  - Services that hold the business rules (orders, offers, returns,
+    availability, MoorMove, identity, notifications, and others).
+  - Repositories that query the database.
+  - Scheduled background tasks within the server process.
+
+9.3 Client-server communication
+  - The web application calls the server's REST interface with the session
+    held in a secure cookie that scripts cannot read; the mobile application
+    sends the session token with each request. Short-lived access sessions
+    are renewed with longer refresh sessions.
+  - Near-real-time behaviour (new messages, unread counts, order changes) is
+    achieved by periodic polling and push notifications; WebSockets are not
+    used.
+
+9.4 Integration architecture
+  - MoorMove: server-to-server requests (quote, book, cancel, status) to the
+    MoorMove service, and signed event messages from MoorMove to E-MOORM.
+  - External services: Google (sign-in), an email provider (Resend, or any
+    SMTP service), an SMS provider (Semaphore), the browser push services
+    (web push with VAPID keys), an OSRM routing service (road distance),
+    OpenStreetMap (map tiles and address lookup), and Hugging Face (language
+    model for the assistant).
+
+9.5 Deployment architecture
+  The server application and the built web application run together as one
+  Node.js application on a Hostinger web hosting plan, connected to a MySQL
+  database on the same provider, at emoorm.shop. MoorMove runs as a separate
+  application on its own subdomain. See Section 17.
+
+9.6 Suggested architecture diagram content
+  Boxes: Buyer/Seller/Admin browser (web app, PWA); Android app; E-MOORM
+  server (REST interface, business services, background tasks, file
+  storage); MySQL database; optional Redis cache; MoorMove system (rider
+  app and its server); Google; Email provider; SMS provider; Push services;
+  OSRM routing; OpenStreetMap; Hugging Face. Arrows: clients to server over
+  HTTPS; server to database; server to each external service; MoorMove to
+  server (signed events).
+
+
+--------------------------------------------------------------------------------
+10. TECHNOLOGY STACK
+--------------------------------------------------------------------------------
+
+10.1 Web application (front end)
+  - React 19 (user interface library) with React Router 7 (page routing).
+  - Vite 8 (build tool and development server).
+  - TanStack Query (server data fetching and caching) and Zustand (shared
+    client state such as cart, session, and unread counts).
+  - Tailwind CSS 4 with custom style sheets; Phosphor icons.
+  - React Hook Form (forms); React Hot Toast (brief messages).
+  - Leaflet with React Leaflet and OpenStreetMap tiles (maps).
+  - Google Model Viewer and Three.js (3D product viewing).
+  - ZXing (QR code scanning in the browser) and a QR code generator.
+  - Google OAuth library (Google sign-in button).
+  - Service worker and web app manifest (PWA).
+  - Vitest (unit tests) and ESLint (code quality).
+
+10.2 Server (back end)
+  - Node.js 22 (runtime) with Express 5 (web framework).
+  - Prisma 5 (object-relational mapper and migrations) with MySQL (via the
+    mysql2 driver).
+  - bcrypt (password hashing), JSON Web Tokens (sessions), Speakeasy (time-
+    based one-time passwords for MFA), Google Auth Library (verifying Google
+    sign-in).
+  - Helmet (security headers), express-rate-limit (rate limiting),
+    express-validator (input validation), CORS and compression middleware.
+  - Multer (file uploads), Sharp (image processing and resizing),
+    Tesseract.js (OCR of identity documents).
+  - Nodemailer and Resend (email), web-push (browser push), Expo Server SDK
+    (mobile push sending), QRCode (QR images), ioredis (optional Redis).
+  - The Node.js built-in test runner (backend tests).
+
+10.3 Mobile application
+  - React Native with Expo (SDK 57 in the released code; an upgrade to SDK
+    58 is prepared and awaiting device testing) and Expo Router (screens).
+  - Expo modules for camera, image picker and manipulation, location, secure
+    storage of the session, file system, sharing, media library, video,
+    haptics, web browser, splash screen, and fonts; React Native Maps;
+    React Native SVG; WebView (for 3D viewing and some embedded content);
+    Zustand (state); Axios (requests).
+
+10.4 Database
+  - MySQL relational database, schema managed through Prisma migrations
+    applied automatically during deployment.
+
+10.5 Hosting and operations
+  - Hostinger web hosting (Node.js application and MySQL), with automatic
+    deployment from the project's Git repository on GitHub.
+  - GitHub Actions for continuous integration (lint, build, tests).
+
+10.6 External services
+  - Google Identity (sign-in), Resend or SMTP (email), Semaphore (SMS),
+    browser push services, OSRM (routing), OpenStreetMap (tiles and
+    geocoding), Hugging Face Inference (assistant language model, an open
+    Qwen instruction model by default), MoorMove (rider delivery).
+
+
+--------------------------------------------------------------------------------
+11. DATABASE AND DATA MANAGEMENT
+--------------------------------------------------------------------------------
+
+11.1 Overview
+  The database holds 52 entities and 30 enumerated value sets. Identifiers
+  are unique strings (UUIDs). Most entities record creation and update
+  times; users, shops, products, reviews, and notifications use soft
+  deletion (a deletion time) so that history is preserved.
+
+11.2 Core entities and their purpose (for the ERD)
+  People and access
+    - User: every account (role, municipality, contact, verification flags,
+      seller application and shop application details, payout details, MFA
+      state, administrator access end date, deletion request, last activity).
+    - IdentityVerification: one per user; status, ID type, encrypted extracted
+      data, hashed ID number, attempts, reviewer, note.
+    - Address: delivery addresses of a user, with municipality, barangay,
+      street, and map coordinates.
+    - RefreshSession: signed-in sessions (family, expiry, revocation, device).
+    - QrLoginSession: QR sign-in requests and their approval.
+    - PushToken: browser or device push subscriptions.
+    - SecurityCounter: time-limited counters for rate limits and lockouts.
+  Places
+    - Municipality: the fifteen towns (name, code, seal, tagline,
+      description, gallery, primary administrator).
+    - StoreServiceArea: towns or barangays a shop delivers to, with fees.
+  Shops and catalog
+    - Store: one per seller (profile, appearance, home layout, hours,
+      vacation, location, fulfillment, pickup, payment details, delivery fee
+      mode and values, MoorMove switch, approval and suspension).
+    - Category: product categories (kind: goods, food, livestock).
+    - Product: listings (type, prices, sale, tiers, variations, stock, images,
+      3D model, return policy, status, stored statistics, search text).
+    - PackageItem: the products and quantities inside a package product.
+    - ProductAvailability: "Available Today" windows.
+    - InventoryMovement: stock change log.
+    - ProductView: daily view counts per product.
+    - Courier and StoreCourier: platform couriers and the couriers each shop
+      uses (many-to-many).
+  Shopping
+    - CartItem and WishlistItem: per user and product.
+    - Voucher and VoucherRedemption: discounts and their use per order.
+    - Order: one purchase from one shop (totals, fees, discount, status,
+      fulfillment, payment, delivery details, courier, tracking, rider
+      fallback, failed-trip fees, deadlines, arrival estimate).
+    - OrderItem: lines of an order (price, quantity, variations, return
+      policy and package contents at purchase time, link to a Today window or
+      price offer).
+    - OrderStatusHistory: every status change with actor and note.
+    - RiderDelivery: MoorMove bookings for an order (job, rider, fee, cash,
+      timestamps for each stage, failure details).
+    - MoormoveEvent: identifiers of rider events already processed (to apply
+      each event once).
+    - BuyerUnpaidFee: failed-trip fees a buyer owes a shop, and how they were
+      settled (paid on a later order or waived).
+    - PriceOffer: livestock negotiations (prices, rounds, meeting, outcome,
+      resulting order).
+  After-sales and trust
+    - ReturnRequest and ReturnRequestItem: return cases and their items.
+    - Review: product reviews with media and seller reply.
+    - ProductQuestion: questions and answers on products.
+    - Report: reports against products, sellers, or buyers.
+    - Feedback: system feedback.
+    - AuditLog: recorded actions with actor, entity, details, address,
+      device, and municipality.
+  Communication
+    - Conversation and Message: buyer-shop chat (with photo, product, order,
+      or offer attached; read and unsend times).
+    - SupportConversation and SupportMessage: help-desk cases.
+    - AdminConversation and AdminMessage: super administrator to municipal
+      administrator threads.
+    - TeamMessage and TeamChatRead: town team chat and read positions.
+    - Notification: in-app notifications.
+    - StoreAnnouncement and StoreFollow: shop announcements and followers.
+    - Banner: home page banners.
+    - EmailOutbox: emails waiting to be retried.
+  Platform
+    - AppSetting: platform-wide settings (single record).
+    - AppInstall and AppDownload: Android app installs and daily downloads.
+
+11.3 Principal relationships (cardinalities)
+  - Municipality 1 : N User, Store, Product, Address, Report,
+    SupportConversation, Feedback, TeamMessage, StoreServiceArea.
+  - Municipality 1 : 0..1 primary administrator (User).
+  - User 1 : 0..1 Store (a seller owns one shop).
+  - User 1 : 0..1 IdentityVerification.
+  - User 1 : N Address, Order (as buyer), CartItem, WishlistItem, Review,
+    Notification, Report (as reporter), Conversation (as buyer), Message,
+    PriceOffer, ReturnRequest, SupportConversation, RefreshSession,
+    PushToken, VoucherRedemption, StoreFollow.
+  - User (administrator) 1 : N User (administrators added by them).
+  - Store 1 : N Product, Order, Conversation, ProductAvailability,
+    PriceOffer, ReturnRequest, StoreAnnouncement, StoreFollow, Voucher,
+    StoreServiceArea, ProductQuestion, BuyerUnpaidFee.
+  - Store N : M Courier (through StoreCourier).
+  - Category 1 : N Product.
+  - Product 1 : N OrderItem, Review, CartItem, WishlistItem, PriceOffer,
+    InventoryMovement, ProductQuestion, ProductView, ProductAvailability.
+  - Product (package) 1 : N PackageItem N : 1 Product (contained item).
+  - Order 1 : N OrderItem, OrderStatusHistory, RiderDelivery, ReturnRequest,
+    Message; Order 0..1 : 1 VoucherRedemption; Order N : 0..1 Voucher;
+    Order N : 0..1 Courier.
+  - OrderItem 1 : N ReturnRequestItem; ReturnRequest 1 : N
+    ReturnRequestItem.
+  - Conversation 1 : N Message; Message N : 0..1 PriceOffer, Product, Order.
+  - SupportConversation 1 : N SupportMessage; AdminConversation 1 : N
+    AdminMessage.
+  - Voucher 1 : N VoucherRedemption; Voucher N : 0..1 Store (shop voucher;
+    none means a platform voucher).
+
+11.4 Enumerated value sets (major)
+  User role; product status; order status; fulfillment mode (delivery,
+  pickup, both); fulfillment method; delivery fee mode; listing kind
+  (regular, today); product type; category kind; Today mode; availability
+  status; payment method; payment status; report type and status;
+  notification type and audience; return status, reason, and refund method;
+  QR login status; support category and status; identity verification
+  status; banner placement; voucher discount type; feedback category and
+  status; offer status; unpaid fee status.
+
+11.5 Data flow (for DFDs)
+  Level 0 (context): Buyers, Sellers, Municipal Administrators, Super
+  Administrator, MoorMove, Google, Email provider, SMS provider, Push
+  services, Routing and map services, and the language model service
+  exchange data with the E-MOORM system.
+  Level 1 processes (suggested): 1.0 Manage Accounts and Verification;
+  2.0 Manage Shops and Products; 3.0 Search and Browse; 4.0 Process Orders
+  and Payments; 5.0 Manage Delivery; 6.0 Negotiate Livestock Offers;
+  7.0 Handle Returns and Disputes; 8.0 Communicate (chat, help desk,
+  notifications); 9.0 Moderate and Administer; 10.0 Analyze and Report.
+  Data stores: Users, Identity, Shops, Products, Orders, Deliveries, Offers,
+  Returns, Reviews and Questions, Conversations, Notifications, Reports,
+  Audit Logs, Settings, Files (public and private).
+
+11.6 Data retention and lifecycle
+  - Identity documents and permits of decided seller applications: deleted
+    after a retention period (90 days by default); the decision remains.
+  - Buyer ID images: never stored; only encrypted extracted data and a
+    hashed ID number.
+  - Closed accounts: erased 30 days after the deletion request.
+  - Unsent chat messages and their photos: erased after 30 days; uploaded
+    private photos never attached to anything: removed after a day.
+  - Expired sessions and security counters: removed daily.
+  - Processed rider event records: trimmed daily.
+  - Backups: a database and uploads backup about once a day.
+
+11.7 Data validation
+  Server-side validation of every input (lengths, formats, ranges, allowed
+  values, ownership), file type detection from file contents (not file
+  names), image dimension limits, and sanitization of text shown to others.
+
+
+--------------------------------------------------------------------------------
+12. SECURITY AND PRIVACY
+--------------------------------------------------------------------------------
+
+12.1 Authentication
+  - Passwords must have at least 8 characters with an uppercase letter, a
+    lowercase letter, a digit, and a special character; they are stored
+    only as bcrypt hashes.
+  - Sessions: a short-lived access token (one hour by default) and a
+    rotating refresh session (30 days by default). Each refresh replaces the
+    previous one; sessions are recorded with device and network address and
+    can be revoked singly or all at once. Changing a password, or a change
+    of role or municipality for an administrator, ends existing sessions.
+  - On the web, the session is kept in a secure, HTTP-only cookie that page
+    scripts cannot read; the mobile application keeps its token in the
+    device's secure storage.
+  - Google sign-in tokens are verified with Google.
+  - Multi-factor authentication with time-based codes and eight one-time
+    backup codes; limited tries; a code cannot be reused. Required for every
+    administrator; administrator access is granted only to sessions that
+    passed it.
+  - QR sign-in codes expire after two minutes and require approval from a
+    signed-in device.
+  - Email verification and password reset use single-use, expiring links.
+
+12.2 Authorization
+  - Role-based access checked on the server for every protected action.
+  - Ownership checks: sellers act only on their own shop's records; buyers
+    only on their own orders, returns, and conversations.
+  - Municipal scoping: municipal administrators see and act only within
+    their municipality.
+  - Temporary administrator access ends automatically.
+
+12.3 Abuse prevention
+  - Rate limits on sign-in, registration, password reset, MFA, refresh,
+    session switching, sending messages and other writes, voucher checks,
+    product questions, views, price quotes, and pings; failed sign-ins lock
+    the account and address out after repeated failures (10 within 15
+    minutes by default). Counters are kept in the database so they survive
+    restarts.
+  - SMS codes: valid ten minutes, resend after one minute, at most five per
+    account per hour and five per number per day, five tries, and a daily
+    cap for the whole site.
+  - Identity checks: five attempts per day.
+  - Limits on open orders, offers per day, message lengths, upload sizes
+    (images up to 20 MB), and items per order or return.
+  - Detection of request origin to block cross-site request forgery;
+    duplicate checkout protection.
+
+12.4 Data protection
+  - Identity data encrypted with AES-256-GCM; ID numbers stored as one-way
+    hashes.
+  - Private files (identity documents, payment proofs, chat photos) are kept
+    outside the public file area and opened only by signed links that expire;
+    administrator access to identity photos and personal details goes
+    through explicit, audited "reveal" actions.
+  - Signed messages from MoorMove are verified and accepted only within a
+    five-minute window, and each event is applied once.
+  - HTTP security headers, including a Content Security Policy; HTTPS in
+    production; cross-origin rules limited to the site's own addresses.
+  - Uploaded images are re-encoded and checked by their actual content.
+
+12.5 Auditing
+  - Administrator and security-relevant actions (approvals, rejections,
+    suspensions, role changes, reveals, settings changes, team changes,
+    purges) are recorded in the audit log with actor, time, address, and
+    device.
+
+12.6 Privacy practices
+  - Published Privacy Policy, Terms of Service, and Cookie Policy pages.
+  - Data minimization for buyer ID checks; scheduled deletion of documents
+    and closed accounts; user data export; personal details of buyers
+    shown to sellers only as needed for fulfillment.
+  - These practices are relevant to the Philippine Data Privacy Act of 2012
+    (Republic Act No. 10173); formal compliance registration is not
+    recorded in the system (see Section 23).
+
+
+--------------------------------------------------------------------------------
+13. USER INTERFACE AND USER EXPERIENCE
+--------------------------------------------------------------------------------
+
+13.1 Web application screens (grouped)
+  Public and buyer: Home; Products and category pages; Search start and
+  results; Search by image; Product details (gallery, 3D view, variations,
+  delivery estimate, questions, reviews); Product reviews; Available Today;
+  Shops; Shop map; Shop page; Municipality showcase and gallery; Public
+  profile; Cart; Checkout; Orders and order receipt; Returns (list, request,
+  detail); Wishlist; Messages; Notifications and notification detail;
+  Profile with followed shops, addresses, reviews, reports, offers, support,
+  verification, and settings (including phone); Login, Register, Seller
+  Login, Forgot and Reset Password, Verify Email; Google app sign-in;
+  Sell, Seller Apply, Seller Welcome, Seller Academy and lessons, Seller
+  Tutorial; App download; About, Help Centre, Customer Care, Feedback,
+  Terms, Privacy, Cookies; Not Found.
+  Seller centre: Dashboard (today's work, attention items); Setup checklist;
+  Products and new product; Today windows (list, post, edit); Menu; Orders;
+  Fulfillment settings (delivery, pickup, payment, couriers); Returns and
+  return detail; Offers; Questions; Reviews; Messages; Notifications;
+  Marketing; Analytics; Finance (rider cash and unpaid fees); Store profile
+  and settings; Decorate (home layout and templates); Shop QR; Verification;
+  Assistant; Support.
+  Administrator panel: Dashboard; Sellers (applications) and all sellers;
+  Buyers; Users; Products; Reviews; Reports; Returns; Orders; Support inbox;
+  Messages (with an Announcements tab); Email; Team; Notifications;
+  Analytics; Audit logs; Municipalities; Junior administrators; Categories;
+  Couriers; Banners; Vouchers; Feedback; App users; Settings; Tools; Menu
+  (phone layout). Creating or editing a banner, voucher, courier, or
+  category, and adding a municipality, opens a page of its own with a live
+  preview or summary beside the form.
+
+13.2 Mobile application screens
+  Buyer tabs (Home, Cart, Messages, Notifications, Profile) and screens for
+  products, product details and reviews, search and image search, stores and
+  store map, store pages, Available Today, municipality pages and galleries,
+  checkout, orders, receipts, returns, offers, wishlist, followed stores,
+  addresses, reviews, reports, verification, edit profile, settings, QR scan
+  and approval, conversations, support, help, feedback, and legal pages; a
+  seller centre with tabs (Dashboard, Products, Messages, Marketing, Menu)
+  and screens matching the web seller centre.
+
+13.3 Design and layout principles
+  - Brand colours of deep green with white, and a pink accent on promotional
+    pages; a consistent card-based layout; local photography.
+  - Responsive layout: a side rail and header on large screens; a bottom tab
+    bar, sheets that slide up, and full-screen pages on phones.
+  - The seller centre and administrator panel adopt a phone-app style with
+    coloured tool icons for quick recognition.
+  - Familiar marketplace conventions for order tabs, sale tags, ratings, and
+    cart steppers.
+
+13.4 Navigation
+  - Header with search, language, notifications, messages, cart, and
+    account menu; footer with categories and information pages; breadcrumb
+    and back controls; deep links for products, categories, shops, and
+    notifications; a role-appropriate home after sign-in.
+
+13.5 Feedback and states
+  - Short messages for completed actions; inline field errors; loading
+    placeholders; illustrated empty and offline states; clear "could not
+    load" messages with retry; confirmation before destructive actions.
+
+13.6 Language
+  - English by default; Tagalog and Bisaya selectable anywhere; personal
+    content (names, messages, product titles) is protected from automatic
+    translation.
+
+
+--------------------------------------------------------------------------------
+14. BUSINESS RULES
+--------------------------------------------------------------------------------
+
+14.1 Accounts and roles
+  BR-01 Every account belongs to one municipality of Oriental Mindoro.
+  BR-02 Every new account is a buyer; selling requires an approved seller
+        application.
+  BR-03 A seller has exactly one shop.
+  BR-04 Administrator access requires multi-factor authentication at sign-in.
+  BR-05 A municipal administrator acts only within the assigned municipality.
+  BR-06 Backup administrator access lasts at most 90 days and ends
+        automatically; the team size is limited by a platform setting.
+  BR-07 A closed account is erased 30 days after the request; accounts with
+        open orders cannot be closed until they are settled.
+
+14.2 Orders
+  BR-08 One order is created per shop per checkout.
+  BR-09 An order may have at most 50 lines.
+  BR-10 A buyer may hold at most 8 unconfirmed orders overall and 3 with any
+        one shop (adjustable by configuration).
+  BR-11 Delivery orders follow PENDING -> CONFIRMED -> (PREPARING) ->
+        TO_SHIP -> OUT_FOR_DELIVERY -> DELIVERED -> COMPLETED; courier orders
+        go to SHIPPED and then COMPLETED.
+  BR-12 Pickup orders follow PENDING -> CONFIRMED -> (PREPARING) ->
+        READY_FOR_PICKUP -> PICKED_UP -> COMPLETED.
+  BR-13 Orders may be cancelled before hand-over; no order may move out of
+        COMPLETED or CANCELLED. (READY is an older status kept for earlier
+        orders.)
+  BR-14 A buyer may cancel only while the order is PENDING or CONFIRMED;
+        while the shop is checking a payment proof, the buyer may cancel only
+        after 48 hours have passed without a check.
+  BR-15 A seller cancelling must give a reason; "buyer did not show up" is
+        allowed only for pickup orders ready for collection, and "buyer
+        refused" only for orders out for delivery.
+  BR-16 For online payments, preparation and hand-over cannot proceed until
+        the payment is marked paid.
+  BR-17 Unconfirmed orders expire after 48 hours; confirmed online orders
+        still unpaid expire after 48 hours.
+  BR-18 Handed-over orders not confirmed by the buyer are completed
+        automatically after 7 days.
+  BR-19 Courier and rider orders cannot be marked out for delivery or
+        delivered by the seller; the courier shipment or rider events move
+        them.
+  BR-20 Courier tracking numbers are 6 to 40 letters, digits, or dashes.
+  BR-21 Prices, product names, variations, return policies, and package
+        contents are fixed in the order at purchase.
+
+14.3 Payments, fees, and vouchers
+  BR-22 The platform does not collect money; online payments go to the
+        seller's own account and are confirmed by the seller.
+  BR-23 Shop delivery fees follow the shop's fee mode (free, flat, per town,
+        per barangay, or per kilometre with included kilometres and maximum
+        distance); the platform default and free-delivery threshold apply
+        where the shop sets none.
+  BR-24 Vouchers have a code of 3 to 32 letters, digits, dashes, or
+        underscores; a percent discount cannot exceed 100; minimum order,
+        maximum discount, total and per-user limits, and dates are enforced.
+  BR-25 A MoorMove fee quote is valid for 30 minutes.
+
+14.4 MoorMove deliveries
+  BR-26 A rider may be called only for orders the buyer chose to have
+        delivered by MoorMove, once the order is confirmed or being packed.
+  BR-27 A rider booking may be cancelled until the parcel is picked up; an
+        order with an active rider cannot be cancelled until the rider is.
+  BR-28 For a failed trip that was the buyer's fault, the buyer pays the
+        trip fee; for cash orders it is added to the buyer's next order with
+        that shop unless waived by the seller or super administrator.
+  BR-29 Parcel size is derived from weight: up to 3 kg small, up to 10 kg
+        medium, otherwise large (unknown weights count as 500 g each).
+
+14.5 Livestock offers
+  BR-30 An offer price is at least half and at most the asking price.
+  BR-31 One open deal per buyer per listing; at most 10 new offers a day;
+        at most 30 rounds.
+  BR-32 A price must be answered within 7 days; the sale must be recorded
+        within 14 days of agreement; the buyer's confirmation is assumed
+        after 3 days.
+
+14.6 Available Today
+  BR-33 Windows may be scheduled up to 30 days ahead, take orders for at most
+        7 days, and have a ready period of at most 3 days; quantities up to
+        10,000.
+  BR-34 Today orders not confirmed (and paid, if online) within 45 minutes
+        are cancelled.
+  BR-35 Followers are notified of a shop's live windows no more than once per
+        three hours.
+
+14.7 Returns and reviews
+  BR-36 The default return window is 7 days after completion; a seller may
+        set up to 60 days per product.
+  BR-37 A decision on a return may be disputed within 7 days; disputes are
+        resolved by a municipal or super administrator.
+  BR-38 Only buyers who purchased a product may review it, once, with a
+        rating from 1 to 5.
+
+14.8 Communication
+  BR-39 A sender may unsend a chat message within 5 hours; it disappears for
+        both parties.
+  BR-40 Help-desk cases are routed to the administrators of the user's
+        municipality.
+  BR-41 Product questions are 5 to 500 characters; answers up to 1,000.
+  BR-41a A municipal administrator's email can reach only people of their
+         own municipality (living there, or with a shop or shop application
+         there); a super administrator's can reach anyone.
+  BR-41b Administrator emails go only to active accounts with a confirmed
+         email address; subjects are 3 to 150 characters, messages 10 to
+         5,000; at most 200 people can be picked for one email; each
+         administrator may send at most 5 such emails an hour.
+
+14.9 Products and verification
+  BR-42 Products of an approved, active, unsuspended shop are published
+        immediately; administrators may suspend or archive them.
+  BR-43 When the platform requires buyer verification, checkout requires a
+        verified identity.
+  BR-44 Identity checks are limited to five attempts per day.
+  BR-45 Seller identity documents are deleted after the retention period
+        following the application decision (90 days by default).
+
+
+--------------------------------------------------------------------------------
+15. REPORTS, MONITORING, AND ANALYTICS
+--------------------------------------------------------------------------------
+
+15.1 Seller analytics
+  Revenue, number of orders, average order value, completion rate, sales by
+  day, orders by status, top products, low-stock products, pending work,
+  recent activity, and a single-day breakdown; comparison with the previous
+  period of equal length.
+
+15.2 Municipal analytics
+  Town-level revenue, orders, sales by day, orders by status, top products,
+  top categories, top shops, buyers, and pending moderation, scoped to the
+  administrator's municipality.
+
+15.3 Platform analytics
+  All of the above across the province, with sales by municipality.
+
+15.4 Exports and printable outputs
+  CSV exports in the administrator analytics, orders, users, reports,
+  feedback, and app users views; printable order receipts; printable shop
+  QR posters; personal data export for users.
+
+15.5 Administrative monitoring
+  Attention queue (items needing an administrator's action), store health
+  indicators, seller attention lists, application install and download
+  statistics, feedback summary, audit logs, MoorMove service health and
+  usage, and a server health report (database status, background task last
+  runs, late tasks, cache status).
+
+15.6 Operational logs
+  Server logs of errors and background task results; error tracking
+  integration point; audit logs in the database.
+
+
+--------------------------------------------------------------------------------
+16. INTEGRATIONS
+--------------------------------------------------------------------------------
+
+16.1 Google Identity
+  Purpose: sign-in with a Google account on web and mobile.
+  Data: Google account identifier, name, email, photo.
+  Status: Implemented.
+
+16.2 Email (Resend or SMTP)
+  Purpose: email verification links, password reset links, account and
+  seller notices, new-order and order-accepted emails, and administrators'
+  emails to many users. Undelivered emails are queued and retried;
+  administrator emails are queued and sent gradually to respect the
+  provider's rate limit.
+  Status: Implemented.
+
+16.3 MoorMove (rider delivery)
+  Purpose: on-demand rider delivery of E-MOORM orders.
+  Data sent: pickup and drop-off locations, parcel size and weight, cash to
+  collect, order reference, contact numbers needed for delivery.
+  Data received: quotes, job status, rider details and location, delivery
+  photo, failure reasons, fault, and cash collection.
+  Status: Implemented in E-MOORM; switchable by the super administrator and
+  per shop. The production availability of the MoorMove service at the time
+  of writing is unable to verify (Section 23).
+
+16.4 SMS (Semaphore)
+  Purpose: phone verification codes.
+  Status: Implemented; depends on a configured sender account.
+
+16.5 Web push
+  Purpose: notifications to browsers that subscribe.
+  Status: Implemented.
+
+16.6 Mobile push (Expo)
+  Purpose: notifications to the mobile application.
+  Status: Partially implemented: the server can send to registered devices,
+  but the mobile application does not currently register for notifications.
+
+16.7 OSRM routing
+  Purpose: road distance for per-kilometre fees and rider quotes; a public
+  demonstration server is used by default.
+  Status: Implemented, with straight-line estimation as fallback.
+
+16.8 OpenStreetMap
+  Purpose: map tiles for shop maps and address pins; address lookup.
+  Status: Implemented.
+
+16.9 Hugging Face Inference
+  Purpose: language model answers for the assistant's typed questions.
+  Status: Implemented, with guide-based fallback when unavailable.
+
+16.10 GCash, QR Ph, and banks
+  Purpose: payment by buyers to sellers.
+  Status: Not integrated by interface; payments are made outside the system
+  and recorded by proof and seller confirmation (by design).
+
+16.11 Couriers
+  Purpose: shipping beyond the shop's own delivery.
+  Status: Partially implemented by design: rates, selection, tracking number,
+  and tracking link; no automated booking with courier companies.
+
+
+--------------------------------------------------------------------------------
+17. DEPLOYMENT
+--------------------------------------------------------------------------------
+
+17.1 Environment
+  - Production: a Hostinger web hosting plan running the combined server
+    and web application as one Node.js 22 application at emoorm.shop, with a
+    MySQL database. MoorMove runs separately at moormove.emoorm.shop.
+  - Development: a local workstation running the server, the web
+    development server, and a local MySQL database; a separate test database
+    for automated tests.
+
+17.2 Release process
+  - The source code is kept in a Git repository on GitHub. Pushing to the
+    main branch triggers the host's automatic deployment, which installs
+    dependencies, builds the web application, and applies database
+    migrations during the build; the application then restarts.
+  - A continuous integration workflow on GitHub runs linting, the web build,
+    and automated tests for each change.
+  - The Android application is built separately and published as an
+    installable package offered on the website's app download page.
+
+17.3 Configuration
+  - Secrets and environment-specific values (database connection, signing
+    keys, encryption key, provider credentials) are held in the host's
+    environment configuration and kept out of the source repository.
+
+17.4 Operations
+  - Background tasks run inside the server process: order expiry and
+    automatic completion and offer expiry (every 5 minutes), the Available
+    Today clock (every minute), MoorMove status checks (every 2 minutes),
+    email retries (every 2 minutes), product statistics check (hourly), and
+    daily tasks (identity document retention, account erasure, private photo
+    clean-up, smaller photo copies, security counter and session clean-up,
+    rider event trimming, and backup when due).
+  - Scheduled tasks run inside the server because the hosting plan's own
+    scheduled jobs are not available on this account; a protected health
+    address can also trigger due tasks from an external monitor.
+  - A health report shows database status, background task runs, and cache.
+  - The server shuts down gracefully, finishing requests in progress.
+
+
+--------------------------------------------------------------------------------
+18. ERROR HANDLING
+--------------------------------------------------------------------------------
+
+  - Validation errors: specific messages for each invalid field; forms show
+    them next to the field and announce them to assistive technology.
+  - Business rule violations: clear refusals with the reason (for example,
+    an invalid status change, payment not yet verified, voucher limits).
+  - Authentication: expired or revoked sessions prompt a new sign-in;
+    access changes and expired backup access are explained.
+  - Rate limits and lockouts: "too many attempts" responses with a waiting
+    period.
+  - Conflicts: duplicate submissions (checkout, offers) are detected;
+    concurrent stock changes are handled in transactions; conflicting
+    database operations are retried.
+  - External service failures: email is queued and retried; SMS, routing,
+    language model, and MoorMove failures produce fallbacks (estimated
+    distance, guide answers, rider unavailability) or clear messages.
+  - Page failures: a recovery screen in the web application; reloading
+    after an update when outdated files are requested; "could not load"
+    panels with retry; offline illustration.
+  - Server errors: a generic message to the user without internal details;
+    details recorded in the server log.
+  - Overload: excess requests receive a "service busy" response instead of
+    slowing every user.
+  - Not found: a dedicated page for unknown addresses; a proper "not found"
+    response for unknown product, shop, and category addresses.
+
+
+--------------------------------------------------------------------------------
+19. LIMITATIONS AND FUTURE ENHANCEMENTS
+--------------------------------------------------------------------------------
+
+19.1 Current limitations
+  - No payment gateway; payment confirmation depends on the seller checking
+    the buyer's proof.
+  - No automated courier booking; tracking relies on the courier's own page.
+  - Near-real-time updates use polling and push, not a live connection.
+  - The mobile application does not receive push notifications.
+  - Administrators must use the website; the mobile application has no
+    administrator functions.
+  - Identity OCR matches the name only and depends on photo quality.
+  - Bisaya and parts of Tagalog depend on automatic translation; some
+    sentences built from parts may read unnaturally when translated.
+  - Search uses stored text matching, not a full-text search engine or
+    relevance-ranked index.
+  - Search engines receive a short summary of each page rather than fully
+    rendered pages.
+  - Default road routing uses a public demonstration service with usage
+    limits.
+  - The shared hosting plan limits processes and memory; background tasks
+    share the server process.
+  - Photos in the mobile application are loaded at full size (smaller copies
+    are used on the web only).
+  - The platform has no revenue model and no seller payout handling.
+
+19.2 Possible future enhancements
+  - Integration with a licensed payment gateway for automatic confirmation.
+  - Push notifications in the mobile application and an iOS release.
+  - Administrator functions in the mobile application.
+  - Live connections for chat and order updates.
+  - A dedicated search index with ranking and typo tolerance.
+  - Courier booking through courier interfaces.
+  - Self-hosted routing and map services.
+  - Server-side rendering for search engines.
+  - Smaller photo copies in the mobile application.
+  - Additional curated translations (Bisaya and the province's other
+    languages).
+
+
+--------------------------------------------------------------------------------
+20. SIGNIFICANCE OF THE SYSTEM
+--------------------------------------------------------------------------------
+
+  Buyers: one place to find local food, produce, livestock, and crafts from
+  their own and nearby towns, with clear prices, availability today, ratings,
+  photo search, multiple ways to pay and receive, and protection through
+  returns, disputes, and verified sellers.
+
+  Sellers: a free shop with no commission, simple listing for many product
+  kinds, tools to process orders and deliveries, local delivery options
+  including riders, negotiation for livestock, promotion to followers, and
+  guidance through the academy and assistant, which lowers the barrier for
+  small and home-based sellers to sell online.
+
+  Local government units: a means to register and verify local sellers,
+  monitor and moderate local trade, respond to residents' concerns through a
+  help desk, publish announcements, and view town-level economic activity.
+
+  Province and community: support for local livelihoods and products of
+  Oriental Mindoro, more money circulating within the province, and a
+  digital channel suited to local practices.
+
+  Researchers and future developers: a documented reference for a
+  government-assisted hyperlocal marketplace, including its rules for
+  payments without a gateway, rider delivery integration, and identity
+  verification by OCR.
+
+
+--------------------------------------------------------------------------------
+21. CAPSTONE CHAPTER REFERENCE
+--------------------------------------------------------------------------------
+
+21.1 Chapter 1 (Introduction)
+  Use Sections 1 (background, problem, purpose), 2 (objectives), 3 (scope
+  and delimitations), and 20 (significance). Key terms for a definition of
+  terms: hyperlocal marketplace, municipal administrator, super
+  administrator, seller application, identity verification, OCR, Available
+  Today, paluto (cook-to-order), price offer, MoorMove, cash on delivery,
+  QR Ph, payment proof, voucher, return and refund, dispute, PWA, MFA.
+
+21.2 Chapter 2 (Review of Related Literature and Systems)
+  Comparable themes: multi-vendor marketplaces, local and agricultural
+  e-commerce, government-supported MSME platforms, cash-on-delivery
+  practices, QR payments, last-mile delivery, identity verification by OCR,
+  trust and reputation systems, and conversational assistants. (Specific
+  literature is not part of the system and must be supplied separately.)
+
+21.3 Chapter 3 (Methodology and Design)
+  - Architecture: Section 9.
+  - Technology: Section 10.
+  - Use case diagram: actors Guest, Buyer, Seller, Municipal Administrator,
+    Super Administrator, MoorMove (external system), and external services.
+    Main use cases: Register, Sign In (password, Google, QR), Verify
+    Identity, Verify Phone, Manage Profile and Addresses, Browse and Search,
+    Search by Image, Manage Cart and Wishlist, Check Out, Pay and Upload
+    Proof, Track Order, Confirm Receipt, Make Price Offer, Request Return,
+    Dispute Decision, Write Review, Ask Question, Chat with Shop, Follow
+    Shop, Report, Open Help Case, Apply as Seller, Set Up Shop, Manage
+    Products, Post Today Window, Process Orders, Verify Payment, Ship or
+    Call Rider, Respond to Offers, Decide Returns, Create Vouchers, Announce
+    to Followers, View Analytics, Review Applications, Moderate Content,
+    Resolve Reports and Disputes, Answer Help Cases, Manage Team, Announce
+    to Town, Manage Platform Settings, Manage Municipalities and
+    Administrators, Manage Categories, Couriers, Banners, and Vouchers,
+    Review Feedback, View Audit Logs. "Check Out" includes "Apply Voucher"
+    and "Quote Delivery"; "Process Orders" extends to "Call Rider".
+  - Data flow diagrams: Section 11.5.
+  - Entity-relationship diagram: Sections 11.2 to 11.4.
+  - Flowcharts: Section 6 (each workflow can be drawn as a flowchart; the
+    order process in 6.6, the rider process in 6.8, the offer process in 6.9,
+    and the return process in 6.11 are the most decision-rich).
+  - State diagrams: order statuses (Section 14.2), payment statuses (5.11),
+    offer statuses (5.14), return statuses (5.16), rider job statuses
+    (searching, accepted, at pickup, picked up, at drop-off, delivered,
+    cancelled, failed, returning).
+  - Requirements: Sections 7 and 8.
+  - Development approach: iterative development with version control,
+    automated deployment, automated tests, and continuous integration (the
+    formal methodology name used in the manuscript is a matter for the
+    proponents).
+
+21.4 Chapter 4 (Results and Discussion)
+  Use Sections 5 and 13 (what was built), 15 (reports), 22 (feature status),
+  and the testing note below. Survey or evaluation results (for example,
+  ISO/IEC 25010 ratings or user acceptance scores) are not stored in the
+  system and must come from the proponents' own evaluation records.
+  Testing performed within the project: an automated backend test suite
+  against a dedicated test database (257 tests passed in the most recent
+  local run on 27 October 2026) covering orders, payments, offers, returns,
+  refunds, riders, identity, security counters, email retries, job locks,
+  sign-in flows, and search-engine pages; and web unit tests (9 tests in
+  5 files, all passing on 28 October 2026).
+
+21.5 Chapter 5 (Summary, Conclusions, and Recommendations)
+  Use Sections 19 (limitations and enhancements) and 20 (significance).
+
+
+--------------------------------------------------------------------------------
+22. COMPLETE FEATURE INVENTORY
+--------------------------------------------------------------------------------
+
+Format: Feature | Module | Status | Note
+
+Accounts and security
+  Email registration and sign-in | Accounts | Implemented |
+  Email verification | Accounts | Implemented |
+  Google sign-in (web and app) | Accounts | Implemented |
+  QR code sign-in | Accounts | Implemented |
+  Multi-factor authentication with backup codes | Accounts | Implemented | Required for administrators
+  Password reset and change | Accounts | Implemented |
+  Saved accounts and switching | Accounts | Implemented |
+  Sign out of all devices | Accounts | Implemented |
+  Phone verification by SMS | Accounts | Implemented | Requires SMS provider account
+  Buyer ID verification by OCR | Identity | Implemented |
+  Checkout gate on buyer verification | Identity | Implemented | Switchable by super administrator
+  Data export | Accounts | Implemented |
+  Account deletion with 30-day erasure | Accounts | Implemented |
+  Rate limits and lockouts | Security | Implemented |
+  Private files with signed links | Security | Implemented |
+  Encrypted identity data | Security | Implemented |
+  Audit logs | Security | Implemented |
+  Production access-token lifetime of one hour | Security | Unable to verify | Code default is one hour; production setting not checked
+
+Selling
+  Seller application with drafts and documents | Onboarding | Implemented |
+  Application review and resubmission | Onboarding | Implemented |
+  Identity document retention and deletion | Onboarding | Implemented |
+  Setup checklist and shop health | Shop | Implemented |
+  Shop decoration, home layout, templates | Shop | Implemented |
+  Opening hours, vacation mode, prep days | Shop | Implemented |
+  Shop QR poster | Shop | Implemented |
+  Seller Academy and tutorial | Onboarding | Implemented |
+  Seller assistant (Ate Moormy) | Assistant | Implemented | Model answers need a service token
+  Buyer assistant | Assistant | Implemented |
+  Product types: regular, ready-to-eat, cook-to-order, livestock, package | Catalog | Implemented |
+  Variations, tiered and sale prices | Catalog | Implemented |
+  Stock movements and low-stock alerts | Catalog | Implemented |
+  3D product models | Catalog | Implemented | Switchable by super administrator
+  Bulk product actions | Catalog | Implemented |
+  Available Today windows and daily menu | Today | Implemented | Switchable by super administrator
+  Shop vouchers | Vouchers | Implemented |
+  Shop announcements to followers | Marketing | Implemented |
+  Seller analytics | Analytics | Implemented |
+  Seller finance view (rider cash, unpaid fees) | Delivery | Implemented |
+
+Buying
+  Home page, banners, carousels | Discovery | Implemented |
+  Text search, filters, sorting | Discovery | Implemented | Stored-text matching, not a full-text index
+  Category pages | Discovery | Implemented |
+  Image search | Discovery | Implemented |
+  Shop directory and map | Discovery | Implemented |
+  Municipality pages and galleries | Discovery | Implemented |
+  Recently viewed and quick view | Discovery | Implemented |
+  Cart and wishlist (synchronized) | Shopping | Implemented |
+  Checkout with one order per shop | Shopping | Implemented |
+  Platform vouchers | Vouchers | Implemented |
+  COD, GCash, QR Ph, bank transfer with proof | Payment | Implemented | No payment gateway (by design)
+  Order tracking and history | Orders | Implemented |
+  Receipts | Orders | Implemented |
+  Automatic expiry and completion | Orders | Implemented |
+  Livestock price offers | Offers | Implemented |
+  Returns, refunds, disputes | After-sales | Implemented |
+  Reviews with photos and video, seller replies | Reviews | Implemented |
+  Product questions and answers | Reviews | Implemented |
+  Shop following | Marketing | Implemented |
+  Price-drop alerts on wished items | Notifications | Implemented |
+
+Delivery
+  Shop delivery fees (free, flat, town, barangay, distance) | Delivery | Implemented |
+  Road distance by OSRM | Delivery | Implemented | Public demo server by default
+  Service areas | Delivery | Implemented |
+  Pickup | Delivery | Implemented |
+  Couriers with rates and tracking link | Delivery | Partially implemented | No automated booking
+  MoorMove rider delivery | Delivery | Implemented | Live service availability unable to verify
+  Failed-trip fees and unpaid fee carry-over | Delivery | Implemented |
+  Arrival estimates | Delivery | Implemented |
+
+Communication
+  Buyer-seller chat with photos and attachments | Messaging | Implemented |
+  Unsend within five hours | Messaging | Implemented |
+  Shop service rating | Messaging | Implemented |
+  Help desk with ratings | Support | Implemented |
+  Administrator team chat | Admin communication | Implemented |
+  Super administrator to municipal admin threads | Admin communication | Implemented |
+  In-app notifications | Notifications | Implemented |
+  Web push notifications | Notifications | Implemented |
+  Mobile app push notifications | Notifications | Partially implemented | Server can send; app does not register
+  Email notices with retry | Notifications | Implemented |
+  Administrator emails to many users (super admin: any audience; municipal admin: own town) | Administrator Email | Implemented | Built and tested locally; not yet deployed (see Section 23)
+  Municipal and platform announcements | Announcements | Implemented |
+  Home banners and pop-ups | Announcements | Implemented |
+  Real-time live connection | Messaging | Planned | Polling used instead (future enhancement)
+
+Administration
+  Seller application review | Administration | Implemented |
+  Identity review | Administration | Implemented |
+  Product, review, question, store, return moderation | Administration | Implemented |
+  Reports handling | Administration | Implemented |
+  Attention queue and store health | Administration | Implemented |
+  Administrator teams with backups | Administration | Implemented |
+  Municipal administrator assignment (junior administrators page) | Administration | Implemented |
+  Municipality management | Administration | Implemented |
+  User management incl. restore and purge | Administration | Implemented |
+  Categories, couriers, banners, vouchers | Administration | Implemented |
+  Platform settings | Administration | Implemented |
+  Feedback inbox | Feedback | Implemented |
+  Municipal and platform analytics with CSV | Analytics | Implemented |
+  App install and download statistics | Analytics | Implemented |
+  MoorMove health view | Administration | Implemented |
+  Server health report | Operations | Implemented |
+  Administrator functions in the mobile app | Mobile | Planned | Administrators are sent to the website
+
+Platform
+  Responsive web application | Platform | Implemented |
+  Installable PWA with update handling | Platform | Implemented |
+  Android application | Mobile | Implemented | Distributed through the website
+  Expo SDK 58 upgrade of the mobile app | Mobile | Partially implemented | Prepared, awaiting device testing; not released
+  iOS application | Mobile | Unable to verify | Build target exists; no confirmed release
+  Smaller photo copies on the web | Performance | Implemented |
+  Smaller photo copies in the mobile app | Performance | Planned |
+  English, Tagalog (curated), Bisaya (automatic) | Language | Implemented | Bisaya and some Tagalog by machine translation
+  Keyboard and screen reader support | Accessibility | Implemented |
+  Sitemap, robots rules, share previews | SEO | Implemented |
+  Server-side rendering for search engines | SEO | Planned | Summary only at present
+  Daily backups | Operations | Implemented | Off-site copy and encryption unable to verify
+  Background tasks with database locks | Operations | Implemented |
+  Optional Redis cache | Performance | Implemented | Used only when configured
+  Legacy READY order status | Orders | Disabled or deprecated | Kept for earlier orders
+  Older help-desk chat addresses | Support | Disabled or deprecated | Kept for compatibility; cases replace them
+  Payment gateway | Payment | Planned | Not in current scope
+
+
+--------------------------------------------------------------------------------
+23. UNVERIFIED INFORMATION AND DOCUMENTATION GAPS
+--------------------------------------------------------------------------------
+
+  1. Production configuration. The hosting provider's management access was
+     unavailable during this review, so production settings could not be
+     read. In particular, whether the production access-token lifetime
+     matches the one-hour default, and whether the off-site backup copy and
+     backup encryption are configured, are unverified.
+  2. MoorMove availability. The MoorMove service experienced an outage on
+     27 October 2026 after a deployment exhausted the hosting account's
+     process limit; whether it has since been restarted and is operating
+     could not be verified at the time of writing.
+  3. Most recent deployment. Whether the latest release (27 October 2026)
+     is live in production, including its sitemap category entries, could not
+     be confirmed.
+  4. Continuous integration. The automated checks on GitHub reported
+     failures on recent changes; the cause had not been confirmed when this
+     document was prepared, although linting, building, and the test suites
+     pass locally.
+  5. iOS. No distributed iOS build or App Store listing was found.
+  6. Mobile push notifications. The server can send them, but the mobile
+     application does not register for them, so they do not reach users.
+  7. Usage statistics. Numbers of users, sellers, products, orders, and
+     revenue in production are not included because they were not measured
+     for this document; they must be obtained from the live database or the
+     platform analytics.
+  8. Evaluation results. No system evaluation, survey, or user acceptance
+     results are stored in the system.
+  9. Legal compliance. No record of registration with the National Privacy
+     Commission or of formal agreements with municipalities or MoorMove was
+     found in the system.
+  10. Courier partnerships. The courier list and rates are entered by the
+      super administrator; actual agreements with courier companies are not
+      recorded.
+  11. Methodology. The software development methodology to be named in the
+      manuscript is not recorded in the system.
+  12. Uncommitted work. A shared money and time formatting change in the web
+      application, the administrator email module (Section 5.22a), and the
+      mobile SDK 58 upgrade were present as work in progress on 28 October
+      2026 and are not yet part of the released system. The administrator
+      email module passed its automated and browser tests locally; its
+      delivery volume in production also depends on the email provider's
+      plan limits, which could not be checked.
