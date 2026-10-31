@@ -1,3 +1,4 @@
+import { createPortal } from 'react-dom';
 import { useEffect, useState } from 'react';
 import { Warning } from '../../lib/icons';
 import axios from '../../lib/axios';
@@ -68,7 +69,7 @@ export default function DeleteUserDialog({ open, user, onDeleted, onCancel }) {
   const counts = preview?.counts || {};
   const shown = ROWS.filter(([key]) => (counts[key] || 0) > 0);
 
-  return (
+  return createPortal(
     <div className="cf-dialog-backdrop" onClick={() => !busy && onCancel?.()} role="dialog" aria-modal="true" aria-labelledby="del-user-title" ref={dialogRef}>
       <form className="cf-dialog del-user-dialog" onClick={(e) => e.stopPropagation()} onSubmit={submit}>
         <div className="cf-dialog-body reason-dialog-body">
@@ -129,6 +130,7 @@ export default function DeleteUserDialog({ open, user, onDeleted, onCancel }) {
           </button>
         </div>
       </form>
-    </div>
+    </div>,
+    document.body,
   );
 }

@@ -1,3 +1,4 @@
+import { createPortal } from 'react-dom';
 import { useState } from 'react';
 import '../ui/ConfirmDialog.css';
 import './ReasonDialog.css';
@@ -53,7 +54,7 @@ export default function ReasonDialog({
     setReason('');
   };
 
-  return (
+  return createPortal(
     <div className={`cf-dialog-backdrop ui-sheet-backdrop${closing ? ' is-closing' : ''}`} ref={trapRef} onClick={close} role="dialog" aria-modal="true" aria-labelledby="reason-dialog-title">
       <form className="cf-dialog reason-dialog ui-sheet-panel" onClick={(e) => e.stopPropagation()} onSubmit={submit}>
         <div className="cf-dialog-body reason-dialog-body">
@@ -85,6 +86,7 @@ export default function ReasonDialog({
           </button>
         </div>
       </form>
-    </div>
+    </div>,
+    document.body,
   );
 }

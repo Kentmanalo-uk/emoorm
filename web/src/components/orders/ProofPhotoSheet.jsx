@@ -1,3 +1,4 @@
+import { createPortal } from 'react-dom';
 import { useEffect, useRef, useState } from 'react';
 import {
   Camera, ImageSquare, ArrowClockwise, CircleNotch, Truck, Storefront, CheckCircle, WarningCircle,
@@ -90,7 +91,7 @@ export default function ProofPhotoSheet({ open, kind = 'DELIVERY', orderNumber, 
 
   const Icon = pickup ? Storefront : Truck;
 
-  return (
+  return createPortal(
     <div
       className={`cf-dialog-backdrop ui-sheet-backdrop${closing ? ' is-closing' : ''}`}
       onClick={() => !saving && onCancel?.()}
@@ -176,7 +177,8 @@ export default function ProofPhotoSheet({ open, kind = 'DELIVERY', orderNumber, 
           </button>
         </div>
       </div>
-    </div>
+    </div>,
+    document.body,
   );
 }
 

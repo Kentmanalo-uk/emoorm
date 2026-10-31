@@ -813,6 +813,10 @@
 
   .sc-content .so-orders-table td:nth-child(6) {
     grid-area: act;
+    /* The 110px the column is given on wide screens would squeeze the
+       buttons into a sliver here: across the card they have the room
+       for their words. */
+    width: auto;
     margin-top: 12px;
     padding: 8px 0;
     border-top: 1px solid var(--t-neutral-100, #f1f5f9);
@@ -1104,7 +1108,10 @@
 .so-cancel-link:hover { text-decoration: underline; }
 
 /* Phones: filters behind an icon inside the search box. */
-.so-filter-btn {
+/* Named with its parent on purpose: ".seller-search button" sizes the little
+   clear-the-search cross at 18px, and on specificity alone it also won here,
+   leaving the filter a 18px target no thumb could hit. */
+.seller-search button.so-filter-btn {
   position: relative;
   display: grid;
   place-items: center;

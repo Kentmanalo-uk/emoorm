@@ -1,3 +1,4 @@
+import { createPortal } from 'react-dom';
 import { useEffect, useRef, useState } from 'react';
 import { Truck, Barcode, X, CircleNotch } from '../../lib/icons';
 import toast from 'react-hot-toast';
@@ -162,7 +163,7 @@ export default function ShipOrderSheet({ open, couriers = [], orderNumber, onCan
     if (ok === false) setBusy(false);
   };
 
-  return (
+  return createPortal(
     <div
       className={`cf-dialog-backdrop ui-sheet-backdrop${closing ? ' is-closing' : ''}`}
       onClick={() => !busy && onCancel?.()}
@@ -232,6 +233,7 @@ export default function ShipOrderSheet({ open, couriers = [], orderNumber, onCan
           </button>
         </div>
       </div>
-    </div>
+    </div>,
+    document.body,
   );
 }
