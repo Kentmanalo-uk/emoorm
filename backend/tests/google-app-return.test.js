@@ -57,3 +57,25 @@ test("the server's own Google redirect keeps the return link in its state", asyn
   // A forged state: the Android app, "expired".
   assert.equal(await authService.googleAppFinishUrl({ code: 'x', state: 'not-a-token' }), `${ANDROID}?error=expired`);
 });
+
+// The address Google is sent must be the configured one, character for
+// character: Google rejects anything else with "redirect_uri_mismatch", and
+// the installed app claims every link on the bare domain as a verified App
+// Link, so a callback there is opened by the app -- which has no /api route
+// and shows "page not found" -- instead of finishing in the browser. The www
+// host is never verified (Android will not follow a redirect to read
+// /.well-known/assetlinks.json), which is why the callback belongs there.
+test('Google is sent exactly the configured callback address', () => {
+  const savedId = config.google.clientId;
+  config.google.clientId = 'test-client-id.apps.googleusercontent.com';
+  const WWW = 'https://www.emoorm.shop/api/auth/google/app/callback';
+  try {
+    withCallback(WWW, () => {
+      const url = new URL(authService.googleAppStartUrl(challenge, ANDROID));
+      assert.equal(url.host, 'accounts.google.com');
+      assert.equal(url.searchParams.get('redirect_uri'), WWW);
+    });
+  } finally {
+    config.google.clientId = savedId;
+  }
+});

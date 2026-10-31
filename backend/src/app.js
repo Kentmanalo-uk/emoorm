@@ -59,10 +59,21 @@ app.set('trust proxy', config.nodeEnv === 'production' ? (Number.isInteger(proxy
 const canonicalHost = (() => {
   try { return new URL(config.site.url).host.toLowerCase(); } catch { return ''; }
 })();
+// The one path that must stay where it is asked for. The Android app claims
+// every https link on the canonical host as a verified App Link, so Google's
+// redirect back to the apex is handed to the app, which has no route for an
+// /api address and shows its "page not found" screen — the sign-in never
+// reaches the server. Android does not follow the redirect below to read
+// /.well-known/assetlinks.json, so www is never verified and a callback
+// served here stays in the browser. GOOGLE_APP_CALLBACK_URL must name this
+// same www address, and Google must list it as an authorized redirect URI.
+const googleAppCallbackPath = `${config.apiPrefix}/auth/google/app/callback`;
+
 if (config.nodeEnv === 'production' && canonicalHost && !canonicalHost.startsWith('www.')) {
   app.use((req, res, next) => {
     const host = String(req.get('host') || '').toLowerCase();
     if (host !== `www.${canonicalHost}`) return next();
+    if (req.path === googleAppCallbackPath) return next();
     const target = `${new URL(config.site.url).protocol}//${canonicalHost}${req.originalUrl}`;
     return res.redirect(['GET', 'HEAD'].includes(req.method) ? 301 : 308, target);
   });
