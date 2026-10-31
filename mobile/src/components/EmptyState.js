@@ -1,6 +1,6 @@
 import { cloneElement, isValidElement } from 'react';
 import { Pressable, StyleSheet, Text, View } from 'react-native';
-import { font, t } from '../theme';
+import { font, t, themed } from '../theme';
 import EmptyArt from './EmptyArt';
 import WeightWaveText from './WeightWaveText';
 
@@ -80,7 +80,7 @@ export function EmptyActions({ actions }) {
 }
 
 // The signed-out page's measures (InboxLoginGate / CartLoginGate).
-export const emptyStyles = StyleSheet.create({
+export const emptyStyles = themed(() => StyleSheet.create({
   wrap: { alignItems: 'center', justifyContent: 'center', paddingTop: 32, paddingBottom: 40, paddingHorizontal: 24 },
   // A whole page: centred in the space, lifted a little (more room below).
   page: { flex: 1, paddingTop: 24, paddingBottom: 120 },
@@ -97,8 +97,8 @@ export const emptyStyles = StyleSheet.create({
   },
   btnPrimary: { borderColor: t.primary[600], backgroundColor: t.primary[600] },
   btnPrimaryPressed: { borderColor: t.primary[700], backgroundColor: t.primary[700] },
-  btnOutline: { borderColor: t.neutral[300], backgroundColor: '#fff' },
+  btnOutline: { borderColor: t.neutral[300], backgroundColor: t.neutral[0] },
   btnOutlinePressed: { backgroundColor: t.neutral[50] },
-  btnText: { fontSize: 15, lineHeight: 18, color: '#fff', ...font(500) },
+  btnText: { fontSize: 15, lineHeight: 18, color: t.onBrand, ...font(500) },
   btnTextOutline: { color: t.neutral[800] },
-});
+}));

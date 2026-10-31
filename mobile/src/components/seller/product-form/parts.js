@@ -2,8 +2,8 @@ import {
   createContext, forwardRef, useContext, useEffect, useMemo, useRef, useState,
 } from 'react';
 import { Pressable, StyleSheet, Text, TextInput, View } from 'react-native';
-import { CaretDownIcon, CheckIcon, MinusIcon, PlusIcon } from 'phosphor-react-native';
-import { font, t } from '../../../theme';
+import { CaretDownIcon, CheckIcon, MinusIcon, PlusIcon } from '../../../lib/icons';
+import { font, ink, t, themed } from '../../../theme';
 import { SelectSheet } from '../../Select';
 import { clock } from './formState';
 
@@ -15,14 +15,16 @@ import { clock } from './formState';
  * text input and dropdown (.pf-input / .pf-select).
  */
 
+/* Read on use, not when this module loads, so the form's colours follow
+   light and dark instead of keeping the mode the app started in. */
 export const PF = {
-  green: t.primary[600],
-  greenDark: t.primary[700],
-  greenSoft: t.primary[50],
-  line: t.neutral[200],
-  ink: t.neutral[900],
-  muted: t.neutral[500],
-  danger: t.danger[600],
+  get green() { return t.primary[600]; },
+  get greenDark() { return t.primary[700]; },
+  get greenSoft() { return t.primary[50]; },
+  get line() { return t.neutral[200]; },
+  get ink() { return t.neutral[900]; },
+  get muted() { return t.neutral[500]; },
+  get danger() { return t.danger[600]; },
 };
 
 /* ── Bringing the first problem into view ───────────────────────────
@@ -463,7 +465,7 @@ export const pfText = StyleSheet.create({
   strong: { ...font(700), color: PF.ink },
 });
 
-const s = StyleSheet.create({
+const s = themed(() => StyleSheet.create({
   flex: { flex: 1 },
   field: { gap: 6, minWidth: 0 },
   labelRow: { flexDirection: 'row', alignItems: 'center', gap: 8 },
@@ -510,14 +512,14 @@ const s = StyleSheet.create({
   cardHint: { fontSize: 12.5, lineHeight: 17.5, color: PF.muted, ...font(400) },
   radio: {
     width: 20, height: 20, marginTop: 1, borderWidth: 2, borderColor: t.neutral[300], borderRadius: 10,
-    backgroundColor: '#fff', alignItems: 'center', justifyContent: 'center',
+    backgroundColor: t.neutral[0], alignItems: 'center', justifyContent: 'center',
   },
   radioOn: { borderColor: PF.green },
   radioDot: { width: 10, height: 10, borderRadius: 5, backgroundColor: PF.green },
 
   seg: { flexDirection: 'row', gap: 4, padding: 4, borderRadius: 12, backgroundColor: t.neutral[100] },
   segBtn: { flex: 1, minHeight: 42, paddingHorizontal: 8, borderRadius: 9, alignItems: 'center', justifyContent: 'center' },
-  segBtnOn: { backgroundColor: t.neutral[0], boxShadow: [{ offsetX: 0, offsetY: 1, blurRadius: 3, color: 'rgba(15, 23, 42, 0.12)' }] },
+  segBtnOn: { backgroundColor: t.neutral[0], boxShadow: [{ offsetX: 0, offsetY: 1, blurRadius: 3, color: ink(0.12) }] },
   segText: { fontSize: 13.5, lineHeight: 16.2, color: t.neutral[600], textAlign: 'center', ...font(500) },
   segTextOn: { color: PF.greenDark, ...font(600) },
 
@@ -531,14 +533,14 @@ const s = StyleSheet.create({
   pickChipOff: { opacity: 0.45 },
   pickText: { fontSize: 14.5, lineHeight: 20, color: t.neutral[700], ...font(500) },
   pickTextSm: { fontSize: 14 },
-  pickTextOn: { color: '#fff' },
+  pickTextOn: { color: t.onBrand },
 
   switch: { flexDirection: 'row', alignItems: 'center', gap: 12, minHeight: 52, paddingVertical: 6 },
   track: { width: 44, height: 26, borderRadius: 999, backgroundColor: t.neutral[300] },
   trackOn: { backgroundColor: PF.green },
   knob: {
-    position: 'absolute', top: 3, left: 3, width: 20, height: 20, borderRadius: 10, backgroundColor: '#fff',
-    boxShadow: [{ offsetX: 0, offsetY: 1, blurRadius: 2, color: 'rgba(15, 23, 42, 0.25)' }],
+    position: 'absolute', top: 3, left: 3, width: 20, height: 20, borderRadius: 10, backgroundColor: t.neutral[0],
+    boxShadow: [{ offsetX: 0, offsetY: 1, blurRadius: 2, color: ink(0.25) }],
   },
   knobOn: { transform: [{ translateX: 18 }] },
   switchText: { flex: 1, minWidth: 0, gap: 1 },
@@ -592,12 +594,12 @@ const s = StyleSheet.create({
 
   check: {
     width: 18, height: 18, marginTop: 2, borderWidth: 1.5, borderColor: t.neutral[500], borderRadius: 3,
-    backgroundColor: '#fff', alignItems: 'center', justifyContent: 'center',
+    backgroundColor: t.neutral[0], alignItems: 'center', justifyContent: 'center',
   },
 
   dateRow: { flexDirection: 'row', gap: 8 },
   dateDay: { flex: 1.4 },
   dateTime: { flex: 1 },
-});
+}));
 
 export { s as partStyles };

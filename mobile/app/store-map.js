@@ -6,7 +6,7 @@ import { useLocalSearchParams, useRouter } from 'expo-router';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import {
   CaretDownIcon, CaretLeftIcon, CrosshairSimpleIcon, NavigationArrowIcon, PackageIcon, PathIcon, StorefrontIcon, XIcon,
-} from 'phosphor-react-native';
+} from '../src/lib/icons';
 import apiClient from '../src/api/client';
 import EmptyState from '../src/components/EmptyState';
 import Sheet, { SheetOption } from '../src/components/Sheet';
@@ -20,7 +20,7 @@ import { directionsUrl } from '../src/components/home/HomeStoreMapCard';
 import { awayLabel, openNow } from '../src/components/shop/shopHours';
 import { getCachedData, setCachedData } from '../src/lib/dataCache';
 import { resolveImg } from '../src/lib/media';
-import { font, t } from '../src/theme';
+import { font, t, themed } from '../src/theme';
 
 /*
  * Discover Stores, full screen (Home's Discover Stores card opens it): every
@@ -429,9 +429,10 @@ function StoreCard({ store, width, height, onOpen, onProduct }) {
   );
 }
 
-const LINE = t.neutral[200];
-
-const styles = StyleSheet.create({
+const styles = themed(() => {
+  // Inside the factory: read when the sheet is built, so it follows the mode.
+  const LINE = t.neutral[200];
+  return StyleSheet.create({
   screen: { flex: 1, backgroundColor: t.neutral[100] },
   center: { ...StyleSheet.absoluteFill, alignItems: 'center', justifyContent: 'center' },
 
@@ -439,7 +440,7 @@ const styles = StyleSheet.create({
   header: { position: 'absolute', top: 0, left: 0, right: 0, paddingHorizontal: 12, paddingBottom: 6 },
   bar: {
     flexDirection: 'row', alignItems: 'center', gap: 4, height: 46, paddingLeft: 3, paddingRight: 16,
-    borderRadius: 23, borderWidth: 1, borderColor: LINE, backgroundColor: '#fff',
+    borderRadius: 23, borderWidth: 1, borderColor: LINE, backgroundColor: t.neutral[0],
   },
   back: { width: 38, height: 38, borderRadius: 19, alignItems: 'center', justifyContent: 'center' },
   backPressed: { backgroundColor: t.neutral[100] },
@@ -448,20 +449,20 @@ const styles = StyleSheet.create({
   filters: { flexDirection: 'row', gap: 6, marginTop: 8 },
   filter: {
     height: 30, paddingHorizontal: 13, borderRadius: 999, justifyContent: 'center',
-    borderWidth: 1, borderColor: LINE, backgroundColor: '#fff',
+    borderWidth: 1, borderColor: LINE, backgroundColor: t.neutral[0],
   },
   filterOn: { borderColor: t.primary[600], backgroundColor: t.primary[600] },
   filterText: { fontSize: 13, lineHeight: 16, color: t.neutral[700], ...font(500) },
-  filterTextOn: { color: '#fff' },
+  filterTextOn: { color: t.onBrand },
   spacer: { flex: 1 },
   routeBtn: {
     width: 32, height: 32, borderRadius: 16, alignItems: 'center', justifyContent: 'center',
-    borderWidth: 1, borderColor: '#bfdbfe', backgroundColor: '#fff',
+    borderWidth: 1, borderColor: '#bfdbfe', backgroundColor: t.neutral[0],
   },
   routeBtnOn: { borderColor: '#2563eb', backgroundColor: '#2563eb' },
   routeCard: {
     position: 'absolute', left: 20, right: 20, flexDirection: 'row', alignItems: 'center', gap: 12,
-    paddingLeft: 12, paddingRight: 8, borderRadius: 18, borderWidth: 1, borderColor: LINE, backgroundColor: '#fff',
+    paddingLeft: 12, paddingRight: 8, borderRadius: 18, borderWidth: 1, borderColor: LINE, backgroundColor: t.neutral[0],
     boxShadow: [{ offsetX: 0, offsetY: 2, blurRadius: 8, color: 'rgba(15, 23, 42, 0.06)' }],
   },
   routeIcon: { width: 40, height: 40, borderRadius: 20, alignItems: 'center', justifyContent: 'center', backgroundColor: '#eff6ff' },
@@ -471,12 +472,12 @@ const styles = StyleSheet.create({
   routeMeta: { fontSize: 12.5, lineHeight: 17, color: t.neutral[500], ...font(400) },
   routeGo: { flexDirection: 'row', alignItems: 'center', gap: 4, height: 34, paddingHorizontal: 14, borderRadius: 17, backgroundColor: '#2563eb' },
   routeGoPressed: { backgroundColor: '#1d4ed8' },
-  routeGoText: { fontSize: 13.5, lineHeight: 17, color: '#fff', ...font(600) },
+  routeGoText: { fontSize: 13.5, lineHeight: 17, color: t.onBrand, ...font(600) },
   routeClose: { width: 32, height: 32, alignItems: 'center', justifyContent: 'center' },
   townChip: { flexDirection: 'row', alignItems: 'center', gap: 4, maxWidth: 150 },
   locate: {
     position: 'absolute', right: 12, width: 40, height: 40, borderRadius: 12, alignItems: 'center', justifyContent: 'center',
-    borderWidth: 1, borderColor: LINE, backgroundColor: '#fff',
+    borderWidth: 1, borderColor: LINE, backgroundColor: t.neutral[0],
   },
   locateOn: { borderColor: '#bfdbfe' },
   locatePressed: { backgroundColor: t.neutral[50] },
@@ -484,14 +485,14 @@ const styles = StyleSheet.create({
   bottom: { position: 'absolute', left: 0, right: 0, bottom: 0 },
   none: {
     position: 'absolute', alignSelf: 'center', flexDirection: 'row', gap: 8, paddingVertical: 11, paddingHorizontal: 18,
-    borderRadius: 999, borderWidth: 1, borderColor: LINE, backgroundColor: '#fff',
+    borderRadius: 999, borderWidth: 1, borderColor: LINE, backgroundColor: t.neutral[0],
   },
   noneText: { fontSize: 14, lineHeight: 18, color: t.neutral[600], ...font(400) },
   noneLink: { fontSize: 14, lineHeight: 18, color: t.primary[700], ...font(600) },
 
   // The card: white, a hairline edge, a whisper of shadow to lift it off the map.
   card: {
-    padding: CARD_PAD, borderRadius: 20, borderWidth: 1, borderColor: LINE, backgroundColor: '#fff',
+    padding: CARD_PAD, borderRadius: 20, borderWidth: 1, borderColor: LINE, backgroundColor: t.neutral[0],
     boxShadow: [{ offsetX: 0, offsetY: 2, blurRadius: 8, color: 'rgba(15, 23, 42, 0.06)' }],
   },
   who: { flexDirection: 'row', alignItems: 'center', gap: 12 },
@@ -504,7 +505,7 @@ const styles = StyleSheet.create({
   meta: { marginTop: 2, fontSize: 13, lineHeight: 17, color: t.neutral[500], ...font(400) },
   stateOpen: { color: t.primary[600], ...font(500) },
   stateClosed: { color: t.neutral[500], ...font(500) },
-  stateAway: { color: '#b45309', ...font(500) },
+  stateAway: { color: t.warning[700], ...font(500) },
   desc: { marginTop: 10, fontSize: 13.5, lineHeight: 18, color: t.neutral[600], ...font(400) },
 
   row: { flexDirection: 'row', alignItems: 'center', gap: 8, marginTop: 12 },
@@ -517,12 +518,13 @@ const styles = StyleSheet.create({
   empty: { fontSize: 13, lineHeight: 17, color: t.neutral[400], ...font(400) },
   iconBtn: {
     width: 38, height: 38, borderRadius: 19, alignItems: 'center', justifyContent: 'center',
-    borderWidth: 1, borderColor: t.primary[200], backgroundColor: '#fff',
+    borderWidth: 1, borderColor: t.primary[200], backgroundColor: t.neutral[0],
   },
   visit: {
     height: 38, paddingHorizontal: 18, borderRadius: 19, alignItems: 'center', justifyContent: 'center',
-    borderWidth: 1, borderColor: t.primary[600], backgroundColor: '#fff',
+    borderWidth: 1, borderColor: t.primary[600], backgroundColor: t.neutral[0],
   },
-  btnPressed: { backgroundColor: t.primary[50] },
-  visitText: { fontSize: 14, lineHeight: 18, color: t.primary[700], ...font(600) },
+    btnPressed: { backgroundColor: t.primary[50] },
+    visitText: { fontSize: 14, lineHeight: 18, color: t.primary[700], ...font(600) },
+  });
 });

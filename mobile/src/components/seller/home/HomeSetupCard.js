@@ -1,7 +1,7 @@
 import { Pressable, StyleSheet, Text, View } from 'react-native';
 import { useRouter } from 'expo-router';
-import { CaretRightIcon, CheckIcon, ClockIcon, ExclamationMarkIcon } from 'phosphor-react-native';
-import { font, t } from '../../../theme';
+import { CaretRightIcon, CheckIcon, ClockIcon, ExclamationMarkIcon } from '../../../lib/icons';
+import { font, t, themed } from '../../../theme';
 import { describeStep } from '../sellerSetup';
 import { sellerHref } from '../sellerRoutes';
 import { HomeSection, homeStyles } from './HomeCards';
@@ -78,23 +78,23 @@ export default function HomeSetupCard({ setup }) {
   );
 }
 
-const MARKS = {
+const MARKS = themed(() => ({
   done: { borderColor: t.primary[600], backgroundColor: t.primary[600] },
   waiting: { borderColor: t.warning[500], backgroundColor: t.warning[500] },
   failed: { borderColor: t.danger[500], backgroundColor: t.danger[500] },
-};
-const TAGS = {
+}));
+const TAGS = themed(() => ({
   sell: { backgroundColor: t.accent[50] },
   waiting: { backgroundColor: t.warning[50] },
   failed: { backgroundColor: t.danger[50] },
-};
-const TAG_TEXT = {
+}));
+const TAG_TEXT = themed(() => ({
   sell: { color: t.accent[700] },
   waiting: { color: t.warning[700] },
   failed: { color: t.danger[700] },
-};
+}));
 
-const styles = StyleSheet.create({
+const styles = themed(() => StyleSheet.create({
   head: { marginBottom: 10 },
   count: { fontSize: 13, lineHeight: 20.8, color: t.neutral[500], ...font(400) },
   bar: { height: 6, marginBottom: 6, overflow: 'hidden', borderRadius: 999, backgroundColor: t.neutral[100] },
@@ -113,4 +113,4 @@ const styles = StyleSheet.create({
   labelDone: { color: t.neutral[500] },
   tag: { flexShrink: 0, paddingVertical: 2, paddingHorizontal: 8, borderRadius: 999, backgroundColor: t.neutral[100] },
   tagText: { fontSize: 11.5, lineHeight: 18.4, color: t.neutral[500], ...font(500) },
-});
+}));

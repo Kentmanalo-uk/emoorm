@@ -1,6 +1,6 @@
 import { Pressable, StyleSheet, Text, View } from 'react-native';
 import Glass, { floatingTabBar } from '../Glass';
-import { font, t } from '../../theme';
+import { font, t, themed } from '../../theme';
 import { CartRoundCheck } from './CartStoreGroup';
 
 /*
@@ -16,7 +16,7 @@ export default function CartBar({
   note, noteBad, allSelected, onToggleAll, totalLabel, feeLabel, offLabel, checkoutLabel, disabled, onCheckout, style, onLayout,
 }) {
   return (
-    <Glass fallbackStyle={BAR_LOOK} style={[floatingTabBar ? styles.float : styles.bar, style]} onLayout={onLayout}>
+    <Glass fallbackStyle={barLook()} style={[floatingTabBar ? styles.float : styles.bar, style]} onLayout={onLayout}>
       {note ? <Text style={[styles.note, noteBad && styles.noteBad]}>{note}</Text> : null}
       <View style={styles.row}>
         <View style={styles.all}>
@@ -43,7 +43,10 @@ export default function CartBar({
 }
 
 // The website's bar: white, a hairline on top and a soft shadow above.
-const BAR_LOOK = {
+/* A function, not a table: this is handed to a component whole, and
+   React Native freezes the style it is given. A fresh object each time
+   keeps the colours of the palette in use. */
+const barLook = () => ({
   borderTopWidth: 1,
   borderTopColor: t.neutral[200],
   backgroundColor: t.neutral[0],
@@ -52,9 +55,9 @@ const BAR_LOOK = {
   shadowOpacity: 0.06,
   shadowRadius: 16,
   elevation: 8,
-};
+});
 
-const styles = StyleSheet.create({
+const styles = themed(() => StyleSheet.create({
   // On the website the bar's bottom 6px sit under the tab bar (the bar is
   // fixed 68px up, the 74px tab bar covers it): tuck it under the same way.
   bar: { marginBottom: -6, zIndex: 115 },
@@ -91,4 +94,4 @@ const styles = StyleSheet.create({
   },
   ctaDisabled: { opacity: 0.45 },
   ctaText: { fontSize: 15, lineHeight: 18, ...font(500), color: t.neutral[0] },
-});
+}));

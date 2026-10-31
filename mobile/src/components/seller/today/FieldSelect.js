@@ -1,7 +1,7 @@
 import { useState } from 'react';
 import { Pressable, StyleSheet, Text, View } from 'react-native';
-import { CaretDownIcon } from 'phosphor-react-native';
-import { font, t } from '../../../theme';
+import { CaretDownIcon } from '../../../lib/icons';
+import { font, t, themed } from '../../../theme';
 import { SelectSheet } from '../../Select';
 
 /*
@@ -47,7 +47,7 @@ export default function FieldSelect({
   );
 }
 
-const styles = StyleSheet.create({
+const styles = themed(() => StyleSheet.create({
   // .scm-field .ui-select (the sheets' fields); pages pass their own look.
   trigger: {
     flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between', gap: 8,
@@ -58,4 +58,4 @@ const styles = StyleSheet.create({
   value: { flex: 1, minWidth: 0, fontSize: 16, lineHeight: 20.8, ...font(400), color: t.neutral[900] },
   placeholder: { color: t.neutral[500] },
   caretOpen: { transform: [{ rotate: '180deg' }] },
-});
+}));

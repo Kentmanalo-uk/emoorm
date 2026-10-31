@@ -1,5 +1,6 @@
 import { useEffect, useRef, useState } from 'react';
 import { Animated, Easing, StyleSheet } from 'react-native';
+import { t, themed } from '../theme';
 import * as SplashScreen from 'expo-splash-screen';
 import BrandLoader, { BUILT } from './BrandLoader';
 
@@ -64,13 +65,13 @@ export default function BrandSplash({ ready }) {
   );
 }
 
-const styles = StyleSheet.create({
+const styles = themed(() => StyleSheet.create({
   splash: {
     ...StyleSheet.absoluteFill,
     alignItems: 'center',
     justifyContent: 'center',
-    backgroundColor: '#ffffff',
+    backgroundColor: t.neutral[0],
     zIndex: 10000,
     elevation: 10000,
   },
-});
+}));

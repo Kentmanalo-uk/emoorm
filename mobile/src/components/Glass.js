@@ -1,6 +1,7 @@
 import { Platform, View } from 'react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { GlassView, isLiquidGlassAvailable } from 'expo-glass-effect';
+import { activeScheme, ink, veil } from '../theme';
 
 /**
  * iOS 26 Liquid Glass, and the same surface everywhere else.
@@ -22,11 +23,13 @@ export const liquidGlass = Platform.OS === 'ios' && (() => {
   }
 })();
 
+/* Read when the surface is drawn, not when this module loads, so the panel
+   is the dark card colour in dark mode instead of staying white. */
 const FALLBACK = {
-  backgroundColor: 'rgba(255, 255, 255, 0.96)',
+  get backgroundColor() { return veil(0.96); },
   borderWidth: 1,
-  borderColor: 'rgba(15, 23, 42, 0.06)',
-  boxShadow: [{ offsetX: 0, offsetY: 4, blurRadius: 16, color: 'rgba(15, 23, 42, 0.08)' }],
+  get borderColor() { return ink(0.06); },
+  get boxShadow() { return [{ offsetX: 0, offsetY: 4, blurRadius: 16, color: ink(0.08) }]; },
 };
 
 export default function Glass({
@@ -36,7 +39,7 @@ export default function Glass({
     return (
       <GlassView
         glassEffectStyle={glassStyle}
-        colorScheme="light"
+        colorScheme={activeScheme()}
         tintColor={tintColor}
         isInteractive={interactive}
         style={style}
@@ -63,9 +66,10 @@ export function GlassBackdrop({ radius = 14, white = 0 }) {
   const fill = { position: 'absolute', top: 0, right: 0, bottom: 0, left: 0, borderRadius: radius };
   return (
     <>
-      <GlassView pointerEvents="none" glassEffectStyle="regular" colorScheme="light" style={fill} />
-      {/* `white`: a milky layer over the glass (0–1), so what sits on it stays easy to read. */}
-      {white > 0 ? <View pointerEvents="none" style={[fill, { backgroundColor: `rgba(255, 255, 255, ${white})` }]} /> : null}
+      <GlassView pointerEvents="none" glassEffectStyle="regular" colorScheme={activeScheme()} style={fill} />
+      {/* `white`: how far the glass is veiled in the page's own card colour
+          (0–1), so what sits on it stays easy to read in either mode. */}
+      {white > 0 ? <View pointerEvents="none" style={[fill, { backgroundColor: veil(white) }]} /> : null}
     </>
   );
 }

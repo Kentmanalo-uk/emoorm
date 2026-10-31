@@ -1,8 +1,8 @@
 import { forwardRef, useState } from 'react';
 import { ActivityIndicator, Platform, Pressable, StyleSheet, Text, TextInput, View } from 'react-native';
-import { EyeIcon, EyeSlashIcon } from 'phosphor-react-native';
+import { EyeIcon, EyeSlashIcon } from '../../lib/icons';
 import Svg, { Path } from 'react-native-svg';
-import { font, t } from '../../theme';
+import { font, t, themed } from '../../theme';
 
 /*
  * The pieces of the website's phone Log in / Sign up / password sheets
@@ -231,7 +231,7 @@ export function AuthErrorBox({ children, style }) {
   );
 }
 
-const styles = StyleSheet.create({
+const styles = themed(() => StyleSheet.create({
   label: { fontSize: 14, lineHeight: 22.4, color: t.neutral[700], ...font(500) },
   labelSmall: { fontSize: 13, lineHeight: 20.8 },
   optional: { color: t.neutral[500], ...font(400) },
@@ -241,7 +241,7 @@ const styles = StyleSheet.create({
     borderWidth: 1,
     borderColor: t.neutral[300],
     borderRadius: 10,
-    backgroundColor: '#fff',
+    backgroundColor: t.neutral[0],
     color: t.neutral[900],
     fontSize: 16,
     ...font(400),
@@ -282,14 +282,14 @@ const styles = StyleSheet.create({
   submitPressed: { backgroundColor: t.primary[700] },
   submitOff: { backgroundColor: t.neutral[400] },
   submitFaded: { opacity: 0.6 },
-  submitText: { fontSize: 15, lineHeight: 18, color: '#fff', ...font(500) },
+  submitText: { fontSize: 15, lineHeight: 18, color: t.onBrand, ...font(500) },
 
   outline: {
     height: 48,
     borderRadius: 10,
     borderWidth: 1,
     borderColor: t.neutral[300],
-    backgroundColor: '#fff',
+    backgroundColor: t.neutral[0],
     alignItems: 'center',
     justifyContent: 'center',
     flexDirection: 'row',
@@ -303,7 +303,7 @@ const styles = StyleSheet.create({
     borderRadius: 10,
     borderWidth: 1,
     borderColor: t.neutral[300],
-    backgroundColor: '#fff',
+    backgroundColor: t.neutral[0],
     alignItems: 'center',
     justifyContent: 'center',
     flexDirection: 'row',
@@ -318,7 +318,7 @@ const styles = StyleSheet.create({
   dividerLine: { position: 'absolute', left: 0, right: 0, top: 12, height: 1, backgroundColor: t.neutral[200] },
   dividerText: {
     paddingHorizontal: 16,
-    backgroundColor: '#fff',
+    backgroundColor: t.neutral[0],
     fontSize: 12,
     lineHeight: 19.2,
     letterSpacing: 0.6,
@@ -334,4 +334,4 @@ const styles = StyleSheet.create({
     borderRadius: 4,
   },
   errorBoxText: { fontSize: 14, lineHeight: 22.4, color: t.danger[500], textAlign: 'center', ...font(400) },
-});
+}));

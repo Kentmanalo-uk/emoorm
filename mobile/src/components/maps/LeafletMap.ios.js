@@ -1,7 +1,7 @@
 import { useEffect, useMemo, useRef } from 'react';
 import { StyleSheet, View } from 'react-native';
 import MapView, { Marker, Polyline } from 'react-native-maps';
-import { t } from '../../theme';
+import { t, themed } from '../../theme';
 import { mapState } from './mapState';
 import {
   PHILIPPINES_ZOOM_RANGE, keptInPhilippines, mindoroRegion, regionAt,
@@ -133,6 +133,6 @@ export default function LeafletMap({ height = 300, style, ...props }) {
   );
 }
 
-const styles = StyleSheet.create({
+const styles = themed(() => StyleSheet.create({
   frame: { width: '100%', overflow: 'hidden', borderRadius: 12, backgroundColor: t.neutral[150] },
-});
+}));

@@ -2,7 +2,7 @@ import { useEffect, useMemo, useRef, useState } from 'react';
 import { StyleSheet, Text, View } from 'react-native';
 import MapView, { Marker, Polyline } from 'react-native-maps';
 import { useRouter } from 'expo-router';
-import { font, t } from '../../theme';
+import { font, t, themed, veil } from '../../theme';
 import {
   PHILIPPINES_ZOOM_RANGE, keptInPhilippines, mindoroRegion, regionAt,
 } from '../maps/appleRegion';
@@ -150,12 +150,12 @@ export default function HomeStoresMap({
   );
 }
 
-const styles = StyleSheet.create({
+const styles = themed(() => StyleSheet.create({
   frame: { width: '100%', overflow: 'hidden', backgroundColor: t.neutral[150] },
   rounded: { borderRadius: 12 },
   fill: { flex: 1 },
   // Grows from its tip, so it still points at the same spot.
   pinSelected: { transform: [{ translateY: 7 }, { scale: 1.25 }, { translateY: -7 }] },
-  emptyOverlay: { ...StyleSheet.absoluteFill, alignItems: 'center', justifyContent: 'center', backgroundColor: 'rgba(255, 255, 255, 0.6)' },
+  emptyOverlay: { ...StyleSheet.absoluteFill, alignItems: 'center', justifyContent: 'center', backgroundColor: veil(0.6) },
   emptyText: { fontSize: 13, lineHeight: 20, ...font(400), color: t.neutral[500] },
-});
+}));

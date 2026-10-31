@@ -1,5 +1,6 @@
 import { useMemo } from 'react';
 import { Platform, StyleSheet, View } from 'react-native';
+import { themed } from '../../theme';
 import { WebView } from 'react-native-webview';
 import { BACKEND_URL } from '../../lib/media';
 import model3dHtml, { STAGE_BG } from './model3dHtml';
@@ -60,8 +61,8 @@ export default function Model3dView({ src, poster = null, alt, onLoad, onError, 
   );
 }
 
-const styles = StyleSheet.create({
+const styles = themed(() => StyleSheet.create({
   frame: { flex: 1, overflow: 'hidden', backgroundColor: STAGE_BG },
   web: { flex: 1, backgroundColor: STAGE_BG },
   androidWeb: { opacity: 0.99 },
-});
+}));

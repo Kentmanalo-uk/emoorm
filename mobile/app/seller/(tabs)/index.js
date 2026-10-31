@@ -1,5 +1,6 @@
 import { useCallback, useRef, useState } from 'react';
 import { Share, StyleSheet, View } from 'react-native';
+import { themed } from '../../../src/theme';
 import { useFocusEffect } from 'expo-router';
 import apiClient from '../../../src/api/client';
 import { getCacheEntry, setCachedData } from '../../../src/lib/dataCache';
@@ -137,10 +138,10 @@ export default function SellerHomeScreen() {
   );
 }
 
-const styles = StyleSheet.create({
+const styles = themed(() => StyleSheet.create({
   // On the website the shop header sits inside the page, so the first
   // section starts right under its hairline.
   content: { paddingTop: 0 },
   // .sh-body: 12px between the sections, 8px more under the last one.
   body: { gap: 12, paddingBottom: 8 },
-});
+}));

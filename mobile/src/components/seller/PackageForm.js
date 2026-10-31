@@ -8,7 +8,7 @@ import { useFocusEffect } from 'expo-router';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import apiClient from '../../api/client';
 import { toast } from '../../lib/toast';
-import { font, t } from '../../theme';
+import { font, t, themed } from '../../theme';
 import { PACKAGE_KINDS, packageItemsLabel, productKind } from './productKinds';
 import { sellerPageStyles } from './SellerPage';
 import PhoneSaveBar, { PhoneSaveButton, savebarSpace } from './PhoneSaveBar';
@@ -528,7 +528,7 @@ export default function PackageForm({
   );
 }
 
-const styles = StyleSheet.create({
+const styles = themed(() => StyleSheet.create({
   root: { flex: 1 },
   flex: { flex: 1 },
   pkf: { gap: 12 },
@@ -539,4 +539,4 @@ const styles = StyleSheet.create({
   progressOn: { backgroundColor: P.green },
   // In line with the step's card: the 12px page gutter and the card's 16px padding.
   floatTotal: { position: 'absolute', left: 28, right: 28, zIndex: 50 },
-});
+}));

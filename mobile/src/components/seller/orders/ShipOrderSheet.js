@@ -6,11 +6,11 @@ import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { CameraView, useCameraPermissions } from 'expo-camera';
 import {
   BarcodeIcon, CheckIcon, TruckIcon, XIcon,
-} from 'phosphor-react-native';
+} from '../../../lib/icons';
 import OrderSheetFrame from '../../orders/OrderSheetFrame';
 import { CourierMark } from '../../orders/CourierTracking';
 import { toast } from '../../../lib/toast';
-import { font, t } from '../../../theme';
+import { font, t, themed } from '../../../theme';
 import { proofStyles } from './ProofPhotoSheet';
 
 // What a waybill's tracking number looks like once cleaned up.
@@ -229,7 +229,7 @@ export default function ShipOrderSheet({
   );
 }
 
-const styles = StyleSheet.create({
+const styles = themed(() => StyleSheet.create({
   body: { gap: 16 },
   label: { marginBottom: 8, fontSize: 13, lineHeight: 20.8, ...font(600), color: t.neutral[700] },
   courierList: { gap: 8 },
@@ -246,7 +246,7 @@ const styles = StyleSheet.create({
   choiceDesc: { fontSize: 13, lineHeight: 18.2, ...font(400), color: t.neutral[500] },
   check: {
     width: 22, height: 22, borderRadius: 11, alignItems: 'center', justifyContent: 'center',
-    borderWidth: 1.5, borderColor: t.neutral[300], backgroundColor: '#fff',
+    borderWidth: 1.5, borderColor: t.neutral[300], backgroundColor: t.neutral[0],
   },
   checkOn: { borderColor: t.primary[600], backgroundColor: t.primary[600] },
 
@@ -259,7 +259,7 @@ const styles = StyleSheet.create({
   scanBtn: {
     flexDirection: 'row', alignItems: 'center', gap: 6, height: 46, paddingHorizontal: 14, borderRadius: 12, backgroundColor: t.primary[600],
   },
-  scanBtnText: { fontSize: 14, lineHeight: 20, ...font(600), color: '#fff' },
+  scanBtnText: { fontSize: 14, lineHeight: 20, ...font(600), color: t.onBrand },
   trackHint: { marginTop: 8, fontSize: 12.5, lineHeight: 18.1, ...font(400), color: t.neutral[500] },
 
   scan: { overflow: 'hidden', aspectRatio: 4 / 3, borderRadius: 14, backgroundColor: '#0b1210' },
@@ -274,11 +274,11 @@ const styles = StyleSheet.create({
   },
   scanNote: {
     position: 'absolute', left: 12, right: 12, bottom: 10, textAlign: 'center',
-    fontSize: 13, lineHeight: 20.8, ...font(400), color: '#fff',
+    fontSize: 13, lineHeight: 20.8, ...font(400), color: t.onBrand,
     textShadowColor: 'rgba(0, 0, 0, 0.6)', textShadowOffset: { width: 0, height: 1 }, textShadowRadius: 3,
   },
   scanClose: {
     position: 'absolute', top: 8, right: 8, width: 34, height: 34, borderRadius: 17,
     alignItems: 'center', justifyContent: 'center', backgroundColor: 'rgba(0, 0, 0, 0.5)',
   },
-});
+}));

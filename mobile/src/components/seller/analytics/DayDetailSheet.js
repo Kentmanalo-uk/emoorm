@@ -2,21 +2,21 @@ import { useEffect, useState } from 'react';
 import { StyleSheet, Text, View } from 'react-native';
 import apiClient from '../../../api/client';
 import Sheet from '../../Sheet';
-import { font, t } from '../../../theme';
+import { font, t, themed } from '../../../theme';
 import { num, peso } from './format';
 import { Thumb } from './parts';
 
 const HAIRLINE = 'rgba(15, 23, 42, 0.05)';
 
 // .an-badge-<status>
-const BADGES = {
+const BADGES = themed(() => ({
   completed: [t.primary[100], t.primary[700]],
   cancelled: [t.danger[100], t.danger[700]],
   pending: [t.warning[100], t.warning[700]],
   confirmed: [t.info[100], t.info[700]],
   preparing: [t.violet[100], t.violet[700]],
   ready: ['#cffafe', t.teal[600]],
-};
+}));
 
 /**
  * One day's orders (web/src/components/analytics/DayDetailModal.jsx, a
@@ -105,7 +105,7 @@ function Figure({ label, value }) {
   );
 }
 
-const styles = StyleSheet.create({
+const styles = themed(() => StyleSheet.create({
   body: { paddingHorizontal: 0, paddingTop: 0 },
   empty: { paddingVertical: 32, paddingHorizontal: 16, textAlign: 'center', fontSize: 13, lineHeight: 18, color: t.neutral[500], ...font(400) },
   // .an-modal-summary
@@ -130,4 +130,4 @@ const styles = StyleSheet.create({
   itemName: { fontSize: 13, lineHeight: 18, color: t.neutral[900], ...font(400) },
   itemSub: { fontSize: 12, lineHeight: 16, color: t.neutral[500], ...font(400) },
   itemTotal: { fontSize: 13, lineHeight: 18, color: t.neutral[900], ...font(600) },
-});
+}));

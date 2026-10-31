@@ -5,7 +5,7 @@ import {
 import { useLocalSearchParams, useRouter } from 'expo-router';
 import {
   EnvelopeSimpleIcon, FacebookLogoIcon, InstagramLogoIcon, LifebuoyIcon, PaperPlaneRightIcon,
-} from 'phosphor-react-native';
+} from '../src/lib/icons';
 import apiClient from '../src/api/client';
 import ScreenHeader from '../src/components/ScreenHeader';
 import Select from '../src/components/Select';
@@ -17,7 +17,7 @@ import {
 } from '../src/lib/contact';
 import useAuthStore from '../src/store/authStore';
 import { toast } from '../src/lib/toast';
-import { font, t } from '../src/theme';
+import { font, t, themed } from '../src/theme';
 
 /* The website's links, at the app's paths. */
 const topics = [
@@ -308,7 +308,7 @@ export default function HelpCenter() {
   );
 }
 
-const styles = StyleSheet.create({
+const styles = themed(() => StyleSheet.create({
   screen: { flex: 1, backgroundColor: t.neutral[0] },
   content: { gap: 12, paddingHorizontal: 12, paddingTop: 12, paddingBottom: 24 },
   subtitle: { fontSize: 14, lineHeight: 21, color: t.neutral[500], ...font(400) },
@@ -351,7 +351,7 @@ const styles = StyleSheet.create({
     minHeight: 44, flexDirection: 'row', alignItems: 'center', justifyContent: 'center', gap: 7,
     paddingVertical: 10, paddingHorizontal: 18, borderRadius: 8, backgroundColor: t.primary[600],
   },
-  submitText: { fontSize: 13.5, lineHeight: 16.2, color: '#fff', ...font(500) },
+  submitText: { fontSize: 13.5, lineHeight: 16.2, color: t.onBrand, ...font(500) },
 
   reach: {
     flexDirection: 'row', flexWrap: 'wrap', alignItems: 'center', columnGap: 16, rowGap: 8,
@@ -373,4 +373,4 @@ const styles = StyleSheet.create({
   topicLink: { minHeight: 44, justifyContent: 'center' },
   topicLine: { borderTopWidth: 1, borderTopColor: t.neutral[150] },
   topicLinkText: { fontSize: 14, lineHeight: 22.4, color: t.primary[700], ...font(400) },
-});
+}));

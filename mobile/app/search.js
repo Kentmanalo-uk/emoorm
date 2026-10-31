@@ -5,7 +5,7 @@ import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import AsyncStorage from '@react-native-async-storage/async-storage';
 import {
   CaretLeftIcon, ClockCounterClockwiseIcon, EyeIcon, EyeSlashIcon, MagnifyingGlassIcon, SquaresFourIcon, TrashIcon, XIcon,
-} from 'phosphor-react-native';
+} from '../src/lib/icons';
 import apiClient from '../src/api/client';
 import ProductImage from '../src/components/ProductImage';
 import SearchCameraGlyph from '../src/components/search/SearchCameraGlyph';
@@ -13,7 +13,7 @@ import SearchCategoryIcon from '../src/components/search/SearchCategoryIcon';
 import { clearRecent, loadRecent, removeRecentTerm, saveRecent } from '../src/lib/shellSearch';
 import { fetchCategories } from '../src/lib/referenceData';
 import { resolveImg } from '../src/lib/media';
-import { font, t } from '../src/theme';
+import { font, t, themed } from '../src/theme';
 
 const HIDE_POPULAR_KEY = 'emoorm.search.hide-popular';
 // The website's /search shows the results once anything is asked (App.jsx SearchRoute).
@@ -316,7 +316,7 @@ function SuggestRow({ Icon, thumb, onPress, children }) {
   );
 }
 
-const styles = StyleSheet.create({
+const styles = themed(() => StyleSheet.create({
   screen: { flex: 1, backgroundColor: t.neutral[0] },
   srOnly: { position: 'absolute', width: 1, height: 1, overflow: 'hidden', opacity: 0 },
 
@@ -391,5 +391,5 @@ const styles = StyleSheet.create({
   sugText: { flex: 1, minWidth: 0, fontSize: 15, lineHeight: 24, ...font(400), color: t.neutral[800] },
   sugBold: { ...font(500) },
   sugSmall: { fontSize: 12, lineHeight: 19.2, ...font(400), color: t.neutral[500] },
-});
+}));
 

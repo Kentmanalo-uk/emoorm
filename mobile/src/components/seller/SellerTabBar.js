@@ -1,9 +1,10 @@
 import { Pressable, StyleSheet, Text, View } from 'react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
-import { ChatCircleDotsIcon, HouseIcon, MegaphoneIcon, PackageIcon, UserIcon } from 'phosphor-react-native';
-import { font, t } from '../../theme';
+import { ChatCircleDotsIcon, HouseIcon, MegaphoneIcon, PackageIcon, UserIcon } from '../../lib/icons';
+import { colors, font, ink, t, themed, veil } from '../../theme';
 import { GlassBackdrop, floatingTabBar, liquidGlass } from '../Glass';
 import { openAccountSheet } from '../AccountSheet';
+import { longPressTab, pressTab } from '../tabBarEvents';
 import { useSellerShell } from './SellerShell';
 
 // The tabs, by route name in app/seller/(tabs).
@@ -21,7 +22,8 @@ const TABS = {
  * that fills in on the active tab, 11px labels, green when active, and the
  * unread chats as a red count on Chat. For <Tabs tabBar={…}>.
  */
-export default function SellerTabBar({ state, navigation }) {
+export default function SellerTabBar(nav) {
+  const { state } = nav;
   const insets = useSafeAreaInsets();
   const { waiting } = useSellerShell();
   const current = state.routes[state.index]?.name;
@@ -38,10 +40,7 @@ export default function SellerTabBar({ state, navigation }) {
         const active = route.name === current;
         const color = active ? t.primary[600] : t.neutral[500];
         const count = badge ? Number(waiting[badge]?.count || 0) : 0;
-        const onPress = () => {
-          const event = navigation.emit({ type: 'tabPress', target: route.key, canPreventDefault: true });
-          if (!active && !event.defaultPrevented) navigation.navigate(route.name, route.params);
-        };
+        const onPress = () => pressTab(nav, route, active);
         return (
           <Pressable
             key={route.key}
@@ -50,7 +49,7 @@ export default function SellerTabBar({ state, navigation }) {
             accessibilityLabel={count ? `${label}, ${count} unread` : label}
             onPress={onPress}
             onLongPress={() => {
-              navigation.emit({ type: 'tabLongPress', target: route.key });
+              longPressTab(nav, route);
               // Hold Me: the account sheet (switch account, log out).
               if (route.name === 'menu') openAccountSheet();
             }}
@@ -73,7 +72,7 @@ export default function SellerTabBar({ state, navigation }) {
   );
 }
 
-const styles = StyleSheet.create({
+const styles = themed(() => StyleSheet.create({
   // iOS 26: Liquid Glass behind the icons instead of the website's white.
   barGlass: { backgroundColor: 'transparent' },
   // iOS 26: over the bottom of the page, full width, so the page shows through.
@@ -83,8 +82,8 @@ const styles = StyleSheet.create({
     minHeight: 68,
     paddingTop: 7,
     paddingHorizontal: 6,
-    backgroundColor: 'rgba(255, 255, 255, 0.98)',
-    boxShadow: [{ offsetX: 0, offsetY: -4, blurRadius: 16, color: 'rgba(15, 23, 42, 0.08)' }],
+    backgroundColor: veil(0.98),
+    boxShadow: [{ offsetX: 0, offsetY: -4, blurRadius: 16, color: ink(0.08) }],
   },
   tab: { flex: 1, minWidth: 0, alignItems: 'center', justifyContent: 'center', gap: 3 },
   label: { maxWidth: '100%', fontSize: 11, lineHeight: 12.1, ...font(500) },
@@ -100,5 +99,6 @@ const styles = StyleSheet.create({
     justifyContent: 'center',
     backgroundColor: t.danger[500],
   },
-  badgeText: { fontSize: 9, lineHeight: 10, color: '#fff', ...font(700) },
-});
+  // The badge is the same red in either mode, so its count stays white.
+  badgeText: { fontSize: 9, lineHeight: 10, color: colors.white, ...font(700) },
+}));

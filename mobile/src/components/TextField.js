@@ -1,7 +1,7 @@
 import { useState } from 'react';
 import { Pressable, View, Text, TextInput, StyleSheet } from 'react-native';
-import { EyeIcon as Eye, EyeSlashIcon as EyeOff } from 'phosphor-react-native';
-import { colors, control, fontFamily, radius, spacing, typography } from '../theme';
+import { EyeIcon as Eye, EyeSlashIcon as EyeOff } from '../lib/icons';
+import { colors, control, fontFamily, radius, spacing, typography, themed } from '../theme';
 
 export default function TextField({
   label,
@@ -58,7 +58,7 @@ export default function TextField({
   );
 }
 
-const styles = StyleSheet.create({
+const styles = themed(() => StyleSheet.create({
   container: { marginBottom: spacing.lg },
   label: {
     ...typography.caption,
@@ -90,4 +90,4 @@ const styles = StyleSheet.create({
   inputFocused: { backgroundColor: colors.white, borderWidth: 1, borderColor: colors.primary },
   inputError: { borderWidth: 1, borderColor: colors.error, backgroundColor: colors.white },
   error: { ...typography.caption, color: colors.error, marginTop: spacing.xs },
-});
+}));

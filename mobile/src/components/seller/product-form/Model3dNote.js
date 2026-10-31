@@ -1,6 +1,6 @@
 import { Linking, Pressable, StyleSheet, Text, View } from 'react-native';
 import { useCartSettings } from '../../cart/cartSettings';
-import { font } from '../../../theme';
+import { font, themed } from '../../../theme';
 import { CubeMark } from '../../product/Product3dSheet';
 import { PF } from './parts';
 
@@ -36,10 +36,10 @@ export default function Model3dNote({ product, kind }) {
   );
 }
 
-const styles = StyleSheet.create({
+const styles = themed(() => StyleSheet.create({
   box: { gap: 2, paddingVertical: 2, paddingHorizontal: 4 },
   has: { flexDirection: 'row', alignItems: 'center', gap: 6 },
   hasText: { fontSize: 13.5, lineHeight: 21.6, color: PF.ink, ...font(500) },
   link: { alignSelf: 'flex-start', minHeight: 32, justifyContent: 'center' },
   linkText: { fontSize: 13.5, lineHeight: 21.6, color: PF.greenDark, ...font(600) },
-});
+}));

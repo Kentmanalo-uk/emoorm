@@ -1,6 +1,6 @@
 import { useEffect, useRef } from 'react';
 import { Animated, StyleSheet } from 'react-native';
-import { colors, radius } from '../theme';
+import { colors, radius, themed } from '../theme';
 
 export default function LoadingSkeleton({ width = '100%', height = 16, style, borderRadius = radius.base }) {
   const opacity = useRef(new Animated.Value(0.45)).current;
@@ -27,6 +27,6 @@ export default function LoadingSkeleton({ width = '100%', height = 16, style, bo
   );
 }
 
-const styles = StyleSheet.create({
+const styles = themed(() => StyleSheet.create({
   base: { backgroundColor: colors.gray200, overflow: 'hidden' },
-});
+}));

@@ -1,7 +1,7 @@
 import { Fragment } from 'react';
 import { Linking, Platform, ScrollView, StyleSheet, Text, View } from 'react-native';
 import { useRouter } from 'expo-router';
-import { font, t } from '../../theme';
+import { font, t, themed } from '../../theme';
 import PublicHeader from './PublicHeader';
 
 /*
@@ -61,7 +61,7 @@ export default function LegalDocument({ title, updated, blocks }) {
 
 const LINE = 23; // 14px × 1.65, as the browser lays it out
 
-const styles = StyleSheet.create({
+const styles = themed(() => StyleSheet.create({
   screen: { flex: 1, backgroundColor: t.neutral[0] },
   page: { paddingTop: 18, paddingBottom: 6, paddingHorizontal: SIDE, backgroundColor: t.neutral[0] },
   p: { marginBottom: 14, fontSize: 14, lineHeight: LINE, color: t.neutral[700], ...font(400) },
@@ -81,4 +81,4 @@ const styles = StyleSheet.create({
     fontSize: 13,
     color: t.neutral[700],
   },
-});
+}));

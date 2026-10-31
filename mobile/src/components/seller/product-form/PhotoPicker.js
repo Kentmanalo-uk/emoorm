@@ -3,8 +3,8 @@ import {
   ActivityIndicator, Image, Platform, Pressable, StyleSheet, Text, View,
 } from 'react-native';
 import * as ImagePicker from 'expo-image-picker';
-import { CameraIcon, ImagesIcon, XIcon } from 'phosphor-react-native';
-import { font, t } from '../../../theme';
+import { CameraIcon, ImagesIcon, XIcon } from '../../../lib/icons';
+import { font, t, themed, veil } from '../../../theme';
 import { toast } from '../../../lib/toast';
 import { uploadImage } from '../../../lib/upload';
 import { resolveImg } from '../../../lib/media';
@@ -158,7 +158,7 @@ export default function PhotoPicker({ images, onChange, empty = 'Add photos' }) 
   );
 }
 
-const styles = StyleSheet.create({
+const styles = themed(() => StyleSheet.create({
   empty: {
     alignItems: 'center', justifyContent: 'center', gap: 6, width: '100%', minHeight: 168, padding: 20,
     borderWidth: 1.5, borderStyle: 'dashed', borderColor: t.neutral[300], borderRadius: 14, backgroundColor: t.neutral[50],
@@ -183,10 +183,10 @@ const styles = StyleSheet.create({
     position: 'absolute', left: 6, bottom: 6, paddingVertical: 4, paddingHorizontal: 8, borderRadius: 999, overflow: 'hidden',
     fontSize: 11.5, lineHeight: 13.8, ...font(600),
   },
-  coverTag: { backgroundColor: PF.green, color: '#fff' },
+  coverTag: { backgroundColor: PF.green, color: t.onBrand },
   makeCover: {
     position: 'absolute', left: 6, bottom: 6, paddingVertical: 4, paddingHorizontal: 8, borderRadius: 999,
-    backgroundColor: 'rgba(255, 255, 255, 0.92)',
+    backgroundColor: veil(0.92),
   },
   tagText: { fontSize: 11.5, lineHeight: 13.8, ...font(600) },
   makeCoverText: { color: PF.ink },
@@ -198,4 +198,4 @@ const styles = StyleSheet.create({
   },
   addText: { color: PF.green, fontSize: 13, lineHeight: 20.8, ...font(600) },
   addCount: { color: t.neutral[500], fontSize: 11.5, lineHeight: 18.4, ...font(500) },
-});
+}));

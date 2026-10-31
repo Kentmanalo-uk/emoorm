@@ -8,13 +8,13 @@ import * as ImagePicker from 'expo-image-picker';
 import { SvgXml } from 'react-native-svg';
 import {
   CheckCircleIcon, CheckIcon, MapPinIcon, MoneyIcon, QrCodeIcon, StorefrontIcon, TrashIcon, TruckIcon, UploadSimpleIcon, WarningIcon,
-} from 'phosphor-react-native';
+} from '../../../lib/icons';
 import apiClient from '../../../api/client';
 import { resolveImg } from '../../../lib/media';
 import { toast } from '../../../lib/toast';
 import { uploadImage } from '../../../lib/upload';
 import { fetchMunicipalities } from '../../../lib/referenceData';
-import { font, t } from '../../../theme';
+import { font, t, themed } from '../../../theme';
 import SellerPage, { SellerPrivateLine } from '../SellerPage';
 import { useSellerShell } from '../SellerShell';
 import PhoneSaveBar, { savebarSpace } from '../PhoneSaveBar';
@@ -755,7 +755,7 @@ export default function SellerFulfillmentScreen({ part: rawPart }) {
   );
 }
 
-const styles = StyleSheet.create({
+const styles = themed(() => StyleSheet.create({
   flex: { flex: 1 },
   // The list runs edge to edge, 4px under the bar as on the website.
   flush: { paddingHorizontal: 0 },
@@ -805,11 +805,11 @@ const styles = StyleSheet.create({
   qrKinds: { flexDirection: 'row', gap: 10 },
   qrKind: {
     flex: 1, height: 60, paddingHorizontal: 14, alignItems: 'center', justifyContent: 'center',
-    borderWidth: 1.5, borderColor: t.neutral[200], borderRadius: 12, backgroundColor: '#fff',
+    borderWidth: 1.5, borderColor: t.neutral[200], borderRadius: 12, backgroundColor: t.neutral[0],
   },
   qrKindOn: { borderColor: t.primary[600], boxShadow: '0px 0px 0px 3px rgba(5, 150, 105, 0.12)' },
   qrKindCheck: {
-    position: 'absolute', top: -8, right: -8, width: 22, height: 22, borderRadius: 11, borderWidth: 2, borderColor: '#fff',
+    position: 'absolute', top: -8, right: -8, width: 22, height: 22, borderRadius: 11, borderWidth: 2, bordercolor: t.onBrand,
     alignItems: 'center', justifyContent: 'center', backgroundColor: t.primary[600],
   },
   qrDrop: {
@@ -823,7 +823,7 @@ const styles = StyleSheet.create({
     flexDirection: 'row', alignItems: 'center', gap: 14, padding: 12,
     borderWidth: 1, borderColor: t.neutral[200], borderRadius: 12, backgroundColor: t.neutral[0],
   },
-  qrImg: { width: 112, height: 112, borderRadius: 8, backgroundColor: '#fff' },
+  qrImg: { width: 112, height: 112, borderRadius: 8, backgroundColor: t.neutral[0] },
   qrActions: { flex: 1, minWidth: 0, gap: 8 },
   qrAction: {
     flexDirection: 'row', alignItems: 'center', justifyContent: 'center', gap: 6, minHeight: 40, paddingHorizontal: 14,
@@ -832,4 +832,4 @@ const styles = StyleSheet.create({
   qrActionText: { fontSize: 14, lineHeight: 20, color: t.neutral[800], ...font(500) },
   qrRemove: { borderColor: t.danger[100] },
   qrRemoveText: { color: t.danger[600] },
-});
+}));

@@ -1,7 +1,7 @@
 import {
   ArchiveIcon, CheckCircleIcon, ClockIcon, EyeSlashIcon, WarningCircleIcon,
-} from 'phosphor-react-native';
-import { t } from '../../../theme';
+} from '../../../lib/icons';
+import { t, themed } from '../../../theme';
 import { isTodayProduct } from '../../../lib/availability';
 import { isStockless, productKind } from '../productKinds';
 
@@ -12,11 +12,11 @@ import { isStockless, productKind } from '../productKinds';
  */
 
 // .seller-badge tones (SellerDashboard.css .status-*).
-const TONES = {
+const TONES = themed(() => ({
   pending: { bg: t.warning[100], fg: t.warning[700] },
   confirmed: { bg: t.info[100], fg: t.info[700] },
   cancelled: { bg: t.danger[100], fg: t.danger[700] },
-};
+}));
 
 export const STATUS_LABELS = {
   PENDING: { label: 'Pending Approval', tone: TONES.pending, Icon: ClockIcon },

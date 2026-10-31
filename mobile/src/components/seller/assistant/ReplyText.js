@@ -1,5 +1,5 @@
 import { StyleSheet, Text, View } from 'react-native';
-import { font } from '../../../theme';
+import { font, themed } from '../../../theme';
 
 /*
  * Ate Moormy's answers, as paragraphs and lists (web/src/components/moormy/
@@ -51,7 +51,7 @@ export default function ReplyText({ text, style }) {
   });
 }
 
-const styles = StyleSheet.create({
+const styles = themed(() => StyleSheet.create({
   bold: { ...font(600) },
   italic: { fontStyle: 'italic' },
   blockGap: { marginTop: 8 },
@@ -60,4 +60,4 @@ const styles = StyleSheet.create({
   liGap: { marginTop: 4 },
   marker: { position: 'absolute', left: -20, width: 18, textAlign: 'right', paddingRight: 4 },
   liText: { flex: 1 },
-});
+}));

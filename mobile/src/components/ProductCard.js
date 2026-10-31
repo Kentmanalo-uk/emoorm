@@ -2,9 +2,9 @@ import { useRef } from 'react';
 import { Pressable, StyleSheet, Text, View, useWindowDimensions } from 'react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { useRouter } from 'expo-router';
-import { MapPinIcon, StarIcon } from 'phosphor-react-native';
+import { MapPinIcon, StarIcon } from '../lib/icons';
 import { saleInfo } from '../lib/variantPricing';
-import { font, t } from '../theme';
+import { font, t, themed } from '../theme';
 import ProductImage from './ProductImage';
 import { ProductStats } from './ProductStats';
 import { canFlyHero, launchHero, productGalleryBox } from './HeroFlight';
@@ -171,7 +171,7 @@ function ResultMeta({ product }) {
   );
 }
 
-const styles = StyleSheet.create({
+const styles = themed(() => StyleSheet.create({
   // Phones: square corners, white tile (index.css .layout-main .product-card).
   card: { minWidth: 0, overflow: 'hidden', backgroundColor: t.neutral[0] },
   cardGrid: { width: '48%' },
@@ -206,8 +206,8 @@ const styles = StyleSheet.create({
 
   badge: {
     position: 'absolute', top: 6, left: 6, paddingVertical: 3, paddingHorizontal: 6, borderRadius: 4, overflow: 'hidden',
-    fontSize: 11, lineHeight: 14, ...font(500), color: '#fff', textTransform: 'uppercase',
+    fontSize: 11, lineHeight: 14, ...font(500), color: t.onBrand, textTransform: 'uppercase',
   },
   badgeOut: { backgroundColor: t.danger[500] },
   badgeFeatured: { backgroundColor: t.warning[500] },
-});
+}));

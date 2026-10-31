@@ -1,8 +1,8 @@
 import { useEffect, useState } from 'react';
 import { StyleSheet, Text, View } from 'react-native';
-import { HandshakeIcon, LightningIcon, TagIcon } from 'phosphor-react-native';
+import { HandshakeIcon, LightningIcon, TagIcon } from '../../lib/icons';
 import { saleInfo } from '../../lib/variantPricing';
-import { font, t } from '../../theme';
+import { font, t, themed } from '../../theme';
 import { peso } from './productLib';
 
 /*
@@ -79,7 +79,7 @@ export default function PriceNotes({ product, tiers = [], negotiable = false, st
   );
 }
 
-const styles = StyleSheet.create({
+const styles = themed(() => StyleSheet.create({
   notes: { gap: 6 },
   note: { flexDirection: 'row', alignItems: 'flex-start', gap: 8 },
   icon: { flexShrink: 0, marginTop: 2 },
@@ -89,4 +89,4 @@ const styles = StyleSheet.create({
   dot: { ...font(400), color: t.neutral[700] },
   // A space's width between the tiers, as the inline text has on the website.
   tiers: { flex: 1, minWidth: 0, flexDirection: 'row', flexWrap: 'wrap', columnGap: 3.5 },
-});
+}));

@@ -1,17 +1,18 @@
 import { useId } from 'react';
 import { StyleSheet, Text, View } from 'react-native';
 import Svg, { Defs, G, LinearGradient, Rect, Stop } from 'react-native-svg';
-import { font, t } from '../../theme';
+import { ikionShapes } from '../../lib/ikionNative';
+import { font, t, themed } from '../../theme';
 import stopPaint from '../../lib/stopPaint';
 
 // Ate Moormy's pink and green (web Moormy.css --mmy-*).
-export const MMY = {
+export const MMY = themed(() => ({
   pink: t.accent[500],
   pinkSoft: '#fdf2f8',
   pinkLine: '#fbcfe8',
   pinkInk: '#be185d',
   green: t.primary[500],
-};
+}));
 
 /**
  * A CSS linear-gradient as a background: fills its parent (absolute), with
@@ -47,18 +48,17 @@ export function AiTag({ style }) {
  * A Phosphor icon filled with a gradient, drawn from the icon's own fill
  * paths (the website fills its phone icons with url(#sh-grad-<tone>)).
  */
-const iconPaths = (Icon) => Icon({}).props.weights.get('fill');
 export function GradientIcon({ Icon, size = 24, colors }) {
   const id = `gi${useId().replace(/[^a-zA-Z0-9]/g, '')}`;
   return (
-    <Svg width={size} height={size} viewBox="0 0 256 256">
+    <Svg width={size} height={size} viewBox="0 0 24 24">
       <Defs>
         <LinearGradient id={id} x1="0" y1="0" x2="1" y2="1">
           <Stop offset="0" stopColor={colors[0]} />
           <Stop offset="1" stopColor={colors[1]} />
         </LinearGradient>
       </Defs>
-      <G fill={`url(#${id})`}>{iconPaths(Icon)}</G>
+      <G fill={`url(#${id})`}>{ikionShapes(Icon, { paint: `url(#${id})` })}</G>
     </Svg>
   );
 }
@@ -76,7 +76,7 @@ export const TOOL_GRADIENTS = {
   slate: ['#cbd5e1', '#475569'],
 };
 
-const styles = StyleSheet.create({
+const styles = themed(() => StyleSheet.create({
   tag: { marginLeft: 4, paddingHorizontal: 6, paddingVertical: 1, borderRadius: 999, overflow: 'hidden', alignSelf: 'center' },
-  tagText: { fontSize: 11, lineHeight: 15, letterSpacing: 0.3, color: '#fff', ...font(500) },
-});
+  tagText: { fontSize: 11, lineHeight: 15, letterSpacing: 0.3, color: t.onBrand, ...font(500) },
+}));

@@ -3,8 +3,8 @@ import {
   Animated, Easing, Modal, Platform, Pressable, ScrollView, StyleSheet, Text, View, useWindowDimensions,
 } from 'react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
-import { CaretDownIcon, CheckIcon } from 'phosphor-react-native';
-import { font, t } from '../../../theme';
+import { CaretDownIcon, CheckIcon } from '../../../lib/icons';
+import { font, t, themed } from '../../../theme';
 import { P } from './pkfLib';
 import { SheetFrame } from '../../Sheet';
 
@@ -141,7 +141,7 @@ function OptionList({ options, value, onPick, style }) {
   );
 }
 
-const styles = StyleSheet.create({
+const styles = themed(() => StyleSheet.create({
   // .pkf-input.pkf-select.ui-select (the caret sits inside the 40px right padding's start)
   trigger: {
     flexDirection: 'row',
@@ -194,4 +194,4 @@ const styles = StyleSheet.create({
   optionOnActive: { backgroundColor: t.primary[50] },
   optionText: { flexShrink: 1, fontSize: 16, lineHeight: 20.8, color: t.neutral[800], ...font(400) },
   optionTextOn: { color: t.primary[700], ...font(600) },
-});
+}));

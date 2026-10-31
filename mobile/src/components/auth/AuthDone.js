@@ -1,5 +1,5 @@
 import { StyleSheet, Text, View } from 'react-native';
-import { font, t } from '../../theme';
+import { font, t, themed } from '../../theme';
 
 /*
  * The centred "done" state of the password and email-confirmation sheets
@@ -28,7 +28,7 @@ export default function AuthDone({ children, style }) {
   return <View style={[styles.done, style]}>{children}</View>;
 }
 
-const styles = StyleSheet.create({
+const styles = themed(() => StyleSheet.create({
   done: { paddingTop: 24 },
   icon: {
     width: 72,
@@ -51,4 +51,4 @@ const styles = StyleSheet.create({
     ...font(500),
   },
   text: { marginBottom: 24, fontSize: 15, lineHeight: 22.5, color: t.neutral[500], textAlign: 'center', ...font(400) },
-});
+}));

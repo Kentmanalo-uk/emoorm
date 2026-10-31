@@ -1,7 +1,7 @@
 import { useState } from 'react';
 import { Image, StyleSheet, Text, View } from 'react-native';
 import { resolveImg } from '../../lib/media';
-import { font, t } from '../../theme';
+import { font, ink, t, themed } from '../../theme';
 import { GradientIcon, TOOL_GRADIENTS } from './InboxGradient';
 
 const initialsOf = (name) => String(name || '?').trim().split(/\s+/).map((part) => part[0]).slice(0, 2).join('')
@@ -57,15 +57,15 @@ export default function NotificationPicture({
   );
 }
 
-const styles = StyleSheet.create({
+const styles = themed(() => StyleSheet.create({
   tile: { alignItems: 'center', justifyContent: 'center', flexShrink: 0 },
-  outline: { borderWidth: 1, borderColor: 'rgba(15, 23, 42, 0.06)' },
+  outline: { borderWidth: 1, borderColor: ink(0.06) },
   initials: { alignItems: 'center', justifyContent: 'center', backgroundColor: t.primary[100] },
   initialsText: { color: t.primary[700], ...font(500) },
   // The badge's 2px white ring: a white disc 4px wider, centred where the
   // website's badge sits (right/bottom -4px).
   badge: {
-    position: 'absolute', right: -6, bottom: -6, alignItems: 'center', justifyContent: 'center', backgroundColor: '#fff',
+    position: 'absolute', right: -6, bottom: -6, alignItems: 'center', justifyContent: 'center', backgroundColor: t.neutral[0],
   },
   badgeInner: { alignItems: 'center', justifyContent: 'center' },
-});
+}));

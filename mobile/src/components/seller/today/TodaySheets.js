@@ -2,8 +2,8 @@ import { useEffect, useState } from 'react';
 import {
   Pressable, StyleSheet, Text, TextInput, View,
 } from 'react-native';
-import { MinusIcon, PlusIcon } from 'phosphor-react-native';
-import { font, t } from '../../../theme';
+import { MinusIcon, PlusIcon } from '../../../lib/icons';
+import { font, t, themed } from '../../../theme';
 import Sheet, { SheetButton, SheetOption } from '../../Sheet';
 import { momentLabel } from '../../../lib/availability';
 import { DateTimeField, DateTimePanel } from './DateTimeField';
@@ -131,7 +131,7 @@ export function MoreSheet({ more, onExtend, onEnd, onClose }) {
   );
 }
 
-const styles = StyleSheet.create({
+const styles = themed(() => StyleSheet.create({
   // .stw-form
   form: { gap: 14, paddingBottom: 4 },
   // .scm-field
@@ -155,4 +155,4 @@ const styles = StyleSheet.create({
     borderWidth: 1, borderColor: t.neutral[200], borderRadius: 12, backgroundColor: t.neutral[0],
   },
   addText: { fontSize: 16, lineHeight: 22, ...font(500), color: t.neutral[800] },
-});
+}));

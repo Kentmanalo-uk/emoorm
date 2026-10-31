@@ -4,8 +4,8 @@ import {
 } from 'react-native';
 import {
   CheckIcon, InfoIcon, MinusIcon, PlusIcon, WarningIcon,
-} from 'phosphor-react-native';
-import { font, t } from '../../../theme';
+} from '../../../lib/icons';
+import { font, t, themed } from '../../../theme';
 import { PACKAGE_KINDS } from '../productKinds';
 import {
   NAME_MAX, P, STOCK_MAX, aheadText, peso,
@@ -214,7 +214,7 @@ function CountInput({ value, onChange, error, onSubmit }) {
   );
 }
 
-const styles = StyleSheet.create({
+const styles = themed(() => StyleSheet.create({
   kinds: { flexDirection: 'row', flexWrap: 'wrap', gap: 8 },
   kind: {
     minHeight: 38,
@@ -227,7 +227,7 @@ const styles = StyleSheet.create({
   },
   kindOn: { borderColor: P.green, backgroundColor: P.green },
   kindText: { fontSize: 14, lineHeight: 22.4, color: t.neutral[700], ...font(500) },
-  kindTextOn: { color: '#fff' },
+  kindTextOn: { color: t.onBrand },
 
   money: {
     flexDirection: 'row',
@@ -283,7 +283,7 @@ const styles = StyleSheet.create({
   },
   wayOn: { borderColor: P.green, backgroundColor: P.greenSoft },
   radio: {
-    width: 20, height: 20, marginTop: 1, alignItems: 'center', justifyContent: 'center', borderWidth: 2, borderColor: t.neutral[300], borderRadius: 10, backgroundColor: '#fff',
+    width: 20, height: 20, marginTop: 1, alignItems: 'center', justifyContent: 'center', borderWidth: 2, borderColor: t.neutral[300], borderRadius: 10, backgroundColor: t.neutral[0],
   },
   radioOn: { borderColor: P.green },
   radioDot: { width: 10, height: 10, borderRadius: 5, backgroundColor: P.green },
@@ -299,4 +299,4 @@ const styles = StyleSheet.create({
   },
   noteIcon: { marginTop: 2 },
   noteText: { flex: 1, fontSize: 12.5, lineHeight: 18.125, color: t.info[700], ...font(400) },
-});
+}));

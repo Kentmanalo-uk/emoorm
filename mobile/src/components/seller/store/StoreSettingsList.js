@@ -1,7 +1,7 @@
 import { Children } from 'react';
 import { Pressable, StyleSheet, Text, View } from 'react-native';
-import { CaretRightIcon } from 'phosphor-react-native';
-import { font, t } from '../../../theme';
+import { CaretRightIcon } from '../../../lib/icons';
+import { font, ink, t, themed } from '../../../theme';
 
 /*
  * Phones: a settings page broken into its parts, one row each showing what
@@ -51,7 +51,7 @@ export function SettingsRow({ onPress, Icon, label, value, missing = false, tag 
   );
 }
 
-const styles = StyleSheet.create({
+const styles = themed(() => StyleSheet.create({
   list: { marginHorizontal: -12, backgroundColor: t.neutral[0] },
   line: { borderTopWidth: 1, borderTopColor: t.neutral[100] },
   row: { flexDirection: 'row', alignItems: 'center', gap: 14, minHeight: 64, paddingVertical: 12, paddingLeft: 16, paddingRight: 14 },
@@ -67,7 +67,7 @@ const styles = StyleSheet.create({
     height: 12,
     marginRight: 4,
     borderRadius: 6,
-    boxShadow: [{ offsetX: 0, offsetY: 0, blurRadius: 0, spreadDistance: 1, inset: true, color: 'rgba(15, 23, 42, 0.12)' }],
+    boxShadow: [{ offsetX: 0, offsetY: 0, blurRadius: 0, spreadDistance: 1, inset: true, color: ink(0.12) }],
   },
   swatchLast: { marginRight: 8 },
   tag: {
@@ -82,4 +82,4 @@ const styles = StyleSheet.create({
     lineHeight: 15,
     ...font(500),
   },
-});
+}));

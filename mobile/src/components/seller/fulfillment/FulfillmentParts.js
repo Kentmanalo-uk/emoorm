@@ -3,8 +3,8 @@ import {
   Pressable, StyleSheet, Text, TextInput, View,
 } from 'react-native';
 import { useRouter } from 'expo-router';
-import { CaretRightIcon, CheckCircleIcon, CheckIcon } from 'phosphor-react-native';
-import { font, t } from '../../../theme';
+import { CaretRightIcon, CheckCircleIcon, CheckIcon } from '../../../lib/icons';
+import { font, t, themed } from '../../../theme';
 
 /*
  * The pieces of the seller's Delivery & payment pages on phones
@@ -219,7 +219,7 @@ export function OutlineButton({ label, onPress, disabled = false, style }) {
   );
 }
 
-const styles = StyleSheet.create({
+const styles = themed(() => StyleSheet.create({
   list: { overflow: 'hidden', borderRadius: 16, backgroundColor: t.neutral[0] },
   row: {
     flexDirection: 'row', alignItems: 'center', gap: 14, minHeight: 64, paddingVertical: 12, paddingRight: 14, paddingLeft: 16,
@@ -265,7 +265,7 @@ const styles = StyleSheet.create({
   qNum: {
     width: 24, height: 24, borderRadius: 12, alignItems: 'center', justifyContent: 'center', backgroundColor: t.primary[600], flexShrink: 0,
   },
-  qNumText: { fontSize: 12.5, lineHeight: 15, color: '#fff', ...font(500) },
+  qNumText: { fontSize: 12.5, lineHeight: 15, color: t.onBrand, ...font(500) },
   qTitleText: { flex: 1, fontSize: 16, lineHeight: 22, color: t.neutral[900], ...font(500) },
 
   hint: { fontSize: 12, lineHeight: 18, color: t.neutral[500], ...font(400) },
@@ -298,14 +298,14 @@ const styles = StyleSheet.create({
   },
   freeOn: { borderColor: t.primary[600], backgroundColor: t.primary[600] },
   freeText: { fontSize: 12.5, lineHeight: 16, color: t.neutral[600], ...font(600) },
-  freeTextOn: { color: '#fff' },
+  freeTextOn: { color: t.onBrand },
 
   switch: {
     width: 46, height: 28, borderRadius: 999, backgroundColor: t.neutral[300], flexShrink: 0,
   },
   switchOn: { backgroundColor: t.primary[600] },
   knob: {
-    position: 'absolute', top: 3, left: 3, width: 22, height: 22, borderRadius: 11, backgroundColor: '#fff',
+    position: 'absolute', top: 3, left: 3, width: 22, height: 22, borderRadius: 11, backgroundColor: t.neutral[0],
     boxShadow: '0px 1px 2px rgba(15, 23, 42, 0.25)',
   },
   knobOn: { transform: [{ translateX: 18 }] },
@@ -326,4 +326,4 @@ const styles = StyleSheet.create({
   outlineOff: { opacity: 0.5 },
   outlinePressed: { backgroundColor: t.neutral[50] },
   outlineText: { fontSize: 13, lineHeight: 16, color: t.neutral[700], ...font(500) },
-});
+}));

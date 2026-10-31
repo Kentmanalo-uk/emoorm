@@ -1,8 +1,8 @@
 import { ScrollView, StyleSheet, Text, View } from 'react-native';
 import { useRouter } from 'expo-router';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
-import { HeartIcon, StorefrontIcon } from 'phosphor-react-native';
-import { border, font, t } from '../../theme';
+import { HeartIcon, StorefrontIcon } from '../../lib/icons';
+import { border, font, t, themed } from '../../theme';
 import EmptyState from '../EmptyState';
 import ShellPageMenu from '../ShellPageMenu';
 import HeaderGlow from '../HeaderGlow';
@@ -45,7 +45,7 @@ export default function CartLoginGate() {
   );
 }
 
-const styles = StyleSheet.create({
+const styles = themed(() => StyleSheet.create({
   screen: { flex: 1, backgroundColor: t.neutral[0] },
   content: { flexGrow: 1 },
   // .login-gate-head: 48px, 16px in on the left, the ⋯ 8px from the edge;
@@ -61,4 +61,4 @@ const styles = StyleSheet.create({
     zIndex: 120,
   },
   heading: { flexShrink: 1, fontSize: 22, lineHeight: 25.3, color: t.neutral[900], ...font(500) },
-});
+}));

@@ -1,7 +1,7 @@
 import { useState } from 'react';
 import { Pressable, StyleSheet, Text, View } from 'react-native';
 import Svg, { Circle, Path, Text as SvgText } from 'react-native-svg';
-import { font, fontFamily, t } from '../../../theme';
+import { font, fontFamily, t, themed } from '../../../theme';
 import EmptyState from '../../EmptyState';
 
 /*
@@ -102,7 +102,7 @@ export function TrendLine({ data = [], height = 60, valueKey = 'total', color = 
   );
 }
 
-const STATUS_COLORS = {
+const STATUS_COLORS = themed(() => ({
   PENDING: t.warning[500],
   CONFIRMED: t.info[500],
   PREPARING: t.violet[500],
@@ -113,7 +113,7 @@ const STATUS_COLORS = {
   HIDDEN: t.neutral[500],
   SUSPENDED: t.danger[500],
   ARCHIVED: t.neutral[700],
-};
+}));
 
 /** The order statuses as a ring with the total inside, and the legend beside it. */
 export function StatusDonut({
@@ -173,7 +173,7 @@ export function StatusDonut({
   );
 }
 
-const styles = StyleSheet.create({
+const styles = themed(() => StyleSheet.create({
   chartWrap: { gap: 10 },
   summary: { flexDirection: 'row', alignItems: 'center', gap: 24, paddingHorizontal: 18 },
   summaryItem: { gap: 1 },
@@ -207,4 +207,4 @@ const styles = StyleSheet.create({
   swatch: { width: 10, height: 10, borderRadius: 3 },
   legendKey: { flex: 1, fontSize: 12.5, lineHeight: 17, color: t.neutral[600], ...font(400) },
   legendVal: { fontSize: 12.5, lineHeight: 17, color: t.neutral[900], ...font(700) },
-});
+}));

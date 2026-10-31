@@ -2,12 +2,12 @@ import { useState } from 'react';
 import {
   Image, Pressable, StyleSheet, Text, TextInput, View,
 } from 'react-native';
-import { CheckCircleIcon, StarIcon } from 'phosphor-react-native';
+import { CheckCircleIcon, StarIcon } from '../../../lib/icons';
 import apiClient from '../../../api/client';
 import { resolveImg } from '../../../lib/media';
 import { toast } from '../../../lib/toast';
 import { errorText } from '../../profile/profileLib';
-import { font, t } from '../../../theme';
+import { font, t, themed } from '../../../theme';
 import { BADGE, formatTime } from './supportLib';
 
 /*
@@ -166,7 +166,7 @@ export function Message({ mine, name, body, createdAt }) {
   );
 }
 
-const styles = StyleSheet.create({
+const styles = themed(() => StyleSheet.create({
   badge: {
     alignSelf: 'flex-start', paddingVertical: 1, paddingHorizontal: 6, overflow: 'hidden', fontSize: 11, lineHeight: 17.6, ...font(700),
   },
@@ -190,7 +190,7 @@ const styles = StyleSheet.create({
   itemBadges: { flexDirection: 'row', gap: 4, marginTop: 3 },
   unread: {
     alignSelf: 'center', minWidth: 20, paddingVertical: 1, paddingHorizontal: 6, borderRadius: 999, overflow: 'hidden',
-    backgroundColor: t.primary[600], color: '#fff', textAlign: 'center', fontSize: 11, lineHeight: 17.6, ...font(700),
+    backgroundColor: t.primary[600], color: t.onBrand, textAlign: 'center', fontSize: 11, lineHeight: 17.6, ...font(700),
   },
 
   stars: { flexDirection: 'row', gap: 1 },
@@ -210,7 +210,7 @@ const styles = StyleSheet.create({
     backgroundColor: t.neutral[0], color: t.neutral[900], fontSize: 13, lineHeight: 20.8, ...font(400),
   },
   btnGreen: { minHeight: 36, justifyContent: 'center', paddingVertical: 8, paddingHorizontal: 14, borderRadius: 8, backgroundColor: t.primary[600] },
-  btnGreenText: { fontSize: 12, lineHeight: 14.4, color: '#fff', ...font(600) },
+  btnGreenText: { fontSize: 12, lineHeight: 14.4, color: t.onBrand, ...font(600) },
 
   message: {
     alignSelf: 'flex-start', maxWidth: '82%', paddingVertical: 8, paddingHorizontal: 12, backgroundColor: t.neutral[100],
@@ -220,5 +220,5 @@ const styles = StyleSheet.create({
   messageName: { marginBottom: 2, fontSize: 12, lineHeight: 19.2, color: t.primary[700], ...font(600) },
   messageText: { fontSize: 14, lineHeight: 20.3, color: t.neutral[800], ...font(400) },
   messageTime: { marginTop: 4, fontSize: 11, lineHeight: 17.6, opacity: 0.88, textAlign: 'right', color: t.neutral[800], ...font(400) },
-  onGreen: { color: '#fff' },
-});
+  onGreen: { color: t.onBrand },
+}));

@@ -7,7 +7,7 @@ import { useLocalSearchParams, useRouter } from 'expo-router';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import {
   CaretLeftIcon, ChatsCircleIcon, CheckCircleIcon, LockSimpleIcon, NotePencilIcon, PaperPlaneRightIcon, StarIcon,
-} from 'phosphor-react-native';
+} from '../src/lib/icons';
 import apiClient from '../src/api/client';
 import ScreenHeader from '../src/components/ScreenHeader';
 import EmptyState from '../src/components/EmptyState';
@@ -16,7 +16,7 @@ import SupportCaseSheet from '../src/components/profile/SupportCaseSheet';
 import { CASE_STATUS_LABELS as STATUS_LABELS, CATEGORY_LABELS, errorText } from '../src/components/profile/profileLib';
 import { resolveImg } from '../src/lib/media';
 import { toast } from '../src/lib/toast';
-import { font, t } from '../src/theme';
+import { font, t, themed } from '../src/theme';
 
 const THREAD_POLL_MS = 5000;
 const LIST_POLL_MS = 15000;
@@ -27,12 +27,12 @@ const TOPIC_LABELS = {
   DIRECT: 'Direct message',
 };
 
-const BADGE = {
+const BADGE = themed(() => ({
   OPEN: { backgroundColor: t.primary[50], color: t.primary[700] },
   RESOLVED: { backgroundColor: t.success[100], color: t.success[800] },
   CLOSED: { backgroundColor: t.neutral[200], color: t.neutral[600] },
   RATED: { backgroundColor: t.warning[100], color: t.warning[800] },
-};
+}));
 
 const formatTime = (value) => {
   if (!value) return '';
@@ -317,8 +317,8 @@ export default function ProfileSupport() {
                 return (
                   <View key={m.id} style={[styles.message, mine && styles.messageMine]}>
                     {!mine ? <Text style={styles.messageName}>{m.sender?.fullName}</Text> : null}
-                    <Text style={[styles.messageText, mine && { color: '#fff' }]} selectable>{m.body}</Text>
-                    <Text style={[styles.messageTime, mine && { color: '#fff' }]}>{formatTime(m.createdAt)}</Text>
+                    <Text style={[styles.messageText, mine && { color: t.onBrand }]} selectable>{m.body}</Text>
+                    <Text style={[styles.messageTime, mine && { color: t.onBrand }]}>{formatTime(m.createdAt)}</Text>
                   </View>
                 );
               })}
@@ -428,7 +428,7 @@ export default function ProfileSupport() {
   );
 }
 
-const styles = StyleSheet.create({
+const styles = themed(() => StyleSheet.create({
   screen: { flex: 1, backgroundColor: t.neutral[0] },
   content: { flexGrow: 1, gap: 12, paddingHorizontal: 12, paddingTop: 12, paddingBottom: 16 },
   subtitle: { fontSize: 13, lineHeight: 19.5, color: t.neutral[500], ...font(400) },
@@ -441,7 +441,7 @@ const styles = StyleSheet.create({
     marginTop: 12, marginHorizontal: 12, marginBottom: 10, paddingVertical: 9, paddingHorizontal: 12, borderRadius: 10,
     backgroundColor: t.primary[600],
   },
-  composeText: { fontSize: 13, lineHeight: 15.6, color: '#fff', ...font(500) },
+  composeText: { fontSize: 13, lineHeight: 15.6, color: t.onBrand, ...font(500) },
   loading: { paddingVertical: 32, paddingHorizontal: 16, textAlign: 'center', fontSize: 14, lineHeight: 22.4, color: t.neutral[500], ...font(400) },
 
   item: {
@@ -464,7 +464,7 @@ const styles = StyleSheet.create({
   badge: { alignSelf: 'flex-start', paddingVertical: 1, paddingHorizontal: 6, overflow: 'hidden', fontSize: 11, lineHeight: 13.2, ...font(500) },
   unread: {
     alignSelf: 'center', minWidth: 20, paddingVertical: 1, paddingHorizontal: 6, borderRadius: 999, overflow: 'hidden',
-    backgroundColor: t.primary[600], color: '#fff', textAlign: 'center', fontSize: 11, lineHeight: 13.2, ...font(500),
+    backgroundColor: t.primary[600], color: t.onBrand, textAlign: 'center', fontSize: 11, lineHeight: 13.2, ...font(500),
   },
 
   threadScreen: { flex: 1, backgroundColor: t.neutral[0] },
@@ -511,7 +511,7 @@ const styles = StyleSheet.create({
     backgroundColor: t.neutral[0], color: t.neutral[900], fontSize: 13, lineHeight: 20.8, ...font(400),
   },
   btnGreen: { minHeight: 36, justifyContent: 'center', paddingVertical: 8, paddingHorizontal: 14, borderRadius: 8, backgroundColor: t.primary[600] },
-  btnGreenText: { fontSize: 12, lineHeight: 14.4, color: '#fff', ...font(500) },
+  btnGreenText: { fontSize: 12, lineHeight: 14.4, color: t.onBrand, ...font(500) },
 
   composer: {
     flexDirection: 'row', alignItems: 'center', gap: 8, paddingTop: 8, paddingHorizontal: 8,
@@ -523,4 +523,4 @@ const styles = StyleSheet.create({
   },
   composerFocus: { boxShadow: `0px 0px 0px 1px ${t.primary[600]}` },
   send: { width: 42, height: 42, borderRadius: 21, alignItems: 'center', justifyContent: 'center', backgroundColor: t.primary[600] },
-});
+}));

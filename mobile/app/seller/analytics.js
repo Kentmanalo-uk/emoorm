@@ -1,6 +1,6 @@
 import { useCallback, useEffect, useMemo, useState } from 'react';
 import { StyleSheet, Text, View } from 'react-native';
-import { MinusIcon, TrendDownIcon, TrendUpIcon } from 'phosphor-react-native';
+import { MinusIcon, TrendDownIcon, TrendUpIcon } from '../../src/lib/icons';
 import apiClient from '../../src/api/client';
 import SellerPage from '../../src/components/seller/SellerPage';
 import {
@@ -14,7 +14,7 @@ import {
   num, peso, shareCsv, shortDate, toCSV,
 } from '../../src/components/seller/analytics/format';
 import { toast } from '../../src/lib/toast';
-import { font, t } from '../../src/theme';
+import { font, t, themed } from '../../src/theme';
 
 /**
  * /seller/analytics (web/src/pages/SellerAnalytics.jsx, phone layout from
@@ -193,7 +193,7 @@ export default function SellerAnalyticsScreen() {
   );
 }
 
-const styles = StyleSheet.create({
+const styles = themed(() => StyleSheet.create({
   error: { padding: 16, fontSize: 13, lineHeight: 18, color: t.danger[600], ...font(400) },
 
   // .an-growth on Seller Center phones: edge to edge, an 8px grey band under it.
@@ -208,4 +208,4 @@ const styles = StyleSheet.create({
   growthText: { fontSize: 20, lineHeight: 24, ...font(700) },
 
   lastCard: { marginBottom: 0 },
-});
+}));

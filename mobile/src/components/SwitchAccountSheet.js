@@ -4,7 +4,7 @@ import {
 } from 'react-native';
 import { usePathname, useRouter } from 'expo-router';
 import { create } from 'zustand';
-import { InfoIcon, PlusIcon, XIcon } from 'phosphor-react-native';
+import { InfoIcon, PlusIcon, XIcon } from '../lib/icons';
 import useAuthStore from '../store/authStore';
 import { syncWishlist } from './profile/wishlistSync';
 import {
@@ -12,7 +12,7 @@ import {
 } from '../store/savedAccounts';
 import { resolveImg } from '../lib/media';
 import { toast } from '../lib/toast';
-import { font, t } from '../theme';
+import { font, t, themed } from '../theme';
 import Sheet from './Sheet';
 import CartConfirmDialog from './cart/CartConfirmDialog';
 
@@ -176,7 +176,7 @@ export function SwitchAccountHost() {
   );
 }
 
-const styles = StyleSheet.create({
+const styles = themed(() => StyleSheet.create({
   note: {
     flexDirection: 'row', alignItems: 'flex-start', gap: 10, marginBottom: 14, padding: 14, borderRadius: 12,
     backgroundColor: t.info[50],
@@ -205,7 +205,7 @@ const styles = StyleSheet.create({
     width: 22, height: 22, borderRadius: 11, borderWidth: 2, borderColor: t.neutral[300], alignItems: 'center', justifyContent: 'center',
   },
   radioOn: { borderColor: t.primary[600], backgroundColor: t.primary[600] },
-  radioDot: { width: 8, height: 8, borderRadius: 4, backgroundColor: '#fff' },
+  radioDot: { width: 8, height: 8, borderRadius: 4, backgroundColor: t.neutral[0] },
 
   add: {
     flexDirection: 'row', alignItems: 'center', gap: 12, paddingVertical: 12, paddingHorizontal: 14,
@@ -216,4 +216,4 @@ const styles = StyleSheet.create({
     borderWidth: 1, borderColor: t.neutral[300],
   },
   addText: { flex: 1, fontSize: 16, lineHeight: 21, color: t.neutral[900], ...font(600) },
-});
+}));

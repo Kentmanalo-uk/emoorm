@@ -1,11 +1,11 @@
 import { useCallback, useState } from 'react';
 import { Pressable, StyleSheet, Text, View } from 'react-native';
 import { useFocusEffect, useRouter } from 'expo-router';
-import { ChatCircleDotsIcon, HandshakeIcon } from 'phosphor-react-native';
+import { ChatCircleDotsIcon, HandshakeIcon } from '../../lib/icons';
 import apiClient from '../../api/client';
 import useAuthStore from '../../store/authStore';
 import { toast } from '../../lib/toast';
-import { font, t } from '../../theme';
+import { font, t, themed } from '../../theme';
 import { PriceSheet } from './DealSheets';
 import { chatPath, dealStatus, peso } from './offerText';
 
@@ -119,15 +119,15 @@ function OfferButton({
   );
 }
 
-const styles = StyleSheet.create({
+const styles = themed(() => StyleSheet.create({
   offer: {
     flex: 1, minWidth: 0, height: 48, flexDirection: 'row', alignItems: 'center', justifyContent: 'center', gap: 10,
     paddingHorizontal: 10, borderRadius: 14, backgroundColor: t.primary[600],
   },
   offerOn: { backgroundColor: t.primary[700] },
   offerWords: { flexShrink: 1, minWidth: 0 },
-  offerText: { fontSize: 16, lineHeight: 18.4, ...font(500), color: '#fff' },
-  offerSmall: { fontSize: 12, lineHeight: 13.8, ...font(500), color: '#fff', opacity: 0.9 },
+  offerText: { fontSize: 16, lineHeight: 18.4, ...font(500), color: t.onBrand },
+  offerSmall: { fontSize: 12, lineHeight: 13.8, ...font(500), color: t.onBrand, opacity: 0.9 },
   closed: { backgroundColor: t.neutral[200] },
   closedText: { color: t.neutral[600], textAlign: 'center' },
-});
+}));

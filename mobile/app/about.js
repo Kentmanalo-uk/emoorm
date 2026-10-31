@@ -4,14 +4,14 @@ import { useRouter } from 'expo-router';
 import {
   ArrowCounterClockwiseIcon, ArrowRightIcon, ChatsCircleIcon, GraduationCapIcon, IdentificationCardIcon, LifebuoyIcon,
   MapPinIcon, ShieldCheckIcon, StorefrontIcon, TranslateIcon, TruckIcon,
-} from 'phosphor-react-native';
+} from '../src/lib/icons';
 import PublicHeader from '../src/components/public/PublicHeader';
 import HomeFooter from '../src/components/home/HomeFooter';
 import GradientIcon from '../src/components/GradientIcon';
 import { LinearFill, SWEEP } from '../src/components/sell/SellArt';
 import apiClient from '../src/api/client';
 import { fetchCategories, fetchMunicipalities } from '../src/lib/referenceData';
-import { font, t } from '../src/theme';
+import { font, t, themed, veil } from '../src/theme';
 
 /*
  * About Emoorm (web/src/pages/About.jsx's content), laid out for the app:
@@ -297,7 +297,7 @@ export default function About() {
 
 const GUTTER = 16;
 
-const styles = StyleSheet.create({
+const styles = themed(() => StyleSheet.create({
   screen: { flex: 1, backgroundColor: t.neutral[50] },
   page: { paddingHorizontal: GUTTER, backgroundColor: t.neutral[50] },
   // The footer runs edge to edge, under the last card.
@@ -313,7 +313,7 @@ const styles = StyleSheet.create({
   },
   logoTile: {
     width: 76, height: 76, borderRadius: 22, alignItems: 'center', justifyContent: 'center', marginBottom: 16,
-    backgroundColor: '#fff', boxShadow: [{ offsetX: 0, offsetY: 6, blurRadius: 18, color: 'rgba(4, 120, 87, 0.14)' }],
+    backgroundColor: t.neutral[0], boxShadow: [{ offsetX: 0, offsetY: 6, blurRadius: 18, color: 'rgba(4, 120, 87, 0.14)' }],
   },
   heroLogo: { width: 48, height: 48 },
   heroTitle: { fontSize: 23, lineHeight: 28.5, color: t.neutral[900], textAlign: 'center', ...font(600) },
@@ -321,7 +321,7 @@ const styles = StyleSheet.create({
   facts: { flexDirection: 'row', alignSelf: 'stretch', gap: 8, marginTop: 20 },
   fact: {
     flex: 1, alignItems: 'center', paddingVertical: 10, borderRadius: 14,
-    backgroundColor: 'rgba(255, 255, 255, 0.7)', borderWidth: 1, borderColor: '#fff',
+    backgroundColor: veil(0.7), borderWidth: 1, bordercolor: t.onBrand,
   },
   factValue: { fontSize: 17, lineHeight: 21, color: t.primary[700], ...font(700) },
   factLabel: { marginTop: 2, fontSize: 12, lineHeight: 15, color: t.neutral[500], ...font(400) },
@@ -329,15 +329,15 @@ const styles = StyleSheet.create({
 
   pill: { flex: 1, height: 44, borderRadius: 999, alignItems: 'center', justifyContent: 'center', paddingHorizontal: 14 },
   pillPrimary: { backgroundColor: t.primary[600] },
-  pillPlain: { backgroundColor: '#fff', borderWidth: 1, borderColor: t.neutral[200] },
+  pillPlain: { backgroundColor: t.neutral[0], borderWidth: 1, borderColor: t.neutral[200] },
   pillText: { fontSize: 14.5, lineHeight: 18, color: t.neutral[800], ...font(500) },
-  pillTextPrimary: { color: '#fff' },
+  pillTextPrimary: { color: t.onBrand },
 
   section: { paddingTop: 28 },
   h2: { marginBottom: 10, fontSize: 18, lineHeight: 22, color: t.neutral[900], ...font(600) },
   sub: { marginTop: -4, marginBottom: 14, fontSize: 14, lineHeight: 21, color: t.neutral[500], ...font(400) },
 
-  card: { padding: 16, borderRadius: 16, backgroundColor: '#fff' },
+  card: { padding: 16, borderRadius: 16, backgroundColor: t.neutral[0] },
   cardList: { paddingVertical: 4 },
   para: { fontSize: 14.5, lineHeight: 23, color: t.neutral[700], ...font(400) },
   paraNext: { marginTop: 12 },
@@ -345,7 +345,7 @@ const styles = StyleSheet.create({
   step: { flexDirection: 'row', gap: 14 },
   stepRail: { alignItems: 'center', width: 28 },
   stepDot: { width: 28, height: 28, borderRadius: 14, alignItems: 'center', justifyContent: 'center', overflow: 'hidden' },
-  stepNum: { fontSize: 13, lineHeight: 16, color: '#fff', ...font(700) },
+  stepNum: { fontSize: 13, lineHeight: 16, color: t.onBrand, ...font(700) },
   stepLine: { flex: 1, width: 2, marginVertical: 4, borderRadius: 1, backgroundColor: t.primary[100] },
   stepBody: { flex: 1, paddingTop: 3, paddingBottom: 18 },
   stepBodyLast: { paddingBottom: 0 },
@@ -362,25 +362,25 @@ const styles = StyleSheet.create({
   towns: { flexDirection: 'row', flexWrap: 'wrap', gap: 8 },
   town: {
     flexDirection: 'row', alignItems: 'center', gap: 6, paddingVertical: 7, paddingHorizontal: 12,
-    borderRadius: 999, backgroundColor: '#fff',
+    borderRadius: 999, backgroundColor: t.neutral[0],
   },
   townDot: { width: 6, height: 6, borderRadius: 3, backgroundColor: t.primary[500] },
   townText: { fontSize: 13.5, lineHeight: 17, color: t.neutral[800], ...font(500) },
 
   person: { flexDirection: 'row', alignItems: 'center', gap: 14, paddingVertical: 14 },
   avatar: { width: 44, height: 44, borderRadius: 22, alignItems: 'center', justifyContent: 'center', overflow: 'hidden' },
-  avatarText: { fontSize: 15, lineHeight: 18, color: '#fff', ...font(600) },
+  avatarText: { fontSize: 15, lineHeight: 18, color: t.onBrand, ...font(600) },
   adviserAvatar: { backgroundColor: t.neutral[700] },
   eyebrow: { marginBottom: 2, fontSize: 12, lineHeight: 15, color: t.primary[600], ...font(600) },
   adviserNote: { marginTop: 6, color: t.neutral[600] },
 
   cta: { marginTop: 28, alignItems: 'center', paddingVertical: 26, paddingHorizontal: 20, borderRadius: 18, overflow: 'hidden' },
-  ctaIcon: { width: 44, height: 44, borderRadius: 22, alignItems: 'center', justifyContent: 'center', marginBottom: 12, backgroundColor: '#fff' },
-  ctaTitle: { fontSize: 19, lineHeight: 24, color: '#fff', textAlign: 'center', ...font(600) },
+  ctaIcon: { width: 44, height: 44, borderRadius: 22, alignItems: 'center', justifyContent: 'center', marginBottom: 12, backgroundColor: t.neutral[0] },
+  ctaTitle: { fontSize: 19, lineHeight: 24, color: t.onBrand, textAlign: 'center', ...font(600) },
   ctaText: { marginTop: 6, maxWidth: 300, fontSize: 14, lineHeight: 21, color: 'rgba(255, 255, 255, 0.92)', textAlign: 'center', ...font(400) },
   ctaBtn: {
     flexDirection: 'row', alignItems: 'center', gap: 6, marginTop: 18, height: 42, paddingHorizontal: 22,
-    borderRadius: 999, backgroundColor: '#fff',
+    borderRadius: 999, backgroundColor: t.neutral[0],
   },
   ctaBtnText: { fontSize: 14.5, lineHeight: 18, color: t.primary[700], ...font(600) },
-});
+}));

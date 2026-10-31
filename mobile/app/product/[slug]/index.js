@@ -9,7 +9,7 @@ import {
   CalendarCheckIcon, CaretDownIcon, CaretLeftIcon, CaretRightIcon, ChatCircleIcon, ClockIcon, FlagIcon, HeartIcon,
   InfoIcon, MagnifyingGlassIcon, MapPinIcon, PackageIcon, PlusIcon, ShareNetworkIcon, ShoppingCartIcon,
   ShoppingCartSimpleIcon, StorefrontIcon, TruckIcon,
-} from 'phosphor-react-native';
+} from '../../../src/lib/icons';
 import apiClient from '../../../src/api/client';
 import ShellBarButton from '../../../src/components/ShellBarButton';
 import ShellPageMenu from '../../../src/components/ShellPageMenu';
@@ -33,7 +33,7 @@ import {
 import {
   priceForSelection, pricedVariation, priceRange, priceTiersOf, saleInfo, stockForSelection, unitPriceFor,
 } from '../../../src/lib/variantPricing';
-import { font, t } from '../../../src/theme';
+import { font, ink, t, themed } from '../../../src/theme';
 import ProductOptionSheet from '../../../src/components/product/ProductOptionSheet';
 import ProductQuestions from '../../../src/components/product/ProductQuestions';
 import ReviewItem, { Stars } from '../../../src/components/product/ReviewItem';
@@ -1219,17 +1219,17 @@ function ProductSkeleton({ insets, width, onBack }) {
   );
 }
 
-const styles = StyleSheet.create({
+const styles = themed(() => StyleSheet.create({
   screen: { flex: 1, backgroundColor: t.neutral[100] },
   flex1: { flex: 1, backgroundColor: t.neutral[0] },
   scroll: { flex: 1 },
   // The page's bottom padding above the action bar (layout-main 76px + 8px, less the 65px bar).
   scrollContent: { paddingBottom: 19 },
 
-  head: { zIndex: 130, backgroundColor: '#fff' },
+  head: { zIndex: 130, backgroundColor: t.neutral[0] },
   topbar: {
     zIndex: 1, flexDirection: 'row', alignItems: 'center', gap: 2, height: HEAD_H, paddingHorizontal: 4,
-    backgroundColor: '#fff',
+    backgroundColor: t.neutral[0],
   },
   search: {
     flex: 1, minWidth: 0, flexDirection: 'row', alignItems: 'center', gap: 8, height: 40, marginHorizontal: 4, paddingHorizontal: 14,
@@ -1238,26 +1238,26 @@ const styles = StyleSheet.create({
   searchText: { flexShrink: 1, fontSize: 14, lineHeight: 22.4, ...font(400), color: t.neutral[500] },
   cartBadge: {
     position: 'absolute', top: -3 + 0, right: -5 + 0, minWidth: 18, height: 18, paddingHorizontal: 5, borderRadius: 999,
-    borderWidth: 1.5, borderColor: '#fff', backgroundColor: t.accent[500], alignItems: 'center', justifyContent: 'center',
+    borderWidth: 1.5, bordercolor: t.onBrand, backgroundColor: t.accent[500], alignItems: 'center', justifyContent: 'center',
   },
-  badgeText: { fontSize: 10.5, lineHeight: 13, ...font(500), color: '#fff', textAlign: 'center' },
+  badgeText: { fontSize: 10.5, lineHeight: 13, ...font(500), color: t.onBrand, textAlign: 'center' },
   // Room under the tabs for their shadow; it clips them while they slide in.
   tabsClip: { position: 'absolute', left: 0, right: 0, height: TABS_H + 14, overflow: 'hidden', zIndex: 120, elevation: 4 },
   tabs: {
     height: TABS_H, flexDirection: 'row',
-    backgroundColor: '#fff', borderBottomWidth: 1, borderBottomColor: t.neutral[200],
-    boxShadow: [{ offsetX: 0, offsetY: 4, blurRadius: 10, color: 'rgba(15, 23, 42, 0.05)' }],
+    backgroundColor: t.neutral[0], borderBottomWidth: 1, borderBottomColor: t.neutral[200],
+    boxShadow: [{ offsetX: 0, offsetY: 4, blurRadius: 10, color: ink(0.05) }],
   },
   tab: { flex: 1, minWidth: 0, alignItems: 'center', justifyContent: 'center', paddingHorizontal: 4 },
   tabText: { fontSize: 14, lineHeight: 16.8, ...font(500), color: t.neutral[500] },
   tabTextOn: { color: t.neutral[900] },
   tabLine: { position: 'absolute', bottom: 0, left: '50%', width: 28, height: 3, marginLeft: -14, borderTopLeftRadius: 3, borderTopRightRadius: 3, backgroundColor: t.primary[600] },
 
-  gallery: { backgroundColor: '#fff' },
+  gallery: { backgroundColor: t.neutral[0] },
   slide: { backgroundColor: t.neutral[100] },
   slideImg: { width: '100%', height: '100%' },
   counter: { position: 'absolute', right: 12, bottom: 12, paddingVertical: 3, paddingHorizontal: 11, borderRadius: 999, backgroundColor: 'rgba(15, 23, 42, 0.72)' },
-  counterText: { fontSize: 12, lineHeight: 19.2, ...font(500), color: '#fff', letterSpacing: 0.24 },
+  counterText: { fontSize: 12, lineHeight: 19.2, ...font(500), color: t.onBrand, letterSpacing: 0.24 },
   pending: { position: 'absolute', left: 12, bottom: 12, paddingVertical: 3, paddingHorizontal: 8, borderRadius: 3, backgroundColor: t.warning[100] },
   pendingText: { fontSize: 11, lineHeight: 14, ...font(500), color: t.warning[800], letterSpacing: 0.22 },
   // The 3D chip (.pdp-3d-chip), above the pending badge when there is one.
@@ -1268,10 +1268,10 @@ const styles = StyleSheet.create({
   priceBand: { alignItems: 'flex-start', gap: 8, paddingVertical: 14, paddingHorizontal: 16, overflow: 'hidden' },
   priceTop: { flexDirection: 'row', alignItems: 'flex-end', justifyContent: 'space-between', gap: 12, width: '100%' },
   priceLine: { flexDirection: 'row', alignItems: 'center', flexShrink: 0 },
-  pricePeso: { marginRight: 2, fontSize: 18, lineHeight: 30, ...font(500), color: '#fff', top: -2 },
-  priceText: { fontSize: 30, lineHeight: 30, ...font(500), color: '#fff', letterSpacing: -0.3 },
+  pricePeso: { marginRight: 2, fontSize: 18, lineHeight: 30, ...font(500), color: t.onBrand, top: -2 },
+  priceText: { fontSize: 30, lineHeight: 30, ...font(500), color: t.onBrand, letterSpacing: -0.3 },
   // "from" and " / head": 15px, a little above the price's foot.
-  priceWords: { fontSize: 15, lineHeight: 30, ...font(500), color: '#fff', top: 1 },
+  priceWords: { fontSize: 15, lineHeight: 30, ...font(500), color: t.onBrand, top: 1 },
   priceFrom: { marginRight: 4 },
   priceUnit: { marginLeft: 4 },
   bandWas: { flexDirection: 'row', alignItems: 'center', gap: 6 },
@@ -1279,18 +1279,18 @@ const styles = StyleSheet.create({
   saveOld: { fontSize: 13, lineHeight: 15, ...font(400), color: 'rgba(255, 255, 255, 0.8)', textDecorationLine: 'line-through' },
   saveOff: {
     paddingVertical: 4, paddingHorizontal: 8, borderRadius: 999, overflow: 'hidden',
-    fontSize: 13, lineHeight: 15, ...font(500), color: t.primary[700], backgroundColor: '#fff',
+    fontSize: 13, lineHeight: 15, ...font(500), color: t.primary[700], backgroundColor: t.neutral[0],
   },
-  notes: { paddingVertical: 12, paddingHorizontal: 16, borderBottomWidth: 1, borderBottomColor: t.neutral[100], backgroundColor: '#fff' },
+  notes: { paddingVertical: 12, paddingHorizontal: 16, borderBottomWidth: 1, borderBottomColor: t.neutral[100], backgroundColor: t.neutral[0] },
   bandWasOld: { fontSize: 13, lineHeight: 13, ...font(400), color: 'rgba(255, 255, 255, 0.85)', textDecorationLine: 'line-through' },
   bandWasOff: {
     paddingVertical: 2, paddingHorizontal: 5, borderRadius: 4, overflow: 'hidden',
     fontSize: 11, lineHeight: 11, ...font(500), color: t.danger[700], backgroundColor: t.danger[50],
   },
   place: { flexShrink: 1, minWidth: 0, flexDirection: 'row', alignItems: 'center', gap: 4, marginBottom: 3, opacity: 0.88 },
-  placeText: { flexShrink: 1, fontSize: 12, lineHeight: 19.2, ...font(400), color: '#fff' },
+  placeText: { flexShrink: 1, fontSize: 12, lineHeight: 19.2, ...font(400), color: t.onBrand },
 
-  heroInfo: { paddingTop: 14, paddingHorizontal: 16, paddingBottom: 14, backgroundColor: '#fff', gap: 12 },
+  heroInfo: { paddingTop: 14, paddingHorizontal: 16, paddingBottom: 14, backgroundColor: t.neutral[0], gap: 12 },
   title: { marginBottom: 8, paddingRight: 80, fontSize: 17, lineHeight: 22.95, ...font(500), color: t.neutral[900] },
   titleTag: { marginRight: 6, paddingHorizontal: 6, marginBottom: -4 },
   titleTools: { position: 'absolute', top: 2, right: 6, flexDirection: 'row' },
@@ -1324,7 +1324,7 @@ const styles = StyleSheet.create({
   todayTag: { marginRight: 0 },
   todayState: { fontSize: 14, lineHeight: 21, ...font(500), color: t.primary[700] },
   today_live: {},
-  today_soon: { color: '#b45309' },
+  today_soon: { color: t.warning[700] },
   today_ended: { color: t.neutral[600], ...font(500) },
   todayLeft: { fontSize: 13, lineHeight: 21, ...font(400), color: t.neutral[600] },
   todayNote: { color: t.neutral[600], fontStyle: 'italic' },
@@ -1345,7 +1345,7 @@ const styles = StyleSheet.create({
   askLinkText: { fontSize: 13.5, lineHeight: 21.6, ...font(500), color: t.primary[700] },
   askCaret: { marginLeft: 'auto' },
 
-  storeCard: { flexDirection: 'row', alignItems: 'center', gap: 12, marginTop: 8, paddingTop: 12, paddingHorizontal: 16, paddingBottom: 6, backgroundColor: '#fff' },
+  storeCard: { flexDirection: 'row', alignItems: 'center', gap: 12, marginTop: 8, paddingTop: 12, paddingHorizontal: 16, paddingBottom: 6, backgroundColor: t.neutral[0] },
   storeLeft: { flex: 1, minWidth: 0, flexDirection: 'row', alignItems: 'center', gap: 12 },
   storeAvatar: { width: 44, height: 44, borderRadius: 999, overflow: 'hidden', alignItems: 'center', justifyContent: 'center', backgroundColor: t.primary[50] },
   storeAvatarImg: { width: 44, height: 44 },
@@ -1361,8 +1361,8 @@ const styles = StyleSheet.create({
   },
   storeBtnText: { fontSize: 13, lineHeight: 15.6, ...font(500), color: t.primary[700] },
   followBtn: { backgroundColor: t.primary[600] },
-  followText: { color: '#fff' },
-  followingBtn: { borderColor: t.neutral[300], backgroundColor: '#fff' },
+  followText: { color: t.onBrand },
+  followingBtn: { borderColor: t.neutral[300], backgroundColor: t.neutral[0] },
   followingText: { color: t.neutral[700] },
   busy: { opacity: 0.6 },
 
@@ -1371,7 +1371,7 @@ const styles = StyleSheet.create({
   spec: { maxWidth: 180, gap: 2, paddingVertical: 8, paddingHorizontal: 12, borderRadius: 10, backgroundColor: t.neutral[50] },
   specLabel: { fontSize: 11.5, lineHeight: 18.4, ...font(500), color: t.neutral[500] },
   specValue: { fontSize: 13.5, lineHeight: 21.6, ...font(500), color: t.neutral[900] },
-  descCard: { backgroundColor: '#fff' },
+  descCard: { backgroundColor: t.neutral[0] },
   descHead: { paddingTop: 4, minHeight: 28 },
   desc: { overflow: 'hidden' },
   descClamped: { maxHeight: 14 * 1.7 * 8 },
@@ -1386,8 +1386,8 @@ const styles = StyleSheet.create({
   actionbar: { flexDirection: 'row', alignItems: 'center', gap: 8, paddingTop: 8, paddingHorizontal: 10 },
   // The website's white bar (Android and older iPhones).
   actionbarLook: {
-    borderTopWidth: 1, borderTopColor: t.neutral[200], backgroundColor: '#fff',
-    boxShadow: [{ offsetX: 0, offsetY: -4, blurRadius: 16, color: 'rgba(15, 23, 42, 0.06)' }],
+    borderTopWidth: 1, borderTopColor: t.neutral[200], backgroundColor: t.neutral[0],
+    boxShadow: [{ offsetX: 0, offsetY: -4, blurRadius: 16, color: ink(0.06) }],
   },
   // iOS 26: over the page's foot, so the glass shows it through.
   actionbarFloat: { position: 'absolute', left: 0, right: 0, bottom: 0 },
@@ -1396,22 +1396,22 @@ const styles = StyleSheet.create({
   shopLogo: { width: 24, height: 24, borderRadius: 12, borderWidth: 1, borderColor: t.neutral[200] },
   actionBadge: {
     position: 'absolute', top: -7, left: 13, minWidth: 18, height: 18, paddingHorizontal: 5, borderRadius: 999,
-    borderWidth: 1.5, borderColor: '#fff', backgroundColor: t.accent[500], alignItems: 'center', justifyContent: 'center',
+    borderWidth: 1.5, bordercolor: t.onBrand, backgroundColor: t.accent[500], alignItems: 'center', justifyContent: 'center',
   },
   addcart: { width: 64, height: 48, flexShrink: 0, borderRadius: 999, backgroundColor: t.primary[50], alignItems: 'center', justifyContent: 'center' },
   addcartPlus: { position: 'absolute', top: 17.5, right: 25.5 },
   buy: { flex: 1, minWidth: 0, height: 48, borderRadius: 999, backgroundColor: t.primary[600], alignItems: 'center', justifyContent: 'center' },
-  buyText: { fontSize: 16, lineHeight: 17.6, ...font(500), color: '#fff' },
+  buyText: { fontSize: 16, lineHeight: 17.6, ...font(500), color: t.onBrand },
   buySmall: { flexDirection: 'row', alignItems: 'center', gap: 6, maxWidth: '100%', paddingHorizontal: 8, overflow: 'hidden', opacity: 0.9 },
-  buySmallText: { flexShrink: 0, fontSize: 11.5, lineHeight: 13.8, ...font(500), color: '#fff' },
-  buyRule: { width: 1, height: 10, backgroundColor: '#fff', opacity: 0.6 },
+  buySmallText: { flexShrink: 0, fontSize: 11.5, lineHeight: 13.8, ...font(500), color: t.onBrand },
+  buyRule: { width: 1, height: 10, backgroundColor: t.neutral[0], opacity: 0.6 },
   closed: { backgroundColor: t.neutral[300], opacity: 0.5 },
   closedText: { color: t.neutral[700] },
   closedSmall: { marginTop: 2, fontSize: 11.5, lineHeight: 13.8, ...font(500), color: t.neutral[700] },
   disabled: { opacity: 0.5 },
 
-  notFound: { alignItems: 'center', justifyContent: 'center', gap: 12, backgroundColor: '#fff' },
+  notFound: { alignItems: 'center', justifyContent: 'center', gap: 12, backgroundColor: t.neutral[0] },
   notFoundTitle: { fontSize: 20, lineHeight: 26, ...font(500), color: t.neutral[900] },
   notFoundBtn: { height: 44, paddingHorizontal: 20, borderRadius: 8, backgroundColor: t.primary[600], justifyContent: 'center' },
-  notFoundBtnText: { fontSize: 14, ...font(500), color: '#fff' },
-});
+  notFoundBtnText: { fontSize: 14, ...font(500), color: t.onBrand },
+}));

@@ -4,8 +4,8 @@ import {
 } from 'react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import Svg, { Defs, LinearGradient, Rect, Stop } from 'react-native-svg';
-import { ArrowLeftIcon } from 'phosphor-react-native';
-import { font, t } from '../../../theme';
+import { ArrowLeftIcon } from '../../../lib/icons';
+import { font, t, themed } from '../../../theme';
 import Glass from '../../Glass';
 import { ScrollRevealContext, useScrollReveal } from '../../ScrollReveal';
 
@@ -21,11 +21,14 @@ import { ScrollRevealContext, useScrollReveal } from '../../ScrollReveal';
  * <WelcomeFrame screenKey top={{ onBack, progress: [0..1, 0..1, 0..1], progressLabel, onSkip }} footer={…} still>
  */
 
-const FOOT_FALLBACK = {
+/* A function, not a table: this is handed to a component whole, and
+   React Native freezes the style it is given. A fresh object each time
+   keeps the colours of the palette in use. */
+const footFallback = () => ({
   backgroundColor: t.neutral[0],
   borderTopWidth: 1,
   borderTopColor: t.neutral[100],
-};
+});
 
 /** One part's bar (.sw-bar): grey, filled in green from the left. */
 function ProgressBar({ fill, still }) {
@@ -113,7 +116,7 @@ export default function WelcomeFrame({ screenKey, top, footer, still = false, ch
 
       {footer ? (
         <Glass
-          fallbackStyle={FOOT_FALLBACK}
+          fallbackStyle={footFallback()}
           style={[styles.foot, { paddingBottom: 14 + insets.bottom }]}
           onLayout={(e) => setFootHeight(e.nativeEvent.layout.height)}
         >
@@ -124,7 +127,7 @@ export default function WelcomeFrame({ screenKey, top, footer, still = false, ch
   );
 }
 
-const styles = StyleSheet.create({
+const styles = themed(() => StyleSheet.create({
   screen: { flex: 1, backgroundColor: t.neutral[0] },
   flex: { flex: 1 },
 
@@ -161,4 +164,4 @@ const styles = StyleSheet.create({
     paddingTop: 12,
     paddingHorizontal: 20,
   },
-});
+}));

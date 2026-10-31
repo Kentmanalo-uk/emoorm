@@ -4,7 +4,7 @@ import { useRouter } from 'expo-router';
 import apiClient from '../../api/client';
 import { resolveImg } from '../../lib/media';
 import { appPath } from '../../lib/notificationLink';
-import { border, font, surface, t, text } from '../../theme';
+import { border, font, surface, t, text, themed } from '../../theme';
 
 /*
  * The website's footer (web/src/components/layout/Footer.jsx + Footer.css).
@@ -330,7 +330,7 @@ export default function HomeFooter({ municipalities = [], categories = [], appLo
   );
 }
 
-const styles = StyleSheet.create({
+const styles = themed(() => StyleSheet.create({
   // 32px under the page, 28px in; the bottom clears what the website's
   // fixed bottom nav covers (92px less the 74px tab bar).
   footer: {
@@ -395,4 +395,4 @@ const styles = StyleSheet.create({
   copyrightText: { fontSize: 13, lineHeight: 20.8, ...font(400), color: text.muted, textAlign: 'center' },
   legal: { flexDirection: 'row', flexWrap: 'wrap', justifyContent: 'center', columnGap: 18, rowGap: 4 },
   legalLink: { minHeight: 32, justifyContent: 'center' },
-});
+}));

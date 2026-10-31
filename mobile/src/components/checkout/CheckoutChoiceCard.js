@@ -1,7 +1,7 @@
 import { Image, Pressable, StyleSheet, Text, View } from 'react-native';
-import { CheckIcon } from 'phosphor-react-native';
+import { CheckIcon } from '../../lib/icons';
 import { resolveImg } from '../../lib/media';
-import { font, t } from '../../theme';
+import { font, t, themed } from '../../theme';
 
 /*
  * A selectable card (web/src/components/ui/ChoiceCard.jsx + .css): an icon
@@ -58,7 +58,7 @@ export function CheckoutCourierMark({ courier, size = 30 }) {
   );
 }
 
-const styles = StyleSheet.create({
+const styles = themed(() => StyleSheet.create({
   card: {
     flexDirection: 'row',
     alignItems: 'center',
@@ -86,7 +86,7 @@ const styles = StyleSheet.create({
     justifyContent: 'center',
     flexShrink: 0,
   },
-  mediaOn: { backgroundColor: '#fff' },
+  mediaOn: { backgroundColor: t.neutral[0] },
   mediaPlain: { minWidth: 0, backgroundColor: 'transparent' },
   body: { flex: 1, minWidth: 0, gap: 2 },
   title: { fontSize: 15, lineHeight: 19.5, ...font(500), color: t.neutral[900] },
@@ -98,15 +98,15 @@ const styles = StyleSheet.create({
     borderRadius: 11,
     borderWidth: 1,
     borderColor: t.neutral[300],
-    backgroundColor: '#fff',
+    backgroundColor: t.neutral[0],
     alignItems: 'center',
     justifyContent: 'center',
     flexShrink: 0,
   },
   checkBox: { borderRadius: 6 },
   checkOn: { borderColor: t.primary[600], backgroundColor: t.primary[600] },
-  mark: { borderRadius: 8, backgroundColor: '#fff' },
+  mark: { borderRadius: 8, backgroundColor: t.neutral[0] },
   markLogo: { borderWidth: 1, borderColor: t.neutral[200] },
   markInitial: { alignItems: 'center', justifyContent: 'center', backgroundColor: t.primary[100] },
   markText: { ...font(500), color: t.primary[700] },
-});
+}));

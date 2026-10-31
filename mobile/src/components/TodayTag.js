@@ -1,12 +1,12 @@
 import { StyleSheet, Text, View } from 'react-native';
 import { liveMode, modeLabel } from '../lib/availability';
-import { font, t } from '../theme';
+import { font, t, themed } from '../theme';
 
-const TONES = {
+const TONES = themed(() => ({
   READY_NOW: t.primary[600],
   MADE_TO_ORDER: t.orange[700],
   PRE_ORDER: t.accent[600],
-};
+}));
 
 /**
  * The kind of an Available Today listing (Ready now, Made to order,
@@ -32,7 +32,7 @@ export function ProductTodayTag({ product, size = 10.5, style }) {
   return mode ? <TodayTag mode={mode} size={size} style={style} /> : null;
 }
 
-const styles = StyleSheet.create({
+const styles = themed(() => StyleSheet.create({
   tag: { marginRight: 5, paddingHorizontal: 5, borderRadius: 3 },
-  label: { ...font(500), color: '#fff' },
-});
+  label: { ...font(500), color: t.onBrand },
+}));

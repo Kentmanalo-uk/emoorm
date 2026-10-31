@@ -1,5 +1,5 @@
 import { ActivityIndicator, Pressable, StyleSheet, Text, TextInput, View } from 'react-native';
-import { font, t } from '../../theme';
+import { font, t, themed } from '../../theme';
 
 /*
  * "Have a voucher?" under the phone cart (web Cart.jsx .voucher-card, which
@@ -51,7 +51,7 @@ export default function CartVoucherCard({
   );
 }
 
-const styles = StyleSheet.create({
+const styles = themed(() => StyleSheet.create({
   card: { marginVertical: 12, padding: 12, borderRadius: 10, backgroundColor: t.neutral[0] },
   title: { marginBottom: 10.5, fontSize: 16, lineHeight: 18.4, ...font(500), color: t.accent[800] },
   group: { gap: 7 },
@@ -64,14 +64,14 @@ const styles = StyleSheet.create({
     borderRadius: 0,
     fontSize: 14,
     ...font(400),
-    color: '#000',
+    color: t.neutral[900],
     backgroundColor: t.neutral[0],
   },
-  inputDisabled: { backgroundColor: 'rgba(239, 239, 239, 0.3)', color: t.neutral[500] },
+  inputDisabled: { backgroundColor: t.neutral[150], color: t.neutral[500] },
   btn: { minHeight: 31, paddingVertical: 7, paddingHorizontal: 14, backgroundColor: t.primary[600], alignItems: 'center', justifyContent: 'center' },
   // The website leaves a disabled Apply looking the same.
   btnDisabled: {},
-  btnText: { fontSize: 14, lineHeight: 16.8, ...font(500), color: '#fff' },
+  btnText: { fontSize: 14, lineHeight: 16.8, ...font(500), color: t.onBrand },
   busy: { flexDirection: 'row', alignItems: 'center', gap: 6 },
   note: { marginTop: 8, fontSize: 12, lineHeight: 19.2, ...font(400), color: t.primary[600] },
-});
+}));

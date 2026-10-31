@@ -1,10 +1,10 @@
 import { useEffect, useState } from 'react';
 import { Image, StyleSheet, Text, View } from 'react-native';
 import Svg, { Defs, LinearGradient, Rect, Stop } from 'react-native-svg';
-import { TruckIcon } from 'phosphor-react-native';
+import { TruckIcon } from '../../lib/icons';
 import apiClient from '../../api/client';
 import { resolveImg } from '../../lib/media';
-import { font, t } from '../../theme';
+import { font, t, themed } from '../../theme';
 
 /** "Brgy. Poblacion", without doubling a "Brgy." already there. */
 const brgyLabel = (name) => (/^(brgy\.?|bgy\.?|barangay)\s/i.test(name) ? name : `Brgy. ${name}`);
@@ -129,12 +129,12 @@ export default function ShippingEstimate({ product, unitPrice, municipalityId, o
   );
 }
 
-const styles = StyleSheet.create({
+const styles = themed(() => StyleSheet.create({
   wrap: { gap: 8, width: '100%', maxWidth: 420 },
   list: { gap: 6 },
   item: {
     flexDirection: 'row', alignItems: 'center', gap: 10, paddingVertical: 8, paddingHorizontal: 10,
-    borderWidth: 1, borderColor: t.neutral[200], borderRadius: 12, backgroundColor: '#fff',
+    borderWidth: 1, borderColor: t.neutral[200], borderRadius: 12, backgroundColor: t.neutral[0],
   },
   self: { width: 38, height: 22, borderRadius: 6, overflow: 'hidden', alignItems: 'center', justifyContent: 'center' },
   name: { flex: 1, minWidth: 0 },
@@ -145,8 +145,8 @@ const styles = StyleSheet.create({
   // The 15px price makes the website's line box taller than 13px text alone.
   total: { fontSize: 13, lineHeight: 23, ...font(400), color: t.neutral[600] },
   totalStrong: { fontSize: 15, ...font(500), color: t.primary[700] },
-  mark: { borderRadius: 8, backgroundColor: '#fff' },
+  mark: { borderRadius: 8, backgroundColor: t.neutral[0] },
   markLogo: { borderWidth: 1, borderColor: t.neutral[200] },
   markInitial: { alignItems: 'center', justifyContent: 'center', backgroundColor: t.primary[100] },
   markText: { ...font(500), color: t.primary[700] },
-});
+}));

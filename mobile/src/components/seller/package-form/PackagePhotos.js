@@ -3,8 +3,8 @@ import {
   ActivityIndicator, Image, Pressable, StyleSheet, Text, View,
 } from 'react-native';
 import * as ImagePicker from 'expo-image-picker';
-import { CameraIcon, XIcon } from 'phosphor-react-native';
-import { font, t } from '../../../theme';
+import { CameraIcon, XIcon } from '../../../lib/icons';
+import { font, t, themed, veil } from '../../../theme';
 import { resolveImg } from '../../../lib/media';
 import { uploadImage } from '../../../lib/upload';
 import { toast } from '../../../lib/toast';
@@ -135,7 +135,7 @@ export default function PackagePhotos({ images, itemPhotos, onChange }) {
   );
 }
 
-const styles = StyleSheet.create({
+const styles = themed(() => StyleSheet.create({
   autocover: {
     alignItems: 'flex-start',
     gap: 10,
@@ -176,9 +176,9 @@ const styles = StyleSheet.create({
   },
   badge: { position: 'absolute', bottom: 6, left: 6, paddingVertical: 4, paddingHorizontal: 8, borderRadius: 999 },
   badgeCover: { backgroundColor: P.green },
-  badgeMake: { backgroundColor: 'rgba(255, 255, 255, 0.92)' },
+  badgeMake: { backgroundColor: veil(0.92) },
   badgeText: { fontSize: 11.5, lineHeight: 13.8, color: P.ink, ...font(600) },
-  badgeTextCover: { color: '#fff' },
+  badgeTextCover: { color: t.onBrand },
   loading: { flex: 0, alignItems: 'center', justifyContent: 'center', gap: 6 },
   loadingText: { fontSize: 12, lineHeight: 19.2, color: P.muted, ...font(400) },
   add: {
@@ -192,4 +192,4 @@ const styles = StyleSheet.create({
     backgroundColor: t.neutral[0],
   },
   addText: { fontSize: 13, lineHeight: 20.8, color: P.green, ...font(600) },
-});
+}));

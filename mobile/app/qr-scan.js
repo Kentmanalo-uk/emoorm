@@ -7,8 +7,8 @@ import { useRouter } from 'expo-router';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import {
   DesktopIcon, FlashlightIcon, QrCodeIcon, XIcon,
-} from 'phosphor-react-native';
-import { font, t } from '../src/theme';
+} from '../src/lib/icons';
+import { font, t, themed } from '../src/theme';
 
 /*
  * Scan to log in on a computer (Profile's scan button): the website's
@@ -170,7 +170,7 @@ export default function QrScan() {
   );
 }
 
-const styles = StyleSheet.create({
+const styles = themed(() => StyleSheet.create({
   screen: { flex: 1, backgroundColor: '#000' },
   shade: { position: 'absolute', backgroundColor: 'rgba(0, 0, 0, 0.55)' },
   frame: { position: 'absolute', width: FRAME, height: FRAME, overflow: 'hidden' },
@@ -230,5 +230,5 @@ const styles = StyleSheet.create({
   primaryBtnText: { fontSize: 16, lineHeight: 20, ...font(600), color: '#fff' },
   linkBtn: { marginTop: 12, paddingVertical: 10, paddingHorizontal: 18 },
   linkBtnText: { fontSize: 15, lineHeight: 20, ...font(500), color: t.neutral[600] },
-});
+}));
 

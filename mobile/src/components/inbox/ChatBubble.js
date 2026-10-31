@@ -3,9 +3,9 @@ import { Image, Pressable, StyleSheet, Text, View } from 'react-native';
 import { useRouter } from 'expo-router';
 import {
   CheckIcon, ChecksIcon, HandshakeIcon, PushPinIcon,
-} from 'phosphor-react-native';
+} from '../../lib/icons';
 import { resolveImg } from '../../lib/media';
-import { font, t } from '../../theme';
+import { font, t, themed } from '../../theme';
 import ChatProductThumb from './ChatProductThumb';
 import { formatClock, formatMoney, orderStatusStyle } from './inboxFormat';
 
@@ -108,7 +108,7 @@ export function ChatDay({ label }) {
   );
 }
 
-const styles = StyleSheet.create({
+const styles = themed(() => StyleSheet.create({
   row: { flexDirection: 'row', alignItems: 'flex-end', maxWidth: '100%' },
   rowSelf: { flexDirection: 'row-reverse' },
   bubble: {
@@ -155,4 +155,4 @@ const styles = StyleSheet.create({
     paddingVertical: 3, paddingHorizontal: 10, borderRadius: 999, overflow: 'hidden', backgroundColor: t.neutral[100],
     fontSize: 11.5, lineHeight: 18.4, color: t.neutral[500], ...font(500),
   },
-});
+}));

@@ -3,12 +3,12 @@ import {
   Animated, Easing, Image, Pressable, StyleSheet, Text, View,
 } from 'react-native';
 import { useRouter } from 'expo-router';
-import { ArrowRightIcon, StarIcon } from 'phosphor-react-native';
+import { ArrowRightIcon, StarIcon } from '../../lib/icons';
 import apiClient from '../../api/client';
 import { useProductPeek } from '../peek/ProductPeek';
 import { useStorePeek } from '../peek/StorePeek';
 import { resolveImg } from '../../lib/media';
-import { font, t, text } from '../../theme';
+import { font, t, text, themed } from '../../theme';
 
 /*
  * Pieces of the municipality showcase and gallery (web/src/pages/
@@ -228,7 +228,7 @@ export function MunicipalityStoreRow({ store, fallbackPlace }) {
   );
 }
 
-const styles = StyleSheet.create({
+const styles = themed(() => StyleSheet.create({
   fill: { width: '100%', height: '100%' },
   placeholder: { opacity: 0.12 },
 
@@ -317,4 +317,4 @@ const styles = StyleSheet.create({
   storeName: { fontSize: 15, lineHeight: 24, color: t.secondary[950], ...font(500) },
   storePlace: { marginTop: 4, fontSize: 12, lineHeight: 19.2, color: text.muted, ...font(400) },
   storeArrow: { flexShrink: 0 },
-});
+}));

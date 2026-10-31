@@ -1,9 +1,10 @@
 import Svg, { Defs, G, LinearGradient, Stop } from 'react-native-svg';
+import { ikionShapes } from '../../lib/ikionNative';
 import {
   ArmchairIcon, BasketIcon, BreadIcon, CarrotIcon, CoffeeIcon, CookieIcon, CowIcon, DropIcon, EggIcon,
   FishIcon, FlowerIcon, ForkKnifeIcon, GiftIcon, GrainsIcon, JarIcon, OrangeSliceIcon, PepperIcon,
   PlantIcon, ShrimpIcon, StorefrontIcon, SunIcon, TShirtIcon, TractorIcon,
-} from 'phosphor-react-native';
+} from '../../lib/icons';
 
 /*
  * Home's "Shop by Category" icons (web/src/lib/categoryIcons.js and
@@ -49,10 +50,9 @@ export const categoryIconKey = (category) => {
   return match || 'shop';
 };
 
-// A Phosphor icon's filled paths (its 256-unit drawing), to fill with a
-// gradient inside our own <Svg> (as EmptyArt does): an icon component
+// The icon's filled shapes (its 24-unit drawing) go inside our own <Svg>
+// so the gradient can fill them (as EmptyArt does): an icon component
 // cannot carry a gradient on Android/iOS.
-const iconPaths = (Icon) => Icon({}).props.weights.get('fill');
 
 /** A category's icon, filled with its gradient. */
 export default function HomeCategoryIcon({ category, iconKey, size = 40, style }) {
@@ -60,14 +60,14 @@ export default function HomeCategoryIcon({ category, iconKey, size = 40, style }
   const { Icon, colors: [from, to] } = CATEGORY_ICONS[key];
   const id = `home-cat-grad-${key}`;
   return (
-    <Svg width={size} height={size} viewBox="0 0 256 256" style={style} pointerEvents="none">
+    <Svg width={size} height={size} viewBox="0 0 24 24" style={style} pointerEvents="none">
       <Defs>
         <LinearGradient id={id} x1="0" y1="0" x2="1" y2="1">
           <Stop offset="0" stopColor={from} />
           <Stop offset="1" stopColor={to} />
         </LinearGradient>
       </Defs>
-      <G fill={`url(#${id})`}>{iconPaths(Icon)}</G>
+      <G fill={`url(#${id})`}>{ikionShapes(Icon, { paint: `url(#${id})` })}</G>
     </Svg>
   );
 }

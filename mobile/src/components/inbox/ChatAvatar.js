@@ -1,7 +1,7 @@
 import { useEffect, useState } from 'react';
 import { Image, StyleSheet, Text, View } from 'react-native';
 import { resolveImg } from '../../lib/media';
-import { font, t } from '../../theme';
+import { font, t, themed } from '../../theme';
 
 /**
  * A round picture with the website's fallbacks (web/src/components/ui/
@@ -33,8 +33,8 @@ export default function ChatAvatar({
   );
 }
 
-const styles = StyleSheet.create({
+const styles = themed(() => StyleSheet.create({
   box: { alignItems: 'center', justifyContent: 'center', overflow: 'hidden', flexShrink: 0 },
   img: { width: '100%', height: '100%' },
   initial: { fontSize: 14, lineHeight: 18, ...font(500) },
-});
+}));

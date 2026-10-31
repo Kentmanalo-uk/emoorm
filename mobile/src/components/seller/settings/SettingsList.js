@@ -1,7 +1,7 @@
 import { Pressable, StyleSheet, Text, View } from 'react-native';
 import { useRouter } from 'expo-router';
-import { CaretRightIcon } from 'phosphor-react-native';
-import { font, t } from '../../../theme';
+import { CaretRightIcon } from '../../../lib/icons';
+import { font, ink, t, themed } from '../../../theme';
 import { sellerHref } from '../sellerRoutes';
 
 /*
@@ -63,7 +63,7 @@ export function SettingsRow({ to, icon: Icon, label, value, missing = false, tag
   );
 }
 
-const styles = StyleSheet.create({
+const styles = themed(() => StyleSheet.create({
   list: { marginHorizontal: -12, overflow: 'hidden', backgroundColor: t.neutral[0] },
   band: { borderBottomWidth: 8, borderBottomColor: t.neutral[100] },
   divider: { borderTopWidth: 1, borderTopColor: t.neutral[100] },
@@ -80,10 +80,10 @@ const styles = StyleSheet.create({
   valueRow: { flexDirection: 'row', alignItems: 'center', overflow: 'hidden' },
   swatch: {
     width: 12, height: 12, marginRight: 4, borderRadius: 6,
-    borderWidth: 1, borderColor: 'rgba(15, 23, 42, 0.12)',
+    borderWidth: 1, borderColor: ink(0.12),
   },
   tag: {
     flexShrink: 0, paddingVertical: 3, paddingHorizontal: 8, overflow: 'hidden', borderRadius: 999,
     backgroundColor: t.accent[50], color: t.accent[700], fontSize: 11.5, lineHeight: 15, ...font(500),
   },
-});
+}));

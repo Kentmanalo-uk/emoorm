@@ -2,9 +2,9 @@ import {
   Image, Platform, Pressable, ScrollView, StyleSheet, Text, View, useWindowDimensions,
 } from 'react-native';
 import { usePathname, useRouter } from 'expo-router';
-import { ArrowLeftIcon, HouseIcon, MagnifyingGlassIcon } from 'phosphor-react-native';
+import { ArrowLeftIcon, HouseIcon, MagnifyingGlassIcon } from '../src/lib/icons';
 import PublicHeader from '../src/components/public/PublicHeader';
-import { font, t, text } from '../src/theme';
+import { font, t, text, themed } from '../src/theme';
 
 /*
  * web/src/pages/NotFound.jsx + NotFound.css at phone width: a white card on
@@ -68,7 +68,7 @@ export default function NotFound() {
   );
 }
 
-const styles = StyleSheet.create({
+const styles = themed(() => StyleSheet.create({
   screen: { flex: 1, backgroundColor: t.neutral[0] },
   scrollContent: { flexGrow: 1 },
   section: {
@@ -140,4 +140,4 @@ const styles = StyleSheet.create({
     paddingHorizontal: 12,
   },
   backText: { fontSize: 13, lineHeight: 15.6, color: text.muted, ...font(400) },
-});
+}));

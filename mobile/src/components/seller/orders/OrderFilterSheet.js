@@ -2,9 +2,9 @@ import { useState } from 'react';
 import { Pressable, StyleSheet, Text, View } from 'react-native';
 import {
   CalendarDotsIcon, CaretDownIcon, CaretLeftIcon, CaretRightIcon, CheckIcon,
-} from 'phosphor-react-native';
+} from '../../../lib/icons';
 import Sheet, { SheetButton } from '../../Sheet';
-import { font, t } from '../../../theme';
+import { font, t, themed } from '../../../theme';
 import { PAYMENT_FILTERS } from './sellerOrderLib';
 
 /*
@@ -194,7 +194,7 @@ export default function OrderFilterSheet({
   );
 }
 
-const styles = StyleSheet.create({
+const styles = themed(() => StyleSheet.create({
   // .scm-sheet-label
   label: { marginTop: 14, marginBottom: 8, fontSize: 13, lineHeight: 20.8, ...font(400), color: t.neutral[500] },
   fieldRow: { flexDirection: 'row', gap: 10 },
@@ -229,8 +229,8 @@ const styles = StyleSheet.create({
   calDayOn: { backgroundColor: t.primary[600] },
   calToday: { borderWidth: 1, borderColor: t.primary[300] },
   calDayText: { fontSize: 14, lineHeight: 20, ...font(400), color: t.neutral[800] },
-  calDayTextOn: { ...font(600), color: '#fff' },
+  calDayTextOn: { ...font(600), color: t.onBrand },
   calDayOff: { color: t.neutral[300] },
   calClear: { alignSelf: 'flex-end', marginTop: 4, paddingVertical: 6, paddingHorizontal: 10 },
   calClearText: { fontSize: 13, lineHeight: 20, ...font(600), color: t.danger[600] },
-});
+}));

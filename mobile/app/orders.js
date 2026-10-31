@@ -6,7 +6,7 @@ import { useFocusEffect, useLocalSearchParams, useRouter } from 'expo-router';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import {
   ArrowCounterClockwiseIcon, ChatTextIcon, CheckCircleIcon, EyeIcon, QrCodeIcon, StarIcon, UploadSimpleIcon,
-} from 'phosphor-react-native';
+} from '../src/lib/icons';
 import apiClient from '../src/api/client';
 import ScreenHeader from '../src/components/ScreenHeader';
 import ProductImage from '../src/components/ProductImage';
@@ -19,7 +19,7 @@ import { momentLabel } from '../src/lib/availability';
 import {
   countLabel, etaLabel, isStockless, lineKind, lineNote, lineUnit, minOrder,
 } from '../src/components/orders/orderLines';
-import { font, t } from '../src/theme';
+import { font, t, themed } from '../src/theme';
 import {
   BUYER_TABS, buyerBucket, buyerTabFrom, countBuyerTabs, needsPayment, longDate, pesoPlain,
 } from '../src/components/orders/orderProgress';
@@ -592,7 +592,7 @@ function InfoRow({ label, value, total = false }) {
   );
 }
 
-const styles = StyleSheet.create({
+const styles = themed(() => StyleSheet.create({
   screen: { flex: 1, backgroundColor: t.neutral[0] },
   scroll: { flex: 1 },
   content: { paddingTop: 24, paddingHorizontal: 12, gap: 12 },
@@ -627,7 +627,7 @@ const styles = StyleSheet.create({
     borderRadius: 10, borderWidth: 1, borderColor: t.warning[200], backgroundColor: t.warning[50],
   },
   nudgeBtn: { width: '100%', minHeight: 44, alignItems: 'center', justifyContent: 'center', borderRadius: 10, backgroundColor: t.primary[600] },
-  nudgeBtnText: { fontSize: 14, lineHeight: 22.4, ...font(500), color: '#fff' },
+  nudgeBtnText: { fontSize: 14, lineHeight: 22.4, ...font(500), color: t.onBrand },
   nudgeText: { flexDirection: 'row', alignItems: 'center', gap: 8, flexShrink: 1 },
   nudgeLine: { flexShrink: 1, fontSize: 14, lineHeight: 22.4, ...font(400), color: t.neutral[800] },
   nudgeStrong: { ...font(500) },
@@ -639,5 +639,5 @@ const styles = StyleSheet.create({
     borderWidth: 1, borderColor: t.neutral[200], borderRadius: 999, backgroundColor: t.neutral[0],
   },
   moreText: { fontSize: 14, lineHeight: 22.4, ...font(400), color: t.neutral[700] },
-});
+}));
 

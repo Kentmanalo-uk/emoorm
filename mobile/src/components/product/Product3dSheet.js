@@ -4,10 +4,10 @@ import {
 } from 'react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import Svg, { Path } from 'react-native-svg';
-import { CubeIcon } from 'phosphor-react-native';
+import { CubeIcon } from '../../lib/icons';
 import { resolveImg } from '../../lib/media';
 import { toast } from '../../lib/toast';
-import { font, t } from '../../theme';
+import { font, ink, t, themed, veil } from '../../theme';
 import { SheetFrame } from '../Sheet';
 import Model3dView from './Model3dView';
 import { STAGE_BG } from './model3dHtml';
@@ -171,14 +171,14 @@ export default function Product3dSheet({ model, name, onClose }) {
   );
 }
 
-const styles = StyleSheet.create({
+const styles = themed(() => StyleSheet.create({
   // .pdp-3d-chip
   chip: {
     flexDirection: 'row', alignItems: 'center', gap: 6, minHeight: 36, paddingLeft: 12, paddingRight: 14,
-    borderWidth: 1, borderColor: 'rgba(15, 23, 42, 0.08)', borderRadius: 999, backgroundColor: 'rgba(255, 255, 255, 0.94)',
-    shadowColor: 'rgb(15, 23, 42)', shadowOpacity: 0.14, shadowRadius: 5, shadowOffset: { width: 0, height: 2 }, elevation: 3,
+    borderWidth: 1, borderColor: ink(0.08), borderRadius: 999, backgroundColor: veil(0.94),
+    shadowColor: ink(1), shadowOpacity: 0.14, shadowRadius: 5, shadowOffset: { width: 0, height: 2 }, elevation: 3,
   },
-  chipPressed: { backgroundColor: '#fff' },
+  chipPressed: { backgroundColor: t.neutral[0] },
   chipText: { fontSize: 14, lineHeight: 18, ...font(600), color: t.neutral[900], letterSpacing: 0.28 },
 
   // .p3d-head
@@ -203,8 +203,8 @@ const styles = StyleSheet.create({
     shadowColor: '#000', shadowOpacity: 0.18, shadowRadius: 7, shadowOffset: { width: 0, height: 4 }, elevation: 4,
   },
   arBtnPressed: { backgroundColor: t.primary[700] },
-  arText: { fontSize: 15.5, lineHeight: 20, ...font(500), color: '#fff' },
+  arText: { fontSize: 15.5, lineHeight: 20, ...font(500), color: t.onBrand },
 
   // .p3d-hint
   hint: { paddingTop: 8, paddingHorizontal: 20, fontSize: 12, lineHeight: 16.8, ...font(400), color: t.neutral[400], textAlign: 'center' },
-});
+}));

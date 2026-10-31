@@ -3,11 +3,11 @@ import {
   ActivityIndicator, Animated, Image, Pressable, StyleSheet, Text, View,
 } from 'react-native';
 import { useRouter } from 'expo-router';
-import { EyeIcon, PackageIcon } from 'phosphor-react-native';
+import { EyeIcon, PackageIcon } from '../../../lib/icons';
 import { resolveImg } from '../../../lib/media';
 import { variationImage } from '../../../lib/variationImage';
 import { spanLabel } from '../../../lib/availability';
-import { font, t } from '../../../theme';
+import { font, t, themed } from '../../../theme';
 import TimeLeft from './TimeLeft';
 import {
   ACTION_LABELS, statusOf, cookingFor, countLabel, etaLabel, lineKind, money, nextStep, orderNo, shortDate,
@@ -30,24 +30,24 @@ import { useSellerOrderPeek } from '../../peek/SellerOrderPeek';
  */
 
 /** The coloured words of a status (.seller-badge--solid inside the card). */
-export const STATUS_INK = {
+export const STATUS_INK = themed(() => ({
   pending: t.warning[600],
   confirmed: t.info[600],
   preparing: t.indigo[500],
   ready: t.teal[600],
   completed: t.primary[600],
   cancelled: t.danger[600],
-};
+}));
 
 /** The solid pills of the details sheet (.seller-badge--solid.status-*). */
-export const STATUS_FILL = {
+export const STATUS_FILL = themed(() => ({
   pending: t.warning[500],
   confirmed: t.info[600],
   preparing: t.indigo[500],
   ready: t.teal[600],
   completed: t.primary[600],
   cancelled: t.danger[600],
-};
+}));
 
 // Available Today orders carry a time to confirm by (respondBy); unconfirmed
 // by then, they cancel on their own.
@@ -214,7 +214,7 @@ export function OrdersSkeleton({ rows = 6 }) {
   return <PageLoader minHeight={320} label="Loading orders" />;
 }
 
-const styles = StyleSheet.create({
+const styles = themed(() => StyleSheet.create({
   // The row as a card on phones: out to the screen edges, 12px corners, a faint shadow.
   card: {
     marginHorizontal: -12, paddingTop: 14, paddingHorizontal: 14, borderRadius: 12, backgroundColor: t.neutral[0],
@@ -275,7 +275,7 @@ const styles = StyleSheet.create({
   next: { backgroundColor: t.primary[600] },
   nextPressed: { backgroundColor: t.primary[700] },
   nextBusy: { opacity: 0.6 },
-  nextText: { flexShrink: 1, fontSize: 13.5, lineHeight: 20, ...font(600), color: '#fff' },
+  nextText: { flexShrink: 1, fontSize: 13.5, lineHeight: 20, ...font(600), color: t.onBrand },
 
   skTable: { width: '100%', borderRadius: 10, overflow: 'hidden', backgroundColor: t.neutral[0] },
   skRow: {
@@ -290,4 +290,4 @@ const styles = StyleSheet.create({
   skLines: { flex: 1, minWidth: 0, gap: 5, overflow: 'hidden' },
   skCell: { flex: 1, minWidth: 0 },
   sk: { backgroundColor: t.neutral[150] },
-});
+}));

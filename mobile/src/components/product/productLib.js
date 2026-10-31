@@ -1,6 +1,6 @@
 import {
   MoneyIcon, QrCodeIcon, StorefrontIcon, TruckIcon,
-} from 'phosphor-react-native';
+} from '../../lib/icons';
 import apiClient from '../../api/client';
 import { isOpen as windowOpen, isTodayProduct } from '../../lib/availability';
 import { cookReady, isStockless, productKind } from './productKinds';

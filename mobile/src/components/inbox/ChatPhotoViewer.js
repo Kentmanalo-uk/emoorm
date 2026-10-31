@@ -1,6 +1,7 @@
 import { Image, Modal, Pressable, StyleSheet, View } from 'react-native';
+import { themed } from '../../theme';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
-import { XIcon } from 'phosphor-react-native';
+import { XIcon } from '../../lib/icons';
 import { resolveImg } from '../../lib/media';
 
 /** A sent photo full screen (web .msgr-viewer): tap outside or × to close. */
@@ -27,7 +28,7 @@ export default function ChatPhotoViewer({ image, onClose }) {
   );
 }
 
-const styles = StyleSheet.create({
+const styles = themed(() => StyleSheet.create({
   backdrop: { flex: 1, padding: 24, alignItems: 'center', justifyContent: 'center', backgroundColor: 'rgba(0, 0, 0, 0.9)' },
   frame: { width: '100%', height: '100%' },
   img: { width: '100%', height: '100%', borderRadius: 6 },
@@ -35,4 +36,4 @@ const styles = StyleSheet.create({
     position: 'absolute', right: 12, width: 40, height: 40, borderRadius: 20, alignItems: 'center', justifyContent: 'center',
     backgroundColor: 'rgba(255, 255, 255, 0.15)',
   },
-});
+}));

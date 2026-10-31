@@ -4,7 +4,7 @@ import { useLocalSearchParams, useRouter } from 'expo-router';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import {
   CaretDownIcon, CaretLeftIcon, CaretUpIcon, MagnifyingGlassIcon, MapPinIcon, SlidersHorizontalIcon,
-} from 'phosphor-react-native';
+} from '../src/lib/icons';
 import apiClient from '../src/api/client';
 import Chip from '../src/components/Chip';
 import Glass, { liquidGlass } from '../src/components/Glass';
@@ -17,7 +17,7 @@ import {
 import { readImageSearch } from '../src/components/search/imageSearchStore';
 import { saveRecent } from '../src/lib/shellSearch';
 import { fetchCategories, fetchMunicipalities } from '../src/lib/referenceData';
-import { font, t } from '../src/theme';
+import { font, t, themed } from '../src/theme';
 
 // The API's sortBy and sortOrder for each sort choice (web Products.jsx SORTS).
 const SORTS = {
@@ -419,7 +419,7 @@ function SortTab({ label, on, onPress, accessibilityLabel, children }) {
   );
 }
 
-const styles = StyleSheet.create({
+const styles = themed(() => StyleSheet.create({
   screen: { flex: 1, backgroundColor: t.neutral[100] },
   srOnly: { position: 'absolute', width: 1, height: 1, overflow: 'hidden', opacity: 0 },
 
@@ -468,4 +468,4 @@ const styles = StyleSheet.create({
   row: { gap: 4, paddingHorizontal: 12, marginBottom: 4 },
   cell: { minWidth: 0 },
   more: { marginVertical: 16 },
-});
+}));

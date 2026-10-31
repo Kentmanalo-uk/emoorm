@@ -1,7 +1,7 @@
 import { useEffect, useRef, useState } from 'react';
 import { Pressable, ScrollView, StyleSheet, Text, View } from 'react-native';
-import { CalendarBlankIcon, ClockIcon } from 'phosphor-react-native';
-import { font, t } from '../../../theme';
+import { CalendarBlankIcon, ClockIcon } from '../../../lib/icons';
+import { font, t, themed } from '../../../theme';
 import {
   DAY, clock, clockText, dayStart, daySlots, longDay, pickerDays, shortDay,
 } from './todayTime';
@@ -170,7 +170,7 @@ export function DayPanel({ value, from, count = 30, onChange }) {
   );
 }
 
-const styles = StyleSheet.create({
+const styles = themed(() => StyleSheet.create({
   // .scm-field input
   field: {
     flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between', gap: 8,
@@ -194,6 +194,6 @@ const styles = StyleSheet.create({
   chipOn: { borderColor: t.primary[600], backgroundColor: t.primary[600] },
   chipOff: { opacity: 0.45 },
   chipText: { fontSize: 14, lineHeight: 20, ...font(400), color: t.neutral[700] },
-  chipTextOn: { color: '#fff' },
+  chipTextOn: { color: t.onBrand },
   chipTextOff: { color: t.neutral[400] },
-});
+}));

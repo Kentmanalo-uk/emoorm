@@ -6,11 +6,11 @@ import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import * as ImagePicker from 'expo-image-picker';
 import {
   ArrowClockwiseIcon, CameraIcon, CheckCircleIcon, ImageSquareIcon, StorefrontIcon, TruckIcon, WarningCircleIcon,
-} from 'phosphor-react-native';
+} from '../../../lib/icons';
 import OrderSheetFrame from '../../orders/OrderSheetFrame';
 import { uploadPrivateImage } from '../../../lib/upload';
 import { toast } from '../../../lib/toast';
-import { font, t } from '../../../theme';
+import { font, t, themed } from '../../../theme';
 
 /**
  * Asks the seller for the hand-over photo before an order is marked
@@ -221,7 +221,7 @@ export default function ProofPhotoSheet({
 }
 
 /** The cf-dialog sheet pieces (ProofPhotoSheet.css + ConfirmDialog.css ≤480px), shared with ShipOrderSheet. */
-export const proofStyles = StyleSheet.create({
+export const proofStyles = themed(() => StyleSheet.create({
   body: { gap: 14, paddingTop: 20, paddingHorizontal: 16 },
   head: { flexDirection: 'row', alignItems: 'center', gap: 12 },
   icon: { width: 40, height: 40, borderRadius: 20, alignItems: 'center', justifyContent: 'center', backgroundColor: t.primary[50] },
@@ -240,9 +240,9 @@ export const proofStyles = StyleSheet.create({
   btnText: { fontSize: 14, lineHeight: 20, ...font(600) },
   cancelText: { color: t.neutral[700] },
   goText: { color: '#fff' },
-});
+}));
 
-const styles = StyleSheet.create({
+const styles = themed(() => StyleSheet.create({
   preview: { overflow: 'hidden', borderRadius: 14, backgroundColor: t.neutral[100] },
   previewImg: { width: '100%', maxHeight: 300 },
   previewDim: { opacity: 0.7 },
@@ -258,13 +258,13 @@ const styles = StyleSheet.create({
   errorRow: { flexDirection: 'row', alignItems: 'flex-start', gap: 6, flexGrow: 1, flexShrink: 1, flexBasis: 180 },
   errorText: { flexShrink: 1 },
   tryAgain: {
-    flexDirection: 'row', alignItems: 'center', gap: 6, height: 32, paddingHorizontal: 12, borderRadius: 999, backgroundColor: '#fff',
+    flexDirection: 'row', alignItems: 'center', gap: 6, height: 32, paddingHorizontal: 12, borderRadius: 999, backgroundColor: t.neutral[0],
   },
-  tryAgainText: { fontSize: 13, lineHeight: 18, ...font(600), color: '#b91c1c' },
+  tryAgainText: { fontSize: 13, lineHeight: 18, ...font(600), color: t.danger[700] },
   swap: { flexDirection: 'row', gap: 10 },
   swapBtn: {
     flex: 1, height: 40, flexDirection: 'row', alignItems: 'center', justifyContent: 'center', gap: 6,
-    borderWidth: 1, borderColor: t.neutral[300], borderRadius: 10, backgroundColor: '#fff',
+    borderWidth: 1, borderColor: t.neutral[300], borderRadius: 10, backgroundColor: t.neutral[0],
   },
   swapText: { fontSize: 13.5, lineHeight: 19, ...font(500), color: t.neutral[700] },
   add: { gap: 8 },
@@ -277,4 +277,4 @@ const styles = StyleSheet.create({
   pickPrimary: { borderColor: t.primary[300], backgroundColor: t.primary[50] },
   pickText: { fontSize: 14, lineHeight: 20, ...font(500), color: t.neutral[700], textAlign: 'center' },
   pickTextPrimary: { color: t.primary[700] },
-});
+}));

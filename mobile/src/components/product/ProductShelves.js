@@ -1,14 +1,14 @@
 import { useState } from 'react';
 import { Image, Pressable, ScrollView, StyleSheet, Text, View } from 'react-native';
 import { useRouter } from 'expo-router';
-import { CaretRightIcon, PlusIcon } from 'phosphor-react-native';
+import { CaretRightIcon, PlusIcon } from '../../lib/icons';
 import ProductImage from '../ProductImage';
 import { ProductStats } from '../ProductStats';
 import { SaleWas } from '../SaleTag';
 import { ProductTodayTag } from '../TodayTag';
 import { saleInfo } from '../../lib/variantPricing';
 import { resolveImg } from '../../lib/media';
-import { font, t } from '../../theme';
+import { font, t, themed } from '../../theme';
 import { parseImages, peso } from './productLib';
 import KindPrice from './KindPrice';
 import { useProductPeek } from '../peek/ProductPeek';
@@ -113,8 +113,8 @@ export function RelatedGrid({ products, categoryId, sectionRef }) {
   );
 }
 
-const styles = StyleSheet.create({
-  shelf: { paddingTop: 6, paddingBottom: 14, backgroundColor: '#fff' },
+const styles = themed(() => StyleSheet.create({
+  shelf: { paddingTop: 6, paddingBottom: 14, backgroundColor: t.neutral[0] },
   tabs: { flexDirection: 'row', gap: 18, paddingHorizontal: 16, borderBottomWidth: 1, borderBottomColor: t.neutral[150] },
   tab: { paddingTop: 8, paddingBottom: 10 },
   tabText: { fontSize: 14, lineHeight: 22.4, ...font(500), color: t.neutral[500] },
@@ -130,7 +130,7 @@ const styles = StyleSheet.create({
   foot: { flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between', gap: 6, marginTop: 'auto' },
   price: { flexShrink: 1, minWidth: 0, fontSize: 14, lineHeight: 22.4, ...font(500), color: t.primary[700] },
   add: {
-    width: 26, height: 26, borderRadius: 13, borderWidth: 1.5, borderColor: t.primary[600], backgroundColor: '#fff',
+    width: 26, height: 26, borderRadius: 13, borderWidth: 1.5, borderColor: t.primary[600], backgroundColor: t.neutral[0],
     alignItems: 'center', justifyContent: 'center',
   },
   addPressed: { backgroundColor: t.primary[50] },
@@ -141,12 +141,12 @@ const styles = StyleSheet.create({
   more: { flexDirection: 'row', alignItems: 'center', gap: 3, height: 32 },
   moreText: { fontSize: 13, lineHeight: 20.8, ...font(400), color: t.primary[700] },
   grid: { flexDirection: 'row', flexWrap: 'wrap', gap: 8 },
-  gCard: { overflow: 'hidden', backgroundColor: '#fff' },
-  gImage: { width: '100%', backgroundColor: '#fff', overflow: 'hidden' },
+  gCard: { overflow: 'hidden', backgroundColor: t.neutral[0] },
+  gImage: { width: '100%', backgroundColor: t.neutral[0], overflow: 'hidden' },
   gInfo: { paddingTop: 8, paddingHorizontal: 10, paddingBottom: 10, gap: 3 },
   gName: { minHeight: 37.8, fontSize: 16, lineHeight: 21.6, ...font(400), color: t.secondary[950] },
   gTag: { position: 'relative', top: -1 },
   gPriceRow: { flexDirection: 'row', alignItems: 'center', flexWrap: 'wrap', marginTop: 2 },
   gPrice: { fontSize: 15, lineHeight: 18, ...font(500), color: t.primary[600] },
   gWas: { marginLeft: 4 },
-});
+}));

@@ -1,8 +1,8 @@
 import { useMemo, useState } from 'react';
 import { Pressable, StyleSheet, Text, View } from 'react-native';
-import { CaretLeftIcon, CaretRightIcon } from 'phosphor-react-native';
+import { CaretLeftIcon, CaretRightIcon } from '../../../lib/icons';
 import Sheet from '../../Sheet';
-import { font, t } from '../../../theme';
+import { font, t, themed } from '../../../theme';
 import { MONTHS, ymd } from './format';
 
 /*
@@ -204,7 +204,7 @@ function CalendarSheet({ open, title, value, onClose, onPick }) {
   );
 }
 
-const styles = StyleSheet.create({
+const styles = themed(() => StyleSheet.create({
   // .an-daterange-wrap: the whole row, then the custom dates under it.
   wrap: { width: '100%', gap: 6 },
   row: { flexDirection: 'row', gap: 8 },
@@ -249,4 +249,4 @@ const styles = StyleSheet.create({
   calDayText: { fontSize: 15, lineHeight: 20, color: t.neutral[800], ...font(400) },
   calToday: { color: t.primary[700], ...font(600) },
   calDayTextOn: { color: t.neutral[0], ...font(600) },
-});
+}));

@@ -2,7 +2,7 @@ import { useEffect, useState } from 'react';
 import { Image, StyleSheet, View } from 'react-native';
 import apiClient from '../api/client';
 import { resolveImg } from '../lib/media';
-import { t } from '../theme';
+import { t, themed } from '../theme';
 
 const BRAND_ICON = require('../../assets/brand-icon.png');
 
@@ -49,8 +49,8 @@ export default function ProductImage({ src, style, resizeMode = 'cover', onLoad 
   return <Image source={{ uri }} style={[styles.image, style]} resizeMode={resizeMode} onLoad={onLoad} onError={() => setFailed(true)} />;
 }
 
-const styles = StyleSheet.create({
+const styles = themed(() => StyleSheet.create({
   image: { width: '100%', height: '100%', backgroundColor: t.neutral[100] },
   fallback: { width: '100%', height: '100%', alignItems: 'center', justifyContent: 'center', overflow: 'hidden', backgroundColor: t.neutral[100] },
   mark: { width: '70%', height: '70%', opacity: 0.12 },
-});
+}));

@@ -5,8 +5,8 @@ import {
 import {
   ArrowLeftIcon, ArrowRightIcon, ArrowUpIcon, ArrowUpLeftIcon, ArrowUpRightIcon, ArrowUUpLeftIcon, ArrowsClockwiseIcon,
   CaretDownIcon, ClockIcon, CrosshairIcon, FlagCheckeredIcon, ListBulletsIcon, MapPinIcon, NavigationArrowIcon, PathIcon,
-} from 'phosphor-react-native';
-import { font, t } from '../../theme';
+} from '../../lib/icons';
+import { font, t, themed } from '../../theme';
 import LeafletMap from './LeafletMap';
 import {
   getMyLocation, haversine, km, locationAllowed, mins, validPin,
@@ -239,7 +239,7 @@ export default function PickupRoute({ store, style }) {
   );
 }
 
-const styles = StyleSheet.create({
+const styles = themed(() => StyleSheet.create({
   pr: {
     marginTop: 12,
     borderWidth: 1,
@@ -267,7 +267,7 @@ const styles = StyleSheet.create({
   },
   btnPrimary: { borderColor: t.primary[600], backgroundColor: t.primary[600] },
   btnText: { fontSize: 13.5, lineHeight: 17, color: t.neutral[700], ...font(500) },
-  btnTextPrimary: { color: '#fff' },
+  btnTextPrimary: { color: t.onBrand },
   caretOpen: { transform: [{ rotate: '180deg' }] },
   steps: { maxHeight: 300 },
   stepsContent: { paddingHorizontal: 14, paddingBottom: 14 },
@@ -282,4 +282,4 @@ const styles = StyleSheet.create({
   noPinBody: { flex: 1, minWidth: 0 },
   noPinText: { marginBottom: 4, fontSize: 13.5, lineHeight: 20, color: t.neutral[600], ...font(400) },
   link: { alignSelf: 'flex-start', fontSize: 13.5, lineHeight: 20, color: t.primary[700], ...font(500) },
-});
+}));

@@ -1,8 +1,8 @@
 import { useEffect, useMemo, useState } from 'react';
 import { Pressable, StyleSheet, Text, TextInput, View } from 'react-native';
-import { CaretDownIcon } from 'phosphor-react-native';
+import { CaretDownIcon } from '../../lib/icons';
 import Sheet, { SheetOption } from '../Sheet';
-import { font, t } from '../../theme';
+import { font, t, themed } from '../../theme';
 
 /*
  * The checkout's address fields (web/src/components/common/PhAddressPicker.jsx
@@ -269,7 +269,7 @@ export default function CheckoutAddressPicker({
   );
 }
 
-const styles = StyleSheet.create({
+const styles = themed(() => StyleSheet.create({
   picker: { gap: 12 },
   field: { gap: 4 },
   label: { fontSize: 13, lineHeight: 20.8, ...font(500), color: t.neutral[700] },
@@ -297,4 +297,4 @@ const styles = StyleSheet.create({
   toggle: { alignSelf: 'flex-start', minHeight: 32, justifyContent: 'center' },
   toggleText: { fontSize: 13, lineHeight: 15.6, ...font(400), color: t.info[600], textDecorationLine: 'underline' },
   optionOff: { opacity: 0.45 },
-});
+}));

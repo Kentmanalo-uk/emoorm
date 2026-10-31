@@ -1,8 +1,8 @@
 import { useEffect, useState } from 'react';
 import { Pressable, ScrollView, StyleSheet, Text, TextInput, View } from 'react-native';
-import { MagnifyingGlassIcon, XIcon } from 'phosphor-react-native';
+import { MagnifyingGlassIcon, XIcon } from '../../lib/icons';
 import apiClient from '../../api/client';
-import { font, t } from '../../theme';
+import { font, t, themed } from '../../theme';
 import EmptyState from '../EmptyState';
 import ChatProductThumb from './ChatProductThumb';
 import InboxSheet from './InboxSheet';
@@ -92,7 +92,7 @@ export default function ChatProductPicker({ open, storeId, onPick, onClose }) {
   );
 }
 
-const styles = StyleSheet.create({
+const styles = themed(() => StyleSheet.create({
   sheet: { maxWidth: 520, alignSelf: 'center' },
   inner: { paddingTop: 8, paddingHorizontal: 16, flexShrink: 1 },
   head: { flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between', paddingTop: 12, paddingBottom: 8 },
@@ -117,4 +117,4 @@ const styles = StyleSheet.create({
   itemText: { flex: 1, minWidth: 0, gap: 2 },
   itemName: { fontSize: 14.5, lineHeight: 17.4, color: t.neutral[900], ...font(400) },
   itemPrice: { fontSize: 13.5, lineHeight: 16.2, color: t.primary[700], ...font(500) },
-});
+}));

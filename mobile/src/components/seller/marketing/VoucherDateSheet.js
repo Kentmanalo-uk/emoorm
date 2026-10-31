@@ -1,8 +1,8 @@
 import { useEffect, useState } from 'react';
 import { Pressable, StyleSheet, Text, View } from 'react-native';
-import { CaretLeftIcon, CaretRightIcon } from 'phosphor-react-native';
+import { CaretLeftIcon, CaretRightIcon } from '../../../lib/icons';
 import Sheet, { SheetButton } from '../../Sheet';
-import { font, t } from '../../../theme';
+import { font, t, themed } from '../../../theme';
 
 /*
  * The voucher's "Last day" (the website's <input type="date"> in
@@ -106,7 +106,7 @@ export default function VoucherDateSheet({ open, value, onPick, onClose }) {
   );
 }
 
-const styles = StyleSheet.create({
+const styles = themed(() => StyleSheet.create({
   head: { flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between', marginBottom: 8 },
   nav: { width: 40, height: 40, borderRadius: 20, alignItems: 'center', justifyContent: 'center', backgroundColor: t.neutral[100] },
   navOff: { opacity: 0.4 },
@@ -119,5 +119,5 @@ const styles = StyleSheet.create({
   dayOn: { backgroundColor: t.primary[600], borderWidth: 0 },
   dayText: { fontSize: 15, lineHeight: 20, ...font(400), color: t.neutral[800] },
   dayPast: { color: t.neutral[300] },
-  dayTextOn: { ...font(600), color: '#fff' },
-});
+  dayTextOn: { ...font(600), color: t.onBrand },
+}));

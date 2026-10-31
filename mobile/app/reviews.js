@@ -3,7 +3,7 @@ import { Image, Pressable, ScrollView, StyleSheet, Text, View } from 'react-nati
 import { useLocalSearchParams, useRouter } from 'expo-router';
 import {
   ChatCircleTextIcon, PencilSimpleIcon, StarIcon, StorefrontIcon, TrashIcon,
-} from 'phosphor-react-native';
+} from '../src/lib/icons';
 import apiClient from '../src/api/client';
 import ScreenHeader from '../src/components/ScreenHeader';
 import ProductImage from '../src/components/ProductImage';
@@ -16,7 +16,7 @@ import {
 import { resolveImg } from '../src/lib/media';
 import { toast } from '../src/lib/toast';
 import { invalidateCachedData } from '../src/lib/dataCache';
-import { font, t } from '../src/theme';
+import { font, t, themed } from '../src/theme';
 import { PageLoader } from '../src/components/BrandLoader';
 
 /** Five stars the buyer can tap (the website's hover preview is a press here). */
@@ -189,7 +189,7 @@ export default function ProfileReviews() {
                         onPress={() => setTarget({ product, orderId: item.orderId })}
                         style={({ pressed }) => [styles.btn, styles.btnPrimary, pressed && { backgroundColor: t.primary[700], borderColor: t.primary[700] }]}
                       >
-                        <Text style={[styles.btnText, { color: '#fff' }]}>Write review</Text>
+                        <Text style={[styles.btnText, { color: t.onBrand }]}>Write review</Text>
                       </Pressable>
                     </View>
                   );
@@ -327,7 +327,7 @@ function ReviewCardsSkeleton({ count = 3 }) {
   return <PageLoader label="Loading reviews" />;
 }
 
-const styles = StyleSheet.create({
+const styles = themed(() => StyleSheet.create({
   screen: { flex: 1, backgroundColor: t.neutral[0] },
   content: { flexGrow: 1, gap: 12, paddingHorizontal: 12, paddingTop: 12, paddingBottom: 16 },
   subtitle: { fontSize: 14, lineHeight: 22.4, color: t.neutral[500], ...font(400) },
@@ -341,7 +341,7 @@ const styles = StyleSheet.create({
   tabText: { fontSize: 14, lineHeight: 22.4, color: t.neutral[500], ...font(500) },
   count: { minWidth: 20, height: 20, paddingHorizontal: 6, borderRadius: 999, alignItems: 'center', justifyContent: 'center', backgroundColor: t.primary[600] },
   countMuted: { backgroundColor: t.neutral[100] },
-  countText: { fontSize: 12, lineHeight: 19.2, color: '#fff', ...font(500) },
+  countText: { fontSize: 12, lineHeight: 19.2, color: t.onBrand, ...font(500) },
 
   section: { flexGrow: 1, marginHorizontal: -12, padding: 14, backgroundColor: t.neutral[0] },
   empty: { marginHorizontal: -12 },
@@ -388,4 +388,4 @@ const styles = StyleSheet.create({
   skCard: { gap: 12, padding: 14, borderRadius: 14, backgroundColor: t.neutral[0] },
   skRow: { flexDirection: 'row', alignItems: 'center', gap: 12 },
   skLines: { flex: 1, gap: 8 },
-});
+}));

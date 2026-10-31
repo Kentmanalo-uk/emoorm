@@ -1,7 +1,7 @@
 import { useEffect, useState } from 'react';
 import { Image, Pressable, ScrollView, StyleSheet, Text, View, useWindowDimensions } from 'react-native';
 import { useRouter } from 'expo-router';
-import { PackageIcon, ShoppingCartIcon, TrashIcon } from 'phosphor-react-native';
+import { PackageIcon, ShoppingCartIcon, TrashIcon } from '../src/lib/icons';
 import ScreenHeader from '../src/components/ScreenHeader';
 import CartConfirmDialog from '../src/components/cart/CartConfirmDialog';
 import { ProfileEmpty } from '../src/components/profile/ProfileUI';
@@ -14,7 +14,7 @@ import { saleInfo } from '../src/lib/variantPricing';
 import { isLivestock } from '../src/components/orders/orderLines';
 import { toast } from '../src/lib/toast';
 import { useProductPeek } from '../src/components/peek/ProductPeek';
-import { font, t } from '../src/theme';
+import { font, t, themed, veil } from '../src/theme';
 
 /**
  * /profile/wishlist and /wishlist (web/src/pages/Wishlist.jsx, WishlistContent
@@ -174,7 +174,7 @@ function WishlistCard({ width, product, onOpen, onStore, onAddToCart, onRemove }
   );
 }
 
-const styles = StyleSheet.create({
+const styles = themed(() => StyleSheet.create({
   screen: { flex: 1, backgroundColor: t.neutral[0] },
   content: { flexGrow: 1, gap: 12, paddingHorizontal: 12, paddingTop: 12, paddingBottom: 16 },
 
@@ -193,11 +193,11 @@ const styles = StyleSheet.create({
   noImg: { flex: 1, alignItems: 'center', justifyContent: 'center' },
   discount: {
     position: 'absolute', top: 8, left: 8, paddingVertical: 2, paddingHorizontal: 6, borderRadius: 4, overflow: 'hidden',
-    backgroundColor: t.accent[500], color: '#fff', fontSize: 11, lineHeight: 17.6, ...font(500),
+    backgroundColor: t.accent[500], color: t.onBrand, fontSize: 11, lineHeight: 17.6, ...font(500),
   },
   remove: {
     position: 'absolute', top: 6, right: 6, width: 36, height: 36, borderRadius: 18,
-    alignItems: 'center', justifyContent: 'center', backgroundColor: 'rgba(255, 255, 255, 0.9)',
+    alignItems: 'center', justifyContent: 'center', backgroundColor: veil(0.9),
     boxShadow: '0px 1px 4px rgba(0, 0, 0, 0.12)',
   },
   body: { gap: 4, padding: 10 },
@@ -211,5 +211,5 @@ const styles = StyleSheet.create({
     borderRadius: 8, backgroundColor: t.primary[600],
   },
   cartBtnOff: { backgroundColor: t.neutral[400] },
-  cartText: { fontSize: 13, lineHeight: 15.6, color: '#fff', ...font(500) },
-});
+  cartText: { fontSize: 13, lineHeight: 15.6, color: t.onBrand, ...font(500) },
+}));

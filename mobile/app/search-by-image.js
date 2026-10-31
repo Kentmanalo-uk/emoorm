@@ -15,7 +15,7 @@ import Svg, { Defs, LinearGradient, RadialGradient, Rect, Stop } from 'react-nat
 import {
   ArrowsClockwiseIcon, CameraIcon, CaretDownIcon, CaretUpIcon, ImagesIcon, LightningIcon, LightningSlashIcon,
   MapPinIcon, SlidersHorizontalIcon, XIcon,
-} from 'phosphor-react-native';
+} from '../src/lib/icons';
 import Chip from '../src/components/Chip';
 import EmptyState from '../src/components/EmptyState';
 import ProductCard from '../src/components/ProductCard';
@@ -24,7 +24,7 @@ import { pickSearchImage } from '../src/components/search/ImageSearchSheet';
 import { saveImageSearch, takePendingImage } from '../src/components/search/imageSearchStore';
 import { authedFetch } from '../src/api/client';
 import { fetchCategories, fetchMunicipalities } from '../src/lib/referenceData';
-import { font, t } from '../src/theme';
+import { font, t, themed } from '../src/theme';
 
 /*
  * Search by image, camera first:
@@ -632,7 +632,7 @@ function SortTab({ label, on, onPress, children }) {
   );
 }
 
-const styles = StyleSheet.create({
+const styles = themed(() => StyleSheet.create({
   screen: { flex: 1, backgroundColor: '#000' },
   shade: { position: 'absolute', left: 0, right: 0 },
 
@@ -715,4 +715,4 @@ const styles = StyleSheet.create({
   sortDir: { flexDirection: 'column' },
   filters: { gap: 8, paddingTop: 2, paddingHorizontal: 16, paddingBottom: 12 },
   row: { gap: 4, paddingHorizontal: 12, marginBottom: 4 },
-});
+}));

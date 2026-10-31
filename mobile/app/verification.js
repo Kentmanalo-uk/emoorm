@@ -7,7 +7,7 @@ import * as ImagePicker from 'expo-image-picker';
 import {
   ArrowClockwiseIcon, CameraIcon, ChatsCircleIcon, CircleNotchIcon, IdentificationCardIcon, LockSimpleIcon,
   ShieldCheckIcon, ShieldWarningIcon, UploadSimpleIcon, XCircleIcon,
-} from 'phosphor-react-native';
+} from '../src/lib/icons';
 import apiClient, { authedFetch } from '../src/api/client';
 import ScreenHeader from '../src/components/ScreenHeader';
 import LoadingSkeleton from '../src/components/LoadingSkeleton';
@@ -16,10 +16,10 @@ import IdCamera, { assetToUpload } from '../src/components/profile/IdCamera';
 import { errorText, fetchIdentityStatus } from '../src/components/profile/profileLib';
 import { invalidateCachedData } from '../src/lib/dataCache';
 import { toast } from '../src/lib/toast';
-import { font, t } from '../src/theme';
+import { font, t, themed } from '../src/theme';
 import { PageLoader } from '../src/components/BrandLoader';
 
-const STATUS_META = {
+const STATUS_META = themed(() => ({
   NOT_VERIFIED: {
     label: 'Not Verified',
     color: t.neutral[500],
@@ -44,7 +44,7 @@ const STATUS_META = {
     Icon: XCircleIcon,
     text: 'We could not verify your identity.',
   },
-};
+}));
 
 /** POST /identity-verification: the ID type and the photos, read on the server (up to two minutes). */
 async function submitIdentityVerification(idType, front, back) {
@@ -268,7 +268,7 @@ export default function ProfileVerification() {
                   style={({ pressed }) => [styles.btn, styles.btnPrimary, pressed && { backgroundColor: t.primary[700] }, contacting && styles.off]}
                 >
                   <ChatsCircleIcon size={18} weight="fill" color="#fff" />
-                  <Text style={[styles.btnText, { color: '#fff' }]}>{contacting ? 'Opening…' : 'Contact support'}</Text>
+                  <Text style={[styles.btnText, { color: t.onBrand }]}>{contacting ? 'Opening…' : 'Contact support'}</Text>
                 </Pressable>
               ) : null}
             </View>
@@ -364,7 +364,7 @@ export default function ProfileVerification() {
                     style={({ pressed }) => [styles.btn, styles.btnPrimary, pressed && { backgroundColor: t.primary[700] }, verifyOff && styles.off]}
                   >
                     {submitting ? <ActivityIndicator size={18} color="#fff" /> : null}
-                    <Text style={[styles.btnText, { color: '#fff' }]}>{submitting ? 'Verifying...' : 'Verify identity'}</Text>
+                    <Text style={[styles.btnText, { color: t.onBrand }]}>{submitting ? 'Verifying...' : 'Verify identity'}</Text>
                   </Pressable>
                   {outOfAttempts ? <Text style={styles.attempts}>Daily attempt limit reached. Try again tomorrow.</Text> : null}
                 </View>
@@ -401,7 +401,7 @@ export default function ProfileVerification() {
   );
 }
 
-const styles = StyleSheet.create({
+const styles = themed(() => StyleSheet.create({
   screen: { flex: 1, backgroundColor: t.neutral[0] },
   content: { gap: 12, paddingHorizontal: 12, paddingTop: 12, paddingBottom: 16 },
   subtitle: { fontSize: 13, lineHeight: 18.85, color: t.neutral[500], ...font(400) },
@@ -468,4 +468,4 @@ const styles = StyleSheet.create({
 
   note: { fontSize: 13, lineHeight: 19.5, color: t.neutral[500], ...font(400) },
   noteLink: { color: t.primary[600], ...font(500) },
-});
+}));

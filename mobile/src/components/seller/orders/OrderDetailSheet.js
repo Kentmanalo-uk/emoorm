@@ -7,13 +7,13 @@ import { useRouter } from 'expo-router';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import {
   CheckCircleIcon, FileTextIcon, FlagIcon, MoneyIcon, MotorcycleIcon, PackageIcon, TruckIcon, XCircleIcon,
-} from 'phosphor-react-native';
+} from '../../../lib/icons';
 import apiClient from '../../../api/client';
 import { resolveImg } from '../../../lib/media';
 import { momentLabel, spanLabel } from '../../../lib/availability';
 import CourierTracking from '../../orders/CourierTracking';
 import { SheetFrame } from '../../Sheet';
-import { font, t } from '../../../theme';
+import { font, t, themed } from '../../../theme';
 import { STATUS_FILL } from './OrderCard';
 import {
   carriedFeeLines, payLabel, peso, unpaidFeeStatus,
@@ -117,13 +117,13 @@ function HandOverProof({ order, onView }) {
   );
 }
 
-const ACTION_STYLE = {
+const ACTION_STYLE = themed(() => ({
   confirm: { border: t.info[600], ink: t.info[600] },
   prepare: { border: t.primary[600], ink: t.primary[600] },
   ready: { border: t.violet[600], ink: t.violet[600] },
   complete: { border: t.primary[600], ink: '#fff', fill: t.primary[600] },
   cancel: { border: t.danger[600], ink: t.danger[600] },
-};
+}));
 
 /**
  * The MoorMove buttons under the next step (web SellerRiderPanel): Parcel
@@ -527,7 +527,7 @@ function DetailBody({
             style={[styles.actionBtn, { borderColor: t.primary[600], backgroundColor: t.primary[600] }]}
           >
             <FileTextIcon size={14} color="#fff" style={styles.receiptIcon} />
-            <Text style={[styles.actionText, { color: '#fff' }]}>View Receipt</Text>
+            <Text style={[styles.actionText, { color: t.onBrand }]}>View Receipt</Text>
           </Pressable>
         </View>
       ) : null}
@@ -581,7 +581,7 @@ export default function OrderDetailSheet({ order, onClose, ...actions }) {
   );
 }
 
-const styles = StyleSheet.create({
+const styles = themed(() => StyleSheet.create({
   root: { flex: 1, justifyContent: 'flex-end' },
   backdrop: { backgroundColor: 'rgba(15, 23, 42, 0.45)' },
   panel: { width: '100%', backgroundColor: t.neutral[0], borderTopLeftRadius: 16, borderTopRightRadius: 16, overflow: 'hidden' },
@@ -606,7 +606,7 @@ const styles = StyleSheet.create({
   colLabel: { fontSize: 12, lineHeight: 19.2, letterSpacing: 0.6, textTransform: 'uppercase', ...font(400), color: t.neutral[500] },
   badge: {
     paddingVertical: 4, paddingHorizontal: 12, borderRadius: 999, overflow: 'hidden',
-    fontSize: 11.5, lineHeight: 18.4, letterSpacing: 0.1, ...font(600), color: '#fff',
+    fontSize: 11.5, lineHeight: 18.4, letterSpacing: 0.1, ...font(600), color: t.onBrand,
   },
   todayText: { marginTop: 4, fontSize: 13.5, lineHeight: 20.25, ...font(400), color: t.neutral[700] },
 
@@ -620,7 +620,7 @@ const styles = StyleSheet.create({
     flexDirection: 'row', alignItems: 'center', justifyContent: 'center', gap: 6, minHeight: 44,
     paddingVertical: 8, paddingHorizontal: 14, borderRadius: 10, backgroundColor: t.primary[600],
   },
-  parcelText: { fontSize: 14, lineHeight: 20, ...font(600), color: '#fff' },
+  parcelText: { fontSize: 14, lineHeight: 20, ...font(600), color: t.onBrand },
   // The rider buttons (web .rider-actions): side by side, wrapping; Deliver it
   // myself outlined, Cancel rider a quiet red word.
   riderBox: { gap: 8 },
@@ -678,7 +678,7 @@ const styles = StyleSheet.create({
   approve: { backgroundColor: t.primary[600] },
   reject: { backgroundColor: t.neutral[0], borderColor: t.danger[300] },
   payText: { fontSize: 13, lineHeight: 20, ...font(600) },
-  approveText: { color: '#fff' },
+  approveText: { color: t.onBrand },
   rejectText: { color: t.danger[700] },
 
   payProof: { alignItems: 'flex-start', gap: 6 },
@@ -724,4 +724,4 @@ const styles = StyleSheet.create({
   receiptIcon: { marginRight: 6 },
   cancelLink: { alignSelf: 'center', marginTop: 10, paddingVertical: 6, paddingHorizontal: 10 },
   cancelLinkText: { fontSize: 13, lineHeight: 20.8, ...font(600), color: t.danger[600] },
-});
+}));

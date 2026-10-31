@@ -1,7 +1,7 @@
 import { useState } from 'react';
 import { Image, StyleSheet, Text, View } from 'react-native';
 import { resolveImg } from '../../lib/media';
-import { font, t } from '../../theme';
+import { font, t, themed } from '../../theme';
 import { ShopGradient } from './shopTheme';
 
 /*
@@ -37,11 +37,11 @@ export default function StoreListLogo({ store, style, textStyle }) {
   );
 }
 
-const styles = StyleSheet.create({
+const styles = themed(() => StyleSheet.create({
   logo: {
     width: 52, height: 52, flexShrink: 0, overflow: 'hidden', borderRadius: 14,
     alignItems: 'center', justifyContent: 'center', backgroundColor: t.primary[600],
   },
   logoImg: { width: '100%', height: '100%', backgroundColor: t.neutral[0] },
   logoText: { fontSize: 17, lineHeight: 20.4, ...font(500), color: t.neutral[0] },
-});
+}));

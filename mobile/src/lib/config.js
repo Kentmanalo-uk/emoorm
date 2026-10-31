@@ -43,6 +43,19 @@ export const API_BASE_URL =
   Constants.expoConfig?.extra?.apiBaseUrl ||
   'http://10.0.2.2:3000/api';
 
+/**
+ * "Continue with Google" without a browser (components/auth/googleSignIn.js).
+ * Google hands the phone an ID token made out to the SERVER, so this is the
+ * Web client id, not the Android one: the server checks that audience in
+ * google.service.js. The Android client is never named here -- Google finds
+ * it from the package name and the signing fingerprint, so a build signed
+ * with a key that client does not list fails with DEVELOPER_ERROR.
+ */
+export const GOOGLE_WEB_CLIENT_ID =
+  process.env.EXPO_PUBLIC_GOOGLE_WEB_CLIENT_ID
+  || Constants.expoConfig?.extra?.googleWebClientId
+  || '';
+
 if (__DEV__) {
   console.log(`[config] API_BASE_URL = ${API_BASE_URL}`);
 }

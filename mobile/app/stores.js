@@ -2,7 +2,7 @@ import { useEffect, useRef, useState } from 'react';
 import { Platform, Pressable, ScrollView, StyleSheet, Text, TextInput, View } from 'react-native';
 import { Stack, useLocalSearchParams, useRouter } from 'expo-router';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
-import { CaretLeftIcon, CaretRightIcon, MagnifyingGlassIcon, XIcon } from 'phosphor-react-native';
+import { CaretLeftIcon, CaretRightIcon, MagnifyingGlassIcon, XIcon } from '../src/lib/icons';
 import apiClient from '../src/api/client';
 import Chip from '../src/components/Chip';
 import EmptyState from '../src/components/EmptyState';
@@ -11,7 +11,7 @@ import { StoreCardsSkeleton } from '../src/components/shop/ShopSkeletons';
 import StoreListCard from '../src/components/shop/StoreListCard';
 import { getCachedData, setCachedData } from '../src/lib/dataCache';
 import { fetchMunicipalities } from '../src/lib/referenceData';
-import { font, t } from '../src/theme';
+import { font, t, themed } from '../src/theme';
 
 /*
  * The shops directory on phones (web/src/pages/Stores.jsx, is-phone layout,
@@ -238,7 +238,7 @@ export default function Stores() {
   );
 }
 
-const styles = StyleSheet.create({
+const styles = themed(() => StyleSheet.create({
   screen: { flex: 1, backgroundColor: t.neutral[0] },
   bar: {
     flexDirection: 'row', alignItems: 'center', gap: 6, paddingRight: 12, paddingBottom: 10, paddingLeft: 6,
@@ -276,4 +276,4 @@ const styles = StyleSheet.create({
   pageBtnOff: { opacity: 0.4 },
   pageBtnText: { fontSize: 14, lineHeight: 22.4, ...font(400), color: t.neutral[700] },
   pageInfo: { fontSize: 14, lineHeight: 22.4, ...font(400), color: t.neutral[500] },
-});
+}));

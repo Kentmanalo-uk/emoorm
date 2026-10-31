@@ -1,8 +1,8 @@
 import { useEffect, useRef, useState } from 'react';
 import { Pressable, ScrollView, StyleSheet, Text, View } from 'react-native';
-import { CalendarBlankIcon, CaretLeftIcon, CaretRightIcon, ClockIcon } from 'phosphor-react-native';
+import { CalendarBlankIcon, CaretLeftIcon, CaretRightIcon, ClockIcon } from '../../../lib/icons';
 import Sheet, { SheetButton } from '../../Sheet';
-import { font, t } from '../../../theme';
+import { font, t, themed } from '../../../theme';
 
 /*
  * The website's <input type="date"> and <input type="time"> (Shop Settings,
@@ -182,7 +182,7 @@ export function TimeField({ value, onChange, label = 'Time', style }) {
   );
 }
 
-const styles = StyleSheet.create({
+const styles = themed(() => StyleSheet.create({
   box: {
     flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between', gap: 8,
     minHeight: 46, paddingHorizontal: 10, borderWidth: 1, borderColor: t.neutral[300], borderRadius: 8, backgroundColor: t.neutral[0],
@@ -201,7 +201,7 @@ const styles = StyleSheet.create({
   day: { width: 38, height: 38, borderRadius: 19, alignItems: 'center', justifyContent: 'center' },
   dayOn: { backgroundColor: t.primary[600] },
   dayText: { fontSize: 15, lineHeight: 20, ...font(400), color: t.neutral[900] },
-  dayTextOn: { ...font(600), color: '#fff' },
+  dayTextOn: { ...font(600), color: t.onBrand },
   dayTextOff: { color: t.neutral[300] },
 
   columns: { flexDirection: 'row', gap: 8, height: ROW_H * 5 },
@@ -210,4 +210,4 @@ const styles = StyleSheet.create({
   cellOn: { backgroundColor: t.primary[50] },
   cellText: { fontSize: 16, lineHeight: 22, ...font(400), color: t.neutral[800] },
   cellTextOn: { ...font(600), color: t.primary[700] },
-});
+}));

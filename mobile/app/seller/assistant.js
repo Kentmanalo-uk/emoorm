@@ -5,7 +5,7 @@ import {
 import { useRouter } from 'expo-router';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import AsyncStorage from '@react-native-async-storage/async-storage';
-import { NotePencilIcon } from 'phosphor-react-native';
+import { NotePencilIcon } from '../../src/lib/icons';
 import apiClient from '../../src/api/client';
 import useAuthStore from '../../src/store/authStore';
 import { appPath } from '../../src/lib/notificationLink';
@@ -16,7 +16,7 @@ import ReplyText from '../../src/components/seller/assistant/ReplyText';
 import {
   Avatar, Chips, Composer, LangSwitch, LinkPills, RetryButton, TypingDots, bubbleStyle,
 } from '../../src/components/seller/assistant/AssistantParts';
-import { font, t } from '../../src/theme';
+import { font, t, themed } from '../../src/theme';
 
 /*
  * /seller/assistant, Ate Moormy: the sellers' AI assistant
@@ -292,7 +292,7 @@ export default function SellerAssistantScreen() {
   );
 }
 
-const styles = StyleSheet.create({
+const styles = themed(() => StyleSheet.create({
   flex: { flex: 1 },
   // .scm-icon--bar: 6px before the ⋯
   newChat: { marginRight: 6 },
@@ -319,9 +319,9 @@ const styles = StyleSheet.create({
   },
   bubbleError: { backgroundColor: t.danger[50] },
   text: { fontSize: 15, lineHeight: 22.5, color: t.neutral[900], ...font(400) },
-  textSelf: { color: '#fff' },
+  textSelf: { color: t.onBrand },
   errorText: { color: t.danger[700] },
 
   suggest: { marginLeft: 40 },
   suggestLabel: { marginBottom: 8, fontSize: 12.5, lineHeight: 20, color: t.neutral[500], ...font(500) },
-});
+}));

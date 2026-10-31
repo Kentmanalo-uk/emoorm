@@ -1,11 +1,11 @@
 import { useEffect, useState } from 'react';
 import { Pressable, ScrollView, StyleSheet, Text, View } from 'react-native';
 import { useRouter } from 'expo-router';
-import { ArrowRightIcon } from 'phosphor-react-native';
+import { ArrowRightIcon } from '../../lib/icons';
 import apiClient from '../../api/client';
 import { isOpen } from '../../lib/availability';
 import useAuthStore from '../../store/authStore';
-import { font, t, text } from '../../theme';
+import { font, t, text, themed } from '../../theme';
 import TodayCard from '../TodayCard';
 
 /**
@@ -74,7 +74,7 @@ export default function HomeTodayRail({ refreshKey = 0 }) {
   );
 }
 
-const styles = StyleSheet.create({
+const styles = themed(() => StyleSheet.create({
   // .today-rail on phones: on the page background, 16px top, 4px bottom.
   section: { paddingTop: 16, paddingBottom: 4 },
   header: { flexDirection: 'row', alignItems: 'center', gap: 12, marginBottom: 12, paddingLeft: 16, paddingRight: 16 },
@@ -83,4 +83,4 @@ const styles = StyleSheet.create({
   arrowPressed: { transform: [{ translateX: 2 }] },
   row: { gap: 8, paddingLeft: 16, paddingRight: 16 },
   card: { width: 150 },
-});
+}));

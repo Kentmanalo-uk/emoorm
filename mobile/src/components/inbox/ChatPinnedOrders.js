@@ -1,5 +1,5 @@
 import { ScrollView, StyleSheet, Text, View } from 'react-native';
-import { font, t } from '../../theme';
+import { font, t, themed } from '../../theme';
 import ChatProductThumb from './ChatProductThumb';
 import { formatMoney, orderStatusStyle } from './inboxFormat';
 
@@ -43,7 +43,7 @@ export default function ChatPinnedOrders({ orders, sellerSide }) {
   );
 }
 
-const styles = StyleSheet.create({
+const styles = themed(() => StyleSheet.create({
   pins: {
     paddingVertical: 10, paddingHorizontal: 16, borderBottomWidth: 1, borderBottomColor: t.neutral[150], backgroundColor: t.neutral[0],
   },
@@ -61,4 +61,4 @@ const styles = StyleSheet.create({
   more: { fontSize: 11.5, color: t.neutral[500], ...font(400) },
   status: { marginTop: 2, fontSize: 11, lineHeight: 17.6, letterSpacing: 0.44, color: t.primary[600], ...font(500) },
   total: { fontSize: 12.5, lineHeight: 20, color: t.neutral[500], ...font(500) },
-});
+}));

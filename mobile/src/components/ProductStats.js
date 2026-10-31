@@ -1,6 +1,6 @@
 import { StyleSheet, Text, View } from 'react-native';
-import { StarIcon } from 'phosphor-react-native';
-import { font, t } from '../theme';
+import { StarIcon } from '../lib/icons';
+import { font, t, themed } from '../theme';
 
 /*
  * A product's rating line, as the product tiles show it (web Home.jsx
@@ -43,8 +43,8 @@ export function ProductStats({ product }) {
   );
 }
 
-const styles = StyleSheet.create({
+const styles = themed(() => StyleSheet.create({
   stats: { flexDirection: 'row', alignItems: 'center', gap: 6, height: 12, marginTop: 2 },
   stars: { flexDirection: 'row', alignItems: 'center', gap: 1 },
   count: { fontSize: 12, lineHeight: 12, ...font(400), color: t.neutral[500] },
-});
+}));

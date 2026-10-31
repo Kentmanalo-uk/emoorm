@@ -6,10 +6,10 @@ import {
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import {
   CalculatorIcon, InfoIcon, MinusIcon, PlusIcon, ScalesIcon, TrendUpIcon, XIcon,
-} from 'phosphor-react-native';
+} from '../../lib/icons';
 import apiClient from '../../api/client';
 import ProductImage from '../ProductImage';
-import { font, t } from '../../theme';
+import { font, t, themed } from '../../theme';
 import { SheetFrame } from '../Sheet';
 import {
   MIN_SHARE, below, clock, heads, peso,
@@ -431,7 +431,7 @@ export function RecordSheet({ deal, onSubmit, onClose }) {
   );
 }
 
-const styles = StyleSheet.create({
+const styles = themed(() => StyleSheet.create({
   root: { flex: 1, justifyContent: 'flex-end' },
   backdrop: { backgroundColor: 'rgba(15, 23, 42, 0.5)' },
   dialog: {
@@ -476,7 +476,7 @@ const styles = StyleSheet.create({
   chipOn: { backgroundColor: t.primary[600] },
   chipPast: { opacity: 0.4 },
   chipText: { fontSize: 13, lineHeight: 20.8, ...font(600), color: t.neutral[700] },
-  chipTextOn: { color: '#fff' },
+  chipTextOn: { color: t.onBrand },
   pickRow: { gap: 6 },
 
   help: { marginTop: -6, fontSize: 12.5, lineHeight: 20, ...font(400), color: t.neutral[500], textAlign: 'right' },
@@ -503,6 +503,6 @@ const styles = StyleSheet.create({
   send: { flexDirection: 'row', alignItems: 'center', justifyContent: 'center', padding: 13, borderRadius: 999, backgroundColor: t.primary[600] },
   sendOff: { opacity: 0.5 },
   sendSpin: { marginRight: 8 },
-  sendText: { fontSize: 16, lineHeight: 25.6, ...font(700), color: '#fff' },
+  sendText: { fontSize: 16, lineHeight: 25.6, ...font(700), color: t.onBrand },
   fineprint: { fontSize: 12, lineHeight: 19.2, ...font(400), color: t.neutral[500], textAlign: 'center' },
-});
+}));

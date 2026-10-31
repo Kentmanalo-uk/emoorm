@@ -5,8 +5,8 @@ import Svg, { Circle, Defs, LinearGradient, RadialGradient, Rect, Stop } from 'r
 import {
   CaretRightIcon, ChatCircleDotsIcon, HeartIcon, LinkSimpleIcon, MegaphoneIcon, PaintBrushIcon, PaletteIcon,
   ShareNetworkIcon, SparkleIcon, UsersThreeIcon,
-} from 'phosphor-react-native';
-import { font, t } from '../../../theme';
+} from '../../../lib/icons';
+import { font, t, themed } from '../../../theme';
 import { useReducedMotion } from '../SellerGuideArt';
 
 /*
@@ -235,7 +235,7 @@ function Banner({ slide, width, active, still, onPress }) {
   );
 }
 
-const styles = StyleSheet.create({
+const styles = themed(() => StyleSheet.create({
   banners: { gap: 8 },
   trackWrap: { borderRadius: 16, overflow: 'hidden' },
   placeholder: { minHeight: 132 },
@@ -269,7 +269,7 @@ const styles = StyleSheet.create({
   },
   dotsDeco: { position: 'absolute', right: 96, bottom: 12, opacity: 0.8 },
   text: { flex: 1, minWidth: 0, gap: 2 },
-  title: { marginBottom: 2, fontSize: 20, lineHeight: 24, letterSpacing: -0.2, color: '#fff', ...font(600) },
+  title: { marginBottom: 2, fontSize: 20, lineHeight: 24, letterSpacing: -0.2, color: t.onBrand, ...font(600) },
   sub: { fontSize: 13, lineHeight: 18.2, color: 'rgba(255, 255, 255, 0.9)', ...font(400) },
   cta: {
     flexDirection: 'row',
@@ -282,7 +282,7 @@ const styles = StyleSheet.create({
     paddingBottom: 6,
     paddingLeft: 13,
     borderRadius: 999,
-    backgroundColor: '#fff',
+    backgroundColor: t.neutral[0],
   },
   ctaText: { fontSize: 12.5, lineHeight: 20, ...font(600) },
   art: { flexShrink: 0, width: 92, height: 92, alignItems: 'center', justifyContent: 'center' },
@@ -291,10 +291,10 @@ const styles = StyleSheet.create({
   },
   // The icon stays upright on the tilted tile.
   tileIcon: { transform: [{ rotate: '8deg' }] },
-  accent: { position: 'absolute', alignItems: 'center', justifyContent: 'center', backgroundColor: '#fff' },
+  accent: { position: 'absolute', alignItems: 'center', justifyContent: 'center', backgroundColor: t.neutral[0] },
   accentA: { top: 2, right: 2, width: 28, height: 28, borderRadius: 14 },
   accentB: { bottom: 6, left: 0, width: 24, height: 24, borderRadius: 12, backgroundColor: 'rgba(255, 255, 255, 0.92)' },
   dots: { flexDirection: 'row', justifyContent: 'center', gap: 5 },
   dot: { height: 6, borderRadius: 999, backgroundColor: t.neutral[300] },
   dotOn: { backgroundColor: t.primary[600] },
-});
+}));

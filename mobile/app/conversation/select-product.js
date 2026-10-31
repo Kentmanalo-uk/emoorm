@@ -1,7 +1,7 @@
 import { useEffect, useMemo, useState } from 'react';
 import { View, Text, TextInput, FlatList, Pressable, Image, ActivityIndicator, StyleSheet } from 'react-native';
 import { useLocalSearchParams, useRouter } from 'expo-router';
-import { MagnifyingGlassIcon as Search, TagIcon as Tag, XIcon as X } from 'phosphor-react-native';
+import { MagnifyingGlassIcon as Search, TagIcon as Tag, XIcon as X } from '../../src/lib/icons';
 import apiClient from '../../src/api/client';
 import { ENDPOINTS } from '../../src/api/endpoints';
 import { resolveImg } from '../../src/lib/media';
@@ -10,7 +10,7 @@ import ScreenHeader from '../../src/components/ScreenHeader';
 import EmptyState from '../../src/components/EmptyState';
 import { ListSkeleton } from '../../src/components/SkeletonLayouts';
 import useChatAttachmentStore from '../../src/store/chatAttachmentStore';
-import { colors, radius, spacing, typography } from '../../src/theme';
+import { colors, radius, spacing, typography, themed } from '../../src/theme';
 
 // Dedicated picker page pushed from the conversation composer's product ("Tag") button.
 // Selecting a product stashes it in chatAttachmentStore and pops back to the thread,
@@ -114,7 +114,7 @@ export default function SelectProduct() {
   );
 }
 
-const styles = StyleSheet.create({
+const styles = themed(() => StyleSheet.create({
   screen: { flex: 1, backgroundColor: colors.bgPrimary },
   searchWrap: { minHeight: 44, flexDirection: 'row', alignItems: 'center', gap: spacing.sm, marginHorizontal: spacing.lg, marginVertical: spacing.sm, paddingHorizontal: spacing.md, borderRadius: radius.lg, backgroundColor: colors.gray100 },
   searchInput: { ...typography.body, flex: 1, minWidth: 0, paddingVertical: spacing.sm, color: colors.textPrimary },
@@ -127,4 +127,4 @@ const styles = StyleSheet.create({
   rowBody: { flex: 1, minWidth: 0, gap: 2 },
   rowName: { ...typography.body, color: colors.textPrimary },
   rowPrice: { ...typography.caption, color: colors.primaryDark, fontFamily: 'Inter_600SemiBold' },
-});
+}));

@@ -1,8 +1,8 @@
 import { Pressable, StyleSheet, Text, View } from 'react-native';
 import {
   CaretDownIcon, CookingPotIcon, ForkKnifeIcon, InfoIcon, PackageIcon, PlusIcon,
-} from 'phosphor-react-native';
-import { font, t } from '../../../theme';
+} from '../../../lib/icons';
+import { font, t, themed } from '../../../theme';
 import PhotoPicker from './PhotoPicker';
 import ChoiceGroup from './ChoiceGroup';
 import WayField, { derivedStyles } from './WayField';
@@ -348,7 +348,7 @@ export default function FoodStep({
   );
 }
 
-const styles = StyleSheet.create({
+const styles = themed(() => StyleSheet.create({
   page: { minWidth: 0 },
   // The website's phone look: white sections edge to edge, a grey band between them.
   section: {
@@ -413,4 +413,4 @@ const styles = StyleSheet.create({
   moreSummary: { fontSize: 13, lineHeight: 18.85, color: PF.muted, ...font(400) },
   caretOpen: { transform: [{ rotate: '180deg' }] },
   moreBody: { paddingHorizontal: 12, paddingBottom: 20 },
-});
+}));

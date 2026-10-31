@@ -1,6 +1,6 @@
 import { Image, Pressable, StyleSheet, Text, View } from 'react-native';
-import { PackageIcon } from 'phosphor-react-native';
-import { font, t } from '../../../theme';
+import { PackageIcon } from '../../../lib/icons';
+import { font, t, themed, veil } from '../../../theme';
 import { resolveImg } from '../../../lib/media';
 import { P, firstImage, peso } from './pkfLib';
 import { Thumb, pkfStyles } from './PkfBits';
@@ -103,7 +103,7 @@ function Fact({ text }) {
   );
 }
 
-const styles = StyleSheet.create({
+const styles = themed(() => StyleSheet.create({
   preview: {
     overflow: 'hidden', borderWidth: 1, borderColor: P.line, borderRadius: 14, backgroundColor: t.neutral[0],
   },
@@ -121,7 +121,7 @@ const styles = StyleSheet.create({
     paddingVertical: 4,
     paddingHorizontal: 10,
     borderRadius: 999,
-    backgroundColor: 'rgba(255, 255, 255, 0.94)',
+    backgroundColor: veil(0.94),
   },
   badgeText: { fontSize: 12, lineHeight: 19.2, color: P.greenDark, ...font(600) },
   thumbs: { flexDirection: 'row', gap: 6, paddingTop: 8, paddingHorizontal: 12 },
@@ -153,4 +153,4 @@ const styles = StyleSheet.create({
   fact: { paddingVertical: 4, paddingHorizontal: 10, borderRadius: 999, backgroundColor: t.neutral[100] },
   factText: { fontSize: 12.5, lineHeight: 20, color: t.neutral[700], ...font(400) },
   desc: { fontSize: 13.5, lineHeight: 20.25, color: t.neutral[700], ...font(400) },
-});
+}));

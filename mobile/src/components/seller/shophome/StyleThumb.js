@@ -1,6 +1,6 @@
 import { StyleSheet, View } from 'react-native';
 import Svg, { Rect } from 'react-native-svg';
-import { t } from '../../../theme';
+import { t, themed } from '../../../theme';
 
 /*
  * Small drawings of each section style, 60 × 40 (web SellerShopHome.jsx
@@ -24,7 +24,7 @@ const THUMBS = {
 };
 
 // .shb-thumb-<kind> fills and strokes.
-const PAINT = {
+const PAINT = themed(() => ({
   img: { fill: t.primary[200] },
   img2: { fill: t.primary[100] },
   dot: { fill: t.primary[600] },
@@ -34,7 +34,7 @@ const PAINT = {
   fill: { fill: t.primary[600] },
   soft: { fill: t.primary[50], stroke: t.primary[200], strokeWidth: 0.8 },
   dash: { fill: '#fff', stroke: t.primary[400], strokeWidth: 0.8, strokeDasharray: '2 1.5' },
-};
+}));
 
 export default function StyleThumb({ kind, styleKey, on = false }) {
   const boxes = THUMBS[`${kind}:${styleKey}`] || [];
@@ -49,7 +49,7 @@ export default function StyleThumb({ kind, styleKey, on = false }) {
   );
 }
 
-const styles = StyleSheet.create({
+const styles = themed(() => StyleSheet.create({
   thumb: { width: '100%', aspectRatio: 60 / 40, overflow: 'hidden', borderRadius: 8, backgroundColor: t.neutral[50] },
-  thumbOn: { backgroundColor: '#fff' },
-});
+  thumbOn: { backgroundcolor: t.onBrand },
+}));

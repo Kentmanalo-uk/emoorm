@@ -3,8 +3,8 @@ import { Image, StyleSheet, Text, View } from 'react-native';
 import {
   CaretLeftIcon, CaretRightIcon, DotsThreeIcon, MagnifyingGlassIcon, MapPinIcon, PackageIcon, ShareNetworkIcon,
   ShoppingCartIcon, SquaresFourIcon, StarIcon, StorefrontIcon,
-} from 'phosphor-react-native';
-import { font, t } from '../../../theme';
+} from '../../../lib/icons';
+import { font, t, themed } from '../../../theme';
 import { resolveImg } from '../../../lib/media';
 import { ShopGradient, mix } from '../../shop/shopTheme';
 
@@ -187,7 +187,7 @@ export default function ShopPreview({
   );
 }
 
-const styles = StyleSheet.create({
+const styles = themed(() => StyleSheet.create({
   box: { position: 'relative', width: '100%', overflow: 'hidden' },
   boxCompact: { height: '100%' },
   page: { position: 'absolute', top: 0, left: 0, width: PHONE_WIDTH, paddingBottom: 12, backgroundColor: '#f3f4f6' },
@@ -199,7 +199,7 @@ const styles = StyleSheet.create({
   },
   topIcons: { flexDirection: 'row', gap: 20 },
 
-  card: { zIndex: 1, marginTop: 4, marginHorizontal: 12, overflow: 'hidden', borderRadius: 18, backgroundColor: '#fff' },
+  card: { zIndex: 1, marginTop: 4, marginHorizontal: 12, overflow: 'hidden', borderRadius: 18, backgroundcolor: t.onBrand },
   band: {
     flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between', gap: 10, paddingVertical: 9, paddingHorizontal: 14,
   },
@@ -219,16 +219,16 @@ const styles = StyleSheet.create({
     borderWidth: 2,
     borderColor: '#f3f4f6',
     borderRadius: 31,
-    backgroundColor: '#fff',
+    backgroundcolor: t.onBrand,
   },
   logoImg: { width: '100%', height: '100%' },
-  initials: { fontSize: 20, lineHeight: 28, color: '#fff', ...font(500) },
+  initials: { fontSize: 20, lineHeight: 28, color: t.onBrand, ...font(500) },
   id: { flex: 1, minWidth: 0 },
   nameRow: { flexDirection: 'row', alignItems: 'center', gap: 4, minWidth: 0 },
   name: { flexShrink: 1, fontSize: 17, lineHeight: 21.25, color: '#111827', ...font(500) },
   ratingRow: { flexDirection: 'row', flexWrap: 'wrap', alignItems: 'center', rowGap: 4, columnGap: 8, marginTop: 6 },
   rating: { flexDirection: 'row', alignItems: 'center', gap: 3, paddingVertical: 2, paddingHorizontal: 7, borderRadius: 6 },
-  ratingText: { fontSize: 12.5, lineHeight: 17.5, color: '#fff', ...font(500) },
+  ratingText: { fontSize: 12.5, lineHeight: 17.5, color: t.onBrand, ...font(500) },
   ratingNew: { backgroundColor: '#f3f4f6' },
   ratingNewText: { color: '#4b5563' },
   counts: { fontSize: 12.5, lineHeight: 17.5, color: t.neutral[500], ...font(400) },
@@ -237,7 +237,7 @@ const styles = StyleSheet.create({
   follow: { backgroundColor: t.accent[600] },
   message: { backgroundColor: '#f3f4f6' },
   ctaText: { fontSize: 13.5, lineHeight: 18.9, ...font(500) },
-  followText: { color: '#fff' },
+  followText: { color: t.onBrand },
   messageText: { color: '#1f2937' },
 
   note: {
@@ -257,21 +257,21 @@ const styles = StyleSheet.create({
   noteTownText: { flexShrink: 1, fontSize: 13.5, lineHeight: 18.9, ...font(400) },
   noteDesc: { fontSize: 12.5, lineHeight: 17.5, color: '#4b5563', ...font(400) },
   noteBtn: { flexShrink: 0, height: 30, alignItems: 'center', justifyContent: 'center', paddingHorizontal: 14, borderRadius: 8 },
-  noteBtnText: { fontSize: 13, lineHeight: 18.2, color: '#fff', ...font(500) },
+  noteBtnText: { fontSize: 13, lineHeight: 18.2, color: t.onBrand, ...font(500) },
 
-  tabs: { flexDirection: 'row', marginTop: 12, borderBottomWidth: 1, borderBottomColor: '#e5e7eb', backgroundColor: '#fff' },
+  tabs: { flexDirection: 'row', marginTop: 12, borderBottomWidth: 1, borderBottomColor: '#e5e7eb', backgroundcolor: t.onBrand },
   tab: { flex: 1, height: 48, alignItems: 'center', justifyContent: 'center' },
   tabText: { fontSize: 15, lineHeight: 21, color: t.neutral[500], ...font(500) },
   on: { color: '#111827' },
   tabLine: { position: 'absolute', left: '22%', right: '22%', bottom: -1, height: 3, borderTopLeftRadius: 3, borderTopRightRadius: 3 },
-  sort: { flexDirection: 'row', alignItems: 'center', height: 44, paddingLeft: 16, paddingRight: 18, backgroundColor: '#fff' },
+  sort: { flexDirection: 'row', alignItems: 'center', height: 44, paddingLeft: 16, paddingRight: 18, backgroundcolor: t.onBrand },
   sortText: { paddingHorizontal: 14, fontSize: 14, lineHeight: 16, color: t.neutral[500], ...font(500) },
   sortFirst: { paddingLeft: 0 },
   sortNext: { borderLeftWidth: 1, borderLeftColor: '#e5e7eb' },
   sortIcon: { marginLeft: 'auto' },
 
   grid: { flexDirection: 'row', flexWrap: 'wrap', gap: 4, paddingTop: 4 },
-  prod: { width: (PHONE_WIDTH - 4) / 2, backgroundColor: '#fff' },
+  prod: { width: (PHONE_WIDTH - 4) / 2, backgroundcolor: t.onBrand },
   prodImg: { aspectRatio: 1, alignItems: 'center', justifyContent: 'center', overflow: 'hidden', backgroundColor: '#f3f4f6' },
   prodName: {
     minHeight: 14 * 1.35 * 2, marginTop: 8, marginHorizontal: 10, marginBottom: 4, fontSize: 14, lineHeight: 18.9, color: '#212121', ...font(400),
@@ -280,7 +280,7 @@ const styles = StyleSheet.create({
   prodMeta: { marginTop: 4, marginHorizontal: 10, marginBottom: 10, fontSize: 12, lineHeight: 16.8, color: t.neutral[500], ...font(400) },
 
   empty: {
-    alignItems: 'center', gap: 10, margin: 12, paddingVertical: 32, paddingHorizontal: 16, borderRadius: 16, backgroundColor: '#fff',
+    alignItems: 'center', gap: 10, margin: 12, paddingVertical: 32, paddingHorizontal: 16, borderRadius: 16, backgroundcolor: t.onBrand,
   },
   emptyText: { fontSize: 14, lineHeight: 19.6, color: t.neutral[500], ...font(400) },
-});
+}));

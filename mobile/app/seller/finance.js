@@ -1,7 +1,7 @@
 import { useEffect, useState } from 'react';
 import { Pressable, StyleSheet, Text, View } from 'react-native';
 import { useRouter } from 'expo-router';
-import { InfoIcon } from 'phosphor-react-native';
+import { InfoIcon } from '../../src/lib/icons';
 import apiClient from '../../src/api/client';
 import SellerPage from '../../src/components/seller/SellerPage';
 import EmptyState from '../../src/components/EmptyState';
@@ -15,7 +15,7 @@ import {
   FinanceRow, FinanceTotal, PAYMENT_LABELS, StatTile, toRow,
 } from '../../src/components/seller/finance/FinanceParts';
 import { toast } from '../../src/lib/toast';
-import { font, t } from '../../src/theme';
+import { font, t, themed } from '../../src/theme';
 import { PageLoader } from '../../src/components/BrandLoader';
 
 const PAGE_SIZE = 25;
@@ -219,7 +219,7 @@ export default function SellerFinanceScreen() {
   );
 }
 
-const styles = StyleSheet.create({
+const styles = themed(() => StyleSheet.create({
   // .seller-card on Seller Center phones: edge to edge, an 8px grey band under it.
   section: {
     marginHorizontal: -12, backgroundColor: t.neutral[0], borderBottomWidth: 8, borderBottomColor: t.neutral[100],
@@ -251,4 +251,4 @@ const styles = StyleSheet.create({
   loading: { gap: 14, padding: 16 },
   pager: { flexDirection: 'row', alignItems: 'center', justifyContent: 'center', gap: 8, padding: 16 },
   pageText: { fontSize: 13, lineHeight: 18, color: t.neutral[500], ...font(400) },
-});
+}));

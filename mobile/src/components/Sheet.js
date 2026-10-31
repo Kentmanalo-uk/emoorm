@@ -4,8 +4,8 @@ import {
   useWindowDimensions,
 } from 'react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
-import { CheckIcon, XIcon } from 'phosphor-react-native';
-import { font, t } from '../theme';
+import { CheckIcon, XIcon } from '../lib/icons';
+import { font, t, themed } from '../theme';
 
 /*
  * Every bottom sheet in the app, in one look: the Log in / Sign up sheet's
@@ -219,7 +219,7 @@ export function SheetButton({ label, primary = false, onPress, disabled = false,
   );
 }
 
-const styles = StyleSheet.create({
+const styles = themed(() => StyleSheet.create({
   root: { flex: 1, justifyContent: 'flex-end' },
   backdrop: { backgroundColor: 'rgba(15, 23, 42, 0.42)' },
   panel: {
@@ -284,6 +284,6 @@ const styles = StyleSheet.create({
   btnDisabled: { opacity: 0.6 },
   btnText: { fontSize: 15, lineHeight: 24, ...font(500), color: t.neutral[800] },
   btnTextSeller: { ...font(600) },
-  btnTextPrimary: { color: '#fff' },
+  btnTextPrimary: { color: t.onBrand },
   btnTextGhost: { color: t.neutral[700] },
-});
+}));

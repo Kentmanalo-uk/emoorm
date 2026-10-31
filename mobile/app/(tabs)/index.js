@@ -14,14 +14,14 @@ import { useTabBarScroll } from '../../src/components/Glass';
 import HomeTodayRail from '../../src/components/home/HomeTodayRail';
 import HomeStoresMap from '../../src/components/home/HomeStoresMap';
 import StartSellingBubble from '../../src/components/home/StartSellingBubble';
-import { MapTrifoldIcon } from 'phosphor-react-native';
+import { MapTrifoldIcon } from '../../src/lib/icons';
 import {
   BannerCarousel, FALLBACK_BANNERS, PromotionPopup, SideBanners,
 } from '../../src/components/home/HomeBanners';
 import {
   CategoryStrip, HomeEmpty, HomeStoreRow, MunicipalityRail, SectionHeader,
 } from '../../src/components/home/HomeSections';
-import { font, t } from '../../src/theme';
+import { font, t, themed } from '../../src/theme';
 
 /*
  * Home (web/src/pages/Home.jsx, phone view): quick search words, the banner
@@ -357,7 +357,7 @@ export default function Home() {
   );
 }
 
-const styles = StyleSheet.create({
+const styles = themed(() => StyleSheet.create({
   screen: { flex: 1, backgroundColor: t.neutral[0] },
   scroll: { flex: 1, backgroundColor: t.neutral[100] },
   content: { paddingBottom: 0 },
@@ -376,7 +376,7 @@ const styles = StyleSheet.create({
     boxShadow: [{ offsetX: 0, offsetY: 4, blurRadius: 12, color: 'rgba(4, 120, 87, 0.3)' }],
   },
   mapOpenPressed: { backgroundColor: t.primary[700] },
-  mapOpenText: { fontSize: 13.5, lineHeight: 17, color: '#fff', ...font(600) },
+  mapOpenText: { fontSize: 13.5, lineHeight: 17, color: t.onBrand, ...font(600) },
 
   // Sections on the page background (Suggested, Stores, Explore).
   listSection: { paddingTop: 16, paddingBottom: 4, paddingHorizontal: 12 },
@@ -388,4 +388,4 @@ const styles = StyleSheet.create({
   exploreRetry: { fontSize: 13.5, lineHeight: 18, ...font(400), color: t.neutral[500] },
   exploreRetryLink: { ...font(500), color: t.primary[600] },
   exploreDone: { fontSize: 13, lineHeight: 17, ...font(400), color: t.neutral[400] },
-});
+}));

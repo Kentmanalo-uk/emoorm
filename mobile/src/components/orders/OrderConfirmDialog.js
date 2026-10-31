@@ -1,6 +1,6 @@
 import { ActivityIndicator, Pressable, StyleSheet, Text, View } from 'react-native';
-import { QuestionIcon, WarningIcon } from 'phosphor-react-native';
-import { font, t } from '../../theme';
+import { QuestionIcon, WarningIcon } from '../../lib/icons';
+import { font, t, themed } from '../../theme';
 import OrderSheetFrame from './OrderSheetFrame';
 
 /**
@@ -44,7 +44,7 @@ export default function OrderConfirmDialog({
   );
 }
 
-const styles = StyleSheet.create({
+const styles = themed(() => StyleSheet.create({
   body: { flexDirection: 'row', alignItems: 'flex-start', gap: 12, paddingTop: 22, paddingHorizontal: 16, paddingBottom: 4 },
   icon: { width: 40, height: 40, borderRadius: 20, alignItems: 'center', justifyContent: 'center', backgroundColor: t.danger[100] },
   iconNeutral: { backgroundColor: t.sky[100] },
@@ -59,5 +59,5 @@ const styles = StyleSheet.create({
   off: { opacity: 0.6 },
   btnText: { fontSize: 14, lineHeight: 20, ...font(500) },
   cancelText: { color: t.neutral[700] },
-  goText: { color: '#fff' },
-});
+  goText: { color: t.onBrand },
+}));

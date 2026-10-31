@@ -1,6 +1,6 @@
 import { Pressable, StyleSheet, Text, View } from 'react-native';
-import { CaretRightIcon } from 'phosphor-react-native';
-import { font, t } from '../../theme';
+import { CaretRightIcon } from '../../lib/icons';
+import { font, t, themed } from '../../theme';
 import ProductImage from '../ProductImage';
 import { variationImage } from '../../lib/variationImage';
 import { OrderBadge, cardShadow } from '../orders/OrderBits';
@@ -109,7 +109,7 @@ function InfoRow({ label, value }) {
 
 // .return-status on the detail page: the status tint; the text keeps
 // .return-detail-head span's grey 13px (that rule outranks the tint's colour).
-const PILL_BG = {
+const PILL_BG = themed(() => ({
   REQUESTED: t.orange[100],
   APPROVED: t.sky[100],
   RECEIVED: t.sky[100],
@@ -119,7 +119,7 @@ const PILL_BG = {
   REJECTED: t.danger[100],
   CANCELLED: t.danger[100],
   DISPUTED: t.warning[100],
-};
+}));
 
 /** The detail page's status pill (upper case, letter-spaced). */
 export function ReturnStatusPill({ status }) {
@@ -156,11 +156,11 @@ export function ReturnsMessage({ children }) {
   return <View style={styles.message}>{children}</View>;
 }
 
-export const returnsText = StyleSheet.create({
+export const returnsText = themed(() => StyleSheet.create({
   message: { fontSize: 15, lineHeight: 24, ...font(400), color: t.neutral[500], textAlign: 'center' },
-});
+}));
 
-const styles = StyleSheet.create({
+const styles = themed(() => StyleSheet.create({
   card: { borderRadius: 12, backgroundColor: t.neutral[0], overflow: 'hidden', ...cardShadow },
   cardHead: { flexDirection: 'row', alignItems: 'center', gap: 10, paddingTop: 14, paddingHorizontal: 14, paddingBottom: 4 },
   storeName: { flex: 1, minWidth: 0, fontSize: 15, lineHeight: 24, ...font(500), color: t.neutral[900] },
@@ -191,4 +191,4 @@ const styles = StyleSheet.create({
   primaryText: { fontSize: 14, lineHeight: 16.8, ...font(500), color: t.neutral[0] },
 
   message: { minHeight: 280, alignItems: 'center', justifyContent: 'center', gap: 10 },
-});
+}));

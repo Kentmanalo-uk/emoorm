@@ -1,7 +1,7 @@
 import { Pressable, StyleSheet, Text, View } from 'react-native';
 import { useRouter } from 'expo-router';
 import { useProductPeek } from '../peek/ProductPeek';
-import { PlusIcon, ShoppingCartIcon, StarIcon } from 'phosphor-react-native';
+import { PlusIcon, ShoppingCartIcon, StarIcon } from '../../lib/icons';
 import ProductImage from '../ProductImage';
 import ShopTileImage from './ShopTileImage';
 import { SaleWas } from '../SaleTag';
@@ -9,7 +9,7 @@ import { ProductTodayTag } from '../TodayTag';
 import { saleInfo } from '../../lib/variantPricing';
 import { notTakingOrders, opensLabel } from '../../lib/availability';
 import { isStockless, priceUnit, startsFrom } from '../orders/orderLines';
-import { font, t } from '../../theme';
+import { font, t, themed } from '../../theme';
 
 const money = (n) => `₱${Number(n || 0).toLocaleString('en-PH', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}`;
 
@@ -153,7 +153,7 @@ export function ShopGridCard({ product, accent, style }) {
   );
 }
 
-const styles = StyleSheet.create({
+const styles = themed(() => StyleSheet.create({
   row: {
     flexDirection: 'row', gap: 12, padding: 10, marginHorizontal: -12,
     backgroundColor: t.neutral[0], borderBottomWidth: 1, borderBottomColor: t.neutral[200],
@@ -161,7 +161,7 @@ const styles = StyleSheet.create({
   img: { position: 'relative', width: 112, height: 112, overflow: 'hidden', borderRadius: 10, backgroundColor: t.neutral[100] },
   soldout: {
     position: 'absolute', left: 0, right: 0, bottom: 0, paddingVertical: 4, backgroundColor: 'rgba(17, 24, 39, 0.65)',
-    color: '#fff', fontSize: 11.5, lineHeight: 18.4, ...font(500), textAlign: 'center',
+    color: t.onBrand, fontSize: 11.5, lineHeight: 18.4, ...font(500), textAlign: 'center',
   },
   body: { flex: 1, minWidth: 0 },
   name: { fontSize: 14.5, lineHeight: 19.575, ...font(500), color: t.neutral[900] },
@@ -185,7 +185,7 @@ const styles = StyleSheet.create({
     height: 34, paddingHorizontal: 16, alignItems: 'center', justifyContent: 'center',
     borderTopRightRadius: 8, borderBottomRightRadius: 8, backgroundColor: t.primary[600],
   },
-  buyText: { fontSize: 14, lineHeight: 16.8, ...font(500), color: '#fff' },
+  buyText: { fontSize: 14, lineHeight: 16.8, ...font(500), color: t.onBrand },
   disabled: { opacity: 0.45 },
   // .shop-m-row-closed, .shop-m-row-opens
   closed: {
@@ -204,4 +204,4 @@ const styles = StyleSheet.create({
   ratingRow: { flexDirection: 'row', alignItems: 'center', gap: 4, marginTop: 2 },
   cardStars: { flexDirection: 'row', alignItems: 'center', gap: 1 },
   reviewCount: { fontSize: 11, lineHeight: 11, ...font(400), color: t.neutral[500] },
-});
+}));

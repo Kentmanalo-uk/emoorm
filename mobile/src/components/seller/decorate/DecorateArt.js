@@ -1,6 +1,6 @@
 import { Image, StyleSheet, Text, View } from 'react-native';
-import { ChatTextIcon, ImageSquareIcon, StarIcon } from 'phosphor-react-native';
-import { font, t } from '../../../theme';
+import { ChatTextIcon, ImageSquareIcon, StarIcon } from '../../../lib/icons';
+import { font, t, themed } from '../../../theme';
 import { resolveImg } from '../../../lib/media';
 import { ShopGradient } from '../../shop/shopTheme';
 import { paintColor } from '../store/storeLib';
@@ -77,7 +77,7 @@ export function SwatchArt({ store }) {
   );
 }
 
-const styles = StyleSheet.create({
+const styles = themed(() => StyleSheet.create({
   home: { height: 120, gap: 6, padding: 8, borderRadius: 14, backgroundColor: '#f8fafc' },
   homeBanner: { flex: 1, alignItems: 'center', justifyContent: 'center', overflow: 'hidden', borderRadius: 10 },
   homeRow: { flexDirection: 'row', gap: 5 },
@@ -98,7 +98,7 @@ const styles = StyleSheet.create({
     justifyContent: 'center',
     overflow: 'hidden',
     borderWidth: 3,
-    borderColor: '#fff',
+    bordercolor: t.onBrand,
     borderRadius: 29,
     backgroundColor: t.primary[50],
   },
@@ -107,5 +107,5 @@ const styles = StyleSheet.create({
   swatches: { flexDirection: 'row', justifyContent: 'center' },
   swatchRing: { width: 66, height: 66, borderWidth: 1, borderColor: t.neutral[200], borderRadius: 33 },
   swatchNext: { marginLeft: -18 },
-  swatch: { flex: 1, borderWidth: 4, borderColor: '#fff', borderRadius: 32 },
-});
+  swatch: { flex: 1, borderWidth: 4, bordercolor: t.onBrand, borderRadius: 32 },
+}));

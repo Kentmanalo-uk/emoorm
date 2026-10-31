@@ -1,8 +1,8 @@
 import { StyleSheet, Text, View } from 'react-native';
-import { CaretLeftIcon } from 'phosphor-react-native';
+import { CaretLeftIcon } from '../lib/icons';
 import { useRouter } from 'expo-router';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
-import { border, font, t, text } from '../theme';
+import { border, font, t, text, themed } from '../theme';
 import ShellBarButton from './ShellBarButton';
 import HeaderGlow from './HeaderGlow';
 import ShellPageMenu from './ShellPageMenu';
@@ -47,7 +47,7 @@ export default function ScreenHeader({
   );
 }
 
-const styles = StyleSheet.create({
+const styles = themed(() => StyleSheet.create({
   bar: {
     flexDirection: 'row',
     alignItems: 'center',
@@ -60,4 +60,4 @@ const styles = StyleSheet.create({
   title: { fontSize: 19, lineHeight: 22.8, color: text.strong, ...font(500) },
   subtitle: { fontSize: 13, lineHeight: 16, color: text.muted, ...font(400) },
   end: { flexDirection: 'row', alignItems: 'center', gap: 2, flexShrink: 0, marginLeft: 'auto' },
-});
+}));

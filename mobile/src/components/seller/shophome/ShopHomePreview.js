@@ -1,10 +1,10 @@
 import { useMemo } from 'react';
 import { Image, Modal, Pressable, ScrollView, StyleSheet, Text, View } from 'react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
-import { XIcon } from 'phosphor-react-native';
+import { XIcon } from '../../../lib/icons';
 import ShopHome from '../../shop/ShopHome';
 import { resolveImg } from '../../../lib/media';
-import { font, t } from '../../../theme';
+import { font, ink, t, themed } from '../../../theme';
 import { sectionReady } from './shopHome';
 
 /*
@@ -77,22 +77,22 @@ export default function ShopHomePreviewSheet({ open, onClose, store, sections, l
   );
 }
 
-const styles = StyleSheet.create({
+const styles = themed(() => StyleSheet.create({
   flex: { flex: 1 },
   // .shb-phone inside the sheet (border 6px, no height limit)
   phone: {
     overflow: 'hidden', borderWidth: 6, borderColor: t.neutral[900], borderRadius: 34, backgroundColor: t.neutral[50],
-    boxShadow: [{ offsetX: 0, offsetY: 18, blurRadius: 40, color: 'rgba(15, 23, 42, 0.18)' }],
+    boxShadow: [{ offsetX: 0, offsetY: 18, blurRadius: 40, color: ink(0.18) }],
   },
   head: { flexDirection: 'row', alignItems: 'center', gap: 10, paddingTop: 14, paddingHorizontal: 14, paddingBottom: 10 },
   logo: {
-    width: 34, height: 34, overflow: 'hidden', borderRadius: 17, alignItems: 'center', justifyContent: 'center', backgroundColor: '#fff',
+    width: 34, height: 34, overflow: 'hidden', borderRadius: 17, alignItems: 'center', justifyContent: 'center', backgroundcolor: t.onBrand,
   },
   logoText: { fontSize: 15, lineHeight: 20, ...font(700) },
-  name: { flexShrink: 1, fontSize: 14, lineHeight: 19, ...font(700), color: '#fff' },
+  name: { flexShrink: 1, fontSize: 14, lineHeight: 19, ...font(700), color: t.onBrand },
   tabs: {
     flexDirection: 'row', gap: 14, paddingHorizontal: 14,
-    borderBottomWidth: 1, borderBottomColor: t.neutral[200], backgroundColor: '#fff',
+    borderBottomWidth: 1, borderBottomColor: t.neutral[200], backgroundcolor: t.onBrand,
   },
   tab: { paddingVertical: 9, fontSize: 12.5, lineHeight: 17, ...font(400), color: t.neutral[500] },
   tabOn: { paddingBottom: 7, borderBottomWidth: 2, ...font(700) },
@@ -102,9 +102,9 @@ const styles = StyleSheet.create({
   sheet: { flex: 1, backgroundColor: t.neutral[100] },
   sheetHead: {
     flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between',
-    paddingHorizontal: 14, paddingBottom: 12, backgroundColor: '#fff', borderBottomWidth: 1, borderBottomColor: t.neutral[200],
+    paddingHorizontal: 14, paddingBottom: 12, backgroundcolor: t.onBrand, borderBottomWidth: 1, borderBottomColor: t.neutral[200],
   },
   sheetTitle: { fontSize: 16, lineHeight: 22, ...font(700), color: t.neutral[900] },
   close: { width: 32, height: 32, borderRadius: 9, alignItems: 'center', justifyContent: 'center' },
   sheetBody: { padding: 14 },
-});
+}));

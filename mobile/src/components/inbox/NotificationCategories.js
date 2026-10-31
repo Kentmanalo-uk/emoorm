@@ -1,9 +1,9 @@
 import { Pressable, StyleSheet, Text, View } from 'react-native';
 import {
   BellRingingIcon, ChatCircleDotsIcon, ClipboardTextIcon, MegaphoneIcon,
-} from 'phosphor-react-native';
+} from '../../lib/icons';
 import GradientIcon from '../GradientIcon';
-import { font, t } from '../../theme';
+import { font, ink, t, themed } from '../../theme';
 
 /*
  * The notifications' groups, in one bar above the list (shopping apps'
@@ -73,7 +73,7 @@ export default function NotificationCategories({ value, onChange, unread = {} })
   );
 }
 
-const styles = StyleSheet.create({
+const styles = themed(() => StyleSheet.create({
   bar: {
     flexDirection: 'row', alignItems: 'center', marginBottom: 12, paddingVertical: 4, paddingHorizontal: 4,
     borderRadius: 14, backgroundColor: t.neutral[50],
@@ -84,7 +84,7 @@ const styles = StyleSheet.create({
     flex: 1, flexDirection: 'row', alignItems: 'center', justifyContent: 'center', gap: 7,
     minHeight: 42, marginHorizontal: 2, paddingHorizontal: 2, borderRadius: 10,
   },
-  itemOn: { backgroundColor: t.neutral[0], boxShadow: [{ offsetX: 0, offsetY: 1, blurRadius: 4, color: 'rgba(15, 23, 42, 0.08)' }] },
+  itemOn: { backgroundColor: t.neutral[0], boxShadow: [{ offsetX: 0, offsetY: 1, blurRadius: 4, color: ink(0.08) }] },
   itemPressed: { backgroundColor: t.neutral[100] },
   label: { flexShrink: 1, fontSize: 13.5, lineHeight: 18, ...font(500), color: t.neutral[800] },
   labelOn: { color: t.primary[700], ...font(600) },
@@ -92,5 +92,5 @@ const styles = StyleSheet.create({
     position: 'absolute', top: -6, right: -7, minWidth: 15, height: 15, paddingHorizontal: 3.5, borderRadius: 7.5,
     alignItems: 'center', justifyContent: 'center', backgroundColor: t.danger[500], borderWidth: 1.5, borderColor: t.neutral[50],
   },
-  badgeText: { fontSize: 9, lineHeight: 11, ...font(600), color: '#fff' },
-});
+  badgeText: { fontSize: 9, lineHeight: 11, ...font(600), color: t.onBrand },
+}));

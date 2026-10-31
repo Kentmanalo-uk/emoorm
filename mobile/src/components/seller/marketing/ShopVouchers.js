@@ -1,6 +1,6 @@
 import { useEffect, useRef, useState } from 'react';
 import { Animated, Pressable, StyleSheet, Text, TextInput, View } from 'react-native';
-import { PlusIcon, TrashIcon } from 'phosphor-react-native';
+import { PlusIcon, TrashIcon } from '../../../lib/icons';
 import apiClient from '../../../api/client';
 import { toast } from '../../../lib/toast';
 import Sheet, { SheetButton } from '../../Sheet';
@@ -12,7 +12,7 @@ import { meStyles } from '../me/MeParts';
 import MkField, { MkFieldRow, fieldStyles } from './MkField';
 import VoucherDateSheet from './VoucherDateSheet';
 import { dayLabel, shortDate, voucherSummary } from './marketingLib';
-import { font, t } from '../../../theme';
+import { font, t, themed } from '../../../theme';
 import { PageLoader } from '../../BrandLoader';
 
 /*
@@ -282,7 +282,7 @@ export default function ShopVouchers() {
   );
 }
 
-const styles = StyleSheet.create({
+const styles = themed(() => StyleSheet.create({
   // .sh-card-head
   head: { flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between', gap: 12, marginBottom: 12 },
   title: { fontSize: 15.5, lineHeight: 17.8, ...font(500), color: t.neutral[900] },
@@ -305,10 +305,10 @@ const styles = StyleSheet.create({
   summary: { fontSize: 14, lineHeight: 22.4, ...font(500), color: t.neutral[900] },
   small: { fontSize: 12, lineHeight: 19.2, ...font(400), color: t.neutral[500] },
   switch: { width: 40, height: 24, borderRadius: 999, justifyContent: 'center' },
-  knob: { position: 'absolute', top: 3, left: 3, width: 18, height: 18, borderRadius: 9, backgroundColor: '#fff' },
+  knob: { position: 'absolute', top: 3, left: 3, width: 18, height: 18, borderRadius: 9, backgroundColor: t.neutral[0] },
   del: { padding: 6 },
 
   dateField: { justifyContent: 'center' },
   dateText: { fontSize: 16, lineHeight: 20.8, ...font(400), color: t.neutral[900] },
   datePlaceholder: { color: t.neutral[400] },
-});
+}));

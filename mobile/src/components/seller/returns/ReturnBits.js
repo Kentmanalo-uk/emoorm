@@ -1,5 +1,5 @@
 import { Pressable, StyleSheet, Text, View } from 'react-native';
-import { font, t } from '../../../theme';
+import { font, t, themed } from '../../../theme';
 import EmptyState from '../../EmptyState';
 
 /*
@@ -16,7 +16,7 @@ export const LABELS = { REQUESTED: 'Requested', APPROVED: 'Approved', AWAITING_S
 export const peso = (value) => `₱${Number(value || 0).toFixed(2)}`;
 
 // .seller-status.status-* (phones)
-const STATUS_COLOURS = {
+const STATUS_COLOURS = themed(() => ({
   REQUESTED: [t.warning[100], t.warning[700]],
   APPROVED: [t.info[100], t.info[700]],
   AWAITING_SHIPMENT: [t.info[100], t.info[700]],
@@ -26,7 +26,7 @@ const STATUS_COLOURS = {
   REJECTED: [t.danger[100], t.danger[700]],
   CANCELLED: [t.danger[100], t.danger[700]],
   DISPUTED: [t.warning[100], t.warning[800]],
-};
+}));
 
 export function StatusPill({ status, style }) {
   const [bg, fg] = STATUS_COLOURS[status] || [t.neutral[100], t.secondary[950]];
@@ -68,7 +68,7 @@ export function ReturnsEmpty({ all = true }) {
 // --elev-card: rgba(149, 157, 165, 0.06) 0px 8px 24px
 export const elevCard = { boxShadow: [{ offsetX: 0, offsetY: 8, blurRadius: 24, color: 'rgba(149, 157, 165, 0.06)' }] };
 
-const styles = StyleSheet.create({
+const styles = themed(() => StyleSheet.create({
   pill: { paddingVertical: 3, paddingHorizontal: 10, borderRadius: 999 },
   pillText: { fontSize: 11, lineHeight: 15.4, ...font(700) },
 
@@ -85,4 +85,4 @@ const styles = StyleSheet.create({
   rowAmount: { marginTop: 8, fontSize: 15, lineHeight: 20, ...font(700), color: t.secondary[950], textAlign: 'right' },
 
   // The list around it does not grow, so keep a screenful's room to centre in.
-});
+}));

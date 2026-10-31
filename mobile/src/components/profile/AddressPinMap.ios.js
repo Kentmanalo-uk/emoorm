@@ -1,8 +1,8 @@
 import { useEffect, useMemo, useRef } from 'react';
 import { Pressable, StyleSheet, Text, View } from 'react-native';
 import MapView, { Marker } from 'react-native-maps';
-import { MapPinIcon } from 'phosphor-react-native';
-import { font, t } from '../../theme';
+import { MapPinIcon } from '../../lib/icons';
+import { font, t, themed } from '../../theme';
 import {
   PHILIPPINES_ZOOM_RANGE, keptInPhilippines, mindoroRegion, regionAt,
 } from '../maps/appleRegion';
@@ -97,9 +97,9 @@ export default function AddressPinMap({ value, onChange, height = 260, hint = 'T
   );
 }
 
-const styles = StyleSheet.create({
+const styles = themed(() => StyleSheet.create({
   locate: { flexDirection: 'row', alignItems: 'center', gap: 6, alignSelf: 'flex-start', marginBottom: 8, paddingVertical: 7 },
   locateText: { fontSize: 12, lineHeight: 16, color: t.primary[700], ...font(500) },
   frame: { width: '100%', overflow: 'hidden', borderRadius: 12, backgroundColor: t.neutral[150] },
   coords: { marginTop: 7, fontSize: 12, lineHeight: 19.2, color: t.neutral[500], ...font(400) },
-});
+}));

@@ -4,7 +4,7 @@ import { router, useLocalSearchParams } from 'expo-router';
 import AuthSheet from '../../src/components/auth/AuthSheet';
 import { BusyLabel } from '../../src/components/auth/AuthForm';
 import { finishGoogleSignIn, hasGoogleListener } from '../../src/components/auth/googleSignIn';
-import { font, t } from '../../src/theme';
+import { font, t, themed } from '../../src/theme';
 
 /**
  * Where the phone's browser comes back after "Continue with Google"
@@ -53,7 +53,7 @@ export default function GoogleSignInReturn() {
   );
 }
 
-const styles = StyleSheet.create({
+const styles = themed(() => StyleSheet.create({
   busy: { paddingTop: 48, alignItems: 'center' },
   busyText: { fontSize: 15, lineHeight: 22.5, color: t.neutral[500], ...font(400) },
-});
+}));

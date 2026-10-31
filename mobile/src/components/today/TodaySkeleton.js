@@ -1,7 +1,7 @@
 import { useEffect, useRef, useState } from 'react';
 import { Animated, Easing, Platform, StyleSheet, View } from 'react-native';
 import Svg, { Defs, LinearGradient, Rect, Stop } from 'react-native-svg';
-import { t } from '../../theme';
+import { t, themed } from '../../theme';
 
 /**
  * A loading block as the website's Skeleton (web/src/components/ui/
@@ -46,6 +46,6 @@ export default function TodaySkeleton({ height, radius = 12, style }) {
   );
 }
 
-const styles = StyleSheet.create({
+const styles = themed(() => StyleSheet.create({
   box: { overflow: 'hidden', backgroundColor: t.neutral[150] },
-});
+}));

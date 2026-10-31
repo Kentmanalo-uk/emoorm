@@ -3,14 +3,14 @@ import { Image, Pressable, ScrollView, StyleSheet, Text, TextInput, View } from 
 import * as ImagePicker from 'expo-image-picker';
 import {
   ArrowDownIcon, ArrowUpIcon, CaretDownIcon, CheckIcon, MagnifyingGlassIcon, PlusIcon, TrashIcon, UploadSimpleIcon, XIcon,
-} from 'phosphor-react-native';
+} from '../../../lib/icons';
 import ProductImage from '../../ProductImage';
 import Select from '../../Select';
 import { peso } from '../../SaleTag';
 import { resolveImg } from '../../../lib/media';
 import { uploadImage } from '../../../lib/upload';
 import { toast } from '../../../lib/toast';
-import { font, t } from '../../../theme';
+import { font, t, themed } from '../../../theme';
 import { SECTION_KINDS, sectionReady } from './shopHome';
 import StyleThumb from './StyleThumb';
 import { Grid2, KindIcon, ShbIconButton, ShbLabel, shb } from './shbParts';
@@ -330,9 +330,9 @@ function SpotlightField({ section: s, max, onChange, products, lookup }) {
   );
 }
 
-const styles = StyleSheet.create({
+const styles = themed(() => StyleSheet.create({
   // .shb-sec
-  sec: { borderWidth: 1.5, borderColor: t.neutral[200], borderRadius: 16, backgroundColor: '#fff' },
+  sec: { borderWidth: 1.5, borderColor: t.neutral[200], borderRadius: 16, backgroundColor: t.neutral[0] },
   secOpen: {
     borderColor: t.primary[300],
     boxShadow: [{ offsetX: 0, offsetY: 6, blurRadius: 20, color: 'rgba(5, 150, 105, 0.08)' }],
@@ -355,7 +355,7 @@ const styles = StyleSheet.create({
   // Style picker: two across on phones (Grid2).
   styleCard: {
     flex: 1, gap: 3, padding: 8,
-    borderWidth: 1.5, borderColor: t.neutral[200], borderRadius: 13, backgroundColor: '#fff',
+    borderWidth: 1.5, borderColor: t.neutral[200], borderRadius: 13, backgroundColor: t.neutral[0],
   },
   styleOn: {
     borderColor: t.primary[600], backgroundColor: t.primary[50],
@@ -372,7 +372,7 @@ const styles = StyleSheet.create({
     alignItems: 'center', justifyContent: 'center', backgroundColor: 'rgba(17, 24, 39, 0.65)',
   },
   photoLink: {
-    minHeight: 36, paddingHorizontal: 8, borderWidth: 1.5, borderColor: t.neutral[200], borderRadius: 11, backgroundColor: '#fff',
+    minHeight: 36, paddingHorizontal: 8, borderWidth: 1.5, borderColor: t.neutral[200], borderRadius: 11, backgroundColor: t.neutral[0],
   },
   photoLinkText: { fontSize: 12.5, lineHeight: 17, ...font(400), color: t.neutral[900] },
   photoCaption: { paddingVertical: 6 },
@@ -393,13 +393,13 @@ const styles = StyleSheet.create({
   picker: { gap: 8, padding: 10, borderWidth: 1, borderColor: t.neutral[200], borderRadius: 14, backgroundColor: t.neutral[50] },
   search: {
     flexDirection: 'row', alignItems: 'center', gap: 8, height: 38, paddingHorizontal: 10,
-    borderWidth: 1.5, borderColor: t.neutral[200], borderRadius: 10, backgroundColor: '#fff',
+    borderWidth: 1.5, borderColor: t.neutral[200], borderRadius: 10, backgroundColor: t.neutral[0],
   },
   searchInput: { flex: 1, minWidth: 0, height: 35, padding: 0, fontSize: 14, ...font(400), color: t.neutral[900] },
   pickList: { maxHeight: 320 },
   pick: {
     flexDirection: 'row', alignItems: 'center', gap: 8, padding: 6,
-    borderWidth: 1.5, borderColor: 'transparent', borderRadius: 12, backgroundColor: '#fff',
+    borderWidth: 1.5, borderColor: 'transparent', borderRadius: 12, backgroundColor: t.neutral[0],
   },
   pickOn: { borderColor: t.primary[500], backgroundColor: t.primary[50] },
   check: {
@@ -407,4 +407,4 @@ const styles = StyleSheet.create({
     borderWidth: 1.5, borderColor: t.neutral[300], borderRadius: 11,
   },
   checkOn: { borderColor: t.primary[600], backgroundColor: t.primary[600] },
-});
+}));

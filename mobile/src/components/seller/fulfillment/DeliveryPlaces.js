@@ -6,8 +6,8 @@ import {
 } from 'react-native';
 import {
   CaretDownIcon, CheckIcon, DotsThreeIcon, GiftIcon, MagnifyingGlassIcon, MapPinIcon, PathIcon, PlusIcon, TagIcon, WarningIcon,
-} from 'phosphor-react-native';
-import { font, t } from '../../../theme';
+} from '../../../lib/icons';
+import { font, t, themed } from '../../../theme';
 import { useReveal } from '../../ScrollReveal';
 import { SERVICE_MUNICIPALITIES, listBarangays, normalizeName } from '../../checkout/CheckoutAddressPicker';
 import {
@@ -1075,7 +1075,7 @@ function DistanceFields({
   );
 }
 
-const styles = StyleSheet.create({
+const styles = themed(() => StyleSheet.create({
   flex: { flex: 1, minWidth: 0 },
   pressed: { opacity: 0.85 },
   off: { opacity: 0.5 },
@@ -1095,10 +1095,10 @@ const styles = StyleSheet.create({
   modeTick: {
     width: 22, height: 22, borderRadius: 11, borderWidth: 2, borderColor: t.neutral[300], alignItems: 'center', justifyContent: 'center',
   },
-  modeTickOn: { borderColor: '#fff', backgroundColor: '#fff' },
+  modeTickOn: { bordercolor: t.onBrand, backgroundColor: t.neutral[0] },
   modeLabel: { fontSize: 16.5, lineHeight: 21, color: t.primary[700], ...font(500) },
   modeLabel3: { fontSize: 15, lineHeight: 19 },
-  modeLabelOn: { color: '#fff' },
+  modeLabelOn: { color: t.onBrand },
   modeHint: { fontSize: 13, lineHeight: 18, color: t.neutral[600], ...font(400) },
   modeHint3: { fontSize: 12.5, lineHeight: 17 },
   modeHintOn: { color: 'rgba(255, 255, 255, 0.92)' },
@@ -1115,7 +1115,7 @@ const styles = StyleSheet.create({
   },
   bigPrimary: { borderColor: t.primary[600], backgroundColor: t.primary[600] },
   bigText: { fontSize: 16, lineHeight: 22, color: t.neutral[800], ...font(500) },
-  bigTextPrimary: { color: '#fff' },
+  bigTextPrimary: { color: t.onBrand },
 
   summary: { gap: 4, paddingVertical: 14, paddingHorizontal: 16, borderRadius: 14, backgroundColor: t.success[50] },
   summaryTitle: { marginBottom: 2, fontSize: 14, lineHeight: 20, color: t.primary[800], ...font(500) },
@@ -1144,7 +1144,7 @@ const styles = StyleSheet.create({
   chipQuick: { paddingHorizontal: 11 },
   chipOn: { borderColor: t.primary[600], backgroundColor: t.primary[600] },
   chipText: { fontSize: 14, lineHeight: 19, color: t.neutral[800], ...font(500) },
-  chipTextOn: { color: '#fff' },
+  chipTextOn: { color: t.onBrand },
   feeq: { flexDirection: 'row', flexWrap: 'wrap', alignItems: 'center', gap: 8 },
   chips: { flexDirection: 'row', flexWrap: 'wrap', gap: 6 },
 
@@ -1175,7 +1175,7 @@ const styles = StyleSheet.create({
     alignSelf: 'flex-start', paddingVertical: 1, paddingHorizontal: 8, borderRadius: 999, overflow: 'hidden',
     backgroundColor: t.primary[50], color: t.primary[700], fontSize: 12, lineHeight: 17, ...font(500),
   },
-  tagPink: { backgroundColor: '#fdf2f8', color: '#be185d' },
+  tagPink: { backgroundColor: t.accent[50], color: t.accent[700] },
   rowFee: { flexDirection: 'row', alignItems: 'center', gap: 6 },
   rowFeeState: {
     position: 'absolute', top: '100%', left: 0, flexDirection: 'row', alignItems: 'center', gap: 3, marginTop: 1,
@@ -1202,7 +1202,7 @@ const styles = StyleSheet.create({
   },
   smallDanger: { borderColor: t.danger[600], backgroundColor: t.danger[600] },
   smallText: { fontSize: 13.5, lineHeight: 18, color: t.primary[700], ...font(500) },
-  smallTextDanger: { color: '#fff' },
+  smallTextDanger: { color: t.onBrand },
 
   add: {
     flexDirection: 'row', alignItems: 'center', justifyContent: 'center', gap: 8, minHeight: 52,
@@ -1252,7 +1252,7 @@ const styles = StyleSheet.create({
   pbtnPrimary: { minWidth: 140, borderColor: t.primary[600], backgroundColor: t.primary[600] },
   pbtnGhost: { paddingHorizontal: 12, borderColor: 'transparent', backgroundColor: 'transparent' },
   pbtnText: { fontSize: 15, lineHeight: 21, color: t.neutral[800], ...font(500) },
-  pbtnTextPrimary: { color: '#fff' },
+  pbtnTextPrimary: { color: t.onBrand },
   pbtnTextGhost: { color: t.neutral[600], ...font(400) },
 
   brgy: { gap: 8, marginTop: 4 },
@@ -1268,7 +1268,7 @@ const styles = StyleSheet.create({
   checkOn: { backgroundColor: t.primary[50] },
   cbox: {
     width: 20, height: 20, borderRadius: 5, borderWidth: 1.5, borderColor: t.neutral[400],
-    alignItems: 'center', justifyContent: 'center', backgroundColor: '#fff',
+    alignItems: 'center', justifyContent: 'center', backgroundColor: t.neutral[0],
   },
   cboxOn: { borderColor: t.primary[600], backgroundColor: t.primary[600] },
   checkText: { flex: 1, fontSize: 15, lineHeight: 21, color: t.neutral[800], ...font(400) },
@@ -1305,4 +1305,4 @@ const styles = StyleSheet.create({
     borderRadius: 12, backgroundColor: t.warning[50],
   },
   pinNoteText: { flex: 1, fontSize: 13.5, lineHeight: 19, color: t.warning[800], ...font(400) },
-});
+}));

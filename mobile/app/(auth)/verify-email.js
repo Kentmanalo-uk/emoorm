@@ -1,14 +1,14 @@
 import { useEffect, useRef, useState } from 'react';
 import { Pressable, StyleSheet, Text, View } from 'react-native';
 import { router, useLocalSearchParams } from 'expo-router';
-import { CheckCircleIcon, WarningCircleIcon } from 'phosphor-react-native';
+import { CheckCircleIcon, WarningCircleIcon } from '../../src/lib/icons';
 import apiClient from '../../src/api/client';
 import toast from '../../src/lib/toast';
 import useAuthStore from '../../src/store/authStore';
 import AuthSheet from '../../src/components/auth/AuthSheet';
 import { AuthSubmit, BusyLabel } from '../../src/components/auth/AuthForm';
 import AuthDone, { DoneIcon, DoneText, DoneTitle } from '../../src/components/auth/AuthDone';
-import { font, t } from '../../src/theme';
+import { font, t, themed } from '../../src/theme';
 
 /**
  * /verify-email?token=… — the link in the welcome email (web
@@ -112,10 +112,10 @@ export default function VerifyEmail() {
   );
 }
 
-const styles = StyleSheet.create({
+const styles = themed(() => StyleSheet.create({
   busy: { alignItems: 'center', marginBottom: 24 },
   busyText: { fontSize: 15, lineHeight: 22.5, color: t.neutral[500], ...font(400) },
   footer: { marginTop: 24, alignItems: 'center' },
   backLink: { minHeight: 44, justifyContent: 'center' },
   backLinkText: { fontSize: 14, lineHeight: 22.4, color: t.primary[600], ...font(500) },
-});
+}));

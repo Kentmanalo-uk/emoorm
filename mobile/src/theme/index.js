@@ -1,6 +1,7 @@
 /*
  * The website's design tokens (web/src/styles/tokens.css, typography.css),
- * so the app paints exactly like the website's phone view.
+ * so the app paints exactly like the website's phone view — in light mode
+ * and in dark mode.
  *
  *   t.primary[600]   the ramps, as --t-<ramp>-<stop> on the website
  *   surface / text / border   what a colour is for (--surface-*, --text-*, --border-*)
@@ -8,122 +9,181 @@
  *
  * When porting a screen, read the website's CSS and use the token it names:
  * `var(--t-primary-600, …)` → t.primary[600]; `var(--t-neutral-150)` → t.neutral[150].
+ *
+ * ── Dark mode ───────────────────────────────────────────────────────────
+ * Every colour here is read from the palette that is active *now*, not
+ * copied when the module loads, so the same token gives the right colour in
+ * either mode. Two rules make that work:
+ *
+ *   1. In JSX, use the tokens directly: `color={t.neutral[700]}`. They are
+ *      read on each render, so they follow the mode on their own.
+ *   2. For a StyleSheet, wrap it in `themed()`:
+ *
+ *        const styles = themed(() => StyleSheet.create({ … }));
+ *
+ *      StyleSheet.create runs once and freezes the colours it was given, so
+ *      a plain stylesheet would keep the mode the app started in. themed()
+ *      builds one sheet per mode and hands out the one in use, so
+ *      `styles.card` is always the right sheet.
+ *
+ * ThemeGate (src/theme/ThemeGate.js) re-renders the app when the mode
+ * changes, and src/store/themeStore.js remembers the choice.
  */
+import { useSyncExternalStore } from 'react';
+import { PALETTES } from './palettes';
 
-export const t = {
-  primary: {
-    50: '#ecfdf5', 100: '#d1fae5', 200: '#a7f3d0', 300: '#6ee7b7', 400: '#34d399', 500: '#10b981',
-    600: '#047857', 700: '#03684c', 800: '#065f46', 900: '#064e3b', 950: '#052e1f',
-  },
-  secondary: {
-    50: '#e9f7f0', 100: '#d7ecdf', 200: '#aedcc0', 300: '#7cc79b', 400: '#48ae76', 500: '#29a366',
-    600: '#178048', 700: '#176b3a', 800: '#006927', 900: '#0b5c38', 950: '#17231c',
-  },
-  accent: {
-    50: '#fdf2f8', 100: '#fce7f3', 200: '#fbcfe8', 300: '#f9a8d4', 400: '#f472b6', 500: '#ec4899',
-    600: '#db2777', 700: '#be185d', 800: '#9d174d', 900: '#831843', 950: '#500724',
-  },
-  success: {
-    50: '#f0fdf4', 100: '#dcfce7', 200: '#bbf7d0', 300: '#86efac', 400: '#4ade80', 500: '#22c55e',
-    600: '#16a34a', 700: '#15803d', 800: '#166534', 900: '#14532d', 950: '#052e16',
-  },
-  warning: {
-    50: '#fffbeb', 100: '#fef3c7', 200: '#fde68a', 300: '#fcd34d', 400: '#fbbf24', 500: '#f59e0b',
-    600: '#d97706', 700: '#b45309', 800: '#92400e', 900: '#78350f', 950: '#451a03',
-  },
-  danger: {
-    50: '#fef2f2', 100: '#fee2e2', 200: '#fecaca', 300: '#fca5a5', 400: '#f87171', 500: '#ef4444',
-    600: '#dc2626', 700: '#b91c1c', 800: '#991b1b', 900: '#7f1d1d', 950: '#450a0a',
-  },
-  info: {
-    50: '#eff6ff', 100: '#dbeafe', 200: '#bfdbfe', 300: '#93c5fd', 400: '#60a5fa', 500: '#3b82f6',
-    600: '#2563eb', 700: '#1d4ed8', 800: '#1e40af', 900: '#1e3a8a', 950: '#172554',
-  },
-  neutral: {
-    0: '#ffffff', 50: '#f9fafb', 100: '#f3f4f6', 150: '#eef0f3', 200: '#e5e7eb', 300: '#d1d5db',
-    400: '#9ca3af', 500: '#636b78', 600: '#4b5563', 700: '#374151', 800: '#1f2937', 900: '#111827', 950: '#030712',
-  },
-  violet: { 100: '#ede9fe', 500: '#8b5cf6', 600: '#7c3aed', 700: '#6d28d9' },
-  sky: { 100: '#e0f2fe', 500: '#0ea5e9', 600: '#0284c7', 700: '#0e6f95' },
-  orange: { 100: '#ffedd5', 500: '#f97316', 700: '#c2410c' },
-  teal: { 500: '#14b8a6', 600: '#0891b2', 700: '#155e75' },
-  indigo: { 500: '#4f46e5', 600: '#4338ca', 700: '#3730a3' },
+/* ── Which palette is live ─────────────────────────────────────────────── */
+
+let active = 'light';
+const listeners = new Set();
+
+/** 'light' or 'dark' — the palette being painted right now. */
+export const activeScheme = () => active;
+
+/**
+ * Swap the palette. Called by ThemeGate; screens never call this.
+ *
+ * The swap itself takes effect at once, so a stylesheet built later in the
+ * same render already reads the new palette. Subscribers are told afterwards
+ * rather than during, because this is called while ThemeGate renders and
+ * React will not have a component update another mid-render.
+ */
+export const setActiveScheme = (scheme) => {
+  const next = scheme === 'dark' ? 'dark' : 'light';
+  if (next === active) return;
+  active = next;
+  const tell = () => listeners.forEach((fn) => fn());
+  if (typeof queueMicrotask === 'function') queueMicrotask(tell); else setTimeout(tell, 0);
 };
 
-export const surface = {
-  page: '#f9fafb',
-  card: '#ffffff',
-  sunken: '#f3f4f6',
-  muted: '#eef0f3',
-  raised: '#ffffff',
-  inverse: '#111827',
-  overlay: 'rgba(17, 24, 39, 0.45)',
+export const subscribeScheme = (fn) => {
+  listeners.add(fn);
+  return () => listeners.delete(fn);
 };
 
-export const text = {
-  strong: '#111827',
-  body: '#374151',
-  muted: '#636b78',
-  subtle: '#636b78',
-  inverse: '#ffffff',
-  link: '#047857',
-};
+/** Re-renders the caller when the palette changes. */
+export const useScheme = () => useSyncExternalStore(subscribeScheme, activeScheme, activeScheme);
 
-export const border = {
-  subtle: '#eef0f3',
-  default: '#e5e7eb',
-  strong: '#d1d5db',
-  focus: '#047857',
-};
+const palette = () => PALETTES[active];
+
+/* ── The tokens ────────────────────────────────────────────────────────── */
+
+/* Each token object is read through on access, so a colour is never captured
+   at import time. Spreading one (`{ ...t.primary }`) still works and gives
+   the values of the palette in use at that moment. */
+const liveGroup = (name) => new Proxy({}, {
+  get: (_, key) => palette()[name][key],
+  has: (_, key) => key in palette()[name],
+  ownKeys: () => Reflect.ownKeys(palette()[name]),
+  getOwnPropertyDescriptor: (_, key) => ({
+    value: palette()[name][key], enumerable: true, configurable: true,
+  }),
+});
+
+const RAMPS = ['primary', 'secondary', 'accent', 'success', 'warning', 'danger', 'info', 'neutral', 'violet', 'sky', 'orange', 'teal', 'indigo'];
+const ramps = Object.fromEntries(RAMPS.map((name) => [name, liveGroup(name)]));
+
+/*
+ * `t.onBrand` is the label on a filled brand button or badge — white on the
+ * deep greens of light mode, near-black on the bright mint of dark mode.
+ * Use it wherever text sits on primary/accent/danger/success fill; plain
+ * white there is unreadable once the fill brightens.
+ */
+export const t = new Proxy(ramps, {
+  get: (target, key) => (key === 'onBrand' ? palette().onBrand : target[key]),
+  has: (target, key) => key === 'onBrand' || key in target,
+});
+export const surface = liveGroup('surface');
+export const text = liveGroup('text');
+export const border = liveGroup('border');
 
 // The names older screens use, now on the website's palette.
-export const colors = {
-  primary: t.primary[600],
-  primaryDark: t.primary[700],
-  primaryLight: t.primary[500],
-  primaryLighter: t.primary[100],
-
-  secondary: t.primary[600],
-  secondaryDark: t.primary[700],
-
-  accent: t.accent[600],
-  accentOrange: t.orange[500],
-  accentRed: t.danger[500],
-  accentYellow: t.warning[400],
-
-  white: '#ffffff',
-  black: '#000000',
-  gray50: t.neutral[50],
-  gray100: t.neutral[100],
-  gray200: t.neutral[200],
-  gray300: t.neutral[300],
-  gray400: t.neutral[400],
-  gray500: t.neutral[500],
-  gray600: t.neutral[600],
-  gray700: t.neutral[700],
-  gray800: t.neutral[800],
-  gray900: t.neutral[900],
-
-  success: t.success[500],
-  warning: t.warning[500],
-  error: t.danger[500],
-  info: t.info[500],
-
-  bgPrimary: t.neutral[0],
-  bgSecondary: t.neutral[100],
-  bgGreenLight: t.primary[50],
-
-  textPrimary: text.strong,
-  textSecondary: t.neutral[600],
-  textMuted: text.muted,
-  textWhite: '#ffffff',
-
-  borderLight: border.default,
-  borderMedium: border.strong,
-  borderDark: t.neutral[400],
-
-  star: t.warning[500],
+const COLOR_MAP = {
+  primary: ['primary', 600], primaryDark: ['primary', 700], primaryLight: ['primary', 500], primaryLighter: ['primary', 100],
+  secondary: ['primary', 600], secondaryDark: ['primary', 700],
+  accent: ['accent', 600], accentOrange: ['orange', 500], accentRed: ['danger', 500], accentYellow: ['warning', 400],
+  gray50: ['neutral', 50], gray100: ['neutral', 100], gray200: ['neutral', 200], gray300: ['neutral', 300],
+  gray400: ['neutral', 400], gray500: ['neutral', 500], gray600: ['neutral', 600], gray700: ['neutral', 700],
+  gray800: ['neutral', 800], gray900: ['neutral', 900],
+  success: ['success', 500], warning: ['warning', 500], error: ['danger', 500], info: ['info', 500],
+  bgPrimary: ['neutral', 0], bgSecondary: ['neutral', 100], bgGreenLight: ['primary', 50],
+  textSecondary: ['neutral', 600], borderDark: ['neutral', 400], star: ['warning', 500],
 };
+const COLOR_ROLES = {
+  textPrimary: ['text', 'strong'], textMuted: ['text', 'muted'],
+  borderLight: ['border', 'default'], borderMedium: ['border', 'strong'],
+};
+// white/black stay literal: they are used where a colour must not flip
+// (text on a brand-green button, a photo's backing).
+const COLOR_FIXED = { white: '#ffffff', black: '#000000', textWhite: '#ffffff' };
+
+export const colors = new Proxy({}, {
+  get: (_, key) => {
+    if (key in COLOR_FIXED) return COLOR_FIXED[key];
+    if (key in COLOR_MAP) { const [ramp, stop] = COLOR_MAP[key]; return palette()[ramp][stop]; }
+    if (key in COLOR_ROLES) { const [group, role] = COLOR_ROLES[key]; return palette()[group][role]; }
+    return undefined;
+  },
+  has: (_, key) => key in COLOR_FIXED || key in COLOR_MAP || key in COLOR_ROLES,
+  ownKeys: () => [...Object.keys(COLOR_FIXED), ...Object.keys(COLOR_MAP), ...Object.keys(COLOR_ROLES)],
+  getOwnPropertyDescriptor: () => ({ enumerable: true, configurable: true }),
+});
+
+/**
+ * The card colour at part opacity, for a bar, sheet or pill that lies over
+ * the page and lets it show through: `veil(0.98)` is near-white on a light
+ * page and the dark card colour on a dark one. A plain
+ * `rgba(255, 255, 255, …)` would stay white in dark mode.
+ */
+export const veil = (alpha) => `rgba(${palette().cardRgb}, ${alpha})`;
+
+/**
+ * The ink colour at part opacity, for a hairline, a soft shadow or a faint
+ * wash that has to read against the page it sits on.
+ *
+ * This is NOT for the dim behind a sheet or over a photo: that is meant to
+ * be dark in either mode, so it stays a plain rgba (or surface.overlay).
+ */
+export const ink = (alpha) => `rgba(${palette().inkRgb}, ${alpha})`;
+
+/* ── Stylesheets that follow the mode ──────────────────────────────────── */
+
+/**
+ * One copy per palette, built the first time that palette is painted.
+ *
+ *   const styles = themed(() => StyleSheet.create({ … }));
+ *   const TONES = themed(() => ({ good: { bg: t.primary[50] } }));
+ *
+ * `styles.card` and `TONES.good` read the copy for the palette in use, so
+ * the same name gives light or dark colours without the screen doing
+ * anything. Copies are kept, so switching back and forth costs nothing after
+ * the first time.
+ *
+ * ── Read it key by key; never hand the whole thing over ──────────────────
+ * `styles.card` is a plain object, and a different one in each palette, so
+ * React Native may freeze it (it deep-freezes every style it is given in
+ * development) without that costing anything: the other palette has an
+ * object of its own.
+ *
+ * `styles` itself is a stand-in that answers property reads. Passing it
+ * somewhere as a value — `style={styles}`, `fallbackStyle={LOOK}` — hands
+ * that one object to React Native, which freezes it and replaces its
+ * answers with the colours of the moment. For a single style that a
+ * component needs whole, write a function that returns a fresh object
+ * instead, and call it where it is used.
+ */
+export const themed = (build) => {
+  const copies = {};
+  const copy = () => (copies[active] || (copies[active] = build()));
+  return new Proxy({}, {
+    get: (_, key) => copy()[key],
+    has: (_, key) => key in copy(),
+    ownKeys: () => Reflect.ownKeys(copy()),
+    getOwnPropertyDescriptor: (_, key) => ({ value: copy()[key], enumerable: true, configurable: true }),
+  });
+};
+
+/* ── Everything below carries no colour, so it never changes ───────────── */
 
 export const spacing = {
   xs: 4,
@@ -179,19 +239,16 @@ export const control = {
   iconSize: 44,
 };
 
+/* The shadow carries a colour, so it is read through like the tokens. */
+const shadowFor = (kind, offset, radiusPx, elevation) => ({
+  get shadowColor() { return palette().shadowColor; },
+  shadowOffset: { width: 0, height: offset },
+  get shadowOpacity() { return palette().shadowOpacity[kind]; },
+  shadowRadius: radiusPx,
+  elevation,
+});
+
 export const shadow = {
-  subtle: {
-    shadowColor: '#0f172a',
-    shadowOffset: { width: 0, height: 1 },
-    shadowOpacity: 0.06,
-    shadowRadius: 4,
-    elevation: 1,
-  },
-  card: {
-    shadowColor: '#0f172a',
-    shadowOffset: { width: 0, height: 2 },
-    shadowOpacity: 0.1,
-    shadowRadius: 10,
-    elevation: 3,
-  },
+  subtle: shadowFor('subtle', 1, 4, 1),
+  card: shadowFor('card', 2, 10, 3),
 };

@@ -2,7 +2,7 @@ import { useEffect, useMemo, useRef, useState } from 'react';
 import { ActivityIndicator, Pressable, ScrollView, StyleSheet, Text, View } from 'react-native';
 import { useRouter } from 'expo-router';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
-import { ArrowSquareOutIcon, CheckIcon, EyeIcon, PlusIcon, SparkleIcon, XIcon } from 'phosphor-react-native';
+import { ArrowSquareOutIcon, CheckIcon, EyeIcon, PlusIcon, SparkleIcon, XIcon } from '../../../src/lib/icons';
 import apiClient from '../../../src/api/client';
 import SellerPage, { SellerPrivateLine, sellerPageStyles } from '../../../src/components/seller/SellerPage';
 import { useSellerShell } from '../../../src/components/seller/SellerShell';
@@ -16,7 +16,7 @@ import SectionEditor from '../../../src/components/seller/shophome/SectionEditor
 import ShopHomePreviewSheet from '../../../src/components/seller/shophome/ShopHomePreview';
 import { KindIcon, ShbIconButton } from '../../../src/components/seller/shophome/shbParts';
 import { toast } from '../../../src/lib/toast';
-import { font, t } from '../../../src/theme';
+import { font, t, themed } from '../../../src/theme';
 
 /*
  * /seller/decorate/home — Decorate my shop → Shop home (web
@@ -291,7 +291,7 @@ export default function SellerShopHomeScreen() {
   );
 }
 
-const styles = StyleSheet.create({
+const styles = themed(() => StyleSheet.create({
   flex: { flex: 1 },
   loading: { padding: 24, fontSize: 15, lineHeight: 24, ...font(400), color: t.neutral[500] },
   // .shb-editor: one column, 14px apart.
@@ -310,7 +310,7 @@ const styles = StyleSheet.create({
   presetList: { gap: 10 },
   preset: {
     gap: 4, paddingVertical: 12, paddingHorizontal: 14,
-    borderWidth: 1.5, borderColor: t.neutral[200], borderRadius: 14, backgroundColor: '#fff',
+    borderWidth: 1.5, borderColor: t.neutral[200], borderRadius: 14, backgroundColor: t.neutral[0],
   },
   presetPressed: { borderColor: t.primary[400] },
   presetName: { fontSize: 14, lineHeight: 19, ...font(700), color: t.neutral[900] },
@@ -324,15 +324,15 @@ const styles = StyleSheet.create({
   // .shb-add / .shb-add-pick
   add: {
     flexDirection: 'row', alignItems: 'center', justifyContent: 'center', gap: 8, height: 52,
-    borderWidth: 1.5, borderStyle: 'dashed', borderColor: t.primary[300], borderRadius: 16, backgroundColor: '#fff',
+    borderWidth: 1.5, borderStyle: 'dashed', borderColor: t.primary[300], borderRadius: 16, backgroundColor: t.neutral[0],
   },
   addPressed: { backgroundColor: t.primary[50] },
   addText: { fontSize: 14.5, lineHeight: 20, ...font(600), color: t.primary[700] },
-  addPick: { padding: 14, borderWidth: 1.5, borderColor: t.primary[300], borderRadius: 16, backgroundColor: '#fff' },
+  addPick: { padding: 14, borderWidth: 1.5, borderColor: t.primary[300], borderRadius: 16, backgroundColor: t.neutral[0] },
   addHead: { flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between', marginBottom: 10 },
   addTitle: { fontSize: 15, lineHeight: 20, ...font(700), color: t.neutral[900] },
   kinds: { gap: 10 },
-  kind: { gap: 6, padding: 12, borderWidth: 1.5, borderColor: t.neutral[200], borderRadius: 14, backgroundColor: '#fff' },
+  kind: { gap: 6, padding: 12, borderWidth: 1.5, borderColor: t.neutral[200], borderRadius: 14, backgroundColor: t.neutral[0] },
   kindPressed: { borderColor: t.primary[400] },
   kindName: { fontSize: 14, lineHeight: 19, ...font(700), color: t.neutral[900] },
   kindHint: { fontSize: 12.5, lineHeight: 17.5, ...font(400), color: t.neutral[500] },
@@ -342,12 +342,12 @@ const styles = StyleSheet.create({
     flex: 1, flexDirection: 'row', alignItems: 'center', justifyContent: 'center', gap: 6,
     height: 46, paddingHorizontal: 22, borderRadius: 14,
   },
-  btnGhost: { borderWidth: 1.5, borderColor: t.neutral[200], backgroundColor: '#fff' },
+  btnGhost: { borderWidth: 1.5, borderColor: t.neutral[200], backgroundColor: t.neutral[0] },
   btnPrimary: { backgroundColor: t.primary[600] },
   btnPrimaryOff: { backgroundColor: t.neutral[200] },
   pressed: { opacity: 0.85 },
   btnText: { fontSize: 15, lineHeight: 20, ...font(700) },
   btnGhostText: { color: t.neutral[800] },
-  btnPrimaryText: { color: '#fff' },
+  btnPrimaryText: { color: t.onBrand },
   btnOffText: { color: t.neutral[500] },
-});
+}));

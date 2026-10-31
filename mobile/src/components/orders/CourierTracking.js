@@ -1,9 +1,9 @@
 import { useEffect, useRef, useState } from 'react';
 import { Image, Linking, Pressable, StyleSheet, Text, View } from 'react-native';
-import { ArrowSquareOutIcon, CheckIcon, CopyIcon } from 'phosphor-react-native';
+import { ArrowSquareOutIcon, CheckIcon, CopyIcon } from '../../lib/icons';
 import { resolveImg } from '../../lib/media';
 import { toast } from '../../lib/toast';
-import { font, t } from '../../theme';
+import { font, t, themed } from '../../theme';
 import { trackingLink } from './orderProgress';
 import copyText from './copyText';
 
@@ -84,8 +84,8 @@ export function CourierPending({ order }) {
   );
 }
 
-const styles = StyleSheet.create({
-  mark: { flexShrink: 0, borderRadius: 8, backgroundColor: '#fff' },
+const styles = themed(() => StyleSheet.create({
+  mark: { flexShrink: 0, borderRadius: 8, backgroundColor: t.neutral[0] },
   markLogo: { borderWidth: 1, borderColor: t.neutral[200] },
   markInitial: { alignItems: 'center', justifyContent: 'center', backgroundColor: t.primary[50] },
   markText: { ...font(700), color: t.primary[700] },
@@ -99,15 +99,15 @@ const styles = StyleSheet.create({
   number: { fontFamily: MONO, fontSize: 15, lineHeight: 24, fontWeight: '500', letterSpacing: 0.45, color: t.neutral[900] },
   copy: {
     flexDirection: 'row', alignItems: 'center', gap: 4, paddingVertical: 3, paddingHorizontal: 8,
-    borderWidth: 1, borderColor: t.neutral[200], borderRadius: 999, backgroundColor: '#fff',
+    borderWidth: 1, borderColor: t.neutral[200], borderRadius: 999, backgroundColor: t.neutral[0],
   },
   copyText: { fontSize: 12, lineHeight: 19.2, ...font(400), color: t.neutral[700] },
   track: { flexDirection: 'row', alignItems: 'center', justifyContent: 'center', gap: 6, height: 42, borderRadius: 12, backgroundColor: t.primary[600] },
-  trackText: { fontSize: 14, lineHeight: 22.4, ...font(500), color: '#fff' },
+  trackText: { fontSize: 14, lineHeight: 22.4, ...font(500), color: t.onBrand },
   pending: {
     flexDirection: 'row', alignItems: 'center', gap: 12, padding: 12, borderWidth: 1, borderColor: t.neutral[200], borderRadius: 14, backgroundColor: t.neutral[50],
   },
   pendingText: { flex: 1, minWidth: 0, gap: 2 },
   pendingTitle: { fontSize: 14, lineHeight: 20, ...font(500), color: t.neutral[900] },
   pendingSub: { fontSize: 12.5, lineHeight: 18, ...font(400), color: t.neutral[500] },
-});
+}));

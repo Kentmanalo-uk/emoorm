@@ -2,10 +2,10 @@ import { useEffect, useRef, useState } from 'react';
 import {
   Animated, Easing, Platform, Pressable, StyleSheet, Text, TextInput, View,
 } from 'react-native';
-import { ArrowClockwiseIcon, CaretRightIcon, PaperPlaneRightIcon } from 'phosphor-react-native';
+import { ArrowClockwiseIcon, CaretRightIcon, PaperPlaneRightIcon } from '../../../lib/icons';
 import MoormyFace from '../../inbox/MoormyFace';
 import Glass from '../../Glass';
-import { font, t } from '../../../theme';
+import { font, ink, t, themed } from '../../../theme';
 
 /*
  * The pieces of Ate Moormy's seller page (web/src/pages/SellerAssistant.jsx
@@ -130,11 +130,14 @@ export function TypingDots({ label, still }) {
 }
 
 // .sa-composer on phones: white, a hairline above.
-const COMPOSER_FALLBACK = {
+/* A function, not a table: this is handed to a component whole, and
+   React Native freezes the style it is given. A fresh object each time
+   keeps the colours of the palette in use. */
+const composerFallback = () => ({
   backgroundColor: t.neutral[0],
   borderTopWidth: 1,
   borderTopColor: t.neutral[200],
-};
+});
 
 /**
  * .sa-composer: fixed to the bottom of the screen, floating in Glass (iOS 26
@@ -147,7 +150,7 @@ export function Composer({
   const [focused, setFocused] = useState(false);
   return (
     <Glass
-      fallbackStyle={COMPOSER_FALLBACK}
+      fallbackStyle={composerFallback()}
       style={[styles.composer, { paddingBottom: 8 + bottomInset }]}
       onLayout={(e) => onHeight?.(e.nativeEvent.layout.height)}
     >
@@ -182,7 +185,7 @@ export function Composer({
   );
 }
 
-const styles = StyleSheet.create({
+const styles = themed(() => StyleSheet.create({
   avatar: { overflow: 'hidden', flexShrink: 0 },
 
   lang: {
@@ -191,7 +194,7 @@ const styles = StyleSheet.create({
   langBtn: { minHeight: 34, justifyContent: 'center', paddingHorizontal: 14, borderRadius: 999 },
   langBtnOn: {
     backgroundColor: t.neutral[0],
-    boxShadow: [{ offsetX: 0, offsetY: 1, blurRadius: 2, color: 'rgba(15, 23, 42, 0.12)' }],
+    boxShadow: [{ offsetX: 0, offsetY: 1, blurRadius: 2, color: ink(0.12) }],
   },
   langText: { fontSize: 14, lineHeight: 22.4, color: t.neutral[600], ...font(500) },
   langTextOn: { color: t.primary[700] },
@@ -238,6 +241,6 @@ const styles = StyleSheet.create({
     flexShrink: 0, width: 42, height: 42, borderRadius: 21, alignItems: 'center', justifyContent: 'center', backgroundColor: t.primary[600],
   },
   sendOff: { backgroundColor: t.neutral[200] },
-});
+}));
 
 export const bubbleStyle = styles.bubble;

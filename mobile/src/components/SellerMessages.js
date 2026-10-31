@@ -2,12 +2,12 @@ import { useCallback, useEffect, useMemo, useState } from 'react';
 import { FlatList, Pressable, RefreshControl, StyleSheet, Text, TextInput, View } from 'react-native';
 import { useFocusEffect, useLocalSearchParams, useRouter } from 'expo-router';
 import AsyncStorage from '@react-native-async-storage/async-storage';
-import { ChatCircleDotsIcon, MagnifyingGlassIcon, XIcon } from 'phosphor-react-native';
+import { ChatCircleDotsIcon, MagnifyingGlassIcon, XIcon } from '../lib/icons';
 import apiClient from '../api/client';
 import { toast } from '../lib/toast';
 import { getCachedData, setCachedData } from '../lib/dataCache';
 import useAuthStore from '../store/authStore';
-import { font, t } from '../theme';
+import { font, t, themed } from '../theme';
 import EmptyState from './EmptyState';
 import ChatAvatar from './inbox/ChatAvatar';
 import { ConversationListSkeleton } from './inbox/InboxSkeletons';
@@ -244,7 +244,7 @@ function BuyerChatRow({ item, currentUserId, onPress, peek }) {
   );
 }
 
-const styles = StyleSheet.create({
+const styles = themed(() => StyleSheet.create({
   screen: { flex: 1, backgroundColor: t.neutral[0] },
   content: { flexGrow: 1, paddingTop: 4, paddingBottom: 16 },
   privateWrap: { paddingHorizontal: 12 },
@@ -295,4 +295,4 @@ const styles = StyleSheet.create({
     borderRadius: 9999, backgroundColor: t.primary[600], alignItems: 'center', justifyContent: 'center',
   },
   badgeText: { fontSize: 10.5, lineHeight: 12.6, color: t.neutral[0], ...font(500) },
-});
+}));

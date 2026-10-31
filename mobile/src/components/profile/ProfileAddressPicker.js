@@ -1,8 +1,8 @@
 import { useEffect, useMemo, useState } from 'react';
 import { Pressable, StyleSheet, Text, TextInput, View } from 'react-native';
-import { CaretDownIcon } from 'phosphor-react-native';
+import { CaretDownIcon } from '../../lib/icons';
 import Sheet, { SheetOption } from '../Sheet';
-import { font, t } from '../../theme';
+import { font, t, themed } from '../../theme';
 
 /*
  * The Philippine address picker (web/src/components/common/PhAddressPicker.jsx
@@ -245,7 +245,7 @@ export function ProfileSelect({ title, value, options, onChange, placeholder = '
   );
 }
 
-const styles = StyleSheet.create({
+const styles = themed(() => StyleSheet.create({
   picker: { gap: 12 },
   field: { gap: 4, minWidth: 0 },
   label: { fontSize: 13, lineHeight: 20.8, color: t.neutral[700], ...font(500) },
@@ -264,4 +264,4 @@ const styles = StyleSheet.create({
   note: { fontSize: 12, lineHeight: 19.2, color: t.warning[700], ...font(400) },
   toggle: { alignSelf: 'flex-start', minHeight: 32, justifyContent: 'center' },
   toggleText: { fontSize: 13, lineHeight: 20.8, color: t.info[600], textDecorationLine: 'underline', ...font(400) },
-});
+}));

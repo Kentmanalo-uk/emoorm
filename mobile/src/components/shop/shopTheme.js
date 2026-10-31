@@ -9,8 +9,10 @@ import stopPaint from '../../lib/stopPaint';
  * and the CSS colour mixes its phone page paints with.
  */
 
-export const DEFAULT_PRIMARY = t.primary[600];
-export const DEFAULT_SECONDARY = t.warning[500];
+/* Functions, not values: read when a shop is painted, so a shop that has
+   set no colours of its own follows light and dark like everything else. */
+export const defaultPrimary = () => t.primary[600];
+export const defaultSecondary = () => t.warning[500];
 
 const rgbOf = (color) => {
   const c = String(color || '').trim();
@@ -38,8 +40,8 @@ export const alpha = (color, a) => {
 
 /** The shop's colours, falling back to the site's green and amber. */
 export const shopColors = (store) => ({
-  primary: store?.primaryColor || DEFAULT_PRIMARY,
-  secondary: store?.secondaryColor || DEFAULT_SECONDARY,
+  primary: store?.primaryColor || defaultPrimary(),
+  secondary: store?.secondaryColor || defaultSecondary(),
 });
 
 let gradientSeq = 0;

@@ -6,11 +6,11 @@ import { useLocalSearchParams } from 'expo-router';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import {
   CheckCircleIcon, ClockIcon, PackageIcon, ScalesIcon,
-} from 'phosphor-react-native';
+} from '../../src/lib/icons';
 import apiClient from '../../src/api/client';
 import ScreenHeader from '../../src/components/ScreenHeader';
 import { toast } from '../../src/lib/toast';
-import { font, t } from '../../src/theme';
+import { font, t, themed } from '../../src/theme';
 import { cardShadow } from '../../src/components/orders/OrderBits';
 import { fullStamp } from '../../src/components/orders/orderProgress';
 import {
@@ -235,11 +235,14 @@ function ReturnHint({ Icon, text }) {
   );
 }
 
-const panelBase = {
+/* A function, not a table: this is handed to a component whole, and
+   React Native freezes the style it is given. A fresh object each time
+   keeps the colours of the palette in use. */
+const panelBase = () => ({
   marginTop: 12, padding: 14, borderRadius: 12, backgroundColor: t.neutral[0], ...cardShadow,
-};
+});
 
-const styles = StyleSheet.create({
+const styles = themed(() => StyleSheet.create({
   screen: { flex: 1, backgroundColor: t.neutral[0] },
   scroll: { flex: 1 },
   content: { paddingTop: 12, paddingHorizontal: 12 },
@@ -253,7 +256,7 @@ const styles = StyleSheet.create({
   // An inline 13px line inside the block's 24px lines.
   orderNo: { fontSize: 13, lineHeight: 24, ...font(400), color: t.neutral[500] },
 
-  panel: panelBase,
+  panel: panelBase(),
   h2: { marginBottom: 12, fontSize: 16, lineHeight: 18.4, ...font(500), color: t.neutral[900] },
   h2Inline: { marginBottom: 0, flexShrink: 1 },
 
@@ -274,7 +277,7 @@ const styles = StyleSheet.create({
   detailQty: { marginTop: 4, fontSize: 12.5, lineHeight: 20, ...font(400), color: t.neutral[500] },
   detailTotal: { flexDirection: 'row', justifyContent: 'space-between', gap: 12, paddingTop: 12 },
 
-  note: { ...panelBase, backgroundColor: t.neutral[50] },
+  note: { ...panelBase(), backgroundColor: t.neutral[50] },
   noteDecision: { backgroundColor: t.info[50] },
   noteText: { color: t.neutral[600] },
 
@@ -282,13 +285,13 @@ const styles = StyleSheet.create({
   disputeText: { marginBottom: 14, fontSize: 14, lineHeight: 21.7, ...font(400), color: t.neutral[600] },
   disputeInput: {
     minHeight: 111.6, paddingVertical: 10, paddingHorizontal: 12, borderWidth: 1, borderColor: t.neutral[300], borderRadius: 8,
-    fontSize: 14, lineHeight: 22.4, ...font(400), color: '#000', backgroundColor: t.neutral[0],
+    fontSize: 14, lineHeight: 22.4, ...font(400), color: t.neutral[900], backgroundColor: t.neutral[0],
     // An inline-block on the website: the line's descent adds 7px under it.
     marginBottom: 7,
   },
   disputeActions: { flexDirection: 'row', justifyContent: 'flex-end', gap: 8, marginTop: 10 },
   plainBtn: { justifyContent: 'center' },
-  plainBtnText: { fontSize: 14, lineHeight: 16.8, ...font(400), color: '#000' },
+  plainBtnText: { fontSize: 14, lineHeight: 16.8, ...font(400), color: t.neutral[900] },
   sendBtn: { flexGrow: 1, flexShrink: 1 },
 
   actions: { marginTop: 12, gap: 8 },
@@ -303,4 +306,4 @@ const styles = StyleSheet.create({
   },
   hintIcon: { width: 18, height: 18, flexShrink: 1, alignItems: 'center', justifyContent: 'center' },
   hintText: { flexShrink: 1, fontSize: 13, lineHeight: 18.85, ...font(400), color: t.info[800] },
-});
+}));

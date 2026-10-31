@@ -5,7 +5,7 @@ import {
 import { useFocusEffect } from 'expo-router';
 import {
   CheckIcon, InfoIcon, MapPinIcon, PencilSimpleIcon, PlusIcon, SparkleIcon, TrashIcon, WarningCircleIcon,
-} from 'phosphor-react-native';
+} from '../src/lib/icons';
 import apiClient from '../src/api/client';
 import ScreenHeader from '../src/components/ScreenHeader';
 import EmptyState from '../src/components/EmptyState';
@@ -18,7 +18,7 @@ import ProfileAddressPicker, { normalizeName } from '../src/components/profile/P
 import { addressFromPin } from '../src/lib/pinAddress';
 import LocationPicker from '../src/components/maps/LocationPicker';
 import { useFreshAccount } from '../src/components/profile/SettingsParts';
-import { font, t } from '../src/theme';
+import { font, t, themed } from '../src/theme';
 import { PageLoader } from '../src/components/BrandLoader';
 
 const emptyForm = {
@@ -298,7 +298,7 @@ export default function Addresses() {
           </Pressable>
           <Pressable accessibilityRole="button" onPress={handleSave} disabled={isSubmitting} style={[styles.formBtn, styles.formSubmit, isSubmitting && { opacity: 0.6 }]}>
             {isSubmitting ? <ActivityIndicator size="small" color="#fff" style={{ marginRight: 6 }} /> : null}
-            <Text style={[styles.formBtnText, { color: '#fff' }]}>{isSubmitting ? 'Saving…' : editingId ? 'Save Changes' : 'Add Address'}</Text>
+            <Text style={[styles.formBtnText, { color: t.onBrand }]}>{isSubmitting ? 'Saving…' : editingId ? 'Save Changes' : 'Add Address'}</Text>
           </Pressable>
         </View>
       </View>
@@ -437,7 +437,7 @@ function PinNote({ note }) {
   );
 }
 
-const styles = StyleSheet.create({
+const styles = themed(() => StyleSheet.create({
   screen: { flex: 1, backgroundColor: t.neutral[0] },
   content: { gap: 12, paddingHorizontal: 12, paddingTop: 12, paddingBottom: 24 },
 
@@ -445,7 +445,7 @@ const styles = StyleSheet.create({
     alignSelf: 'flex-start', flexDirection: 'row', alignItems: 'center', gap: 6, minHeight: 40, paddingHorizontal: 14,
     borderRadius: 999, backgroundColor: t.primary[600],
   },
-  addText: { fontSize: 13, lineHeight: 15.6, color: '#fff', ...font(500) },
+  addText: { fontSize: 13, lineHeight: 15.6, color: t.onBrand, ...font(500) },
 
   grow: { flexGrow: 1 },
 
@@ -473,7 +473,7 @@ const styles = StyleSheet.create({
   actions: { flexDirection: 'row', flexWrap: 'wrap', gap: 8, paddingTop: 12, borderTopWidth: 1, borderTopColor: t.neutral[100] },
   actionBtn: {
     flexDirection: 'row', alignItems: 'center', justifyContent: 'center', gap: 6, minWidth: 0, minHeight: 42, paddingHorizontal: 10,
-    borderWidth: 1, borderColor: t.neutral[300], borderRadius: 10, backgroundColor: '#fff',
+    borderWidth: 1, borderColor: t.neutral[300], borderRadius: 10, backgroundColor: t.neutral[0],
   },
   actionText: { fontSize: 13, lineHeight: 15.6, color: t.neutral[700], ...font(500) },
 
@@ -482,7 +482,7 @@ const styles = StyleSheet.create({
   formLabel: { fontSize: 12.5, lineHeight: 20, color: t.neutral[700], ...font(600) },
   formInput: {
     minHeight: 46, paddingVertical: 10, paddingHorizontal: 12, borderWidth: 1, borderColor: t.neutral[200], borderRadius: 10,
-    backgroundColor: '#fff', color: t.neutral[900], fontSize: 16, lineHeight: 24, ...font(400),
+    backgroundColor: t.neutral[0], color: t.neutral[900], fontSize: 16, lineHeight: 24, ...font(400),
   },
   formError: { fontSize: 12, lineHeight: 18, color: t.danger[500], ...font(400) },
   pinGroup: { gap: 6 },
@@ -495,7 +495,7 @@ const styles = StyleSheet.create({
   unpinnedText: { flexShrink: 1, fontSize: 12.5, lineHeight: 18.75, color: t.accent[600], ...font(400) },
   formActions: { flexDirection: 'row', gap: 8, paddingTop: 4 },
   formBtn: { flex: 1, flexDirection: 'row', alignItems: 'center', justifyContent: 'center', minHeight: 46, paddingVertical: 10, paddingHorizontal: 20, borderRadius: 10 },
-  formCancel: { borderWidth: 1, borderColor: t.neutral[300], backgroundColor: '#fff' },
+  formCancel: { borderWidth: 1, borderColor: t.neutral[300], backgroundColor: t.neutral[0] },
   formSubmit: { backgroundColor: t.primary[600] },
   formBtnText: { fontSize: 14, lineHeight: 16.8, ...font(500) },
-});
+}));

@@ -12,7 +12,7 @@ import {
 import AuthAddressPicker from '../../src/components/auth/AuthAddressPicker';
 import { AuthHint, AuthTitle, Strong } from '../../src/components/auth/AuthPanels';
 import useAuthGoogle from '../../src/components/auth/useAuthGoogle';
-import { font, t } from '../../src/theme';
+import { font, t, themed } from '../../src/theme';
 
 const PASSWORD_RULE = /(?=.*[a-z])(?=.*[A-Z])(?=.*\d)(?=.*[!@#$%^&*(),.?":{}|<>])/;
 
@@ -344,7 +344,7 @@ export default function Register() {
   );
 }
 
-const styles = StyleSheet.create({
+const styles = themed(() => StyleSheet.create({
   card: { paddingTop: 20 },
   title: { marginBottom: 20 },
   googleHint: { marginBottom: 16 },
@@ -359,4 +359,4 @@ const styles = StyleSheet.create({
   footerLink: { color: t.primary[600], ...font(500) },
   terms: { marginTop: 12, marginBottom: 14, textAlign: 'center', fontSize: 12, lineHeight: 18.6, color: t.neutral[500], ...font(400) },
   termsLink: { color: t.primary[600], textDecorationLine: 'underline' },
-});
+}));

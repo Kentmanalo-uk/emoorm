@@ -1,7 +1,7 @@
 import { Pressable, StyleSheet, Text, View } from 'react-native';
 import { useRouter } from 'expo-router';
-import { CalendarCheckIcon, PlusIcon, XIcon } from 'phosphor-react-native';
-import { font, t } from '../../../theme';
+import { CalendarCheckIcon, PlusIcon, XIcon } from '../../../lib/icons';
+import { font, t, themed } from '../../../theme';
 import { ANIMALS, AGE_UNITS, SEXES, WEEKDAYS } from '../productKinds';
 import {
   Chips, Field, FieldError, Hint, MoneyInput, OptionalHead, PF, PfInput, PfSelect, Stepper, Suggest, Switch,
@@ -450,7 +450,7 @@ export default function DetailsStep({ form, set, patch, errors, ctx }) {
   return <RegularDetails {...props} couriersOn={ctx.couriersOn} stockedGroup={ctx.stockedGroup} />;
 }
 
-const styles = StyleSheet.create({
+const styles = themed(() => StyleSheet.create({
   emptyStep: {
     padding: 18, borderRadius: 12, overflow: 'hidden', backgroundColor: t.neutral[50],
     color: PF.muted, fontSize: 14, lineHeight: 22.4, ...font(400),
@@ -493,4 +493,4 @@ const styles = StyleSheet.create({
   age: { flexDirection: 'row', gap: 10 },
   ageValue: { flex: 1, width: 'auto' },
   ageUnit: { flex: 1.4, width: 'auto' },
-});
+}));

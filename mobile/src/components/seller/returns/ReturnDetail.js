@@ -3,8 +3,8 @@ import {
 } from 'react-native';
 import {
   CheckCircleIcon, CheckIcon, PackageIcon, TruckIcon, WalletIcon,
-} from 'phosphor-react-native';
-import { font, t } from '../../../theme';
+} from '../../../lib/icons';
+import { font, t, themed } from '../../../theme';
 import FieldSelect from '../today/FieldSelect';
 import { StatusPill, elevCard } from './ReturnBits';
 
@@ -135,7 +135,7 @@ export default function ReturnDetail({
   );
 }
 
-const styles = StyleSheet.create({
+const styles = themed(() => StyleSheet.create({
   card: { padding: 16, borderRadius: 12, backgroundColor: t.neutral[0], ...elevCard },
 
   // .seller-detail-top (a column on phones)
@@ -192,5 +192,5 @@ const styles = StyleSheet.create({
   off: { opacity: 0.6 },
   btnText: { fontSize: 15, lineHeight: 20, ...font(700) },
   rejectText: { color: t.danger[700] },
-  approveText: { color: '#fff' },
-});
+  approveText: { color: t.onBrand },
+}));

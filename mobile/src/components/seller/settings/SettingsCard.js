@@ -1,5 +1,5 @@
 import { ActivityIndicator, Pressable, StyleSheet, Text, View } from 'react-native';
-import { font, t } from '../../../theme';
+import { font, t, themed } from '../../../theme';
 
 /*
  * The pieces Shop Settings is built from on phones:
@@ -49,7 +49,7 @@ export function SellerButton({
   );
 }
 
-const styles = StyleSheet.create({
+const styles = themed(() => StyleSheet.create({
   card: { marginHorizontal: -12, backgroundColor: t.neutral[0] },
   band: { borderBottomWidth: 8, borderBottomColor: t.neutral[100] },
   header: {
@@ -71,4 +71,4 @@ const styles = StyleSheet.create({
   btnText: { fontSize: 13.5, lineHeight: 18 },
   primaryText: { ...font(600) },
   outlineText: { ...font(500) },
-});
+}));

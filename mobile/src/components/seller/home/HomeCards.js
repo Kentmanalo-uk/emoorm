@@ -1,7 +1,7 @@
 import { Image, Pressable, StyleSheet, Text, View } from 'react-native';
 import { useRouter } from 'expo-router';
-import { CaretRightIcon, PackageIcon, WarningCircleIcon } from 'phosphor-react-native';
-import { font, t } from '../../../theme';
+import { CaretRightIcon, PackageIcon, WarningCircleIcon } from '../../../lib/icons';
+import { font, t, themed } from '../../../theme';
 import { resolveImg } from '../../../lib/media';
 import { variationImage } from '../../../lib/variationImage';
 import EmptyState from '../../EmptyState';
@@ -41,12 +41,12 @@ export function HomeHead({ title, link, onLink, style }) {
   );
 }
 
-const NOTICE_TONES = {
+const NOTICE_TONES = themed(() => ({
   amber: { backgroundColor: t.warning[50], color: t.warning[600] },
   red: { backgroundColor: t.danger[50], color: t.danger[600] },
   blue: { backgroundColor: t.info[50], color: t.info[600] },
   green: { backgroundColor: t.primary[50], color: t.primary[600] },
-};
+}));
 
 /** The one thing Home asks for first (.sh-notice): icon, title, hint, a green pill or ›. */
 export function HomeNotice({ notice }) {
@@ -281,7 +281,7 @@ export function HomeRunningLow({ items, last }) {
   );
 }
 
-export const homeStyles = StyleSheet.create({
+export const homeStyles = themed(() => StyleSheet.create({
   // .sh-card on phones (styles/phone-app.css): out to the screen edges.
   section: {
     marginHorizontal: -12,
@@ -298,11 +298,11 @@ export const homeStyles = StyleSheet.create({
   h2: { flexShrink: 1, fontSize: 15.5, lineHeight: 18, color: t.neutral[900], ...font(500) },
   headLink: { flexDirection: 'row', alignItems: 'center', gap: 2 },
   headLinkText: { fontSize: 13, lineHeight: 20.8, color: t.neutral[500], ...font(500) },
-});
+}));
 
-const styles = StyleSheet.create({
+const styles = themed(() => StyleSheet.create({
   pressed: { backgroundColor: t.neutral[50] },
-  white: { color: '#fff' },
+  white: { color: t.onBrand },
 
   notice: {
     flexDirection: 'row', alignItems: 'center', gap: 12, paddingVertical: 12, paddingHorizontal: 14,
@@ -314,7 +314,7 @@ const styles = StyleSheet.create({
   noticeTitle: { fontSize: 14.5, lineHeight: 23.2, color: t.neutral[900], ...font(400) },
   noticeHint: { fontSize: 12.5, lineHeight: 17.5, color: t.neutral[500], ...font(400) },
   noticeCta: { flexShrink: 0, paddingVertical: 7, paddingHorizontal: 14, borderRadius: 999, backgroundColor: t.primary[600] },
-  noticeCtaText: { fontSize: 13, lineHeight: 20.8, color: '#fff', ...font(500) },
+  noticeCtaText: { fontSize: 13, lineHeight: 20.8, color: t.onBrand, ...font(500) },
 
   note: { flexDirection: 'row', alignItems: 'center', gap: 6 },
   noteText: { flex: 1, fontSize: 13, lineHeight: 20.8, color: t.warning[700], ...font(400) },
@@ -340,18 +340,18 @@ const styles = StyleSheet.create({
   salesRow: { flexDirection: 'row', alignItems: 'flex-end', justifyContent: 'space-between', gap: 12 },
   salesCol: { flexShrink: 1, gap: 2 },
   salesSkeleton: { backgroundColor: 'rgba(255, 255, 255, 0.25)' },
-  salesTotal: { fontSize: 26, lineHeight: 29.9, color: '#fff', ...font(500) },
+  salesTotal: { fontSize: 26, lineHeight: 29.9, color: t.onBrand, ...font(500) },
   salesSub: { fontSize: 13, lineHeight: 20.8, color: 'rgba(255, 255, 255, 0.86)', ...font(400) },
   spark: { flexDirection: 'row', flexShrink: 0, alignItems: 'flex-end', gap: 3, width: 112, height: 40 },
   sparkBar: {
     flex: 1, borderTopLeftRadius: 2, borderTopRightRadius: 2, backgroundColor: 'rgba(255, 255, 255, 0.42)',
   },
-  sparkLast: { backgroundColor: '#fff' },
+  sparkLast: { backgroundColor: t.neutral[0] },
   salesStats: {
     flexDirection: 'row', gap: 18, marginTop: 12, paddingTop: 12, borderTopWidth: 1, borderTopColor: 'rgba(255, 255, 255, 0.2)',
   },
   salesStat: { fontSize: 13, lineHeight: 20.8, color: 'rgba(255, 255, 255, 0.76)', ...font(400) },
-  salesStatStrong: { color: '#fff', ...font(500) },
+  salesStatStrong: { color: t.onBrand, ...font(500) },
 
   orders: { marginHorizontal: -16, marginBottom: -8 },
   order: {
@@ -386,4 +386,4 @@ const styles = StyleSheet.create({
   lowIcon: { width: 24, height: 24, flexShrink: 0, alignItems: 'center', justifyContent: 'center' },
   lowLabel: { flex: 1, minWidth: 0, fontSize: 15, lineHeight: 24, color: t.neutral[800], ...font(400) },
   lowHint: { fontSize: 13, lineHeight: 20.8, color: t.neutral[500], ...font(400) },
-});
+}));

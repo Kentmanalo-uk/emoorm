@@ -5,12 +5,12 @@ import {
 import * as ImagePicker from 'expo-image-picker';
 import {
   ImageIcon, StarIcon, TrashIcon, VideoIcon,
-} from 'phosphor-react-native';
+} from '../../lib/icons';
 import apiClient from '../../api/client';
 import { resolveImg } from '../../lib/media';
 import { toast } from '../../lib/toast';
 import { uploadReview } from '../../lib/upload';
-import { font, t } from '../../theme';
+import { font, t, themed } from '../../theme';
 import OrderSheetFrame from './OrderSheetFrame';
 
 const MAX_IMAGES = 5;
@@ -212,7 +212,7 @@ function ScrollBody({ children }) {
   );
 }
 
-const styles = StyleSheet.create({
+const styles = themed(() => StyleSheet.create({
   head: { paddingTop: 12, paddingBottom: 12, paddingLeft: 16, paddingRight: 8, borderBottomColor: t.neutral[100] },
   scrollWrap: { flexShrink: 1 },
   scroll: { flexGrow: 0 },
@@ -261,6 +261,6 @@ const styles = StyleSheet.create({
   cancel: { borderWidth: 1, borderColor: t.neutral[300], backgroundColor: t.neutral[0] },
   cancelText: { fontSize: 14, lineHeight: 20, ...font(400), color: t.neutral[700] },
   submit: { backgroundColor: t.primary[600] },
-  submitText: { fontSize: 14, lineHeight: 20, ...font(500), color: '#fff' },
+  submitText: { fontSize: 14, lineHeight: 20, ...font(500), color: t.onBrand },
   off: { opacity: 0.5 },
-});
+}));

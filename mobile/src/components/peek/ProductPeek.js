@@ -3,8 +3,8 @@ import { useRouter } from 'expo-router';
 import {
   ArrowSquareOutIcon, HandCoinsIcon, HeartIcon, MapPinIcon, ShareNetworkIcon, ShoppingCartIcon, SlidersHorizontalIcon,
   StorefrontIcon,
-} from 'phosphor-react-native';
-import { font, t } from '../../theme';
+} from '../../lib/icons';
+import { font, t, themed } from '../../theme';
 import useAuthStore from '../../store/authStore';
 import useCartStore from '../../store/cartStore';
 import useWishlistStore from '../../store/wishlistStore';
@@ -149,11 +149,11 @@ export function ProductPeekCard({ product: p }) {
   );
 }
 
-const styles = StyleSheet.create({
+const styles = themed(() => StyleSheet.create({
   photo: { width: '100%', aspectRatio: 1, overflow: 'hidden', backgroundColor: t.neutral[100] },
   badge: {
     position: 'absolute', top: 10, left: 10, paddingVertical: 4, paddingHorizontal: 8, borderRadius: 6, overflow: 'hidden',
-    fontSize: 12, lineHeight: 15, ...font(500), color: '#fff', backgroundColor: t.danger[500], textTransform: 'uppercase',
+    fontSize: 12, lineHeight: 15, ...font(500), color: t.onBrand, backgroundColor: t.danger[500], textTransform: 'uppercase',
   },
   tag: { position: 'relative', top: -1 },
   priceRow: { flexDirection: 'row', alignItems: 'center', flexWrap: 'wrap', marginTop: 2 },
@@ -161,4 +161,4 @@ const styles = StyleSheet.create({
   unit: { fontSize: 15, ...font(500) },
   was: { marginLeft: 6 },
   shop: { flexDirection: 'row', alignItems: 'center', gap: 5, marginTop: 4, minWidth: 0 },
-});
+}));

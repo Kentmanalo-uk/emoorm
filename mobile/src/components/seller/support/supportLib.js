@@ -1,6 +1,6 @@
 import { useEffect, useRef } from 'react';
 import { AppState } from 'react-native';
-import { t } from '../../../theme';
+import { t, themed } from '../../../theme';
 
 /*
  * What the Seller Center's "Admin messages" share (web/src/components/
@@ -18,12 +18,12 @@ export const TOPIC_LABELS = {
 };
 
 // .sc-badge-open / -resolved / -closed / -rated
-export const BADGE = {
+export const BADGE = themed(() => ({
   OPEN: { backgroundColor: t.primary[50], color: t.primary[700] },
   RESOLVED: { backgroundColor: t.success[100], color: t.success[800] },
   CLOSED: { backgroundColor: t.neutral[200], color: t.neutral[600] },
   RATED: { backgroundColor: t.warning[100], color: t.warning[800] },
-};
+}));
 
 /** "3:05 PM" today, "Oct 9" before (the website's formatTime). */
 export const formatTime = (value) => {

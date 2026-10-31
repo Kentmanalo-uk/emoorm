@@ -2,8 +2,8 @@ import { useEffect, useState } from 'react';
 import {
   Image, Pressable, StyleSheet, Text, View,
 } from 'react-native';
-import { CheckCircleIcon, StarIcon } from 'phosphor-react-native';
-import { font, t } from '../../theme';
+import { CheckCircleIcon, StarIcon } from '../../lib/icons';
+import { font, t, themed } from '../../theme';
 import ProductImage from '../ProductImage';
 import { resolveImg } from '../../lib/media';
 import { variationImage } from '../../lib/variationImage';
@@ -149,7 +149,7 @@ function SummaryRow({ label, value, total = false }) {
   );
 }
 
-const styles = StyleSheet.create({
+const styles = themed(() => StyleSheet.create({
   body: { padding: 16 },
   head: {
     flexDirection: 'row', alignItems: 'flex-start', justifyContent: 'space-between', gap: 10,
@@ -165,7 +165,7 @@ const styles = StyleSheet.create({
   },
   itemBand: { width: '100%', height: 56, alignItems: 'center', justifyContent: 'center', overflow: 'hidden', backgroundColor: t.neutral[100] },
   itemBandMark: { width: 80, height: 80 },
-  itemImage: { width: 56, height: 56, borderRadius: 8, overflow: 'hidden', backgroundColor: '#fff' },
+  itemImage: { width: 56, height: 56, borderRadius: 8, overflow: 'hidden', backgroundColor: t.neutral[0] },
   itemPhoto: { width: '100%', height: '100%' },
   itemInfo: { flexGrow: 1, flexShrink: 1, flexBasis: 0, minWidth: 0 },
   itemName: { marginBottom: 4, fontSize: 14, lineHeight: 22.4, ...font(500), color: t.neutral[900] },
@@ -193,11 +193,11 @@ const styles = StyleSheet.create({
   // Addresses.css's .btn-modal-cancel loads after Orders.css on the website,
   // so the phone shows the grey outline (10px 20px), not the red one.
   cancel: {
-    flexBasis: 42, paddingVertical: 10, paddingHorizontal: 20, borderWidth: 1, borderColor: t.neutral[300], backgroundColor: '#fff',
+    flexBasis: 42, paddingVertical: 10, paddingHorizontal: 20, borderWidth: 1, borderColor: t.neutral[300], backgroundColor: t.neutral[0],
   },
   cancelPressed: { backgroundColor: t.neutral[50] },
   cancelText: { color: t.neutral[700] },
   close: { backgroundColor: t.primary[600] },
   closePressed: { backgroundColor: t.primary[700] },
-  closeText: { color: '#fff' },
-});
+  closeText: { color: t.onBrand },
+}));

@@ -1,11 +1,11 @@
 import { useState } from 'react';
 import { Pressable, StyleSheet, Text, View } from 'react-native';
 import { router } from 'expo-router';
-import { EnvelopeSimpleIcon } from 'phosphor-react-native';
+import { EnvelopeSimpleIcon } from '../../src/lib/icons';
 import apiClient from '../../src/api/client';
 import AuthSheet from '../../src/components/auth/AuthSheet';
 import { AuthField, AuthOutlineButton, AuthSubmit } from '../../src/components/auth/AuthForm';
-import { font, t } from '../../src/theme';
+import { font, t, themed } from '../../src/theme';
 
 /**
  * Forgot password: the website's phone sheet (web/src/pages/ForgotPassword.jsx
@@ -105,7 +105,7 @@ export default function ForgotPassword() {
   );
 }
 
-const styles = StyleSheet.create({
+const styles = themed(() => StyleSheet.create({
   title: {
     marginTop: 8,
     marginBottom: 8,
@@ -137,4 +137,4 @@ const styles = StyleSheet.create({
   },
   hint: { marginBottom: 20, fontSize: 13, lineHeight: 19.5, color: t.neutral[500], textAlign: 'center', ...font(400) },
   actions: { alignSelf: 'stretch', gap: 12 },
-});
+}));

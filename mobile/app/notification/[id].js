@@ -1,11 +1,11 @@
 import { useEffect, useState } from 'react';
 import { Pressable, ScrollView, StyleSheet, Text, View } from 'react-native';
 import { useLocalSearchParams, usePathname, useRouter } from 'expo-router';
-import { ArrowLeftIcon, BellIcon, InfoIcon } from 'phosphor-react-native';
+import { ArrowLeftIcon, BellIcon, InfoIcon } from '../../src/lib/icons';
 import apiClient from '../../src/api/client';
 import { notificationHref } from '../../src/lib/notificationLink';
 import useAuthStore from '../../src/store/authStore';
-import { font, t } from '../../src/theme';
+import { font, t, themed } from '../../src/theme';
 import ScreenHeader from '../../src/components/ScreenHeader';
 import EmptyState from '../../src/components/EmptyState';
 import LoadingSkeleton from '../../src/components/LoadingSkeleton';
@@ -138,7 +138,7 @@ export default function NotificationDetail() {
   );
 }
 
-const styles = StyleSheet.create({
+const styles = themed(() => StyleSheet.create({
   screen: { flex: 1, backgroundColor: t.neutral[0] },
   content: { flexGrow: 1, paddingTop: 10, paddingHorizontal: 12, paddingBottom: 24 },
 
@@ -168,4 +168,4 @@ const styles = StyleSheet.create({
   btnStart: { alignSelf: 'flex-start' },
   btnPressed: { backgroundColor: t.neutral[100] },
   btnText: { fontSize: 14, lineHeight: 18, color: t.neutral[700], textAlign: 'center', ...font(400) },
-});
+}));

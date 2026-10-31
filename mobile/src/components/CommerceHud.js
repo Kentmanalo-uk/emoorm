@@ -1,9 +1,9 @@
 import { useEffect, useRef, useState } from 'react';
 import { Animated, Easing, StyleSheet, Text, View } from 'react-native';
 import { GlassView } from 'expo-glass-effect';
-import { HeartIcon, ShoppingCartIcon } from 'phosphor-react-native';
+import { HeartIcon, ShoppingCartIcon } from '../lib/icons';
 import { create } from 'zustand';
-import { font, t } from '../theme';
+import { font, ink, t, themed, veil } from '../theme';
 import { liquidGlass } from './Glass';
 
 /*
@@ -88,17 +88,17 @@ function Hud({ hud }) {
   );
 }
 
-const styles = StyleSheet.create({
+const styles = themed(() => StyleSheet.create({
   layer: { ...StyleSheet.absoluteFill, alignItems: 'center', justifyContent: 'center', zIndex: 9500, elevation: 9500 },
   box: { width: 184, minHeight: 150, borderRadius: 26 },
   // Not iOS 26: a white frosted box with a soft shadow.
   boxPlain: {
-    backgroundColor: 'rgba(255, 255, 255, 0.96)',
+    backgroundColor: veil(0.96),
     borderWidth: StyleSheet.hairlineWidth,
-    borderColor: 'rgba(15, 23, 42, 0.08)',
+    borderColor: ink(0.08),
     boxShadow: [
-      { offsetX: 0, offsetY: 16, blurRadius: 40, color: 'rgba(15, 23, 42, 0.16)' },
-      { offsetX: 0, offsetY: 2, blurRadius: 6, color: 'rgba(15, 23, 42, 0.06)' },
+      { offsetX: 0, offsetY: 16, blurRadius: 40, color: ink(0.16) },
+      { offsetX: 0, offsetY: 2, blurRadius: 6, color: ink(0.06) },
     ],
   },
   glass: { borderRadius: 26 },
@@ -113,4 +113,4 @@ const styles = StyleSheet.create({
   },
   title: { marginTop: 3, fontSize: 15, lineHeight: 19, ...font(600), color: t.neutral[900], textAlign: 'center' },
   detail: { fontSize: 12.5, lineHeight: 17, ...font(400), color: t.neutral[600], textAlign: 'center' },
-});
+}));

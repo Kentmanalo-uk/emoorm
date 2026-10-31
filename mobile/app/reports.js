@@ -3,20 +3,20 @@ import { Pressable, ScrollView, StyleSheet, Text, View } from 'react-native';
 import { useLocalSearchParams, useRouter } from 'expo-router';
 import {
   CheckCircleIcon, ClockIcon, PackageIcon, StorefrontIcon,
-} from 'phosphor-react-native';
+} from '../src/lib/icons';
 import apiClient from '../src/api/client';
 import ScreenHeader from '../src/components/ScreenHeader';
 import { ProfileEmpty } from '../src/components/profile/ProfileUI';
 import { errorText, shortDate } from '../src/components/profile/profileLib';
-import { font, t } from '../src/theme';
+import { font, t, themed } from '../src/theme';
 
 /** Report statuses, with the wording a reporter (not an admin) needs. */
-const STATUS_META = {
+const STATUS_META = themed(() => ({
   PENDING: { label: 'Pending review', bg: t.warning[100], color: t.warning[800] },
   UNDER_REVIEW: { label: 'Under review', bg: t.primary[50], color: t.primary[700] },
   RESOLVED: { label: 'Resolved', bg: t.success[100], color: t.success[800] },
   DISMISSED: { label: 'Dismissed', bg: t.neutral[100], color: t.neutral[600] },
-};
+}));
 
 /** What the report was filed against, as a link when there is one to give. */
 function ReportTarget({ report, onOpen }) {
@@ -134,7 +134,7 @@ export default function ProfileReports() {
   );
 }
 
-const styles = StyleSheet.create({
+const styles = themed(() => StyleSheet.create({
   screen: { flex: 1, backgroundColor: t.neutral[0] },
   content: { flexGrow: 1, gap: 12, paddingHorizontal: 12, paddingTop: 12, paddingBottom: 16 },
   subtitle: { fontSize: 13, lineHeight: 19.5, color: t.neutral[500], ...font(400) },
@@ -167,4 +167,4 @@ const styles = StyleSheet.create({
   },
   resolutionLabel: { marginBottom: 2, fontSize: 12, lineHeight: 19.2, color: t.neutral[700], ...font(500) },
   resolutionText: { fontSize: 13.5, lineHeight: 20.25, color: t.neutral[600], ...font(400) },
-});
+}));

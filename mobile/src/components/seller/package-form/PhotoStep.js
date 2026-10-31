@@ -1,5 +1,6 @@
 import { forwardRef } from 'react';
 import { StyleSheet } from 'react-native';
+import { themed } from '../../../theme';
 import { DESCRIPTION_MAX } from './pkfLib';
 import { Field, PkfInput, Section } from './PkfBits';
 import PackagePhotos from './PackagePhotos';
@@ -45,7 +46,7 @@ const PhotoStep = forwardRef(function PhotoStep({
 
 export default PhotoStep;
 
-const styles = StyleSheet.create({
+const styles = themed(() => StyleSheet.create({
   // rows={4}: 4 lines × 24px + 10px padding top and bottom + the hairlines.
   textarea: { minHeight: 118 },
-});
+}));

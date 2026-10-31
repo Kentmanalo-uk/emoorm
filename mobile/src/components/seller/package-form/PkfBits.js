@@ -1,7 +1,7 @@
 import { forwardRef, useState } from 'react';
 import { Image, StyleSheet, Text, TextInput, View } from 'react-native';
-import { InfoIcon, PackageIcon } from 'phosphor-react-native';
-import { font, t } from '../../../theme';
+import { InfoIcon, PackageIcon } from '../../../lib/icons';
+import { font, t, themed } from '../../../theme';
 import { resolveImg } from '../../../lib/media';
 import { P } from './pkfLib';
 
@@ -116,7 +116,7 @@ export const pkfStyles = StyleSheet.create({
   },
 });
 
-const styles = StyleSheet.create({
+const styles = themed(() => StyleSheet.create({
   section: { padding: 16, borderRadius: 16, backgroundColor: t.neutral[0] },
   sectionHead: { marginBottom: 14 },
   titleRow: { flexDirection: 'row', flexWrap: 'wrap', alignItems: 'center', gap: 8 },
@@ -164,4 +164,4 @@ const styles = StyleSheet.create({
   noteDraft: { backgroundColor: t.warning[50] },
   noteIcon: { marginTop: 1 },
   noteText: { flex: 1, fontSize: 13.5, lineHeight: 19.575, ...font(400) },
-});
+}));

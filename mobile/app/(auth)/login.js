@@ -1,7 +1,7 @@
 import { useEffect, useState } from 'react';
 import { Pressable, StyleSheet, Text, View } from 'react-native';
 import { router, useLocalSearchParams } from 'expo-router';
-import { ShoppingBagIcon, StorefrontIcon } from 'phosphor-react-native';
+import { ShoppingBagIcon, StorefrontIcon } from '../../src/lib/icons';
 import apiClient from '../../src/api/client';
 import useAuthStore from '../../src/store/authStore';
 import { fetchMunicipalities } from '../../src/lib/referenceData';
@@ -12,7 +12,7 @@ import {
 import { AuthTitle, GoogleCompleteProfile, MfaSetup, MfaVerify } from '../../src/components/auth/AuthPanels';
 import useAuthGoogle from '../../src/components/auth/useAuthGoogle';
 import RoleSwitchOverlay from '../../src/components/RoleSwitchOverlay';
-import { font, t } from '../../src/theme';
+import { font, t, themed } from '../../src/theme';
 
 const PASSWORD_RULE = /(?=.*[a-z])(?=.*[A-Z])(?=.*\d)(?=.*[!@#$%^&*(),.?":{}|<>])/;
 
@@ -455,7 +455,7 @@ export default function Login({ seller = false }) {
   );
 }
 
-const styles = StyleSheet.create({
+const styles = themed(() => StyleSheet.create({
   card: { paddingTop: 20 },
   headerRow: {
     flexDirection: 'row',
@@ -487,4 +487,4 @@ const styles = StyleSheet.create({
   footerLink: { color: t.primary[600], ...font(500) },
   terms: { marginTop: 16, marginBottom: 14, textAlign: 'center', fontSize: 12, lineHeight: 18.6, color: t.neutral[500], ...font(400) },
   termsLink: { color: t.primary[600], textDecorationLine: 'underline' },
-});
+}));

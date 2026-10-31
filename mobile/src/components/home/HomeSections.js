@@ -1,9 +1,9 @@
 import { useState } from 'react';
 import { Image, Pressable, ScrollView, StyleSheet, Text, useWindowDimensions, View } from 'react-native';
 import { useRouter } from 'expo-router';
-import { ArrowRightIcon, StorefrontIcon } from 'phosphor-react-native';
+import { ArrowRightIcon, StorefrontIcon } from '../../lib/icons';
 import { resolveImg } from '../../lib/media';
-import { font, t, text } from '../../theme';
+import { font, t, text, themed } from '../../theme';
 import EmptyState from '../EmptyState';
 import HomeCategoryIcon from './HomeCategoryIcon';
 import { useStorePeek } from '../peek/StorePeek';
@@ -33,7 +33,11 @@ export function SectionHeader({ title, arrowLabel, onArrow, style }) {
   );
 }
 
-export const sectionTitleStyle = { fontSize: 18, lineHeight: 22.5, ...font(500), color: text.strong };
+// The colour is read on use, not when this module loads, so a section's
+// heading does not stay the near-black of light mode on a dark page.
+export const sectionTitleStyle = {
+  fontSize: 18, lineHeight: 22.5, ...font(500), get color() { return text.strong; },
+};
 
 /** Phones' illustrated empty state for a section (.home-empty). */
 export function HomeEmpty({ art, title, body, action, onAction }) {
@@ -225,7 +229,7 @@ export function MunicipalityRail({ municipalities }) {
   );
 }
 
-const styles = StyleSheet.create({
+const styles = themed(() => StyleSheet.create({
   fill: { width: '100%', height: '100%' },
 
   header: { flexDirection: 'row', alignItems: 'center', gap: 12, marginBottom: 12 },
@@ -275,4 +279,4 @@ const styles = StyleSheet.create({
   },
   muniInitial: { fontSize: 24, lineHeight: 30, ...font(500), color: t.primary[700] },
   muniName: { width: '100%', fontSize: 12, lineHeight: 19.2, ...font(500), color: t.neutral[800], textAlign: 'center' },
-});
+}));

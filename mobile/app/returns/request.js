@@ -7,12 +7,12 @@ import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import * as ImagePicker from 'expo-image-picker';
 import {
   CheckIcon, MinusIcon, PlusIcon, UploadSimpleIcon,
-} from 'phosphor-react-native';
+} from '../../src/lib/icons';
 import apiClient from '../../src/api/client';
 import ScreenHeader from '../../src/components/ScreenHeader';
 import { toast } from '../../src/lib/toast';
 import { uploadPrivateImage } from '../../src/lib/upload';
-import { font, t } from '../../src/theme';
+import { font, t, themed } from '../../src/theme';
 import { cardShadow } from '../../src/components/orders/OrderBits';
 import { ReturnsPrimary } from '../../src/components/returns/ReturnBits';
 
@@ -235,7 +235,7 @@ export default function ReturnRequest() {
   );
 }
 
-const styles = StyleSheet.create({
+const styles = themed(() => StyleSheet.create({
   screen: { flex: 1, backgroundColor: t.neutral[0] },
   scroll: { flex: 1 },
   content: { paddingTop: 12, paddingHorizontal: 12 },
@@ -266,7 +266,7 @@ const styles = StyleSheet.create({
   // The browser's own checkbox (13px, grey edge; blue when ticked).
   checkbox: {
     width: 13, height: 13, marginLeft: 3.5, alignItems: 'center', justifyContent: 'center',
-    borderWidth: 1, borderColor: '#767676', borderRadius: 2.5, backgroundColor: '#fff',
+    borderWidth: 1, borderColor: t.neutral[400], borderRadius: 2.5, backgroundColor: t.neutral[0],
   },
   checkboxOn: { borderColor: '#0075ff', backgroundColor: '#0075ff' },
   requestText: { flex: 1, minWidth: 0, gap: 4 },
@@ -297,7 +297,7 @@ const styles = StyleSheet.create({
   detailsLabel: { marginBottom: 10 },
   textarea: {
     height: 100, marginTop: 7, padding: 11, borderWidth: 1, borderColor: t.neutral[300], borderRadius: 10,
-    fontSize: 16, lineHeight: 25.6, ...font(500), color: '#000', backgroundColor: t.neutral[0],
+    fontSize: 16, lineHeight: 25.6, ...font(500), color: t.neutral[900], backgroundColor: t.neutral[0],
   },
 
   photo: {
@@ -306,4 +306,4 @@ const styles = StyleSheet.create({
   photoRow: { flexDirection: 'row', alignItems: 'center', gap: 8 },
   photoText: { fontSize: 15, lineHeight: 24, ...font(500), color: t.secondary[700] },
   photoSmall: { paddingLeft: 26, fontSize: 12.5, lineHeight: 20, ...font(400), color: t.neutral[500] },
-});
+}));

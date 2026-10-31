@@ -4,7 +4,7 @@ import { useLocalSearchParams, useRouter } from 'expo-router';
 import {
   CalendarBlankIcon, DatabaseIcon, EnvelopeSimpleIcon, HouseIcon, InfoIcon, LockKeyIcon, MapPinIcon, PhoneIcon, ShieldCheckIcon,
   UserCircleIcon, UsersThreeIcon,
-} from 'phosphor-react-native';
+} from '../src/lib/icons';
 import apiClient from '../src/api/client';
 import ScreenHeader from '../src/components/ScreenHeader';
 import { openSwitchAccount } from '../src/components/SwitchAccountSheet';
@@ -15,7 +15,8 @@ import {
 } from '../src/components/profile/SettingsParts';
 import { fetchIdentityStatus, homeAddressLine, longDate } from '../src/components/profile/profileLib';
 import { openAccountSheet } from '../src/components/AccountSheet';
-import { t } from '../src/theme';
+import AppearanceRows from '../src/components/profile/AppearanceRows';
+import { t, themed } from '../src/theme';
 
 const IDENTITY_VALUES = {
   VERIFIED: 'Verified',
@@ -131,6 +132,13 @@ function SettingsHub() {
           </SettingsList>
         </PfSection>
 
+        {/* How the app is painted. Above Account because it changes what the
+            rest of this page looks like as soon as it is tapped. */}
+        <PfSection list>
+          <PfTitle list>Accessibility</PfTitle>
+          <AppearanceRows />
+        </PfSection>
+
         <PfSection list>
           <PfTitle list>Account</PfTitle>
           <SettingsList>
@@ -153,7 +161,7 @@ function SettingsHub() {
   );
 }
 
-const styles = StyleSheet.create({
+const styles = themed(() => StyleSheet.create({
   screen: { flex: 1, backgroundColor: t.neutral[0] },
   content: { gap: 12, paddingTop: 24, paddingBottom: 16 },
-});
+}));

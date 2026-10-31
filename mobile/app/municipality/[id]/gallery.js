@@ -3,13 +3,13 @@ import {
   Image, Pressable, ScrollView, StyleSheet, Text, View, useWindowDimensions,
 } from 'react-native';
 import { useLocalSearchParams, useRouter } from 'expo-router';
-import { ArrowLeftIcon, MapPinIcon } from 'phosphor-react-native';
+import { ArrowLeftIcon, MapPinIcon } from '../../../src/lib/icons';
 import apiClient from '../../../src/api/client';
 import EmptyState from '../../../src/components/EmptyState';
 import PublicHeader from '../../../src/components/public/PublicHeader';
 import { MunicipalitySeal } from '../../../src/components/public/MunicipalityParts';
 import { resolveImg } from '../../../src/lib/media';
-import { font, t, text } from '../../../src/theme';
+import { font, t, text, themed } from '../../../src/theme';
 
 /*
  * web/src/pages/MunicipalityGallery.jsx + MunicipalityGallery.css at phone
@@ -88,7 +88,7 @@ export default function MunicipalityGallery() {
   );
 }
 
-const styles = StyleSheet.create({
+const styles = themed(() => StyleSheet.create({
   screen: { flex: 1, backgroundColor: t.neutral[0] },
   page: { flexGrow: 1, backgroundColor: t.neutral[0] },
 
@@ -112,4 +112,4 @@ const styles = StyleSheet.create({
     backgroundColor: t.neutral[0],
   },
   messageText: { fontSize: 14, lineHeight: 22.4, color: text.muted, textAlign: 'center', ...font(400) },
-});
+}));

@@ -1,7 +1,7 @@
 import { useState } from 'react';
 import { Platform, StyleSheet, Text, TextInput, View, useWindowDimensions } from 'react-native';
 import Sheet, { SheetButton, SheetOption } from '../Sheet';
-import { font, t } from '../../theme';
+import { font, t, themed } from '../../theme';
 
 const TITLES = {
   all: 'Filters',
@@ -132,7 +132,7 @@ export default function SearchFilterSheet({
   );
 }
 
-const styles = StyleSheet.create({
+const styles = themed(() => StyleSheet.create({
   secNext: { borderTopWidth: 8, borderTopColor: t.neutral[50] },
   secTitle: { paddingTop: 14, paddingHorizontal: 20, paddingBottom: 6, fontSize: 15, lineHeight: 17.25, ...font(500), color: t.neutral[900] },
   grid: { flexDirection: 'row', flexWrap: 'wrap', gap: 8, paddingTop: 4, paddingHorizontal: 20, paddingBottom: 12 },
@@ -149,4 +149,4 @@ const styles = StyleSheet.create({
     boxShadow: [{ offsetX: 0, offsetY: 0, blurRadius: 0, spreadDistance: 1.5, color: t.primary[500] }],
   },
   priceActions: { flexDirection: 'row', gap: 10, marginTop: 12 },
-});
+}));

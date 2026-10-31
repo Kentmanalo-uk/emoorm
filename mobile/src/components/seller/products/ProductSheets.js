@@ -1,8 +1,8 @@
 import { Pressable, StyleSheet, Text, TextInput, View } from 'react-native';
 import {
   ArrowSquareOutIcon, EyeIcon, EyeSlashIcon, MinusIcon, PlusIcon, TrashIcon,
-} from 'phosphor-react-native';
-import { font, t } from '../../../theme';
+} from '../../../lib/icons';
+import { font, t, themed } from '../../../theme';
 import Sheet, { SheetButton, SheetOption } from '../../Sheet';
 import { productKind } from '../productKinds';
 import { PRODUCT_TABS, countFor, stockWords } from './productRules';
@@ -131,7 +131,7 @@ export function ProductStockSheet({ product, amount, onChangeAmount, saving, onS
   );
 }
 
-const styles = StyleSheet.create({
+const styles = themed(() => StyleSheet.create({
   // .products-tab-count in a .scm-choice: grey, medium.
   count: { color: t.neutral[500], ...font(500), fontVariant: ['tabular-nums'] },
 
@@ -154,4 +154,4 @@ const styles = StyleSheet.create({
     borderRadius: 999, borderWidth: 1, borderColor: t.neutral[200], backgroundColor: t.neutral[0],
   },
   quickText: { fontSize: 14, lineHeight: 20, color: t.neutral[700], ...font(400) },
-});
+}));

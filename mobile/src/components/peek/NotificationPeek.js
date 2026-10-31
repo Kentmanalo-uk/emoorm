@@ -1,6 +1,6 @@
 import { StyleSheet, Text, View } from 'react-native';
-import { ArrowSquareOutIcon, ChecksIcon, TrashIcon } from 'phosphor-react-native';
-import { t } from '../../theme';
+import { ArrowSquareOutIcon, ChecksIcon, TrashIcon } from '../../lib/icons';
+import { t, themed } from '../../theme';
 import { PeekBody, peekProps, peekText } from '../Peek';
 
 /*
@@ -40,8 +40,8 @@ export function NotificationPeekCard({ notif, art, time }) {
   );
 }
 
-const styles = StyleSheet.create({
+const styles = themed(() => StyleSheet.create({
   art: { alignItems: 'center', paddingTop: 22, paddingBottom: 4 },
   body: { paddingHorizontal: 18, paddingBottom: 18, gap: 6 },
   time: { marginTop: 2, color: t.neutral[500] },
-});
+}));

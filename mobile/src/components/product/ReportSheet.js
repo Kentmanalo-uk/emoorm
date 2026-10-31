@@ -5,10 +5,10 @@ import {
 } from 'react-native';
 import { useRouter } from 'expo-router';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
-import { CaretDownIcon, CheckIcon, WarningIcon, XIcon } from 'phosphor-react-native';
+import { CaretDownIcon, CheckIcon, WarningIcon, XIcon } from '../../lib/icons';
 import apiClient from '../../api/client';
 import { toast } from '../../lib/toast';
-import { font, t } from '../../theme';
+import { font, t, themed } from '../../theme';
 import { SheetFrame } from '../Sheet';
 
 // The app's one sheet look on every phone (the sign-in sheet's: Sheet.js).
@@ -188,10 +188,10 @@ export default function ReportSheet({ type = 'PRODUCT', productId, storeId, targ
   );
 }
 
-const styles = StyleSheet.create({
+const styles = themed(() => StyleSheet.create({
   root: { flex: 1, justifyContent: 'flex-end' },
   scrim: { backgroundColor: 'rgba(0, 0, 0, 0.5)' },
-  panel: { borderTopLeftRadius: 16, borderTopRightRadius: 16, backgroundColor: '#fff', overflow: 'hidden' },
+  panel: { borderTopLeftRadius: 16, borderTopRightRadius: 16, backgroundColor: t.neutral[0], overflow: 'hidden' },
   content: { paddingTop: 18, paddingHorizontal: 16 },
   // Under the system sheet's grabber.
   glassContent: { paddingTop: 4 },
@@ -208,7 +208,7 @@ const styles = StyleSheet.create({
   label: { fontSize: 13, lineHeight: 20.8, ...font(500), color: t.neutral[700] },
   select: {
     flexDirection: 'row', alignItems: 'center', gap: 8, minHeight: 46, paddingVertical: 10, paddingHorizontal: 12,
-    borderWidth: 1, borderColor: t.neutral[300], borderRadius: 8, backgroundColor: '#fff',
+    borderWidth: 1, borderColor: t.neutral[300], borderRadius: 8, backgroundColor: t.neutral[0],
   },
   selectText: { flex: 1, fontSize: 16, lineHeight: 22, ...font(400), color: t.neutral[700] },
   placeholder: { color: t.neutral[700] },
@@ -220,16 +220,16 @@ const styles = StyleSheet.create({
   optionOn: { ...font(500), color: t.primary[700] },
   textarea: {
     minHeight: 112, paddingVertical: 10, paddingHorizontal: 12, borderWidth: 1, borderColor: t.neutral[300], borderRadius: 8,
-    fontSize: 16, ...font(400), color: t.neutral[700], backgroundColor: '#fff', outlineStyle: 'none',
+    fontSize: 16, ...font(400), color: t.neutral[700], backgroundColor: t.neutral[0], outlineStyle: 'none',
   },
   char: { fontSize: 12, lineHeight: 19.2, ...font(400), color: t.neutral[500], textAlign: 'right' },
   disclaimer: { marginBottom: 20, fontSize: 12, lineHeight: 18, ...font(400), color: t.neutral[500] },
   disclaimerStrong: { ...font(500) },
   actions: { flexDirection: 'row', gap: 8 },
   btn: { flex: 1, minHeight: 44, paddingHorizontal: 12, borderRadius: 8, flexDirection: 'row', gap: 6, alignItems: 'center', justifyContent: 'center' },
-  cancel: { borderWidth: 1, borderColor: t.neutral[300], backgroundColor: '#fff' },
+  cancel: { borderWidth: 1, borderColor: t.neutral[300], backgroundColor: t.neutral[0] },
   cancelText: { fontSize: 14, lineHeight: 20, ...font(400), color: t.neutral[700] },
   submit: { backgroundColor: t.danger[500] },
-  submitText: { fontSize: 14, lineHeight: 20, ...font(500), color: '#fff' },
+  submitText: { fontSize: 14, lineHeight: 20, ...font(500), color: t.onBrand },
   off: { opacity: 0.5 },
-});
+}));

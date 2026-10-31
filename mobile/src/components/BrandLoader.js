@@ -1,5 +1,6 @@
 import { useEffect, useId, useMemo, useRef, useState } from 'react';
 import { AccessibilityInfo, Animated, Easing, StyleSheet, View } from 'react-native';
+import { themed } from '../theme';
 import { useIsFocused } from 'expo-router';
 import { create } from 'zustand';
 import Svg, {
@@ -351,7 +352,7 @@ export function LoaderOverlayHost() {
   );
 }
 
-const styles = StyleSheet.create({
+const styles = themed(() => StyleSheet.create({
   page: { flexGrow: 1 },
   overlay: { ...StyleSheet.absoluteFill, alignItems: 'center', justifyContent: 'center', zIndex: 9000, elevation: 9000 },
-});
+}));

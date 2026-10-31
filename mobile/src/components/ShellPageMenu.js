@@ -5,9 +5,9 @@ import {
   ArrowCounterClockwiseIcon, BellIcon, CameraIcon, ChatCircleDotsIcon, ClipboardTextIcon, DotsThreeIcon, FlagIcon,
   GearIcon, HeadsetIcon, HeartIcon, HouseIcon, IdentificationCardIcon, MapPinIcon, PackageIcon, QuestionIcon,
   ShoppingBagIcon, ShoppingCartIcon, StarIcon, StorefrontIcon, UserIcon,
-} from 'phosphor-react-native';
+} from '../lib/icons';
 import useAuthStore from '../store/authStore';
-import { font, t } from '../theme';
+import { font, ink, t, themed } from '../theme';
 import ShellBarButton from './ShellBarButton';
 import { GlassBackdrop, liquidGlass } from './Glass';
 import { closeMenu, enterRow, menuPopStyle, menuRowStyle, openMenu } from './menuMotion';
@@ -190,7 +190,7 @@ function MenuRow({ item: it, index, onPress }) {
   );
 }
 
-const styles = StyleSheet.create({
+const styles = themed(() => StyleSheet.create({
   pop: {
     position: 'absolute',
     minWidth: 200,
@@ -198,8 +198,8 @@ const styles = StyleSheet.create({
     borderRadius: 14,
     backgroundColor: t.neutral[0],
     boxShadow: [
-      { offsetX: 0, offsetY: 12, blurRadius: 32, color: 'rgba(15, 23, 42, 0.18)' },
-      { offsetX: 0, offsetY: 2, blurRadius: 6, color: 'rgba(15, 23, 42, 0.06)' },
+      { offsetX: 0, offsetY: 12, blurRadius: 32, color: ink(0.18) },
+      { offsetX: 0, offsetY: 2, blurRadius: 6, color: ink(0.06) },
     ],
   },
   // iOS 26: the glass is the panel; the website's white and shadow go.
@@ -207,4 +207,4 @@ const styles = StyleSheet.create({
   row: { flexDirection: 'row', alignItems: 'center', gap: 10, paddingVertical: 11, paddingHorizontal: 12, borderRadius: 10 },
   rowPressed: { backgroundColor: t.neutral[100] },
   rowText: { fontSize: 14, lineHeight: 22.4, ...font(400) },
-});
+}));

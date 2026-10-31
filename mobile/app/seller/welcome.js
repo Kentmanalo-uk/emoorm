@@ -5,9 +5,9 @@ import {
 import { useFocusEffect, useLocalSearchParams, useRouter } from 'expo-router';
 import {
   CheckIcon, ClockIcon, HandCoinsIcon, MapPinIcon, PlusIcon, StorefrontIcon, TruckIcon,
-} from 'phosphor-react-native';
+} from '../../src/lib/icons';
 import apiClient from '../../src/api/client';
-import { font, t } from '../../src/theme';
+import { font, t, themed } from '../../src/theme';
 import { toast } from '../../src/lib/toast';
 import { fetchMunicipalities } from '../../src/lib/referenceData';
 import { clearSetupReturn, setSetupReturn } from '../../src/lib/setupReturn';
@@ -647,7 +647,7 @@ export default function SellerWelcomeScreen() {
   );
 }
 
-const styles = StyleSheet.create({
+const styles = themed(() => StyleSheet.create({
   flex: { flex: 1, minWidth: 0 },
   art: { alignSelf: 'center', marginBottom: 16 },
 
@@ -657,8 +657,8 @@ const styles = StyleSheet.create({
   title: { fontSize: 23, lineHeight: 28.75, color: t.neutral[900], ...font(500) },
   text: { marginTop: 8, fontSize: 15, lineHeight: 23.25, color: t.neutral[600], ...font(400) },
   // A step buyers' orders depend on: it can't be skipped.
-  required: { alignSelf: 'flex-start', marginTop: 10, paddingVertical: 3, paddingHorizontal: 10, borderRadius: 999, backgroundColor: '#fef3c7' },
-  requiredText: { fontSize: 12.5, color: '#92400e', ...font(600) },
+  required: { alignSelf: 'flex-start', marginTop: 10, paddingVertical: 3, paddingHorizontal: 10, borderRadius: 999, backgroundColor: t.warning[100] },
+  requiredText: { fontSize: 12.5, color: t.warning[800], ...font(600) },
   form: { gap: 14, marginTop: 22 },
 
   parts: { gap: 10, marginTop: 22 },
@@ -679,7 +679,7 @@ const styles = StyleSheet.create({
     justifyContent: 'center',
     backgroundColor: t.primary[600],
   },
-  partNumText: { fontSize: 14, lineHeight: 22.4, color: '#fff', ...font(600) },
+  partNumText: { fontSize: 14, lineHeight: 22.4, color: t.onBrand, ...font(600) },
   strong: { fontSize: 15, lineHeight: 24, color: t.neutral[900], ...font(500) },
   small: { marginTop: 1, fontSize: 13, lineHeight: 18.2, color: t.neutral[500], ...font(400) },
 
@@ -696,4 +696,4 @@ const styles = StyleSheet.create({
   },
   laterTitle: { marginBottom: 8, fontSize: 14, lineHeight: 22.4, color: t.neutral[800], ...font(500) },
   laterItems: { flexDirection: 'row', flexWrap: 'wrap', gap: 6 },
-});
+}));

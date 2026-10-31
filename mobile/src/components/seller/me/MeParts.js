@@ -1,6 +1,6 @@
 import { Pressable, StyleSheet, Text, View } from 'react-native';
-import { CaretRightIcon } from 'phosphor-react-native';
-import { font, t } from '../../../theme';
+import { CaretRightIcon } from '../../../lib/icons';
+import { font, t, themed } from '../../../theme';
 
 /*
  * The Me page's building blocks (web/src/pages/SellerMenu.jsx, SellerApp.css
@@ -57,7 +57,7 @@ export function MeRow({
   );
 }
 
-export const meStyles = StyleSheet.create({
+export const meStyles = themed(() => StyleSheet.create({
   // .sh-card on phones (phone-app.css): full width, square, an 8px band under it.
   card: {
     marginHorizontal: -12,
@@ -89,5 +89,5 @@ export const meStyles = StyleSheet.create({
     minWidth: 20, height: 20, paddingHorizontal: 6, borderRadius: 999,
     alignItems: 'center', justifyContent: 'center', backgroundColor: t.accent[500],
   },
-  badgeText: { fontSize: 11.5, lineHeight: 20, ...font(700), color: '#fff', textAlign: 'center' },
-});
+  badgeText: { fontSize: 11.5, lineHeight: 20, ...font(700), color: t.onBrand, textAlign: 'center' },
+}));

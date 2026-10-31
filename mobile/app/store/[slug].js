@@ -8,7 +8,7 @@ import {
   AirplaneTiltIcon, ArrowDownIcon, ArrowUpIcon, CaretLeftIcon, CaretRightIcon, ClockIcon, FlagIcon, GridFourIcon, InfoIcon,
   MagnifyingGlassIcon, MapPinIcon, MoneyIcon, PackageIcon, RowsIcon, SealCheckIcon, ShareNetworkIcon, ShoppingCartIcon,
   SquaresFourIcon, StarIcon, StorefrontIcon, TicketIcon, TruckIcon, UserIcon, XIcon,
-} from 'phosphor-react-native';
+} from '../../src/lib/icons';
 import apiClient from '../../src/api/client';
 import EmptyState from '../../src/components/EmptyState';
 import ShopHome from '../../src/components/shop/ShopHome';
@@ -27,7 +27,7 @@ import { isLivestock } from '../../src/components/orders/orderLines';
 import useAuthStore from '../../src/store/authStore';
 import useCartStore, { standaloneLine } from '../../src/store/cartStore';
 import { startBuyNow } from '../../src/lib/buyNow';
-import { font, t } from '../../src/theme';
+import { font, t, themed } from '../../src/theme';
 
 /*
  * A shop's page on phones (web/src/pages/StoreDetail.jsx, the is-phone
@@ -831,7 +831,7 @@ function Detail({ Icon, label, value, children, alignTop = false }) {
   );
 }
 
-const styles = StyleSheet.create({
+const styles = themed(() => StyleSheet.create({
   screen: { flex: 1, backgroundColor: t.neutral[0] },
   scroll: { flex: 1 },
   scrollBody: { paddingBottom: 24 },
@@ -847,7 +847,7 @@ const styles = StyleSheet.create({
   iconShadow: { filter: [{ dropShadow: { offsetX: 0, offsetY: 1, standardDeviation: 2, color: 'rgba(0, 0, 0, 0.35)' } }] },
   cartBadge: {
     position: 'absolute', top: 2, right: 0, minWidth: 18, height: 18, paddingHorizontal: 5, borderRadius: 999, overflow: 'hidden',
-    backgroundColor: t.accent[600], color: '#fff', fontSize: 10.5, lineHeight: 18, ...font(500), textAlign: 'center',
+    backgroundColor: t.accent[600], color: t.onBrand, fontSize: 10.5, lineHeight: 18, ...font(500), textAlign: 'center',
   },
 
   hero: { position: 'relative' },
@@ -869,13 +869,13 @@ const styles = StyleSheet.create({
   },
   logoEmpty: {},
   logoImg: { width: '100%', height: '100%', borderRadius: 37, backgroundColor: t.neutral[0] },
-  logoText: { fontSize: 26, lineHeight: 34, ...font(600), color: '#fff' },
+  logoText: { fontSize: 26, lineHeight: 34, ...font(600), color: t.onBrand },
   idText: { flex: 1, minWidth: 0 },
   name: { flexDirection: 'row', alignItems: 'center', gap: 4, maxWidth: '100%', alignSelf: 'flex-start' },
   nameText: { flexShrink: 1, fontSize: 21, lineHeight: 26, ...font(600), color: t.neutral[900] },
   ratingRow: { flexDirection: 'row', flexWrap: 'wrap', alignItems: 'center', rowGap: 4, columnGap: 8, marginTop: 6 },
   rating: { flexDirection: 'row', alignItems: 'center', gap: 3, paddingVertical: 2, paddingHorizontal: 7, borderRadius: 6 },
-  ratingText: { fontSize: 12.5, lineHeight: 20, ...font(500), color: '#fff' },
+  ratingText: { fontSize: 12.5, lineHeight: 20, ...font(500), color: t.onBrand },
   ratingNew: { backgroundColor: t.neutral[100] },
   ratingNewText: { color: t.neutral[600] },
   counts: { flexShrink: 1, fontSize: 12.5, lineHeight: 20, ...font(400), color: t.neutral[500] },
@@ -896,7 +896,7 @@ const styles = StyleSheet.create({
   noteTownText: { fontSize: 13.5, lineHeight: 21.6, ...font(500) },
   noteDesc: { fontSize: 12.5, lineHeight: 20, ...font(400), color: t.neutral[600] },
   noteBtn: { height: 30, paddingHorizontal: 14, borderRadius: 8, alignItems: 'center', justifyContent: 'center', flexShrink: 0 },
-  noteBtnText: { fontSize: 13, lineHeight: 15.6, ...font(500), color: '#fff' },
+  noteBtnText: { fontSize: 13, lineHeight: 15.6, ...font(500), color: t.onBrand },
 
   away: {
     flexDirection: 'row', alignItems: 'flex-start', gap: 10, marginTop: 12, marginHorizontal: 16,
@@ -991,4 +991,4 @@ const styles = StyleSheet.create({
   pageBtnOff: { opacity: 0.4 },
   pageBtnText: { fontSize: 13, lineHeight: 15.6, ...font(400), color: t.neutral[600] },
   pageInfo: { fontSize: 13, lineHeight: 20.8, ...font(400), color: t.neutral[500] },
-});
+}));

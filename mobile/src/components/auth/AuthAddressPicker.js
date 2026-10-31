@@ -1,12 +1,12 @@
 import { useEffect, useMemo, useState } from 'react';
 import { Pressable, StyleSheet, Text, View } from 'react-native';
-import { CaretDownIcon } from 'phosphor-react-native';
+import { CaretDownIcon } from '../../lib/icons';
 import { SelectSheet } from '../Select';
 import { AuthFieldError, AuthInput, AuthLabel } from './AuthForm';
 import {
   SERVICE_PROVINCE, SERVICE_REGION, listServiceMunicipalities, listBarangaysByMunicipality, normalizeName,
 } from './authAddress';
-import { font, t } from '../../theme';
+import { font, t, themed } from '../../theme';
 
 /*
  * The website's address picker (web/src/components/common/PhAddressPicker.jsx
@@ -291,7 +291,7 @@ function SelectBox({
   );
 }
 
-const styles = StyleSheet.create({
+const styles = themed(() => StyleSheet.create({
   picker: { gap: 12 },
   field: { gap: 4 },
   hint: { fontSize: 12, lineHeight: 19.2, color: t.neutral[500], ...font(400) },
@@ -316,4 +316,4 @@ const styles = StyleSheet.create({
   selectTextDisabled: { color: t.neutral[500] },
   caretOpen: { transform: [{ rotate: '180deg' }] },
   optionOff: { opacity: 0.45 },
-});
+}));

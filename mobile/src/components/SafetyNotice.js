@@ -1,8 +1,8 @@
 import { useState } from 'react';
 import { LayoutAnimation, Pressable, StyleSheet, Text, View } from 'react-native';
-import { CaretDownIcon as CaretDown, ShieldWarningIcon as ShieldWarning } from 'phosphor-react-native';
+import { CaretDownIcon as CaretDown, ShieldWarningIcon as ShieldWarning } from '../lib/icons';
 import { SAFETY_SUMMARY, SAFETY_TIPS } from '../lib/safetyNotice';
-import { fontFamily, radius, spacing } from '../theme';
+import { fontFamily, radius, spacing, themed } from '../theme';
 
 /**
  * Safety & scam prevention strip for a conversation thread.
@@ -56,14 +56,14 @@ const ICON_COLOR = '#d4880f';
 const LINK_COLOR = '#a06a10';
 const TEXT_COLOR = '#8a5a12';
 
-const styles = StyleSheet.create({
+const styles = themed(() => StyleSheet.create({
   // Inset inside the composer's padding, so it reads as a card rather than a
   // full-bleed band. The composer's own gap handles the spacing below it.
   wrap: {
     borderWidth: StyleSheet.hairlineWidth,
-    borderColor: '#f6e3bf',
+    borderColor: t.warning[200],
     borderRadius: radius.lg,
-    backgroundColor: '#fffbf2',
+    backgroundColor: t.warning[50],
   },
   row: {
     flexDirection: 'row',
@@ -110,4 +110,4 @@ const styles = StyleSheet.create({
     fontFamily: fontFamily.regular,
     color: TEXT_COLOR,
   },
-});
+}));

@@ -1,8 +1,8 @@
 import { useState } from 'react';
 import { ActivityIndicator, Pressable, StyleSheet, Text, View } from 'react-native';
-import { NavigationArrowIcon } from 'phosphor-react-native';
+import { NavigationArrowIcon } from '../../lib/icons';
 import { toast } from '../../lib/toast';
-import { font, t } from '../../theme';
+import { font, ink, t, themed } from '../../theme';
 import LeafletMap from './LeafletMap';
 import { getMyLocation, pinnedValue } from './mapUtils';
 
@@ -74,12 +74,12 @@ export default function LocationPicker({
   );
 }
 
-const styles = StyleSheet.create({
+const styles = themed(() => StyleSheet.create({
   // Floating on the map's bottom-right corner (above Leaflet's credit line).
   locate: {
     position: 'absolute', right: 12, bottom: 26, flexDirection: 'row', alignItems: 'center', gap: 7,
     height: 40, paddingHorizontal: 14, borderRadius: 20, backgroundColor: t.neutral[0],
-    boxShadow: [{ offsetX: 0, offsetY: 4, blurRadius: 14, color: 'rgba(15, 23, 42, 0.22)' }],
+    boxShadow: [{ offsetX: 0, offsetY: 4, blurRadius: 14, color: ink(0.22) }],
   },
   locatePressed: { backgroundColor: t.primary[50] },
   locateText: { fontSize: 14, lineHeight: 18, color: t.primary[700], ...font(600) },
@@ -87,4 +87,4 @@ const styles = StyleSheet.create({
   ring: { margin: -4, padding: 2, borderWidth: 2, borderColor: 'transparent', borderRadius: 16 },
   ringOn: { borderColor: t.danger[500] },
   coords: { marginTop: 7, fontSize: 12, lineHeight: 19.2, color: t.neutral[500], ...font(400) },
-});
+}));

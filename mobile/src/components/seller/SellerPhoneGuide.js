@@ -2,7 +2,7 @@ import { useEffect, useRef, useState } from 'react';
 import { Animated, Easing, Modal, Pressable, StyleSheet, Text, useWindowDimensions, View } from 'react-native';
 import { useGlobalSearchParams, usePathname } from 'expo-router';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
-import { font, t } from '../../theme';
+import { font, ink, t, themed } from '../../theme';
 import { useSetupReturn } from '../../lib/setupReturn';
 import { useAccountSwitchStore } from '../RoleSwitchOverlay';
 import SellerGuideArt from './SellerGuideArt';
@@ -189,7 +189,7 @@ function GuideFrame({ page, closing, onClose }) {
 }
 
 
-const styles = StyleSheet.create({
+const styles = themed(() => StyleSheet.create({
   root: { flex: 1, justifyContent: 'flex-end' },
   backdrop: { backgroundColor: 'rgba(15, 23, 42, 0.38)' },
   sheet: {
@@ -199,8 +199,8 @@ const styles = StyleSheet.create({
     paddingHorizontal: 24,
     borderTopLeftRadius: 20,
     borderTopRightRadius: 20,
-    backgroundColor: '#fff',
-    boxShadow: [{ offsetX: 0, offsetY: -8, blurRadius: 30, color: 'rgba(15, 23, 42, 0.12)' }],
+    backgroundColor: t.neutral[0],
+    boxShadow: [{ offsetX: 0, offsetY: -8, blurRadius: 30, color: ink(0.12) }],
   },
   // Inside the native sheet: no panel of its own (the glass is the sheet).
   glassBody: { width: '100%', alignItems: 'center', paddingHorizontal: 24 },
@@ -212,5 +212,5 @@ const styles = StyleSheet.create({
     alignSelf: 'stretch', minHeight: 46, alignItems: 'center', justifyContent: 'center', borderRadius: 999, backgroundColor: t.primary[600],
   },
   okPressed: { backgroundColor: t.primary[700] },
-  okText: { fontSize: 15, lineHeight: 20, color: '#fff', ...font(600) },
-});
+  okText: { fontSize: 15, lineHeight: 20, color: t.onBrand, ...font(600) },
+}));

@@ -3,7 +3,7 @@ import { KeyboardAvoidingView, Platform, ScrollView, StyleSheet, Text, TextInput
 import { useLocalSearchParams, useRouter } from 'expo-router';
 import {
   DeviceMobileIcon, MoneyIcon, QrCodeIcon, StorefrontIcon, TruckIcon,
-} from 'phosphor-react-native';
+} from '../src/lib/icons';
 import apiClient from '../src/api/client';
 import useAuthStore from '../src/store/authStore';
 import useCartStore, { checkLines, patchLines } from '../src/store/cartStore';
@@ -23,7 +23,7 @@ import { validPin } from '../src/components/maps/mapUtils';
 import { cartPeso as peso, storeDeliveryFee, useCartSettings } from '../src/components/cart/cartSettings';
 import { spanLabel } from '../src/lib/availability';
 import { toast } from '../src/lib/toast';
-import { font, t } from '../src/theme';
+import { font, t, themed } from '../src/theme';
 
 /*
  * Checkout (web/src/pages/Checkout.jsx, phone layout .co-phone): one page of
@@ -784,7 +784,7 @@ export default function Checkout() {
 
   const payments = [
     {
-      value: 'COD', label: 'Cash on Delivery / Pickup', desc: 'Pay when you receive/pick up your order', enabled: paymentAvailability.cod, Icon: MoneyIcon, color: '#059669',
+      value: 'COD', label: 'Cash on Delivery / Pickup', desc: 'Pay when you receive/pick up your order', enabled: paymentAvailability.cod, Icon: MoneyIcon, color: t.primary[600],
       off: codBlocked ? (owed?.message || 'Pay the unpaid delivery fee first: choose GCash or QR Ph.') : chosenCourier ? 'Not available with courier delivery' : null,
     },
     { value: 'GCASH', label: 'GCash (QR)', desc: 'Pay with GCash after the seller confirms', enabled: paymentAvailability.gcash, Icon: DeviceMobileIcon, color: t.info[600] },
@@ -1161,7 +1161,7 @@ export default function Checkout() {
   );
 }
 
-const styles = StyleSheet.create({
+const styles = themed(() => StyleSheet.create({
   screen: { flex: 1, backgroundColor: t.neutral[0] },
   flex: { flex: 1 },
   // Panels 8px apart; the live phone page is white between them.
@@ -1240,10 +1240,10 @@ const styles = StyleSheet.create({
     borderWidth: 1,
     borderColor: t.neutral[300],
     borderRadius: 8,
-    backgroundColor: '#fff',
+    backgroundColor: t.neutral[0],
     fontSize: 16,
     lineHeight: 24,
     ...font(400),
-    color: '#000',
+    color: t.neutral[900],
   },
-});
+}));

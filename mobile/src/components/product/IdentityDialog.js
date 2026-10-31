@@ -1,8 +1,8 @@
 import { useEffect, useRef } from 'react';
 import { Animated, Easing, Modal, Platform, Pressable, StyleSheet, Text, View } from 'react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
-import { QuestionIcon } from 'phosphor-react-native';
-import { font, t } from '../../theme';
+import { QuestionIcon } from '../../lib/icons';
+import { font, t, themed } from '../../theme';
 import { IDENTITY_REQUIRED_MESSAGE } from './productLib';
 
 const native = Platform.OS !== 'web';
@@ -52,10 +52,10 @@ export default function IdentityDialog({ open, onVerify, onCancel }) {
   );
 }
 
-const styles = StyleSheet.create({
+const styles = themed(() => StyleSheet.create({
   root: { flex: 1, justifyContent: 'flex-end' },
   scrim: { backgroundColor: 'rgba(15, 23, 42, 0.5)' },
-  panel: { borderTopLeftRadius: 16, borderTopRightRadius: 16, backgroundColor: '#fff', overflow: 'hidden' },
+  panel: { borderTopLeftRadius: 16, borderTopRightRadius: 16, backgroundColor: t.neutral[0], overflow: 'hidden' },
   body: { flexDirection: 'row', alignItems: 'flex-start', gap: 12, paddingTop: 22, paddingHorizontal: 16, paddingBottom: 4 },
   icon: { width: 40, height: 40, borderRadius: 20, alignItems: 'center', justifyContent: 'center', backgroundColor: t.sky[100] },
   text: { flex: 1, minWidth: 0 },
@@ -67,5 +67,5 @@ const styles = StyleSheet.create({
   cancel: { backgroundColor: t.neutral[100] },
   cancelText: { color: t.neutral[700] },
   primary: { backgroundColor: t.primary[600] },
-  primaryText: { color: '#fff' },
-});
+  primaryText: { color: t.onBrand },
+}));

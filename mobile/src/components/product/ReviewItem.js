@@ -2,9 +2,9 @@ import { useState } from 'react';
 import { Image, Linking, Pressable, StyleSheet, Text, View, useWindowDimensions } from 'react-native';
 import { useRouter } from 'expo-router';
 import { useVideoPlayer, VideoView } from 'expo-video';
-import { StarIcon, StorefrontIcon } from 'phosphor-react-native';
+import { StarIcon, StorefrontIcon } from '../../lib/icons';
 import { resolveImg } from '../../lib/media';
-import { font, t } from '../../theme';
+import { font, t, themed } from '../../theme';
 import { localDate } from './productLib';
 
 /** Five stars, filled up to the (rounded) rating (web ReviewItem Stars). */
@@ -101,7 +101,7 @@ export default function ReviewItem({ review, showReply = false, last = false, on
   );
 }
 
-const styles = StyleSheet.create({
+const styles = themed(() => StyleSheet.create({
   stars: { flexDirection: 'row', alignItems: 'center' },
   review: { paddingVertical: 12, borderBottomWidth: 1, borderBottomColor: t.neutral[150] },
   reviewLast: { borderBottomWidth: 0 },
@@ -126,4 +126,4 @@ const styles = StyleSheet.create({
   replyHead: { flexDirection: 'row', alignItems: 'center', gap: 6, marginBottom: 4 },
   replyHeadText: { fontSize: 12.5, lineHeight: 20, ...font(500), color: t.primary[700] },
   replyText: { fontSize: 13.5, lineHeight: 20.25, ...font(400), color: t.neutral[700] },
-});
+}));

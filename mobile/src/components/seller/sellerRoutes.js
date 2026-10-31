@@ -2,7 +2,7 @@ import {
   ArrowCounterClockwiseIcon, BellIcon, ChartLineUpIcon, ChatCircleDotsIcon, GearIcon, HeadsetIcon, HouseIcon,
   IdentificationCardIcon, MegaphoneIcon, PackageIcon, PaintBrushIcon, PlusIcon, QuestionIcon, ShoppingBagIcon,
   SparkleIcon, StarIcon, StorefrontIcon, TruckIcon, UserIcon, WalletIcon,
-} from 'phosphor-react-native';
+} from '../../lib/icons';
 
 /*
  * The Seller Center's phone routes, titles, Back targets and ⋯ menus

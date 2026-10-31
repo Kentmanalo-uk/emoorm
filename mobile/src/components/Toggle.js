@@ -1,6 +1,6 @@
 import { useEffect, useRef } from 'react';
 import { Animated, Pressable, StyleSheet } from 'react-native';
-import { colors } from '../theme';
+import { colors, themed, t } from '../theme';
 
 // Custom pill switch sized/animated to match the modern iOS toggle look.
 const TRACK_WIDTH = 51;
@@ -40,7 +40,7 @@ export default function Toggle({ value, onValueChange, disabled, accessibilityLa
   );
 }
 
-const styles = StyleSheet.create({
+const styles = themed(() => StyleSheet.create({
   track: {
     width: TRACK_WIDTH,
     height: TRACK_HEIGHT,
@@ -52,7 +52,7 @@ const styles = StyleSheet.create({
     height: THUMB_SIZE,
     borderRadius: THUMB_SIZE / 2,
     marginHorizontal: THUMB_INSET,
-    backgroundColor: '#ffffff',
+    backgroundColor: t.neutral[0],
     shadowColor: '#000',
     shadowOffset: { width: 0, height: 2 },
     shadowOpacity: 0.15,
@@ -60,4 +60,4 @@ const styles = StyleSheet.create({
     elevation: 2,
   },
   disabled: { opacity: 0.5 },
-});
+}));

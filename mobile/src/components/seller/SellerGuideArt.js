@@ -4,7 +4,8 @@ import Svg, {
   Circle, ClipPath, Defs, Ellipse, FeComposite, FeFlood, FeGaussianBlur, FeMerge, FeMergeNode, FeOffset, Filter,
   G, LinearGradient, Path, Rect, Stop,
 } from 'react-native-svg';
-import { t } from '../../theme';
+import { t, themed } from '../../theme';
+import { ikionShapes } from '../../lib/ikionNative';
 import ICONS from './guideArtIcons';
 
 /*
@@ -208,8 +209,8 @@ export default function SellerGuideArt({ name, width = VW, style }) {
             {geo.front({ ...glass, filter: url('lift') })}
             <Path d="M60 10h110L60 120Z" fill="#ffffff" opacity={0.28} clipPath={url('clip')} />
             {geo.notch ? <Rect x="130" y="27" width="20" height="4" rx="2" fill="#ffffff" opacity={0.9} /> : null}
-            <G transform={`translate(${cx - s / 2} ${cy - s / 2}) scale(${s / 256})`} fill={url('icon')}>
-              {(ICONS[icon] || []).map((d) => <Path key={d.slice(0, 24)} d={d} />)}
+            <G transform={`translate(${cx - s / 2} ${cy - s / 2}) scale(${s / 24})`} fill={url('icon')}>
+              {ikionShapes(ICONS[icon], { paint: url('icon') })}
             </G>
           </>,
           <>
@@ -238,6 +239,6 @@ export default function SellerGuideArt({ name, width = VW, style }) {
   );
 }
 
-const styles = StyleSheet.create({
+const styles = themed(() => StyleSheet.create({
   svg: { overflow: 'visible' },
-});
+}));

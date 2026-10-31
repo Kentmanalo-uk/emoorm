@@ -1,5 +1,5 @@
 import { StyleSheet, Text, View } from 'react-native';
-import { font, t } from '../../../theme';
+import { font, t, themed } from '../../../theme';
 import { CARD_SHADOW } from '../analytics/parts';
 import { numericDate, peso } from '../analytics/format';
 
@@ -101,7 +101,7 @@ export function FinanceTotal({ label, value }) {
   );
 }
 
-const styles = StyleSheet.create({
+const styles = themed(() => StyleSheet.create({
   stat: { minWidth: 0, gap: 5, padding: 14, borderRadius: 16, backgroundColor: t.neutral[0], boxShadow: CARD_SHADOW },
   statValue: { fontSize: 22, lineHeight: 25.3, color: t.neutral[900], ...font(700) },
   statValueBig: { fontSize: 28, lineHeight: 32.2 },
@@ -128,4 +128,4 @@ const styles = StyleSheet.create({
   },
   footLabel: { fontSize: 13.5, lineHeight: 20, color: t.neutral[700], ...font(600) },
   footValue: { fontSize: 13.5, lineHeight: 20, color: t.primary[700], ...font(700) },
-});
+}));

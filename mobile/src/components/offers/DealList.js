@@ -3,13 +3,13 @@ import {
   Image, Linking, Pressable, ScrollView, StyleSheet, Text, View,
 } from 'react-native';
 import { useFocusEffect, useRouter } from 'expo-router';
-import { ChatCircleDotsIcon, PhoneIcon } from 'phosphor-react-native';
+import { ChatCircleDotsIcon, PhoneIcon } from '../../lib/icons';
 import apiClient from '../../api/client';
 import EmptyState from '../EmptyState';
 import ProductImage from '../ProductImage';
 import { resolveImg } from '../../lib/media';
 import { toast } from '../../lib/toast';
-import { font, t } from '../../theme';
+import { font, ink, t, themed } from '../../theme';
 import {
   chatPath, dealStatus, heads, orderPath, peso, telHref, when,
 } from './offerText';
@@ -173,7 +173,7 @@ export default function DealList({ side }) {
   );
 }
 
-const styles = StyleSheet.create({
+const styles = themed(() => StyleSheet.create({
   wrap: { flexGrow: 1 },
   tabsBox: { flexGrow: 0, marginBottom: 14 },
   // My Offers: the tabs and the list are items of the profile page column
@@ -186,16 +186,16 @@ const styles = StyleSheet.create({
   },
   tabOn: { borderColor: t.primary[600], backgroundColor: t.primary[600] },
   tabText: { fontSize: 13.5, lineHeight: 21.6, color: t.neutral[700] },
-  tabTextOn: { color: '#fff' },
+  tabTextOn: { color: t.onBrand },
   count: { minWidth: 18, paddingHorizontal: 5, borderRadius: 999, backgroundColor: t.danger[500] },
-  countText: { fontSize: 11, lineHeight: 18, color: '#fff', textAlign: 'center' },
+  countText: { fontSize: 11, lineHeight: 18, color: t.onBrand, textAlign: 'center' },
 
   loading: { paddingVertical: 36, paddingHorizontal: 12, fontSize: 15, lineHeight: 24, ...font(400), color: t.neutral[500], textAlign: 'center' },
 
   list: { gap: 10 },
   row: {
     flexDirection: 'row', gap: 12, padding: 12, borderRadius: 14, backgroundColor: t.neutral[0],
-    boxShadow: [{ offsetX: 0, offsetY: 2, blurRadius: 12, color: 'rgba(15, 23, 42, 0.06)' }],
+    boxShadow: [{ offsetX: 0, offsetY: 2, blurRadius: 12, color: ink(0.06) }],
   },
   img: { width: 56, height: 56, overflow: 'hidden', borderRadius: 10, backgroundColor: t.neutral[100] },
   body: { flex: 1, minWidth: 0, gap: 3 },
@@ -212,4 +212,4 @@ const styles = StyleSheet.create({
   total: { color: t.neutral[900] },
   was: { color: t.neutral[400], textDecorationLine: 'line-through' },
   actions: { flexDirection: 'row', flexWrap: 'wrap', alignItems: 'center', gap: 6, marginTop: 6 },
-});
+}));

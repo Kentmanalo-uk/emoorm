@@ -1,4 +1,5 @@
 import { Platform, StyleSheet, View } from 'react-native';
+import { themed } from '../theme';
 import MaskedView from '@react-native-masked-view/masked-view';
 import { GradientFill } from './inbox/InboxGradient';
 
@@ -21,6 +22,6 @@ export default function GradientIcon({ Icon, colors, size = 24, weight = 'fill' 
   );
 }
 
-const styles = StyleSheet.create({
+const styles = themed(() => StyleSheet.create({
   mask: { flex: 1, backgroundColor: 'transparent' },
-});
+}));

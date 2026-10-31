@@ -1,6 +1,6 @@
 import { Pressable, StyleSheet, Text, View } from 'react-native';
-import { PlusIcon, TrashIcon, XIcon } from 'phosphor-react-native';
-import { font, t } from '../../../theme';
+import { PlusIcon, TrashIcon, XIcon } from '../../../lib/icons';
+import { font, t, themed } from '../../../theme';
 import {
   FieldError, Hint, MoneyInput, PF, PfInput, Suggest, Switch, useInvalidTarget,
 } from './parts';
@@ -171,7 +171,7 @@ export default function ChoiceGroup({
   );
 }
 
-const styles = StyleSheet.create({
+const styles = themed(() => StyleSheet.create({
   group: {
     gap: 12, minWidth: 0, paddingVertical: 14, paddingHorizontal: 12,
     borderWidth: 1, borderColor: PF.line, borderRadius: 14, backgroundColor: t.neutral[50],
@@ -189,7 +189,7 @@ const styles = StyleSheet.create({
   },
   typeChipOn: { borderColor: PF.green, backgroundColor: PF.green },
   typeChipText: { fontSize: 14, lineHeight: 20, color: t.neutral[700], ...font(500) },
-  typeChipTextOn: { color: '#fff' },
+  typeChipTextOn: { color: t.onBrand },
 
   choices: { gap: 8, minWidth: 0 },
   label: { fontSize: 14, lineHeight: 22.4, color: t.neutral[800], ...font(600) },
@@ -207,7 +207,7 @@ const styles = StyleSheet.create({
     borderRadius: 12, backgroundColor: PF.green,
   },
   addBtnOff: { backgroundColor: t.neutral[200] },
-  addBtnText: { fontSize: 14, lineHeight: 20, color: '#fff', ...font(600) },
+  addBtnText: { fontSize: 14, lineHeight: 20, color: t.onBrand, ...font(600) },
   addBtnTextOff: { color: t.neutral[500] },
 
   switches: { gap: 2, paddingVertical: 4, borderTopWidth: 1, borderTopColor: PF.line },
@@ -224,4 +224,4 @@ const styles = StyleSheet.create({
   priceColBoth: { width: 112 },
   stockColBoth: { width: 76 },
   name: { fontSize: 14.5, lineHeight: 23.2, color: PF.ink, ...font(600) },
-});
+}));

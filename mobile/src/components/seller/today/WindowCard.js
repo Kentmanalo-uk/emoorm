@@ -2,8 +2,8 @@ import { useState } from 'react';
 import {
   Image, Pressable, StyleSheet, Text, View,
 } from 'react-native';
-import { DotsThreeIcon, ForkKnifeIcon, PlusIcon } from 'phosphor-react-native';
-import { font, t } from '../../../theme';
+import { DotsThreeIcon, ForkKnifeIcon, PlusIcon } from '../../../lib/icons';
+import { font, t, themed } from '../../../theme';
 import { resolveImg } from '../../../lib/media';
 import { clockLabel, isOpen } from '../../../lib/availability';
 import { dayTitle, manilaDay } from './todayTime';
@@ -59,9 +59,9 @@ function Thumb({ src, dim }) {
   return <Image source={{ uri: src }} style={[styles.thumb, dim && styles.dim]} resizeMode="cover" onError={() => setFailed(true)} />;
 }
 
-const STATUS_COLOR = {
+const STATUS_COLOR = themed(() => ({
   live: t.primary[700], soon: t.warning[700], out: t.danger[600], ended: t.neutral[600],
-};
+}));
 
 function Btn({
   label, onPress, disabled, main = false, danger = false, icon = null, square = false, accessibilityLabel,
@@ -136,7 +136,7 @@ export default function WindowCard({
   );
 }
 
-const styles = StyleSheet.create({
+const styles = themed(() => StyleSheet.create({
   // .stw-card
   card: {
     gap: 14, minWidth: 0, padding: 16, borderWidth: 1, borderColor: t.neutral[200], borderRadius: 16, backgroundColor: t.neutral[0],
@@ -163,6 +163,6 @@ const styles = StyleSheet.create({
   },
   off: { opacity: 0.6 },
   btnText: { fontSize: 15, lineHeight: 20, ...font(500), color: t.neutral[800] },
-  btnTextMain: { color: '#fff' },
+  btnTextMain: { color: t.onBrand },
   btnTextDanger: { color: t.danger[600] },
-});
+}));

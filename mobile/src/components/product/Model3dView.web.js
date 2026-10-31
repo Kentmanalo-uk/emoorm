@@ -1,5 +1,6 @@
 import { createElement, useEffect, useMemo, useRef } from 'react';
 import { StyleSheet, View } from 'react-native';
+import { themed } from '../../theme';
 import model3dHtml, { STAGE_BG } from './model3dHtml';
 
 /*
@@ -38,6 +39,6 @@ export default function Model3dView({ src, poster = null, alt, onLoad, onError, 
   );
 }
 
-const styles = StyleSheet.create({
+const styles = themed(() => StyleSheet.create({
   frame: { flex: 1, overflow: 'hidden', backgroundColor: STAGE_BG },
-});
+}));

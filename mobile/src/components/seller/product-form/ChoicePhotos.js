@@ -3,8 +3,8 @@ import {
   ActivityIndicator, Image, Platform, Pressable, StyleSheet, Text, View,
 } from 'react-native';
 import * as ImagePicker from 'expo-image-picker';
-import { CameraIcon, ImagesIcon, TrashIcon } from 'phosphor-react-native';
-import { font, t } from '../../../theme';
+import { CameraIcon, ImagesIcon, TrashIcon } from '../../../lib/icons';
+import { font, t, themed } from '../../../theme';
 import { toast } from '../../../lib/toast';
 import { uploadImage } from '../../../lib/upload';
 import { resolveImg } from '../../../lib/media';
@@ -131,7 +131,7 @@ export default function ChoicePhotos({ group, onPhoto, photosOn = null }) {
   );
 }
 
-const styles = StyleSheet.create({
+const styles = themed(() => StyleSheet.create({
   wrap: { gap: 6, minWidth: 0, paddingTop: 10, borderTopWidth: 1, borderTopColor: PF.line },
   label: { fontSize: 14, lineHeight: 22.4, color: t.neutral[800], ...font(600) },
   optional: { color: PF.muted, ...font(400) },
@@ -147,4 +147,4 @@ const styles = StyleSheet.create({
   name: {
     width: TILE, fontSize: 12, lineHeight: 16, color: PF.ink, textAlign: 'center', ...font(500),
   },
-});
+}));

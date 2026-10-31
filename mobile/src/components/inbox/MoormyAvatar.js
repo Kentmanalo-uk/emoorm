@@ -1,5 +1,6 @@
 import { useEffect, useId, useRef } from 'react';
 import { Animated, Easing, Platform, StyleSheet, View } from 'react-native';
+import { themed } from '../../theme';
 import Svg, { Circle, Defs, LinearGradient, Mask, RadialGradient, Rect, Stop } from 'react-native-svg';
 import MoormyFace from './MoormyFace';
 import { MMY } from './InboxGradient';
@@ -65,7 +66,7 @@ function Halo({ size }) {
   );
 }
 
-const styles = StyleSheet.create({
+const styles = themed(() => StyleSheet.create({
   box: { borderRadius: 999, flexShrink: 0 },
   halo: { position: 'absolute' },
-});
+}));

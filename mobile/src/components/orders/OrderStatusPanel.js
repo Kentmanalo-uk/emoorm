@@ -1,8 +1,8 @@
 import { Image, Linking, Pressable, StyleSheet, Text, View } from 'react-native';
 import {
   ArrowSquareOutIcon, MapPinIcon, MoneyIcon, PhoneIcon, QrCodeIcon, StorefrontIcon,
-} from 'phosphor-react-native';
-import { font, t } from '../../theme';
+} from '../../lib/icons';
+import { font, t, themed } from '../../theme';
 import { resolveImg } from '../../lib/media';
 import {
   failedTripNote, fallbackLine, handOver, orderStage, orderSteps, payLabel, peso, when,
@@ -154,7 +154,7 @@ export function OrderProof({ order }) {
   );
 }
 
-const styles = StyleSheet.create({
+const styles = themed(() => StyleSheet.create({
   section: { paddingBottom: 17.5, marginBottom: 17.5, borderBottomWidth: 1, borderBottomColor: t.neutral[200] },
   sectionLast: { paddingBottom: 0, marginBottom: 0, borderBottomWidth: 0 },
   h3: { marginBottom: 10.5, fontSize: 16, lineHeight: 18.4, ...font(500), color: t.neutral[900] },
@@ -196,4 +196,4 @@ const styles = StyleSheet.create({
   proofTime: { fontSize: 12, lineHeight: 18, ...font(400), color: t.neutral[500] },
   proofPhoto: { width: '100%', maxWidth: 320, borderRadius: 12, overflow: 'hidden', backgroundColor: t.neutral[100] },
   proofImg: { width: '100%', height: 240 },
-});
+}));

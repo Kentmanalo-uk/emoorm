@@ -5,7 +5,7 @@ import * as ImagePicker from 'expo-image-picker';
 import {
   ArrowClockwiseIcon, CameraIcon, ChatsCircleIcon, CircleNotchIcon, IdentificationCardIcon, LockSimpleIcon,
   ShieldCheckIcon, ShieldWarningIcon, UploadSimpleIcon, XCircleIcon,
-} from 'phosphor-react-native';
+} from '../../../lib/icons';
 import apiClient, { authedFetch } from '../../../api/client';
 import LoadingSkeleton from '../../LoadingSkeleton';
 import Select from '../../Select';
@@ -13,7 +13,7 @@ import IdCamera, { assetToUpload } from '../../profile/IdCamera';
 import { fetchIdentityStatus } from '../../profile/profileLib';
 import { invalidateCachedData } from '../../../lib/dataCache';
 import { toast } from '../../../lib/toast';
-import { font, t } from '../../../theme';
+import { font, t, themed } from '../../../theme';
 import { CARD_SHADOW, Spin } from '../analytics/parts';
 import { PageLoader } from '../../BrandLoader';
 
@@ -33,7 +33,7 @@ import { PageLoader } from '../../BrandLoader';
  * supportPath: the support inbox a stuck seller is sent to.
  */
 
-const STATUS_META = {
+const STATUS_META = themed(() => ({
   NOT_VERIFIED: {
     label: 'Not Verified', color: t.neutral[500], Icon: ShieldWarningIcon,
     text: 'Verify your identity with a valid Philippine government-issued ID.',
@@ -50,7 +50,7 @@ const STATUS_META = {
     label: 'Verification Failed', color: t.danger[600], Icon: XCircleIcon,
     text: 'We could not verify your identity.',
   },
-};
+}));
 
 /** POST /identity-verification (multipart): the ID type and the photos, read on the server (up to two minutes). */
 async function submitIdentityVerification(idType, front, back) {
@@ -390,7 +390,7 @@ export default function IdentityVerifier({
   );
 }
 
-const styles = StyleSheet.create({
+const styles = themed(() => StyleSheet.create({
   // .sv .idv-verifier: one card in the page's 12px gutter. Its sections are
   // pulled to the screen's edges by the phone rules and clipped by the card,
   // so their padding (16px from the screen) leaves 4px inside the card.
@@ -457,4 +457,4 @@ const styles = StyleSheet.create({
   privacy: { flexDirection: 'row', alignItems: 'center', gap: 8 },
   privacyText: { flex: 1, fontSize: 13, lineHeight: 19.5, color: t.neutral[500], ...font(400) },
   actions: { gap: 12 },
-});
+}));

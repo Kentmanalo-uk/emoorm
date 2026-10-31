@@ -6,12 +6,12 @@ import { useFocusEffect, useRouter } from 'expo-router';
 import {
   ChatCircleDotsIcon, CheckCircleIcon, ChecksIcon, HandshakeIcon, InfoIcon, PackageIcon, QuestionIcon, ScalesIcon,
   ShoppingBagIcon, StarIcon, TagIcon, TrashIcon, WarningCircleIcon, XCircleIcon,
-} from 'phosphor-react-native';
+} from '../lib/icons';
 import apiClient from '../api/client';
 import { toast } from '../lib/toast';
 import { getCachedData, setCachedData } from '../lib/dataCache';
 import { notificationHref } from '../lib/notificationLink';
-import { font, t } from '../theme';
+import { font, t, themed } from '../theme';
 import EmptyState from './EmptyState';
 import LoadingSkeleton from './LoadingSkeleton';
 import ShellPageMenu from './ShellPageMenu';
@@ -43,10 +43,10 @@ const AUDIENCE = 'SELLER';
 const CACHE_KEY = `notifications:${AUDIENCE}`;
 
 // web TYPE_CONFIG: the kind's icon and colour.
-const C = {
+const C = themed(() => ({
   info: t.info[500], green: t.primary[600], greenLight: t.primary[500], success: t.success[600], orange: t.orange[500],
   danger: t.danger[500], warning: t.warning[500], neutral: t.neutral[500],
-};
+}));
 const TYPE_CONFIG = {
   ORDER_RECEIVED: { Icon: ShoppingBagIcon, color: C.info },
   ORDER_CONFIRMED: { Icon: CheckCircleIcon, color: C.green },
@@ -398,7 +398,7 @@ function NotificationRow({ notif, onOpen, onMarkRead, onDelete }) {
   );
 }
 
-const styles = StyleSheet.create({
+const styles = themed(() => StyleSheet.create({
   screen: { flex: 1, backgroundColor: t.neutral[0] },
   content: { flexGrow: 1, paddingBottom: 24 },
 
@@ -449,4 +449,4 @@ const styles = StyleSheet.create({
   pageBtnOff: { opacity: 0.4 },
   pageBtnText: { fontSize: 14, lineHeight: 17, color: t.neutral[700], ...font(400) },
   pageText: { fontSize: 14, lineHeight: 22.4, color: t.neutral[500], ...font(400) },
-});
+}));

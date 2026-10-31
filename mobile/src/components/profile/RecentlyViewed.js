@@ -4,7 +4,7 @@ import { useRouter } from 'expo-router';
 import ProductImage from '../ProductImage';
 import { peso } from '../SaleTag';
 import { saleInfo } from '../../lib/variantPricing';
-import { font, t } from '../../theme';
+import { font, t, themed } from '../../theme';
 import { clearRecentlyViewed, onRecentChange, recentlyViewed } from './recentViews';
 import { PfSection, PfTitle } from './ProfileUI';
 import { useProductPeek } from '../peek/ProductPeek';
@@ -50,7 +50,7 @@ export default function RecentlyViewed({ userId = null }) {
   );
 }
 
-const styles = StyleSheet.create({
+const styles = themed(() => StyleSheet.create({
   head: { flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between' },
   clear: { paddingVertical: 4, paddingLeft: 8 },
   clearText: { fontSize: 13, lineHeight: 20.8, color: t.neutral[500], ...font(400) },
@@ -60,4 +60,4 @@ const styles = StyleSheet.create({
   img: { width: 112, height: 112, overflow: 'hidden', borderRadius: 10, backgroundColor: t.neutral[100] },
   name: { fontSize: 13, lineHeight: 16.9, color: t.neutral[800], ...font(400) },
   price: { fontSize: 13, lineHeight: 20.8, color: t.primary[700], ...font(500) },
-});
+}));

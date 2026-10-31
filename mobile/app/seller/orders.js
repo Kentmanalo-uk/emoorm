@@ -6,7 +6,7 @@ import {
 } from 'react-native';
 import { useLocalSearchParams, useRouter } from 'expo-router';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
-import { MagnifyingGlassIcon, SlidersHorizontalIcon, XIcon } from 'phosphor-react-native';
+import { MagnifyingGlassIcon, SlidersHorizontalIcon, XIcon } from '../../src/lib/icons';
 import apiClient from '../../src/api/client';
 import { toast } from '../../src/lib/toast';
 import { getCacheEntry, setCachedData } from '../../src/lib/dataCache';
@@ -26,7 +26,7 @@ import {
   PAGE_SIZE, SELLER_TABS, STATUS_MAP, cancelReasonsFor, parcelBackNote, refundNote, sellerTabFrom, sellerTabOf, tabCount,
 } from '../../src/components/seller/orders/sellerOrderLib';
 import { peso } from '../../src/components/orders/orderProgress';
-import { font, t } from '../../src/theme';
+import { colors, font, t, themed } from '../../src/theme';
 
 /*
  * /seller/orders (My orders), the phone view of web/src/pages/SellerOrders.jsx
@@ -671,7 +671,7 @@ function Separator() {
   return <View style={styles.sep} />;
 }
 
-const styles = StyleSheet.create({
+const styles = themed(() => StyleSheet.create({
   // .seller-search in the page head (SellerPhoneFit.css): full width, 48 high, 12px corners.
   search: {
     flexDirection: 'row', alignItems: 'center', gap: 7, minHeight: 48, marginBottom: 12, paddingHorizontal: 12,
@@ -693,13 +693,14 @@ const styles = StyleSheet.create({
   chips: { flexGrow: 0, marginBottom: 12 },
   chipsRow: { flexDirection: 'row', alignItems: 'center', gap: 8 },
   chipText: { fontSize: 14, lineHeight: 20, ...font(400), color: t.neutral[700] },
-  chipTextOn: { color: '#fff' },
+  chipTextOn: { color: t.onBrand },
   // .so-tab-count (6px after the chip's own 6px gap)
   tabCount: {
     minWidth: 18, height: 18, marginLeft: 6, paddingHorizontal: 5, borderRadius: 999,
     alignItems: 'center', justifyContent: 'center', backgroundColor: '#ee4d2d',
   },
-  tabCountText: { fontSize: 11, lineHeight: 14, ...font(700), color: '#fff' },
+  // The count sits on the same orange-red in either mode, so it stays white.
+  tabCountText: { fontSize: 11, lineHeight: 14, ...font(700), color: colors.white },
   // .som-count
   count: { marginTop: -4, marginHorizontal: 2, marginBottom: 10, fontSize: 13, lineHeight: 20.8, ...font(400), color: t.neutral[500] },
 
@@ -730,9 +731,9 @@ const styles = StyleSheet.create({
   reasonOn: { borderColor: t.danger[300], backgroundColor: t.danger[50] },
   radio: {
     width: 16, height: 16, borderRadius: 8, borderWidth: 1.5, borderColor: t.neutral[400],
-    alignItems: 'center', justifyContent: 'center', backgroundColor: '#fff',
+    alignItems: 'center', justifyContent: 'center', backgroundColor: t.neutral[0],
   },
   radioOn: { borderColor: t.danger[600] },
   radioDot: { width: 8, height: 8, borderRadius: 4, backgroundColor: t.danger[600] },
   reasonText: { flex: 1, fontSize: 13.5, lineHeight: 20, ...font(400), color: t.neutral[800] },
-});
+}));

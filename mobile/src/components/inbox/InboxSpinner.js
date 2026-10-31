@@ -1,6 +1,6 @@
 import { useEffect, useRef } from 'react';
 import { Animated, Easing, Platform } from 'react-native';
-import { CircleNotchIcon } from 'phosphor-react-native';
+import { CircleNotchIcon } from '../../lib/icons';
 
 /** The website's spinning CircleNotch (.msgr-spin: one turn a second). */
 export default function InboxSpinner({ size = 18, color, weight = 'regular' }) {

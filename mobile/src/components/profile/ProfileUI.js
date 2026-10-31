@@ -1,9 +1,9 @@
 import { useState } from 'react';
 import { ActivityIndicator, Pressable, StyleSheet, Text, TextInput, View } from 'react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
-import { CaretRightIcon, EyeIcon, EyeSlashIcon, SignOutIcon } from 'phosphor-react-native';
+import { CaretRightIcon, EyeIcon, EyeSlashIcon, SignOutIcon } from '../../lib/icons';
 import EmptyState from '../EmptyState';
-import { font, t } from '../../theme';
+import { font, t, themed, veil } from '../../theme';
 
 /*
  * The account pages' building blocks, drawn as the website's phone view draws
@@ -12,7 +12,12 @@ import { font, t } from '../../theme';
  * the profile pages' .empty-state).
  */
 
-export const BAND = t.neutral[100];
+/*
+ * The band between sections. Read through rather than captured, so it
+ * follows the mode: as a plain const it would keep the colour the app
+ * started in and show as a light stripe on dark pages.
+ */
+export const BAND = { get color() { return t.neutral[100]; } };
 
 /** A full-width white section with the 8px grey band under it (.pf-m-section). */
 export function PfSection({ children, list = false, last = false, style }) {
@@ -183,13 +188,13 @@ export function PsButton({ label, Icon, onPress, variant = 'outline', disabled =
   );
 }
 
-const BTN = {
-  outline: { box: { backgroundColor: '#fff', borderColor: t.neutral[300] }, color: t.neutral[900], pressed: { backgroundColor: t.neutral[50] } },
+const BTN = themed(() => ({
+  outline: { box: { backgroundColor: t.neutral[0], borderColor: t.neutral[300] }, color: t.neutral[900], pressed: { backgroundColor: t.neutral[50] } },
   ghost: { box: { backgroundColor: 'transparent', borderColor: 'transparent' }, color: t.neutral[500], pressed: { backgroundColor: t.neutral[100] } },
-  primary: { box: { backgroundColor: t.primary[600], borderColor: t.primary[600] }, color: '#fff', pressed: { backgroundColor: t.primary[700] } },
-  danger: { box: { backgroundColor: '#fff', borderColor: t.danger[200] }, color: t.danger[600], pressed: { backgroundColor: t.danger[50] }, weight: 'bold' },
-  solidDanger: { box: { backgroundColor: t.danger[600], borderColor: t.danger[600] }, color: '#fff', pressed: { backgroundColor: t.danger[700] } },
-};
+  primary: { box: { backgroundColor: t.primary[600], borderColor: t.primary[600] }, color: t.onBrand, pressed: { backgroundColor: t.primary[700] } },
+  danger: { box: { backgroundColor: t.neutral[0], borderColor: t.danger[200] }, color: t.danger[600], pressed: { backgroundColor: t.danger[50] }, weight: 'bold' },
+  solidDanger: { box: { backgroundColor: t.danger[600], borderColor: t.danger[600] }, color: t.onBrand, pressed: { backgroundColor: t.danger[700] } },
+}));
 
 /**
  * The profile pages' empty state, in the app's one empty look (EmptyState).
@@ -216,8 +221,8 @@ export function PageSubtitle({ children, style }) {
   return <Text style={[styles.subtitle, style]}>{children}</Text>;
 }
 
-const styles = StyleSheet.create({
-  section: { paddingVertical: 14, paddingHorizontal: 16, backgroundColor: t.neutral[0], borderBottomWidth: 8, borderBottomColor: BAND },
+const styles = themed(() => StyleSheet.create({
+  section: { paddingVertical: 14, paddingHorizontal: 16, backgroundColor: t.neutral[0], borderBottomWidth: 8, borderBottomColor: BAND.color },
   sectionList: { paddingTop: 14, paddingBottom: 4, paddingHorizontal: 0 },
   sectionLast: { borderBottomWidth: 0 },
   h2: { fontSize: 17, lineHeight: 19.55, color: t.neutral[900], ...font(500) },
@@ -249,12 +254,12 @@ const styles = StyleSheet.create({
   savebar: {
     position: 'absolute', left: 0, right: 0, bottom: 0, zIndex: 60,
     flexDirection: 'row', gap: 10, paddingTop: 10, paddingHorizontal: 16,
-    backgroundColor: 'rgba(255, 255, 255, 0.97)',
+    backgroundColor: veil(0.97),
     borderTopWidth: 1, borderTopColor: t.neutral[100],
     boxShadow: '0px -6px 18px rgba(15, 23, 42, 0.06)',
   },
   saveBtn: { flexDirection: 'row', alignItems: 'center', justifyContent: 'center', minHeight: 48, paddingHorizontal: 12, borderRadius: 999 },
-  saveCancel: { flex: 1, borderWidth: 1, borderColor: t.neutral[300], backgroundColor: '#fff' },
+  saveCancel: { flex: 1, borderWidth: 1, borderColor: t.neutral[300], backgroundColor: t.neutral[0] },
   saveSave: { flex: 1.6, backgroundColor: t.primary[600] },
   saveOff: { backgroundColor: t.neutral[200] },
   saveText: { fontSize: 15, lineHeight: 24, ...font(500) },
@@ -270,7 +275,7 @@ const styles = StyleSheet.create({
   inputWrap: { position: 'relative', justifyContent: 'center' },
   input: {
     minHeight: 48, paddingVertical: 11, paddingHorizontal: 13, borderWidth: 1, borderColor: t.neutral[300], borderRadius: 10,
-    backgroundColor: '#fff', color: t.neutral[900], fontSize: 16, lineHeight: 24, ...font(400),
+    backgroundColor: t.neutral[0], color: t.neutral[900], fontSize: 16, lineHeight: 24, ...font(400),
   },
   inputFocus: { borderColor: t.primary[600] },
   inputLocked: { backgroundColor: t.neutral[50], color: t.neutral[500] },
@@ -286,4 +291,4 @@ const styles = StyleSheet.create({
   btnText: { fontSize: 14, lineHeight: 16.8, ...font(500) },
 
   subtitle: { fontSize: 13, lineHeight: 19.5, color: t.neutral[500], ...font(400) },
-});
+}));

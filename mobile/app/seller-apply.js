@@ -7,7 +7,7 @@ import Svg, { Defs, LinearGradient, Rect, Stop } from 'react-native-svg';
 import {
   ArrowRightIcon, BriefcaseIcon, BuildingsIcon, CheckCircleIcon, CheckIcon, IdentificationCardIcon,
   MapPinIcon, SparkleIcon, StorefrontIcon, UserIcon, WalletIcon, WarningIcon,
-} from 'phosphor-react-native';
+} from '../src/lib/icons';
 import { Redirect, useRouter } from 'expo-router';
 import ScreenHeader from '../src/components/ScreenHeader';
 import { SheetButton, SheetFrame } from '../src/components/Sheet';
@@ -20,7 +20,7 @@ import apiClient from '../src/api/client';
 import { ENDPOINTS } from '../src/api/endpoints';
 import useAuthStore from '../src/store/authStore';
 import { toast } from '../src/lib/toast';
-import { font, t } from '../src/theme';
+import { font, t, themed } from '../src/theme';
 import { fetchCategories, fetchMunicipalities } from '../src/lib/referenceData';
 
 /*
@@ -706,7 +706,7 @@ export default function SellerApply() {
   );
 }
 
-const styles = StyleSheet.create({
+const styles = themed(() => StyleSheet.create({
   screen: { flex: 1, backgroundColor: t.neutral[100] },
   flex: { flex: 1 },
   content: { gap: 12, paddingTop: 16, paddingHorizontal: 16 },
@@ -775,4 +775,4 @@ const styles = StyleSheet.create({
   statusBack: { alignSelf: 'stretch', marginTop: 24 },
 
   confirmText: { fontSize: 14, lineHeight: 21.7, color: t.neutral[600], ...font(400) },
-});
+}));

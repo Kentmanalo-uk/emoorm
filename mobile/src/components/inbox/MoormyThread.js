@@ -7,10 +7,10 @@ import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import AsyncStorage from '@react-native-async-storage/async-storage';
 import {
   ArrowClockwiseIcon, CaretLeftIcon, CaretRightIcon, NotePencilIcon, PaperPlaneTiltIcon, QuestionIcon, TranslateIcon,
-} from 'phosphor-react-native';
+} from '../../lib/icons';
 import apiClient from '../../api/client';
 import { appPath } from '../../lib/notificationLink';
-import { font, t } from '../../theme';
+import { font, t, themed } from '../../theme';
 import ShellPageMenu from '../ShellPageMenu';
 import MoormyAvatar from './MoormyAvatar';
 import { AiTag, GradientFill, MMY } from './InboxGradient';
@@ -399,7 +399,7 @@ export default function MoormyThread({ userId, pendingAsk, onAsked, onBack }) {
   );
 }
 
-const styles = StyleSheet.create({
+const styles = themed(() => StyleSheet.create({
   screen: { flex: 1, backgroundColor: t.neutral[0] },
   head: {
     flexDirection: 'row', alignItems: 'center', gap: 6, minHeight: 56, paddingHorizontal: 8, paddingBottom: 8,
@@ -428,7 +428,7 @@ const styles = StyleSheet.create({
   },
   bubbleTop: { maxWidth: '82%' },
   bubbleSelf: { backgroundColor: t.primary[600] },
-  bubbleError: { backgroundColor: '#fef2f2' },
+  bubbleError: { backgroundColor: t.danger[50] },
   text: { fontSize: 14, lineHeight: 21, color: t.neutral[900], ...font(400) },
   textSelf: { color: t.neutral[0] },
   errorText: { color: t.danger[800] },
@@ -442,7 +442,7 @@ const styles = StyleSheet.create({
   liText: { flex: 1 },
   retry: {
     flexDirection: 'row', alignItems: 'center', alignSelf: 'flex-start', gap: 5, marginTop: 4, paddingVertical: 4, paddingHorizontal: 10,
-    borderWidth: 1, borderColor: t.danger[200], borderRadius: 999, backgroundColor: '#fff',
+    borderWidth: 1, borderColor: t.danger[200], borderRadius: 999, backgroundColor: t.neutral[0],
   },
   retryText: { fontSize: 12.5, lineHeight: 18.75, color: t.danger[800], ...font(400) },
   suggest: { gap: 6, marginLeft: 34 },
@@ -470,4 +470,4 @@ const styles = StyleSheet.create({
   send: { width: 40, height: 40, borderRadius: 20, alignItems: 'center', justifyContent: 'center', flexShrink: 0, overflow: 'hidden' },
   sendPressed: { transform: [{ scale: 0.94 }] },
   sendOff: { backgroundColor: t.neutral[200], opacity: 0.35 },
-});
+}));

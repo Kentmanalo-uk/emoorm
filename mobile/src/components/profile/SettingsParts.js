@@ -6,7 +6,7 @@ import { useRouter } from 'expo-router';
 import * as ImagePicker from 'expo-image-picker';
 import {
   CameraIcon, ChatCircleTextIcon, DownloadSimpleIcon, SealCheckIcon, TrashIcon, WarningCircleIcon,
-} from 'phosphor-react-native';
+} from '../../lib/icons';
 import apiClient from '../../api/client';
 import ScreenHeader from '../ScreenHeader';
 import LoadingSkeleton from '../LoadingSkeleton';
@@ -16,7 +16,7 @@ import { toast } from '../../lib/toast';
 import { fetchMunicipalities } from '../../lib/referenceData';
 import { invalidateCachedData } from '../../lib/dataCache';
 import useAuthStore from '../../store/authStore';
-import { font, t } from '../../theme';
+import { font, t, themed, veil } from '../../theme';
 import {
   PasswordField, PsButton, PsCard, PsField, PsInput, SaveBar,
 } from './ProfileUI';
@@ -541,7 +541,7 @@ function PhoneVerify() {
   );
 }
 
-const styles = StyleSheet.create({
+const styles = themed(() => StyleSheet.create({
   screen: { flex: 1, backgroundColor: t.neutral[0] },
   content: { paddingHorizontal: 12, paddingTop: 24, paddingBottom: 24 },
   grid: { gap: 14 },
@@ -549,13 +549,13 @@ const styles = StyleSheet.create({
 
   photoRow: { flexDirection: 'row', alignItems: 'center', gap: 14 },
   photo: {
-    width: 64, height: 64, borderRadius: 32, overflow: 'hidden', borderWidth: 2, borderColor: '#fff',
+    width: 64, height: 64, borderRadius: 32, overflow: 'hidden', borderWidth: 2, bordercolor: t.onBrand,
     backgroundColor: t.neutral[100], boxShadow: `0px 0px 0px 1px ${t.neutral[200]}`,
   },
   photoImg: { width: '100%', height: '100%' },
   photoFallback: { flex: 1, alignItems: 'center', justifyContent: 'center', backgroundColor: t.neutral[100] },
   photoInitial: { fontSize: 24, lineHeight: 38.4, color: t.neutral[500], ...font(500) },
-  photoBusy: { ...StyleSheet.absoluteFill, alignItems: 'center', justifyContent: 'center', backgroundColor: 'rgba(255, 255, 255, 0.75)' },
+  photoBusy: { ...StyleSheet.absoluteFill, alignItems: 'center', justifyContent: 'center', backgroundColor: veil(0.75) },
   photoActions: { flex: 1, minWidth: 0, gap: 6 },
   photoBtns: { flexDirection: 'row', gap: 6 },
   photoHint: { marginTop: 2, fontSize: 12, lineHeight: 19.2, color: t.neutral[500], ...font(400) },
@@ -581,5 +581,5 @@ const styles = StyleSheet.create({
     fontSize: 14, color: t.neutral[900], ...font(400),
   },
   pvBtn: { height: 40, justifyContent: 'center', paddingHorizontal: 14, borderRadius: 8, backgroundColor: t.primary[600] },
-  pvBtnText: { fontSize: 14, color: '#fff', ...font(500) },
-});
+  pvBtnText: { fontSize: 14, color: t.onBrand, ...font(500) },
+}));

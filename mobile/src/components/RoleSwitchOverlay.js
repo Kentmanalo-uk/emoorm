@@ -1,13 +1,13 @@
 import { useEffect, useRef, useState } from 'react';
 import { Animated, Easing, Image, Modal, StyleSheet, Text, useWindowDimensions, View } from 'react-native';
 import { usePathname, useRouter } from 'expo-router';
-import { StorefrontIcon } from 'phosphor-react-native';
+import { StorefrontIcon } from '../lib/icons';
 import AsyncStorage from '@react-native-async-storage/async-storage';
 import { create } from 'zustand';
 import apiClient from '../api/client';
 import useAuthStore from '../store/authStore';
 import { resolveImg } from '../lib/media';
-import { font, t } from '../theme';
+import { font, ink, t, themed, veil } from '../theme';
 
 /*
  * The account switch between the personal (buyer) account and the Seller
@@ -228,12 +228,12 @@ function SwitchScreen({ visible, toSeller }) {
   );
 }
 
-const styles = StyleSheet.create({
+const styles = themed(() => StyleSheet.create({
   overlay: {
     flex: 1,
     alignItems: 'center',
     justifyContent: 'center',
-    backgroundColor: 'rgba(255, 255, 255, 0.94)',
+    backgroundColor: veil(0.94),
   },
   card: { alignItems: 'center', gap: 6, paddingHorizontal: 24 },
   ring: {
@@ -248,7 +248,7 @@ const styles = StyleSheet.create({
     position: 'absolute',
     overflow: 'hidden',
     backgroundColor: t.neutral[0],
-    boxShadow: [{ offsetX: 0, offsetY: 6, blurRadius: 20, color: 'rgba(15, 23, 42, 0.1)' }],
+    boxShadow: [{ offsetX: 0, offsetY: 6, blurRadius: 20, color: ink(0.1) }],
   },
   fallback: { flex: 1, alignItems: 'center', justifyContent: 'center', backgroundColor: t.primary[600] },
   fallbackShop: { backgroundColor: t.secondary[800] },
@@ -256,4 +256,4 @@ const styles = StyleSheet.create({
   name: { fontSize: 22, lineHeight: 27.5, color: t.neutral[900], ...font(700) },
   nameSmall: { fontSize: 19, lineHeight: 23.75 },
   title: { fontSize: 14, lineHeight: 21, color: t.neutral[500], ...font(400) },
-});
+}));

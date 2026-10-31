@@ -1,8 +1,8 @@
 import {
   ActivityIndicator, Pressable, StyleSheet, Text, TextInput, View,
 } from 'react-native';
-import { PaperPlaneTiltIcon, PencilSimpleIcon, StarIcon } from 'phosphor-react-native';
-import { font, t } from '../../../theme';
+import { PaperPlaneTiltIcon, PencilSimpleIcon, StarIcon } from '../../../lib/icons';
+import { font, t, themed } from '../../../theme';
 
 /*
  * One review on the seller's Reviews page (web/src/pages/SellerReviews.jsx
@@ -99,7 +99,7 @@ export default function ReviewItem({
   );
 }
 
-const styles = StyleSheet.create({
+const styles = themed(() => StyleSheet.create({
   stars: { flexDirection: 'row', gap: 2 },
 
   // .reviews-item (phones: 12px corners)
@@ -141,5 +141,5 @@ const styles = StyleSheet.create({
   off: { opacity: 0.6 },
   btnText: { fontSize: 13.5, lineHeight: 18 },
   btnTextOutline: { ...font(500), color: t.neutral[700] },
-  btnTextPrimary: { ...font(600), color: '#fff' },
-});
+  btnTextPrimary: { ...font(600), color: t.onBrand },
+}));

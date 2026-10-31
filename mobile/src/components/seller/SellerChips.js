@@ -1,6 +1,6 @@
 import { Pressable, ScrollView, StyleSheet, Text, View } from 'react-native';
-import { SlidersHorizontalIcon } from 'phosphor-react-native';
-import { font, t } from '../../theme';
+import { SlidersHorizontalIcon } from '../../lib/icons';
+import { font, t, themed } from '../../theme';
 
 /*
  * The Seller Center's phone chips (web layout/SellerMobile.css .scm-chips,
@@ -69,7 +69,7 @@ export default function SellerChips({ chips = [], active, onChange, more, scroll
   return <View style={[styles.row, styles.wrap, style]}>{items}</View>;
 }
 
-const styles = StyleSheet.create({
+const styles = themed(() => StyleSheet.create({
   wrap: { marginBottom: 12 },
   scroll: { flexGrow: 0, marginBottom: 12 },
   row: { flexDirection: 'row', alignItems: 'center', gap: 8 },
@@ -81,6 +81,6 @@ const styles = StyleSheet.create({
   moreEnd: { marginLeft: 'auto' },
   on: { backgroundColor: t.primary[600] },
   text: { fontSize: 14, lineHeight: 20, color: t.neutral[700], ...font(400) },
-  textOn: { color: '#fff' },
+  textOn: { color: t.onBrand },
   dot: { width: 7, height: 7, borderRadius: 4, backgroundColor: t.accent[500] },
-});
+}));

@@ -2,9 +2,9 @@ import { Pressable, StyleSheet, Text, View } from 'react-native';
 import { useRouter } from 'expo-router';
 import {
   CaretDownIcon, CaretRightIcon, CheckIcon, MinusIcon, PlusIcon, StorefrontIcon, TrashIcon,
-} from 'phosphor-react-native';
+} from '../../lib/icons';
 import CartProductImage from './CartProductImage';
-import { font, t } from '../../theme';
+import { font, t, themed } from '../../theme';
 import { cartPeso } from './cartSettings';
 import { useProductPeek } from '../peek/ProductPeek';
 
@@ -170,7 +170,7 @@ export default function CartStoreGroup({
   );
 }
 
-const styles = StyleSheet.create({
+const styles = themed(() => StyleSheet.create({
   check: { width: 30, height: 30, alignItems: 'center', justifyContent: 'center', flexShrink: 0 },
   checkDisabled: { opacity: 0.4 },
   checkDot: {
@@ -245,4 +245,4 @@ const styles = StyleSheet.create({
     borderRadius: 8,
   },
   removeText: { fontSize: 13, lineHeight: 15.6, ...font(400), color: t.danger[600] },
-});
+}));

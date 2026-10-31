@@ -7,7 +7,7 @@ import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import {
   ArrowRightIcon, CameraIcon, ChartLineUpIcon, ChatCircleDotsIcon, HouseIcon, IdentificationCardIcon, MinusIcon,
   MoneyIcon, PackageIcon, PlayCircleIcon, PlusIcon, SealCheckIcon, StorefrontIcon, TruckIcon, UsersIcon,
-} from 'phosphor-react-native';
+} from '../../src/lib/icons';
 import EmptyArt from '../../src/components/EmptyArt';
 import { startAccountSwitch } from '../../src/components/RoleSwitchOverlay';
 import {
@@ -16,7 +16,7 @@ import {
 import { fetchCategories } from '../../src/lib/referenceData';
 import { resolveImg } from '../../src/lib/media';
 import useAuthStore from '../../src/store/authStore';
-import { font, t } from '../../src/theme';
+import { font, t, themed, veil } from '../../src/theme';
 
 /*
  * web/src/pages/Sell.jsx + Sell.css at phone width ("Sell on Emoorm"): the
@@ -415,7 +415,7 @@ export default function Sell() {
   );
 }
 
-const styles = StyleSheet.create({
+const styles = themed(() => StyleSheet.create({
   screen: { flex: 1, backgroundColor: t.neutral[0] },
   pressedFade: { opacity: 0.7 },
 
@@ -472,7 +472,7 @@ const styles = StyleSheet.create({
     borderColor: 'rgba(255, 255, 255, 0.55)',
     // The website blurs the photo behind it (backdrop-filter); without a
     // blur the card is a little more opaque so its text stays as readable.
-    backgroundColor: 'rgba(255, 255, 255, 0.74)',
+    backgroundColor: veil(0.74),
     shadowColor: '#000',
     shadowOffset: { width: 0, height: 12 },
     shadowOpacity: 0.18,
@@ -639,4 +639,4 @@ const styles = StyleSheet.create({
   },
   fabPressed: { transform: [{ scale: 0.95 }] },
   fabText: { fontSize: 15, lineHeight: 24, color: t.neutral[0], ...font(600) },
-});
+}));

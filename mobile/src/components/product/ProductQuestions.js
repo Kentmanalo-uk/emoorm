@@ -1,11 +1,11 @@
 import { useEffect, useState } from 'react';
 import { Pressable, StyleSheet, Text, TextInput, View } from 'react-native';
 import { useRouter } from 'expo-router';
-import { QuestionIcon, StorefrontIcon } from 'phosphor-react-native';
+import { QuestionIcon, StorefrontIcon } from '../../lib/icons';
 import apiClient from '../../api/client';
 import useAuthStore from '../../store/authStore';
 import { toast } from '../../lib/toast';
-import { font, t } from '../../theme';
+import { font, t, themed } from '../../theme';
 import EmptyState from '../EmptyState';
 import ProductSection, { SectionBody, SectionHead, SectionTitle } from './ProductSection';
 import { longDate } from './productLib';
@@ -114,16 +114,16 @@ export default function ProductQuestions({ product, isOwnProduct = false, sectio
   );
 }
 
-const styles = StyleSheet.create({
+const styles = themed(() => StyleSheet.create({
   ask: { flexDirection: 'row', gap: 8, marginBottom: 14 },
   input: {
     flex: 1, minWidth: 0, height: 46, paddingHorizontal: 12, borderWidth: 1, borderColor: t.neutral[300], borderRadius: 8,
-    fontSize: 14, ...font(400), color: t.neutral[900], backgroundColor: '#fff', outlineStyle: 'none',
+    fontSize: 14, ...font(400), color: t.neutral[900], backgroundColor: t.neutral[0], outlineStyle: 'none',
   },
   inputFocus: { borderColor: t.primary[600] },
   button: { height: 46, paddingHorizontal: 16, borderRadius: 8, alignItems: 'center', justifyContent: 'center', backgroundColor: t.primary[600] },
   buttonOff: { opacity: 0.5 },
-  buttonText: { fontSize: 14, lineHeight: 22.4, ...font(500), color: '#fff' },
+  buttonText: { fontSize: 14, lineHeight: 22.4, ...font(500), color: t.onBrand },
   item: { paddingVertical: 12, borderTopWidth: 1, borderTopColor: t.neutral[100] },
   itemFirst: { paddingTop: 0, borderTopWidth: 0 },
   qa: { flexDirection: 'row', gap: 10 },
@@ -136,4 +136,4 @@ const styles = StyleSheet.create({
   a: { color: t.neutral[700] },
   small: { marginTop: 2, fontSize: 12, lineHeight: 18, ...font(400), color: t.neutral[500] },
   waiting: { marginTop: 6, marginLeft: 32, fontSize: 12.5, lineHeight: 18.75, ...font(400), fontStyle: 'italic', color: t.neutral[500] },
-});
+}));

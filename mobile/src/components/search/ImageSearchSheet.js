@@ -3,7 +3,7 @@ import { Alert, Animated, Easing, Modal, Platform, Pressable, StyleSheet, Text, 
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import * as ImagePicker from 'expo-image-picker';
 import { toast } from '../../lib/toast';
-import { font, t } from '../../theme';
+import { font, ink, t, themed } from '../../theme';
 import { SheetFrame } from '../Sheet';
 
 // The app's one sheet look on every phone (the sign-in sheet's: Sheet.js).
@@ -108,7 +108,7 @@ export default function ImageSearchSheet({ open, onClose, onFile }) {
   );
 }
 
-const styles = StyleSheet.create({
+const styles = themed(() => StyleSheet.create({
   root: { flex: 1, justifyContent: 'flex-end' },
   backdrop: { backgroundColor: 'rgba(15, 23, 42, 0.45)' },
   card: {
@@ -118,7 +118,7 @@ const styles = StyleSheet.create({
     borderTopLeftRadius: 16,
     borderTopRightRadius: 16,
     backgroundColor: t.neutral[0],
-    boxShadow: [{ offsetX: 0, offsetY: 24, blurRadius: 70, color: 'rgba(0, 0, 0, 0.18)' }],
+    boxShadow: [{ offsetX: 0, offsetY: 24, blurRadius: 70, color: ink(0.18) }],
   },
   glassCard: { paddingTop: 14, paddingHorizontal: 16 },
   close: { position: 'absolute', top: 14, right: 16, zIndex: 1, width: 32, height: 32, alignItems: 'center', justifyContent: 'center' },
@@ -139,5 +139,5 @@ const styles = StyleSheet.create({
   dropTitle: { fontSize: 15, lineHeight: 24, ...font(500), color: t.neutral[900], textAlign: 'center' },
   dropHint: { marginTop: 6, marginBottom: 22, fontSize: 13, lineHeight: 20.8, ...font(400), color: t.neutral[500], textAlign: 'center' },
   dropBtn: { paddingVertical: 10, paddingHorizontal: 22, borderRadius: 2, backgroundColor: t.neutral[900] },
-  dropBtnText: { fontSize: 13, lineHeight: 20.8, letterSpacing: 0.13, ...font(500), color: '#fff' },
-});
+  dropBtnText: { fontSize: 13, lineHeight: 20.8, letterSpacing: 0.13, ...font(500), color: t.onBrand },
+}));

@@ -3,11 +3,11 @@ import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import Svg, { Circle, Path, Rect } from 'react-native-svg';
 import {
   CheckCircleIcon, ClockCountdownIcon, StorefrontIcon, TruckIcon, WarningIcon,
-} from 'phosphor-react-native';
+} from '../../lib/icons';
 import CartProductImage from '../cart/CartProductImage';
 import { cartPeso as peso } from '../cart/cartSettings';
 import Glass from '../Glass';
-import { font, t } from '../../theme';
+import { font, ink, t, themed } from '../../theme';
 
 /*
  * The pieces of the phone checkout (web/src/pages/Checkout.jsx with
@@ -308,7 +308,7 @@ export function CheckoutSummary({
 export function CheckoutBar({ saving, itemCount, total, busy, label, disabled, onPress, onLayout }) {
   const insets = useSafeAreaInsets();
   return (
-    <Glass fallbackStyle={BAR_FALLBACK} style={styles.bar} onLayout={onLayout}>
+    <Glass fallbackStyle={barFallback()} style={styles.bar} onLayout={onLayout}>
       {saving ? <Text style={styles.saving}>{saving}</Text> : null}
       <View style={[styles.barRow, { paddingBottom: 10 + insets.bottom }]}>
         <View style={styles.barTotal}>
@@ -331,10 +331,13 @@ export function CheckoutBar({ saving, itemCount, total, busy, label, disabled, o
 }
 
 // The website's .co-m-bar: white with a soft shadow above.
-const BAR_FALLBACK = {
-  backgroundColor: '#fff',
-  boxShadow: [{ offsetX: 0, offsetY: -4, blurRadius: 16, color: 'rgba(15, 23, 42, 0.08)' }],
-};
+/* A function, not a table: this is handed to a component whole, and
+   React Native freezes the style it is given. A fresh object each time
+   keeps the colours of the palette in use. */
+const barFallback = () => ({
+  backgroundColor: t.neutral[0],
+  boxShadow: [{ offsetX: 0, offsetY: -4, blurRadius: 16, color: ink(0.08) }],
+});
 
 /** "Order Placed Successfully!" (.order-success-card). */
 export function CheckoutSuccess({ orderId, payLater, onReceipt, onOrders, onShop }) {
@@ -372,7 +375,7 @@ export function CheckoutSuccess({ orderId, payLater, onReceipt, onOrders, onShop
   );
 }
 
-const styles = StyleSheet.create({
+const styles = themed(() => StyleSheet.create({
   section: { padding: 16, backgroundColor: t.neutral[0] },
   sectionTitle: { marginBottom: 12, fontSize: 17, lineHeight: 19.55, ...font(500), color: t.neutral[900] },
   summaryTitle: { marginBottom: 8, paddingBottom: 12 },
@@ -397,10 +400,10 @@ const styles = StyleSheet.create({
     marginTop: 3,
     borderRadius: 9,
     borderWidth: 1,
-    borderColor: '#767676',
+    borderColor: t.neutral[400],
     alignItems: 'center',
     justifyContent: 'center',
-    backgroundColor: '#fff',
+    backgroundColor: t.neutral[0],
   },
   radioOn: { borderWidth: 2, borderColor: t.accent[500] },
   radioDot: { width: 8, height: 8, borderRadius: 4, backgroundColor: t.accent[500] },
@@ -451,7 +454,7 @@ const styles = StyleSheet.create({
     paddingHorizontal: 12,
     borderWidth: 1,
     borderColor: t.neutral[300],
-    backgroundColor: '#fff',
+    backgroundColor: t.neutral[0],
   },
   statusBtnText: { fontSize: 12, lineHeight: 19.2, ...font(500), color: t.neutral[700] },
 
@@ -464,7 +467,7 @@ const styles = StyleSheet.create({
   itemInfo: { flex: 1, minWidth: 0, gap: 4 },
   itemName: { fontSize: 15, lineHeight: 24, ...font(400), color: t.neutral[900] },
   itemVar: { fontSize: 13.5, lineHeight: 21.6, ...font(400), color: t.neutral[500] },
-  itemBad: { fontSize: 13, lineHeight: 20.8, ...font(400), color: '#dc2626' },
+  itemBad: { fontSize: 13, lineHeight: 20.8, ...font(400), color: t.danger[600] },
   itemRow: { marginTop: 'auto', flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between' },
   itemPrice: { fontSize: 16, lineHeight: 25.6, ...font(400), color: t.accent[500] },
   itemQty: { fontSize: 14, lineHeight: 22.4, ...font(400), color: t.neutral[600] },
@@ -493,7 +496,7 @@ const styles = StyleSheet.create({
     borderRadius: 8,
     borderWidth: 1,
     borderColor: t.neutral[200],
-    backgroundColor: '#fff',
+    backgroundColor: t.neutral[0],
     alignItems: 'center',
     justifyContent: 'center',
   },
@@ -535,12 +538,12 @@ const styles = StyleSheet.create({
     borderWidth: 1,
     borderColor: t.neutral[300],
     borderRadius: 8,
-    backgroundColor: '#fff',
+    backgroundColor: t.neutral[0],
     fontSize: 16,
     ...font(400),
-    color: '#000',
+    color: t.neutral[900],
   },
-  voucherInputOff: { backgroundColor: 'rgba(239, 239, 239, 0.3)', color: t.neutral[500] },
+  voucherInputOff: { backgroundColor: t.neutral[150], color: t.neutral[500] },
   voucherBtn: {
     height: 46,
     paddingVertical: 8,
@@ -551,8 +554,8 @@ const styles = StyleSheet.create({
     backgroundColor: t.primary[600],
   },
   voucherBtnOff: { backgroundColor: t.neutral[400] },
-  voucherBtnBack: { borderWidth: 1, borderColor: t.neutral[300], backgroundColor: '#fff' },
-  voucherBtnText: { fontSize: 13, lineHeight: 15.6, ...font(500), color: '#fff' },
+  voucherBtnBack: { borderWidth: 1, borderColor: t.neutral[300], backgroundColor: t.neutral[0] },
+  voucherBtnText: { fontSize: 13, lineHeight: 15.6, ...font(500), color: t.onBrand },
   voucherBtnTextBack: { color: t.neutral[700] },
   voucherNote: { marginTop: 6, fontSize: 12, lineHeight: 19.2, ...font(400), color: t.primary[600] },
 
@@ -572,7 +575,7 @@ const styles = StyleSheet.create({
     backgroundColor: t.accent[500],
   },
   ctaOff: { opacity: 0.5 },
-  ctaText: { fontSize: 16, lineHeight: 19.2, ...font(500), color: '#fff' },
+  ctaText: { fontSize: 16, lineHeight: 19.2, ...font(500), color: t.onBrand },
 
   // The phone shell lifts the card's h1 into the back bar (the screen's
   // title), so the card starts with the icon.
@@ -585,7 +588,7 @@ const styles = StyleSheet.create({
     paddingVertical: 28,
     paddingHorizontal: 16,
     borderRadius: 12,
-    backgroundColor: '#fff',
+    backgroundColor: t.neutral[0],
   },
   successText: { alignSelf: 'stretch', fontSize: 14, lineHeight: 22.4, ...font(400), color: t.neutral[500], textAlign: 'center' },
   successNext: {
@@ -605,7 +608,7 @@ const styles = StyleSheet.create({
   successActions: { alignSelf: 'stretch', gap: 8, marginTop: 14 },
   successBtn: { minHeight: 48, paddingHorizontal: 16, borderRadius: 8, alignItems: 'center', justifyContent: 'center' },
   successBtnPrimary: { backgroundColor: t.primary[600] },
-  successBtnOutline: { borderWidth: 1, borderColor: t.neutral[300], backgroundColor: '#fff' },
-  successBtnText: { fontSize: 15, lineHeight: 24, ...font(500), color: '#fff' },
+  successBtnOutline: { borderWidth: 1, borderColor: t.neutral[300], backgroundColor: t.neutral[0] },
+  successBtnText: { fontSize: 15, lineHeight: 24, ...font(500), color: t.onBrand },
   successBtnTextOutline: { color: t.neutral[700] },
-});
+}));

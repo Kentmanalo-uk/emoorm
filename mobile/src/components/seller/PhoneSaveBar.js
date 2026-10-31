@@ -1,6 +1,6 @@
 import { ActivityIndicator, Pressable, StyleSheet, Text, View } from 'react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
-import { font, t } from '../../theme';
+import { font, ink, t, themed, veil } from '../../theme';
 import Glass from '../Glass';
 
 /*
@@ -20,12 +20,15 @@ import Glass from '../Glass';
 /** Room the bar takes at the bottom of the screen: 10 + 48 + 10 + the home bar. */
 export const savebarSpace = (insets) => 68 + (insets?.bottom || 0);
 
-export const SAVEBAR_FALLBACK = {
-  backgroundColor: 'rgba(255, 255, 255, 0.97)',
+/* A function, not a table: this is handed to a component whole, and
+   React Native freezes the style it is given. A fresh object each time
+   keeps the colours of the palette in use. */
+export const saveBarFallback = () => ({
+  backgroundColor: veil(0.97),
   borderTopWidth: 1,
   borderTopColor: t.neutral[100],
-  boxShadow: [{ offsetX: 0, offsetY: -6, blurRadius: 18, color: 'rgba(15, 23, 42, 0.06)' }],
-};
+  boxShadow: [{ offsetX: 0, offsetY: -6, blurRadius: 18, color: ink(0.06) }],
+});
 
 /** One pill button of the bar: primary = the green Save (grows 1.6×), else the white Cancel. */
 export function PhoneSaveButton({ label, primary = false, onPress, disabled = false, busy = false, busyLabel, grow, style, children }) {
@@ -60,7 +63,7 @@ export default function PhoneSaveBar({
   const insets = useSafeAreaInsets();
   return (
     <Glass
-      fallbackStyle={SAVEBAR_FALLBACK}
+      fallbackStyle={saveBarFallback()}
       style={[styles.bar, { paddingBottom: 10 + insets.bottom }, style]}
       accessibilityLabel="Save or cancel"
     >
@@ -76,7 +79,7 @@ export default function PhoneSaveBar({
   );
 }
 
-const styles = StyleSheet.create({
+const styles = themed(() => StyleSheet.create({
   bar: { position: 'absolute', left: 0, right: 0, bottom: 0, zIndex: 60, paddingTop: 10, paddingHorizontal: 16 },
   row: { flexDirection: 'row', gap: 10 },
   btn: {
@@ -90,6 +93,6 @@ const styles = StyleSheet.create({
   spin: { marginRight: 6 },
   text: { fontSize: 15, lineHeight: 20, ...font(500) },
   cancelText: { color: t.neutral[700] },
-  saveText: { color: '#fff' },
+  saveText: { color: t.onBrand },
   saveTextOff: { color: t.neutral[500] },
-});
+}));

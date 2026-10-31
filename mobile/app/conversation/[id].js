@@ -9,13 +9,13 @@ import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import * as ImagePicker from 'expo-image-picker';
 import {
   ArrowsClockwiseIcon, CaretLeftIcon, FlagIcon, HandshakeIcon, PackageIcon, PhoneIcon, StorefrontIcon, UserIcon, XIcon,
-} from 'phosphor-react-native';
+} from '../../src/lib/icons';
 import apiClient from '../../src/api/client';
 import { ENDPOINTS } from '../../src/api/endpoints';
 import { canUnsend, withoutMessage } from '../../src/lib/unsend';
 import { toast } from '../../src/lib/toast';
 import useAuthStore from '../../src/store/authStore';
-import { font, t } from '../../src/theme';
+import { font, t, themed } from '../../src/theme';
 import ShellPageMenu from '../../src/components/ShellPageMenu';
 import ChatAvatar from '../../src/components/inbox/ChatAvatar';
 import ChatBubble, { ChatDay } from '../../src/components/inbox/ChatBubble';
@@ -536,7 +536,7 @@ function StoreChat({ id, onBack }) {
   );
 }
 
-const styles = StyleSheet.create({
+const styles = themed(() => StyleSheet.create({
   screen: { flex: 1, backgroundColor: t.neutral[0] },
   bareBar: { minHeight: 56, paddingHorizontal: 8, justifyContent: 'center' },
   head: {
@@ -593,4 +593,4 @@ const styles = StyleSheet.create({
   dealPrice: { flexShrink: 0, fontSize: 13, lineHeight: 20.8, color: t.neutral[800] },
   dealRow: { alignItems: 'center', paddingVertical: 4 },
   errorX: { width: 26, height: 26, borderRadius: 13, alignItems: 'center', justifyContent: 'center' },
-});
+}));

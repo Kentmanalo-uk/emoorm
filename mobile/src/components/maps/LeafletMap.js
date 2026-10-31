@@ -1,7 +1,7 @@
 import { useEffect, useMemo, useRef } from 'react';
 import { Linking, Platform, StyleSheet, View } from 'react-native';
 import { WebView } from 'react-native-webview';
-import { t } from '../../theme';
+import { t, themed } from '../../theme';
 import leafletHtml from './leafletHtml';
 import { mapState } from './mapState';
 
@@ -96,8 +96,8 @@ export default function LeafletMap({ height = 300, style, ...props }) {
   );
 }
 
-const styles = StyleSheet.create({
+const styles = themed(() => StyleSheet.create({
   frame: { width: '100%', overflow: 'hidden', borderRadius: 12, backgroundColor: t.neutral[150] },
   web: { flex: 1, backgroundColor: t.neutral[150] },
   androidWeb: { opacity: 0.99 },
-});
+}));

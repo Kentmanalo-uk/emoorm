@@ -4,7 +4,7 @@ import { useFocusEffect, useLocalSearchParams, useRouter } from 'expo-router';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import {
   HeartIcon, MagnifyingGlassIcon, ShoppingBagIcon, StorefrontIcon, TrashIcon, WarningCircleIcon,
-} from 'phosphor-react-native';
+} from '../../src/lib/icons';
 import apiClient from '../../src/api/client';
 import useCartStore from '../../src/store/cartStore';
 import useAuthStore from '../../src/store/authStore';
@@ -21,7 +21,7 @@ import useCartIdentityGate from '../../src/components/cart/useCartIdentityGate';
 import CartLoginGate from '../../src/components/cart/CartLoginGate';
 import { cartPeso, storeDeliveryFee, useCartSettings } from '../../src/components/cart/cartSettings';
 import { toast } from '../../src/lib/toast';
-import { font, t } from '../../src/theme';
+import { font, t, themed } from '../../src/theme';
 
 /*
  * The cart (web/src/pages/Cart.jsx, phone layout): a title bar with the ⋯
@@ -494,7 +494,7 @@ export default function Cart() {
   );
 }
 
-const styles = StyleSheet.create({
+const styles = themed(() => StyleSheet.create({
   screen: { flex: 1, backgroundColor: t.neutral[0] },
   content: { paddingBottom: 24 },
   emptyContent: { paddingBottom: 24 },
@@ -544,4 +544,4 @@ const styles = StyleSheet.create({
   suggestions: { marginTop: 8 },
   // The website's empty card ends in an 8px grey rule before the suggestions.
   emptyCard: { borderBottomWidth: 8, borderBottomColor: t.neutral[100] },
-});
+}));

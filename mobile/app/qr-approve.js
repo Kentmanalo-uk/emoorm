@@ -7,13 +7,13 @@ import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import {
   CheckCircleIcon, ClockIcon, DesktopIcon, DeviceMobileIcon, GlobeIcon, LockKeyIcon, QrCodeIcon,
   ShieldCheckIcon, UserIcon, WarningCircleIcon, XCircleIcon,
-} from 'phosphor-react-native';
+} from '../src/lib/icons';
 import ScreenHeader from '../src/components/ScreenHeader';
 import apiClient from '../src/api/client';
 import { ENDPOINTS } from '../src/api/endpoints';
 import useAuthStore from '../src/store/authStore';
 import { resolveImg } from '../src/lib/media';
-import { font, t } from '../src/theme';
+import { font, t, themed } from '../src/theme';
 
 /*
  * "Allow this computer?" after scanning the website's "Log in with QR" code
@@ -294,7 +294,7 @@ function Result({ Icon, color, title, text, action, onAction, onDone }) {
   );
 }
 
-const styles = StyleSheet.create({
+const styles = themed(() => StyleSheet.create({
   screen: { flex: 1, backgroundColor: t.neutral[50] },
   body: { flexGrow: 1, paddingHorizontal: 16, paddingTop: 8, gap: 12 },
   center: { flex: 1, minHeight: 320, alignItems: 'center', justifyContent: 'center', gap: 10 },
@@ -347,7 +347,7 @@ const styles = StyleSheet.create({
     minHeight: 52, alignItems: 'center', justifyContent: 'center', borderRadius: 999, backgroundColor: t.primary[600], marginTop: 4,
   },
   allowPressed: { backgroundColor: t.primary[700] },
-  allowText: { fontSize: 16, lineHeight: 20, ...font(600), color: '#fff' },
+  allowText: { fontSize: 16, lineHeight: 20, ...font(600), color: t.onBrand },
   deny: {
     minHeight: 50, alignItems: 'center', justifyContent: 'center', borderRadius: 999,
     borderWidth: 1, borderColor: t.neutral[300], backgroundColor: t.neutral[0],
@@ -360,4 +360,4 @@ const styles = StyleSheet.create({
   resultTitle: { marginTop: 6, fontSize: 20, lineHeight: 26, ...font(600), color: t.neutral[900], textAlign: 'center' },
   resultText: { fontSize: 14.5, lineHeight: 21, ...font(400), color: t.neutral[600], textAlign: 'center', marginBottom: 14 },
   resultBtn: { alignSelf: 'stretch' },
-});
+}));

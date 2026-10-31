@@ -1,8 +1,8 @@
 import { Share, StyleSheet, Text, View } from 'react-native';
 import {
   ArrowSquareOutIcon, EyeIcon, EyeSlashIcon, PencilSimpleIcon, PlusIcon, ShareNetworkIcon, TrashIcon,
-} from 'phosphor-react-native';
-import { font, t } from '../../theme';
+} from '../../lib/icons';
+import { font, t, themed } from '../../theme';
 import { isStockless, productKind } from '../seller/productKinds';
 import { statusOf } from '../seller/products/productRules';
 import { ProductPeekCard } from './ProductPeek';
@@ -71,7 +71,7 @@ function SellerProductPeekCard({ product }) {
   );
 }
 
-const styles = StyleSheet.create({
+const styles = themed(() => StyleSheet.create({
   facts: {
     flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between', gap: 10,
     paddingHorizontal: 16, paddingBottom: 14, marginTop: -4,
@@ -79,4 +79,4 @@ const styles = StyleSheet.create({
   badge: { paddingHorizontal: 10, paddingVertical: 3, borderRadius: 999, backgroundColor: t.neutral[100] },
   badgeText: { fontSize: 12.5, lineHeight: 17, ...font(500), color: t.neutral[700] },
   stock: { fontSize: 13, lineHeight: 18, ...font(500), color: t.neutral[700] },
-});
+}));

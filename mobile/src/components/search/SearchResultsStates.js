@@ -1,10 +1,10 @@
 import { useEffect, useRef } from 'react';
 import { Animated, Platform, Pressable, StyleSheet, Text, View } from 'react-native';
-import { WarningCircleIcon } from 'phosphor-react-native';
+import { WarningCircleIcon } from '../../lib/icons';
 import Chip from '../Chip';
 import EmptyState from '../EmptyState';
 import { POPULAR_SUGGESTIONS } from '../../lib/shellSearch';
-import { font, t } from '../../theme';
+import { font, t, themed } from '../../theme';
 import { PageLoader } from '../BrandLoader';
 
 /**
@@ -69,7 +69,7 @@ export function SearchSkeletonCards({ count = 12 }) {
   return <PageLoader minHeight={320} label="Loading products" />;
 }
 
-const styles = StyleSheet.create({
+const styles = themed(() => StyleSheet.create({
   empty: {
     alignItems: 'center', paddingHorizontal: 20, paddingBottom: 24,
     borderRadius: 16, backgroundColor: t.neutral[0],
@@ -91,10 +91,10 @@ const styles = StyleSheet.create({
     alignItems: 'center', justifyContent: 'center', backgroundColor: t.primary[600],
   },
   retryPressed: { backgroundColor: t.primary[700] },
-  retryText: { fontSize: 14, lineHeight: 20, ...font(500), color: '#fff' },
+  retryText: { fontSize: 14, lineHeight: 20, ...font(500), color: t.onBrand },
 
   skCards: { gap: 16 },
   skCard: { overflow: 'hidden', borderRadius: 12, borderWidth: 1, borderColor: t.neutral[150], backgroundColor: t.neutral[0] },
   skBody: { gap: 8, paddingTop: 12, paddingHorizontal: 14, paddingBottom: 14 },
   skFoot: { flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between', marginTop: 4 },
-});
+}));

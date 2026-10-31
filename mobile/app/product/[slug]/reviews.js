@@ -4,12 +4,12 @@ import {
 } from 'react-native';
 import { Stack, useLocalSearchParams, useRouter } from 'expo-router';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
-import { CaretLeftIcon, StarIcon } from 'phosphor-react-native';
+import { CaretLeftIcon, StarIcon } from '../../../src/lib/icons';
 import apiClient from '../../../src/api/client';
 import EmptyState from '../../../src/components/EmptyState';
 import ShellPageMenu from '../../../src/components/ShellPageMenu';
 import { resolveImg } from '../../../src/lib/media';
-import { font, t } from '../../../src/theme';
+import { font, t, themed } from '../../../src/theme';
 import ReviewItem, { Stars } from '../../../src/components/product/ReviewItem';
 import { parseImages, peso } from '../../../src/components/product/productLib';
 
@@ -248,22 +248,22 @@ function Pulse({ style }) {
   return <Animated.View style={[style, { opacity: v }]} />;
 }
 
-const styles = StyleSheet.create({
+const styles = themed(() => StyleSheet.create({
   // Phones: a white page whose sections run edge to edge, each closed by an
   // 8px grey band (web/src/styles/phone-app.css).
-  screen: { flex: 1, backgroundColor: '#fff' },
-  page: { flexGrow: 1, backgroundColor: '#fff' },
+  screen: { flex: 1, backgroundColor: t.neutral[0] },
+  page: { flexGrow: 1, backgroundColor: t.neutral[0] },
   topGap: { height: 12 },
   top: {
     flexDirection: 'row', alignItems: 'center', gap: 10, height: 41, marginBottom: 14, paddingLeft: 12, paddingRight: 8,
-    backgroundColor: '#fff',
+    backgroundColor: t.neutral[0],
   },
   back: { width: 38, height: 38, borderRadius: 19, alignItems: 'center', justifyContent: 'center' },
   titleRow: { flexDirection: 'row', alignItems: 'center', gap: 8 },
   title: { fontSize: 19, lineHeight: 21.85, ...font(500), color: t.neutral[900] },
   count: { minWidth: 20, paddingVertical: 1, paddingHorizontal: 8, borderRadius: 999, backgroundColor: t.primary[50] },
   countText: { fontSize: 11, lineHeight: 12.65, ...font(500), color: t.primary[700], textAlign: 'center' },
-  card: { backgroundColor: '#fff', borderBottomWidth: 8, borderBottomColor: t.neutral[100] },
+  card: { backgroundColor: t.neutral[0], borderBottomWidth: 8, borderBottomColor: t.neutral[100] },
   cardLast: { borderBottomWidth: 0 },
   product: { flexDirection: 'row', alignItems: 'center', gap: 12, padding: 12 },
   thumb: { width: 56, height: 56, borderRadius: 10, backgroundColor: t.neutral[100] },
@@ -288,7 +288,7 @@ const styles = StyleSheet.create({
   chips: { gap: 8 },
   chip: {
     flexDirection: 'row', alignItems: 'center', gap: 4, height: 34, paddingHorizontal: 14, borderRadius: 999,
-    borderWidth: 1, borderColor: t.neutral[200], backgroundColor: '#fff',
+    borderWidth: 1, borderColor: t.neutral[200], backgroundColor: t.neutral[0],
   },
   chipOn: { borderColor: t.primary[600], backgroundColor: t.primary[50] },
   chipText: { fontSize: 13.5, lineHeight: 16.2, ...font(500), color: t.neutral[700] },
@@ -305,4 +305,4 @@ const styles = StyleSheet.create({
   // The "Couldn't load reviews" line.
   empty: { alignItems: 'center', gap: 6, paddingVertical: 36, paddingHorizontal: 20 },
   emptyText: { fontSize: 14, lineHeight: 22.4, ...font(400), color: t.neutral[500], textAlign: 'center' },
-});
+}));

@@ -9,8 +9,8 @@ import {
   FlagIcon, GearSixIcon, HeadsetIcon, HeartIcon, IdentificationCardIcon, ImageSquareIcon, InfoIcon, LockKeyIcon,
   MapPinIcon, PackageIcon, ReceiptIcon, ShoppingCartIcon, StarIcon, StorefrontIcon, TagIcon, TicketIcon,
   UserCircleIcon, UserPlusIcon, WarningCircleIcon,
-} from 'phosphor-react-native';
-import { font, t } from '../theme';
+} from './icons';
+import { font, ink, t, themed, veil } from '../theme';
 import { showCommerceHud } from '../components/CommerceHud';
 import { liquidGlass } from '../components/Glass';
 
@@ -50,7 +50,7 @@ export const toast = {
 };
 
 // .app-toast-icon.is-<tone>
-const TONES = {
+const TONES = themed(() => ({
   green: t.primary[600],
   blue: t.info[500],
   orange: t.orange[500],
@@ -59,7 +59,7 @@ const TONES = {
   red: t.danger[500],
   slate: '#64748b',
   purple: t.violet[500],
-};
+}));
 
 /** What an action's message is about, from its words: the icon and the small label. */
 const CONTEXTS = [
@@ -180,27 +180,27 @@ export const toastConfig = {
   info: (props) => <AppToast {...props} type="info" />,
 };
 
-const styles = StyleSheet.create({
+const styles = themed(() => StyleSheet.create({
   card: {
     flexDirection: 'row', alignItems: 'center', gap: 12,
     paddingTop: 12, paddingRight: 14, paddingBottom: 12, paddingLeft: 12,
     borderRadius: 22,
   },
   cardPlain: {
-    borderWidth: StyleSheet.hairlineWidth, borderColor: 'rgba(15, 23, 42, 0.08)',
-    backgroundColor: 'rgba(255, 255, 255, 0.97)',
+    borderWidth: StyleSheet.hairlineWidth, borderColor: ink(0.08),
+    backgroundColor: veil(0.97),
     boxShadow: [
-      { offsetX: 0, offsetY: 16, blurRadius: 38, color: 'rgba(15, 23, 42, 0.14)' },
-      { offsetX: 0, offsetY: 2, blurRadius: 8, color: 'rgba(15, 23, 42, 0.05)' },
+      { offsetX: 0, offsetY: 16, blurRadius: 38, color: ink(0.14) },
+      { offsetX: 0, offsetY: 2, blurRadius: 8, color: ink(0.05) },
     ],
   },
   // iOS 26: the glass draws its own edge and depth; a soft shadow lifts it off the page.
   cardGlass: {
-    boxShadow: [{ offsetX: 0, offsetY: 10, blurRadius: 30, color: 'rgba(15, 23, 42, 0.12)' }],
+    boxShadow: [{ offsetX: 0, offsetY: 10, blurRadius: 30, color: ink(0.12) }],
   },
   glass: { borderRadius: 22 },
-  milk: { backgroundColor: 'rgba(255, 255, 255, 0.28)' },
-  veil: { backgroundColor: 'rgba(255, 255, 255, 0.97)' },
+  milk: { backgroundColor: veil(0.28) },
+  veil: { backgroundColor: veil(0.97) },
   tile: { width: 40, height: 40, borderRadius: 11, alignItems: 'center', justifyContent: 'center', flexShrink: 0 },
   text: { flex: 1, minWidth: 0, gap: 1 },
   top: { flexDirection: 'row', alignItems: 'baseline', justifyContent: 'space-between', gap: 10, marginBottom: 1 },
@@ -212,6 +212,6 @@ const styles = StyleSheet.create({
   title: { fontSize: 14.5, lineHeight: 18.85, ...font(600), color: t.neutral[900] },
   titleError: { color: t.danger[700] },
   detail: { fontSize: 13.5, lineHeight: 18.225, ...font(400), color: t.neutral[600] },
-});
+}));
 
 export default toast;

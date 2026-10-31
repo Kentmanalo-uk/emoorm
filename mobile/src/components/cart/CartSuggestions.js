@@ -1,9 +1,9 @@
 import { Pressable, StyleSheet, Text, View, useWindowDimensions } from 'react-native';
 import { useRouter } from 'expo-router';
-import { StarIcon } from 'phosphor-react-native';
+import { StarIcon } from '../../lib/icons';
 import CartProductImage from './CartProductImage';
 import { useProductPeek } from '../peek/ProductPeek';
-import { font, t } from '../../theme';
+import { font, t, themed } from '../../theme';
 
 /*
  * "You may also like" under the cart (web Cart.jsx suggestionsSection,
@@ -77,7 +77,7 @@ export default function CartSuggestions({ suggestions, loading, style }) {
   );
 }
 
-const styles = StyleSheet.create({
+const styles = themed(() => StyleSheet.create({
   section: { marginTop: 20 },
   head: { flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between', gap: 12, marginBottom: 12 },
   title: { flexShrink: 1, fontSize: 18, lineHeight: 20.7, ...font(500), color: t.neutral[900] },
@@ -97,4 +97,4 @@ const styles = StyleSheet.create({
   skelImg: { width: '100%', aspectRatio: 1, backgroundColor: t.neutral[200] },
   skelLine: { height: 12, borderRadius: 4, backgroundColor: t.neutral[200] },
   skelShort: { width: '60%' },
-});
+}));

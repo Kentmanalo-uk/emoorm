@@ -1,6 +1,6 @@
 import { StyleSheet, Text, View } from 'react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
-import { border, font, t } from '../../theme';
+import { border, font, t, themed } from '../../theme';
 import HeaderGlow from '../HeaderGlow';
 
 /**
@@ -39,7 +39,7 @@ export function InboxTopGap({ gap = 10 }) {
 
 const BAR_HEIGHT = 49;
 
-const styles = StyleSheet.create({
+const styles = themed(() => StyleSheet.create({
   bar: {
     flexDirection: 'row',
     alignItems: 'center',
@@ -51,4 +51,4 @@ const styles = StyleSheet.create({
   left: { flexDirection: 'row', alignItems: 'center', gap: 8, flexShrink: 1, minWidth: 0 },
   title: { flexShrink: 1, fontSize: 22, lineHeight: 25.3, color: t.neutral[900], ...font(500) },
   tools: { flexDirection: 'row', alignItems: 'center', flexShrink: 0 },
-});
+}));

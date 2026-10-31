@@ -1,6 +1,6 @@
 import { Pressable, StyleSheet, Text, View } from 'react-native';
-import { PackageIcon } from 'phosphor-react-native';
-import { font } from '../../../theme';
+import { PackageIcon } from '../../../lib/icons';
+import { font, themed } from '../../../theme';
 import PhotoPicker from './PhotoPicker';
 import {
   Field, FieldError, FieldLabel, MoneyInput, PF, PfInput, PfSelect, RadioCards, useInvalidTarget,
@@ -109,7 +109,7 @@ export default function BasicsStep({
   );
 }
 
-const styles = StyleSheet.create({
+const styles = themed(() => StyleSheet.create({
   field: { gap: 6, minWidth: 0 },
   // .pf-package-hint: one quiet line at the end of Basics.
   pkg: {
@@ -118,5 +118,5 @@ const styles = StyleSheet.create({
   },
   pkgText: { flexShrink: 1, fontSize: 13.5, lineHeight: 21.6, color: PF.muted, ...font(400) },
   pkgStrong: { color: PF.greenDark, ...font(700) },
-});
+}));
 

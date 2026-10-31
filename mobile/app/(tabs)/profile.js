@@ -7,7 +7,7 @@ import {
   ArrowCounterClockwiseIcon, BellIcon, CaretRightIcon, ChatTextIcon, EnvelopeSimpleIcon, EyeIcon, GearIcon, InfoIcon, ScanIcon,
   HandshakeIcon, HeartIcon, LifebuoyIcon, FlagIcon, MapPinIcon, PackageIcon, PencilSimpleIcon, QuestionIcon, ShoppingBagIcon,
   StarIcon, StorefrontIcon, UsersThreeIcon,
-} from 'phosphor-react-native';
+} from '../../src/lib/icons';
 import apiClient from '../../src/api/client';
 import { resolveImg } from '../../src/lib/media';
 import { toast } from '../../src/lib/toast';
@@ -25,7 +25,7 @@ import RecentlyViewed from '../../src/components/profile/RecentlyViewed';
 import { countBuyerTabs, errorText } from '../../src/components/profile/profileLib';
 import { syncWishlist } from '../../src/components/profile/wishlistSync';
 import { openAccountSheet } from '../../src/components/AccountSheet';
-import { font, t } from '../../src/theme';
+import { font, t, themed } from '../../src/theme';
 import HeaderGlow from '../../src/components/HeaderGlow';
 import { openSwitchAccount } from '../../src/components/SwitchAccountSheet';
 import { loadSavedAccounts, useSavedAccounts } from '../../src/store/savedAccounts';
@@ -275,7 +275,7 @@ function Guest() {
           <View style={styles.guestActions}>
             <Pressable accessibilityRole="link" onPress={() => toLogin('/profile')} style={({ pressed }) => [styles.guestBtn, styles.guestPrimary, pressed && { opacity: 0.9 }]}>
               <LoginGradient />
-              <Text style={[styles.guestBtnText, { color: '#fff' }]}>Log in</Text>
+              <Text style={[styles.guestBtnText, { color: t.onBrand }]}>Log in</Text>
             </Pressable>
             <Pressable accessibilityRole="link" onPress={() => router.push('/register')} style={({ pressed }) => [styles.guestBtn, pressed && { opacity: 0.9 }]}>
               <Text style={styles.guestBtnText}>Sign up</Text>
@@ -440,7 +440,7 @@ function ProfileLoading() {
   return <PageLoader minHeight={360} label="Loading your profile" />;
 }
 
-const styles = StyleSheet.create({
+const styles = themed(() => StyleSheet.create({
   screen: { flex: 1, backgroundColor: t.neutral[0] },
   scroll: { flex: 1 },
   content: { gap: 12, paddingTop: 12, paddingBottom: 28 },
@@ -483,7 +483,7 @@ const styles = StyleSheet.create({
   confirmTitle: { fontSize: 13, lineHeight: 17.55, color: t.neutral[900], ...font(500) },
   confirmBody: { fontSize: 13, lineHeight: 17.55, color: t.neutral[700], ...font(400) },
   confirmBtn: { paddingVertical: 6, paddingHorizontal: 12, borderRadius: 999, backgroundColor: t.warning[600] },
-  confirmBtnText: { fontSize: 13, lineHeight: 17, color: '#fff', ...font(500) },
+  confirmBtnText: { fontSize: 13, lineHeight: 17, color: t.onBrand, ...font(500) },
 
   stats: { flexDirection: 'row', borderTopWidth: 1, borderTopColor: t.neutral[100] },
   stat: { flex: 1, alignItems: 'center', gap: 1, paddingVertical: 12 },
@@ -503,8 +503,8 @@ const styles = StyleSheet.create({
     alignItems: 'center', justifyContent: 'center',
     borderWidth: 2, borderColor: t.neutral[0], borderRadius: 999, backgroundColor: t.accent[500],
   },
-  badgeText: { fontSize: 10.5, lineHeight: 14, color: '#fff', ...font(500) },
+  badgeText: { fontSize: 10.5, lineHeight: 14, color: t.onBrand, ...font(500) },
 
   skRow: { flexDirection: 'row', alignItems: 'center', gap: 14, padding: 16 },
   skCounts: { flexDirection: 'row', justifyContent: 'space-around', paddingVertical: 14 },
-});
+}));

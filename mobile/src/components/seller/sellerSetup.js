@@ -2,7 +2,7 @@ import {
   PaperPlaneTiltIcon as PaperPlaneTilt, StorefrontIcon as Storefront, TruckIcon as Truck, MapPinIcon as MapPin,
   HandCoinsIcon as HandCoins, QrCodeIcon as QrCode, PackageIcon as Package, IdentificationCardIcon as IdentificationCard,
   SealCheckIcon as SealCheck, ImageIcon,
-} from 'phosphor-react-native';
+} from '../../lib/icons';
 import apiClient from '../../api/client';
 
 /**

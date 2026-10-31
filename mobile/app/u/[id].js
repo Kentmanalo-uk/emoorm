@@ -5,12 +5,12 @@ import {
 import { Redirect, useLocalSearchParams, useRouter } from 'expo-router';
 import {
   CalendarBlankIcon, ChatCircleIcon, MapPinIcon, PencilSimpleIcon, SealCheckIcon,
-} from 'phosphor-react-native';
+} from '../../src/lib/icons';
 import apiClient from '../../src/api/client';
 import PublicHeader from '../../src/components/public/PublicHeader';
 import { resolveImg } from '../../src/lib/media';
 import toast from '../../src/lib/toast';
-import { font, t, text } from '../../src/theme';
+import { font, t, text, themed } from '../../src/theme';
 
 /*
  * web/src/pages/PublicProfile.jsx + PublicProfile.css at phone width.
@@ -179,7 +179,7 @@ export default function PublicProfile() {
   );
 }
 
-const styles = StyleSheet.create({
+const styles = themed(() => StyleSheet.create({
   screen: { flex: 1, backgroundColor: t.neutral[0] },
   scroll: { flex: 1, backgroundColor: t.neutral[0] },
   scrollContent: { flexGrow: 1 },
@@ -265,4 +265,4 @@ const styles = StyleSheet.create({
 
   empty: { alignItems: 'center', paddingVertical: 40, paddingHorizontal: 20 },
   emptyText: { marginBottom: 16, fontSize: 15, lineHeight: 24, color: text.muted, textAlign: 'center', ...font(400) },
-});
+}));

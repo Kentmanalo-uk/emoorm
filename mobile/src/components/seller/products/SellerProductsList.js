@@ -3,9 +3,9 @@ import {
   ActivityIndicator, FlatList, Pressable, RefreshControl, StyleSheet, Text, View,
 } from 'react-native';
 import { useFocusEffect, useLocalSearchParams, useRouter } from 'expo-router';
-import { CaretRightIcon, PackageIcon, PlusIcon } from 'phosphor-react-native';
+import { CaretRightIcon, PackageIcon, PlusIcon } from '../../../lib/icons';
 import apiClient from '../../../api/client';
-import { font, t } from '../../../theme';
+import { font, t, themed } from '../../../theme';
 import { toast } from '../../../lib/toast';
 import { getCacheEntry, setCachedData } from '../../../lib/dataCache';
 import EmptyState from '../../EmptyState';
@@ -418,7 +418,7 @@ function Separator() {
   return <View style={styles.separator} />;
 }
 
-const styles = StyleSheet.create({
+const styles = themed(() => StyleSheet.create({
   // Lets an empty list's message fill the page and centre in it.
   content: { flexGrow: 1 },
   separator: { height: 10 },
@@ -435,4 +435,4 @@ const styles = StyleSheet.create({
   packageTitle: { fontSize: 15, lineHeight: 24, color: t.neutral[900], ...font(500) },
   packageSub: { fontSize: 12.5, lineHeight: 17.5, color: t.neutral[500], ...font(400) },
 
-});
+}));

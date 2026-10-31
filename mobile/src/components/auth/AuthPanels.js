@@ -1,7 +1,7 @@
 import { Image, Pressable, StyleSheet, Text, View } from 'react-native';
 import AuthAddressPicker from './AuthAddressPicker';
 import { AuthErrorBox, AuthField, AuthSubmit } from './AuthForm';
-import { font, t } from '../../theme';
+import { font, t, themed } from '../../theme';
 
 /*
  * The other steps of the website's Log in sheet (web/src/pages/Login.jsx):
@@ -190,7 +190,7 @@ export function MfaSetup({
 
 const mono = { fontFamily: 'monospace' };
 
-const styles = StyleSheet.create({
+const styles = themed(() => StyleSheet.create({
   form: { gap: 16 },
   title: { fontSize: 28, lineHeight: 32.2, letterSpacing: -0.28, color: t.neutral[900], ...font(500) },
   hint: { fontSize: 13.5, lineHeight: 20.9, color: t.neutral[600], textAlign: 'center', marginBottom: 2, ...font(400) },
@@ -239,4 +239,4 @@ const styles = StyleSheet.create({
     textAlign: 'center',
   },
   signedAs: { marginTop: -8 },
-});
+}));

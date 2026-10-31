@@ -1,7 +1,7 @@
 import { usePathname } from 'expo-router';
 import {
   BuildingsIcon, FileTextIcon, ImagesIcon, InfoIcon, QuestionIcon, ShieldCheckIcon, ShoppingBagIcon, StorefrontIcon,
-} from 'phosphor-react-native';
+} from '../../lib/icons';
 import ScreenHeader from '../ScreenHeader';
 import ShellPageMenu from '../ShellPageMenu';
 

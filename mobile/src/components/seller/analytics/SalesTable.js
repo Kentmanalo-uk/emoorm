@@ -1,6 +1,6 @@
 import { useState } from 'react';
 import { Pressable, StyleSheet, Text, View } from 'react-native';
-import { font, t } from '../../../theme';
+import { font, t, themed } from '../../../theme';
 import EmptyState from '../../EmptyState';
 
 const HAIRLINE = 'rgba(15, 23, 42, 0.05)';
@@ -57,7 +57,7 @@ export default function SalesTable({
   );
 }
 
-const styles = StyleSheet.create({
+const styles = themed(() => StyleSheet.create({
   // .an-table-none sits at the card's edge, as on the website.
   none: { marginTop: 4, marginBottom: 8, fontSize: 13.5, lineHeight: 20, color: t.neutral[500], ...font(400) },
   headRow: {
@@ -77,4 +77,4 @@ const styles = StyleSheet.create({
     minHeight: 44, marginTop: 6, alignItems: 'center', justifyContent: 'center', borderRadius: 12, backgroundColor: t.neutral[50],
   },
   moreText: { fontSize: 14, lineHeight: 20, color: t.primary[700], ...font(600) },
-});
+}));

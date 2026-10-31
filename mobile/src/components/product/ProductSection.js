@@ -1,5 +1,5 @@
 import { StyleSheet, Text, View } from 'react-native';
-import { font, t } from '../../theme';
+import { font, t, themed } from '../../theme';
 
 /*
  * The product page's white panels (web ProductDetails.css .pdp-detail-card,
@@ -30,12 +30,12 @@ export default function ProductSection({ children, style, sectionRef }) {
   return <View ref={sectionRef} collapsable={false} style={[styles.card, style]}>{children}</View>;
 }
 
-export const sectionStyles = StyleSheet.create({
-  card: { marginTop: 8, backgroundColor: '#fff' },
-});
+export const sectionStyles = themed(() => StyleSheet.create({
+  card: { marginTop: 8, backgroundColor: t.neutral[0] },
+}));
 
-const styles = StyleSheet.create({
-  card: { marginTop: 8, backgroundColor: '#fff' },
+const styles = themed(() => StyleSheet.create({
+  card: { marginTop: 8, backgroundColor: t.neutral[0] },
   // The title sits in a 24px line box on the website (the head is a block).
   head: {
     flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between', gap: 12, paddingTop: 14, paddingHorizontal: 16,
@@ -46,4 +46,4 @@ const styles = StyleSheet.create({
   count: { paddingVertical: 1, paddingHorizontal: 8, borderRadius: 999, backgroundColor: t.primary[50] },
   countText: { fontSize: 11, lineHeight: 12.65, ...font(500), color: t.primary[700], textAlign: 'center' },
   body: { paddingTop: 10, paddingHorizontal: 16, paddingBottom: 14 },
-});
+}));

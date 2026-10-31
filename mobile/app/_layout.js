@@ -4,8 +4,8 @@ import * as Font from 'expo-font';
 import { loadFontsByFetch } from '../src/lib/devFonts';
 import { SafeAreaProvider } from 'react-native-safe-area-context';
 import { StatusBar } from 'expo-status-bar';
-import { useEffect, useState } from 'react';
-import { Appearance, View, StyleSheet, Text, TextInput } from 'react-native';
+import { Fragment, useEffect, useState } from 'react';
+import { View, StyleSheet, Text, TextInput } from 'react-native';
 import Toast from 'react-native-toast-message';
 import {
   useFonts,
@@ -16,7 +16,9 @@ import {
   DMSans_800ExtraBold,
 } from '@expo-google-fonts/dm-sans';
 import useAuthStore from '../src/store/authStore';
-import { colors, fontFamily } from '../src/theme';
+import { activeScheme, colors, fontFamily, themed } from '../src/theme';
+import ThemeGate from '../src/theme/ThemeGate';
+import { useResolvedScheme } from '../src/store/themeStore';
 import { toastConfig } from '../src/lib/toast';
 import { AccountSwitchHost } from '../src/components/RoleSwitchOverlay';
 import { liquidGlass } from '../src/components/Glass';
@@ -42,6 +44,21 @@ const AUTH_SHEET = liquidGlass
     contentStyle: { backgroundColor: 'transparent' },
   };
 
+/*
+ * Light or dark: each page is built again when the palette changes.
+ *
+ * A stylesheet is frozen the first time its page paints, so a page already
+ * open would otherwise keep the colours it opened with, and the pages
+ * stacked behind it would too. Rebuilding is the only way to turn them all
+ * at once; it costs the open page's scroll position.
+ *
+ * This sits on the navigator rather than around the whole app on purpose:
+ * the navigator's own state — which pages are open, and which one you are
+ * looking at — lives above it, so changing the setting leaves you exactly
+ * where you were instead of dropping you back on the home page.
+ */
+const repaintOnTheme = ({ children }) => <Fragment key={activeScheme()}>{children}</Fragment>;
+
 SplashScreen.preventAutoHideAsync().catch(() => { });
 
 // How long the opening waits for the fonts before it shows the app anyway.
@@ -54,11 +71,7 @@ const FONTS = {
   DMSans_800ExtraBold,
 };
 
-// The app is light only, like the website: a phone in dark mode must not
-// turn the system's own parts dark (the iOS 26 glass bars, tab bars, sheets
-// and menus) under the app's light pages. app.json says the same for builds;
-// this also covers Expo Go, which ignores it.
-try { Appearance.setColorScheme('light'); } catch { /* not on every platform */ }
+
 
 const PROTECTED_PATHS = [
   '/conversation',
@@ -92,6 +105,17 @@ TextInput.defaultProps = TextInput.defaultProps || {};
 TextInput.defaultProps.style = [{ fontFamily: fontFamily.regular }, TextInput.defaultProps.style];
 
 export default function RootLayout() {
+  // ThemeGate sets the palette and remounts the app when it changes, so
+  // every page is painted by the same one.
+  return (
+    <ThemeGate>
+      <AppRoot />
+    </ThemeGate>
+  );
+}
+
+function AppRoot() {
+  const scheme = useResolvedScheme();
   const pathname = usePathname();
   const router = useRouter();
   const hydrate = useAuthStore((s) => s.hydrate);
@@ -136,12 +160,13 @@ export default function RootLayout() {
 
   return (
     <SafeAreaProvider>
-      <StatusBar style="dark" />
+      {/* Dark pages need light clock and battery icons, and the other way round. */}
+      <StatusBar style={scheme === 'dark' ? 'light' : 'dark'} />
       {!isHydrated || !fontsLoaded || requiresLogin ? (
         // Under the opening splash (BrandSplash) until the first page can show.
         <View style={styles.splash} />
       ) : (
-        <Stack screenOptions={{ headerShown: false }}>
+        <Stack screenOptions={{ headerShown: false }} screenLayout={repaintOnTheme}>
           <Stack.Screen name="(tabs)" />
           <Stack.Screen
             name="product/[slug]"
@@ -197,6 +222,6 @@ export default function RootLayout() {
   );
 }
 
-const styles = StyleSheet.create({
+const styles = themed(() => StyleSheet.create({
   splash: { flex: 1, backgroundColor: colors.bgPrimary },
-});
+}));

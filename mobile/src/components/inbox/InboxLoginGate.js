@@ -2,8 +2,8 @@ import { ScrollView, StyleSheet, View } from 'react-native';
 import { usePathname, useRouter } from 'expo-router';
 import {
   ArrowsClockwiseIcon, ChecksIcon, EnvelopeOpenIcon, FunnelIcon, MagnifyingGlassIcon, StorefrontIcon,
-} from 'phosphor-react-native';
-import { t } from '../../theme';
+} from '../../lib/icons';
+import { t, themed } from '../../theme';
 import EmptyState from '../EmptyState';
 import ShellBarButton from '../ShellBarButton';
 import ShellPageMenu from '../ShellPageMenu';
@@ -60,7 +60,7 @@ export default function InboxLoginGate({ page }) {
   );
 }
 
-const styles = StyleSheet.create({
+const styles = themed(() => StyleSheet.create({
   screen: { flex: 1, backgroundColor: t.neutral[0] },
   content: { flexGrow: 1 },
-});
+}));

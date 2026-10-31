@@ -1,7 +1,7 @@
 import { useEffect, useLayoutEffect, useRef } from 'react';
 import { AccessibilityInfo, Animated, Easing, Image, StyleSheet } from 'react-native';
 import { create } from 'zustand';
-import { t } from '../theme';
+import { t, themed } from '../theme';
 
 /*
  * The product photo's flight from a product card to the product page.
@@ -174,6 +174,6 @@ function Flight({ flight }) {
   );
 }
 
-const styles = StyleSheet.create({
+const styles = themed(() => StyleSheet.create({
   frame: { position: 'absolute', overflow: 'hidden', backgroundColor: t.neutral[100], zIndex: 9999, elevation: 9999 },
-});
+}));

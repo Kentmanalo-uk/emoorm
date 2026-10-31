@@ -1,12 +1,12 @@
 import { useEffect, useRef, useState } from 'react';
 import { Pressable, StyleSheet, Text, View } from 'react-native';
 import { router, useLocalSearchParams } from 'expo-router';
-import { CheckCircleIcon, CheckIcon } from 'phosphor-react-native';
+import { CheckCircleIcon, CheckIcon } from '../../src/lib/icons';
 import apiClient from '../../src/api/client';
 import AuthSheet from '../../src/components/auth/AuthSheet';
 import { AuthField, AuthSubmit } from '../../src/components/auth/AuthForm';
 import AuthDone, { DoneIcon, DoneText, DoneTitle } from '../../src/components/auth/AuthDone';
-import { font, t } from '../../src/theme';
+import { font, t, themed } from '../../src/theme';
 
 /**
  * Reset password, from the link in the email (/reset-password?token=…): the
@@ -199,7 +199,7 @@ export default function ResetPassword() {
   );
 }
 
-const styles = StyleSheet.create({
+const styles = themed(() => StyleSheet.create({
   // .rp-card lays its parts 8px apart.
   card: { paddingTop: 8, gap: 8 },
   title: {
@@ -244,4 +244,4 @@ const styles = StyleSheet.create({
   footerText: { fontSize: 14, lineHeight: 22.4, color: t.neutral[600], ...font(400) },
   backLink: { minHeight: 44, justifyContent: 'center' },
   backLinkText: { fontSize: 14, lineHeight: 22.4, color: t.primary[600], ...font(500) },
-});
+}));

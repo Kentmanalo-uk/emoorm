@@ -6,16 +6,18 @@
       "emoorm",
       "shop.emoorm.app"
     ],
-    "version": "2.1.0",
+    "version": "2.2.1",
     "orientation": "portrait",
     "icon": "./assets/icon.png",
-    "userInterfaceStyle": "light",
+    "userInterfaceStyle": "automatic",
     "extra": {
       "apiBaseUrl": "http://10.0.2.2:3000/api",
       "router": {},
       "eas": {
         "projectId": "311942fe-f5ea-4b8d-9f32-081a7f151819"
-      }
+      },
+      "googleWebClientId": "525462391540-idk8hit6qrd139poqu61k5tt4qauga6h.apps.googleusercontent.com",
+      "googleAndroidClientId": "525462391540-s7cggmdnog0i3bvsttfq46qftlalqkn2.apps.googleusercontent.com"
     },
     "ios": {
       "supportsTablet": true,
@@ -42,7 +44,7 @@
         "foregroundImage": "./assets/android-icon-foreground.png",
         "monochromeImage": "./assets/android-icon-monochrome.png"
       },
-      "versionCode": 12,
+      "versionCode": 14,
       "intentFilters": [
         {
           "action": "VIEW",
@@ -108,7 +110,8 @@
       "expo-web-browser",
       "expo-secure-store",
       "expo-image",
-      "expo-sharing"
+      "expo-sharing",
+      "@react-native-google-signin/google-signin"
     ],
     "owner": "devbymikes-team"
   }

@@ -5,7 +5,7 @@ import {
 import apiClient from '../../../api/client';
 import { resolveImg } from '../../../lib/media';
 import { toast } from '../../../lib/toast';
-import { font, t } from '../../../theme';
+import { font, t, themed } from '../../../theme';
 import { Hint } from './FulfillmentParts';
 
 /*
@@ -86,23 +86,23 @@ export function WeightFixer({ products, total, onSaved }) {
   );
 }
 
-const styles = StyleSheet.create({
+const styles = themed(() => StyleSheet.create({
   weigh: {
     marginTop: 12, padding: 14, borderWidth: 1, borderColor: t.warning[200], borderRadius: 14, backgroundColor: t.warning[50],
   },
   weighHead: { gap: 2, marginBottom: 10 },
   weighTitle: { fontSize: 14, lineHeight: 20, color: t.warning[800], ...font(600) },
-  weighSub: { fontSize: 12.5, lineHeight: 18, color: '#a16207', ...font(400) },
+  weighSub: { fontSize: 12.5, lineHeight: 18, color: t.warning[700], ...font(400) },
   weighList: { gap: 6 },
   weighRow: {
-    flexDirection: 'row', alignItems: 'center', gap: 10, paddingVertical: 6, paddingHorizontal: 8, borderRadius: 10, backgroundColor: '#fff',
+    flexDirection: 'row', alignItems: 'center', gap: 10, paddingVertical: 6, paddingHorizontal: 8, borderRadius: 10, backgroundColor: t.neutral[0],
   },
   weighImg: { width: 36, height: 36, borderRadius: 8, backgroundColor: t.neutral[100] },
   weighName: { flex: 1, minWidth: 0, fontSize: 13.5, lineHeight: 20, color: t.neutral[900], ...font(500) },
   weighInputWrap: { flexDirection: 'row', alignItems: 'center', gap: 6, flexShrink: 0 },
   weighInput: {
     width: 84, height: 36, paddingVertical: 0, paddingHorizontal: 8, borderWidth: 1, borderColor: t.neutral[300], borderRadius: 8,
-    backgroundColor: '#fff', fontSize: 14, color: t.neutral[900], ...font(400),
+    backgroundColor: t.neutral[0], fontSize: 14, color: t.neutral[900], ...font(400),
   },
   weighKg: { fontSize: 13, lineHeight: 18, color: t.neutral[500], ...font(600) },
   weighMore: { marginTop: 8 },
@@ -111,5 +111,5 @@ const styles = StyleSheet.create({
     alignItems: 'center', justifyContent: 'center', backgroundColor: t.primary[600],
   },
   weighSaveOff: { opacity: 0.5 },
-  weighSaveText: { fontSize: 14, lineHeight: 18, color: '#fff', ...font(600) },
-});
+  weighSaveText: { fontSize: 14, lineHeight: 18, color: t.onBrand, ...font(600) },
+}));

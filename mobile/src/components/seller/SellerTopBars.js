@@ -5,8 +5,8 @@ import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import {
   BellIcon, CaretDownIcon, CaretLeftIcon, ChatCircleDotsIcon, CheckIcon, GearIcon, HeadsetIcon, PlusIcon,
   ShareNetworkIcon, SparkleIcon,
-} from 'phosphor-react-native';
-import { border, font, t } from '../../theme';
+} from '../../lib/icons';
+import { border, font, ink, t, themed } from '../../theme';
 import useAuthStore from '../../store/authStore';
 import { resolveImg } from '../../lib/media';
 import ShellBarButton from '../ShellBarButton';
@@ -293,7 +293,7 @@ export function SellerBackBar({ title, action, onBack, menu = true, menuItems })
   );
 }
 
-const styles = StyleSheet.create({
+const styles = themed(() => StyleSheet.create({
   head: {
     flexDirection: 'row',
     alignItems: 'center',
@@ -325,7 +325,7 @@ const styles = StyleSheet.create({
     justifyContent: 'center',
     backgroundColor: t.accent[500],
   },
-  badgeText: { fontSize: 10.5, lineHeight: 14, color: '#fff', ...font(700) },
+  badgeText: { fontSize: 10.5, lineHeight: 14, color: t.onBrand, ...font(700) },
 
   chatTitle: { flexDirection: 'row', alignItems: 'center', gap: 10, minWidth: 0, flexShrink: 1 },
   chatSwitch: {
@@ -338,7 +338,7 @@ const styles = StyleSheet.create({
     paddingVertical: 4,
     borderRadius: 16,
     backgroundColor: t.neutral[0],
-    boxShadow: [{ offsetX: 0, offsetY: 12, blurRadius: 30, color: 'rgba(15, 23, 42, 0.14)' }],
+    boxShadow: [{ offsetX: 0, offsetY: 12, blurRadius: 30, color: ink(0.14) }],
   },
   // iOS 26: Liquid Glass behind the rows instead of the website's white.
   chatMenuGlass: { backgroundColor: 'transparent', boxShadow: undefined, overflow: 'hidden' },
@@ -348,7 +348,7 @@ const styles = StyleSheet.create({
   chatRowText: { flex: 1, fontSize: 15, lineHeight: 22, color: t.neutral[800], ...font(400) },
   chatCount: {
     minWidth: 18, height: 18, paddingHorizontal: 5, borderRadius: 999, overflow: 'hidden', backgroundColor: t.accent[500],
-    color: '#fff', fontSize: 10.5, lineHeight: 18, textAlign: 'center', ...font(700),
+    color: t.onBrand, fontSize: 10.5, lineHeight: 18, textAlign: 'center', ...font(700),
   },
 
   shop: { flexDirection: 'row', alignItems: 'center', gap: 12, minWidth: 0, flexShrink: 1 },
@@ -368,4 +368,4 @@ const styles = StyleSheet.create({
     zIndex: 120,
   },
   backtitle: { flex: 1, minWidth: 0, fontSize: 19, lineHeight: 22.8, color: t.neutral[900], ...font(500) },
-});
+}));

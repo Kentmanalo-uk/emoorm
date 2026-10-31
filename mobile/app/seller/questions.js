@@ -11,7 +11,7 @@ import LoadingSkeleton from '../../src/components/LoadingSkeleton';
 import OrderConfirmDialog from '../../src/components/orders/OrderConfirmDialog';
 import QuestionCard from '../../src/components/seller/questions/QuestionCard';
 import { toast } from '../../src/lib/toast';
-import { font, t } from '../../src/theme';
+import { font, t, themed } from '../../src/theme';
 import { PageLoader } from '../../src/components/BrandLoader';
 
 /**
@@ -154,7 +154,7 @@ export default function SellerQuestionsScreen() {
   );
 }
 
-const styles = StyleSheet.create({
+const styles = themed(() => StyleSheet.create({
   flex: { flex: 1 },
   // .sq-tabs
   tabs: { flexDirection: 'row', gap: 6, marginBottom: 14 },
@@ -169,4 +169,4 @@ const styles = StyleSheet.create({
   loading: { gap: 10, padding: 20 },
   // .sq-list
   list: { gap: 12 },
-});
+}));

@@ -6,7 +6,7 @@ import { useRouter } from 'expo-router';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import AsyncStorage from '@react-native-async-storage/async-storage';
 import { File, Paths } from 'expo-file-system';
-import { CheckIcon, DownloadSimpleIcon, ShareNetworkIcon } from 'phosphor-react-native';
+import { CheckIcon, DownloadSimpleIcon, ShareNetworkIcon } from '../../src/lib/icons';
 import SellerPage, { SellerPrivateLine, sellerPageStyles } from '../../src/components/seller/SellerPage';
 import PhoneSaveBar, { PhoneSaveButton, savebarSpace } from '../../src/components/seller/PhoneSaveBar';
 import { useSellerShell } from '../../src/components/seller/SellerShell';
@@ -17,7 +17,7 @@ import { base64ToBytes, bytesToBase64, withPrintDpi } from '../../src/components
 import EmptyState from '../../src/components/EmptyState';
 import { resolveImg } from '../../src/lib/media';
 import { toast } from '../../src/lib/toast';
-import { font, t } from '../../src/theme';
+import { font, ink, t, themed } from '../../src/theme';
 
 /*
  * /seller/shop-qr (web/src/pages/SellerShopQr.jsx, phones): the shop's QR
@@ -420,7 +420,7 @@ export default function SellerShopQrScreen() {
   );
 }
 
-const styles = StyleSheet.create({
+const styles = themed(() => StyleSheet.create({
   flex: { flex: 1 },
   content: { alignItems: 'center' },
   wait: { paddingVertical: 48, alignItems: 'center' },
@@ -431,8 +431,8 @@ const styles = StyleSheet.create({
   sheet: {
     borderRadius: 18, overflow: 'hidden', backgroundColor: t.neutral[0],
     boxShadow: [
-      { offsetX: 0, offsetY: 1, blurRadius: 2, color: 'rgba(15, 23, 42, 0.06)' },
-      { offsetX: 0, offsetY: 14, blurRadius: 34, color: 'rgba(15, 23, 42, 0.08)' },
+      { offsetX: 0, offsetY: 1, blurRadius: 2, color: ink(0.06) },
+      { offsetX: 0, offsetY: 14, blurRadius: 34, color: ink(0.08) },
     ],
   },
   sheetWait: {
@@ -455,7 +455,7 @@ const styles = StyleSheet.create({
   },
   thumbTick: {
     position: 'absolute', top: -7, right: -7, width: 18, height: 18, borderRadius: 9, alignItems: 'center', justifyContent: 'center',
-    backgroundColor: t.primary[600], borderWidth: 2, borderColor: '#fff',
+    backgroundColor: t.primary[600], borderWidth: 2, bordercolor: t.onBrand,
   },
   thumbName: { fontSize: 12, lineHeight: 15, ...font(400), color: t.neutral[600] },
   thumbNameOn: { ...font(500), color: t.neutral[900] },
@@ -465,4 +465,4 @@ const styles = StyleSheet.create({
   btnRow: { flexDirection: 'row', alignItems: 'center', gap: 8 },
   btnText: { fontSize: 15, lineHeight: 20, ...font(500) },
   btnTextPlain: { color: t.neutral[700] },
-});
+}));

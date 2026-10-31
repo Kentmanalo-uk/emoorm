@@ -5,7 +5,7 @@ import {
   ArrowsLeftRightIcon, BellIcon, CaretRightIcon, ChatTextIcon, GearIcon, HandshakeIcon, HeadsetIcon, HeartbeatIcon,
   IdentificationCardIcon, LifebuoyIcon, MapPinIcon, PaintBrushIcon, QrCodeIcon, QuestionIcon, SignOutIcon,
   StorefrontIcon, TruckIcon, UserIcon, WalletIcon,
-} from 'phosphor-react-native';
+} from '../../../src/lib/icons';
 import apiClient from '../../../src/api/client';
 import useAuthStore from '../../../src/store/authStore';
 import { BACKEND_URL, resolveImg } from '../../../src/lib/media';
@@ -16,7 +16,7 @@ import { useSellerShell } from '../../../src/components/seller/SellerShell';
 import { MeCard, MeList, MeRow, meStyles } from '../../../src/components/seller/me/MeParts';
 import ShopQrPop from '../../../src/components/seller/me/ShopQrPop';
 import { qrMethod } from '../../../src/components/seller/me/qrPayment';
-import { font, t } from '../../../src/theme';
+import { font, t, themed } from '../../../src/theme';
 
 /*
  * /seller/menu, "Me" (web/src/pages/SellerMenu.jsx + SellerApp.css .sme-*),
@@ -44,12 +44,12 @@ const HEALTH = {
 };
 
 // The health row's icon tile and level colour, per tone (.sh-notice is-*, .sme-health is-*).
-const TONES = {
+const TONES = themed(() => ({
   good: { bg: t.primary[50], icon: t.primary[600], level: t.primary[700] },
   ok: { bg: t.warning[50], icon: t.warning[600], level: t.warning[700] },
   bad: { bg: t.danger[50], icon: t.danger[600], level: t.danger[700] },
   none: { bg: t.neutral[100], icon: t.neutral[500], level: t.neutral[900] },
-};
+}));
 
 const HEALTH_KEY = 'seller:health';
 
@@ -283,7 +283,7 @@ export default function SellerMeScreen() {
   );
 }
 
-const styles = StyleSheet.create({
+const styles = themed(() => StyleSheet.create({
   // The bar above already stands in for the website's 4px top padding (.sme-head is inside it there).
   content: { paddingTop: 0 },
   // .sh-body: 12px between the sections; 8px more under the last (.sme > .sh-body).
@@ -339,4 +339,4 @@ const styles = StyleSheet.create({
   },
   logoutPressed: { backgroundColor: t.danger[50] },
   logoutText: { fontSize: 15, lineHeight: 24, ...font(500), color: t.danger[600] },
-});
+}));

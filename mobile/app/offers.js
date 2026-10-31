@@ -5,7 +5,7 @@ import ScreenHeader from '../src/components/ScreenHeader';
 import { PageSubtitle } from '../src/components/profile/ProfileUI';
 import DealList from '../src/components/offers/DealList';
 import useAuthStore from '../src/store/authStore';
-import { t } from '../src/theme';
+import { t, themed } from '../src/theme';
 
 /**
  * /profile/offers, My Offers (web/src/pages/ProfileOffers.jsx): the buyer's
@@ -32,8 +32,8 @@ export default function ProfileOffersScreen() {
   );
 }
 
-const styles = StyleSheet.create({
+const styles = themed(() => StyleSheet.create({
   screen: { flex: 1, backgroundColor: t.neutral[0] },
   scroll: { flex: 1 },
   content: { flexGrow: 1, gap: 12, paddingHorizontal: 12, paddingTop: 12, paddingBottom: 16 },
-});
+}));

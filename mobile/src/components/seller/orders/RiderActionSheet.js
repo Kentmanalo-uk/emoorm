@@ -6,7 +6,7 @@ import apiClient from '../../../api/client';
 import { toast } from '../../../lib/toast';
 import OrderConfirmDialog from '../../orders/OrderConfirmDialog';
 import { peso } from '../../orders/orderProgress';
-import { font, t } from '../../../theme';
+import { font, t, themed } from '../../../theme';
 import {
   feeToAdd, orderPromo, promoSellerLine, redeliveryNote,
 } from './sellerOrderLib';
@@ -192,7 +192,7 @@ export default function RiderActionSheet({ ask, onClose, onDone }) {
   );
 }
 
-const styles = StyleSheet.create({
+const styles = themed(() => StyleSheet.create({
   // .rider-sheet-lines: a grey box of amounts under the question.
   lines: { gap: 6, marginTop: 12, paddingVertical: 10, paddingHorizontal: 12, borderRadius: 10, backgroundColor: t.neutral[50] },
   line: { flexDirection: 'row', justifyContent: 'space-between', gap: 12 },
@@ -215,9 +215,9 @@ const styles = StyleSheet.create({
   reasonOn: { borderColor: t.danger[300], backgroundColor: t.danger[50] },
   radio: {
     width: 16, height: 16, borderRadius: 8, borderWidth: 1.5, borderColor: t.neutral[400],
-    alignItems: 'center', justifyContent: 'center', backgroundColor: '#fff',
+    alignItems: 'center', justifyContent: 'center', backgroundColor: t.neutral[0],
   },
   radioOn: { borderColor: t.danger[600] },
   radioDot: { width: 8, height: 8, borderRadius: 4, backgroundColor: t.danger[600] },
   reasonText: { flex: 1, fontSize: 13.5, lineHeight: 20, ...font(400), color: t.neutral[800] },
-});
+}));

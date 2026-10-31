@@ -3,7 +3,7 @@ import { Image, Pressable, ScrollView, StyleSheet, Text, TextInput, View } from 
 import { useFocusEffect, useRouter } from 'expo-router';
 import {
   BellIcon, BellSlashIcon, MagnifyingGlassIcon, UserMinusIcon, XIcon,
-} from 'phosphor-react-native';
+} from '../src/lib/icons';
 import apiClient from '../src/api/client';
 import ScreenHeader from '../src/components/ScreenHeader';
 import { ProfileEmpty } from '../src/components/profile/ProfileUI';
@@ -12,7 +12,7 @@ import { errorText } from '../src/components/profile/profileLib';
 import { resolveImg } from '../src/lib/media';
 import { toast } from '../src/lib/toast';
 import { invalidateCachedData } from '../src/lib/dataCache';
-import { font, t } from '../src/theme';
+import { font, t, themed } from '../src/theme';
 import { PageLoader } from '../src/components/BrandLoader';
 import { useStorePeek } from '../src/components/peek/StorePeek';
 
@@ -251,7 +251,7 @@ function StoreCardsSkeleton({ count = 4 }) {
 
 const CARD_SHADOW = '0px 1px 2px rgba(15, 23, 42, 0.04)';
 
-const styles = StyleSheet.create({
+const styles = themed(() => StyleSheet.create({
   screen: { flex: 1, backgroundColor: t.neutral[0] },
   content: { flexGrow: 1, gap: 12, paddingHorizontal: 12, paddingTop: 12, paddingBottom: 16 },
   subtitle: { marginTop: 4, fontSize: 13.5, lineHeight: 21.6, color: t.neutral[500], ...font(400) },
@@ -281,7 +281,7 @@ const styles = StyleSheet.create({
     alignItems: 'center', justifyContent: 'center', backgroundColor: t.primary[600],
   },
   avatarImg: { width: '100%', height: '100%' },
-  initials: { fontSize: 20, lineHeight: 26, color: '#fff', ...font(500) },
+  initials: { fontSize: 20, lineHeight: 26, color: t.onBrand, ...font(500) },
   title: { flex: 1, minWidth: 0, gap: 3 },
   name: { fontSize: 18, lineHeight: 23, color: t.neutral[900], ...font(600) },
   location: { fontSize: 13.5, lineHeight: 18, color: t.neutral[500], ...font(400) },
@@ -303,4 +303,4 @@ const styles = StyleSheet.create({
   skRow: { flexDirection: 'row', alignItems: 'center', gap: 12 },
   skLines: { flex: 1, gap: 8 },
   skThumbs: { flexDirection: 'row', gap: 6 },
-});
+}));

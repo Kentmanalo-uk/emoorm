@@ -6,7 +6,7 @@ import { useLocalSearchParams } from 'expo-router';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import apiClient from '../../src/api/client';
 import { toast } from '../../src/lib/toast';
-import { t } from '../../src/theme';
+import { t, themed } from '../../src/theme';
 import SellerPage, { sellerPageStyles } from '../../src/components/seller/SellerPage';
 import SellerChips from '../../src/components/seller/SellerChips';
 import Sheet, { SheetOption } from '../../src/components/Sheet';
@@ -170,11 +170,11 @@ export default function SellerReturnsScreen() {
   );
 }
 
-const styles = StyleSheet.create({
+const styles = themed(() => StyleSheet.create({
   flex: { flex: 1 },
   // .seller-return-layout / .seller-return-list on phones
   layout: { gap: 12, marginTop: 12 },
   list: { gap: 10 },
   // Nothing to show: the empty state takes the rest of the screen and centres in it.
   grow: { flexGrow: 1 },
-});
+}));

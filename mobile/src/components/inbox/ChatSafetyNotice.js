@@ -1,8 +1,8 @@
 import { useState } from 'react';
 import { Pressable, StyleSheet, Text, View } from 'react-native';
-import { CaretDownIcon, ShieldWarningIcon } from 'phosphor-react-native';
+import { CaretDownIcon, ShieldWarningIcon } from '../../lib/icons';
 import { SAFETY_SUMMARY, SAFETY_TIPS } from '../../lib/safetyNotice';
-import { font, t } from '../../theme';
+import { font, t, themed } from '../../theme';
 
 /**
  * The safety strip between a chat's messages and its composer
@@ -40,9 +40,9 @@ export default function ChatSafetyNotice() {
   );
 }
 
-const text = { fontSize: 12, lineHeight: 17.4, color: t.warning[800], ...font(400) };
-
-const styles = StyleSheet.create({
+const styles = themed(() => {
+  const text = { fontSize: 12, lineHeight: 17.4, color: t.warning[800], ...font(400) };
+  return StyleSheet.create({
   wrap: { borderTopWidth: 1, borderTopColor: t.warning[100], backgroundColor: t.warning[50] },
   row: { flexDirection: 'row', alignItems: 'center', gap: 7, paddingVertical: 7, paddingHorizontal: 14 },
   summary: { ...text, flex: 1, minWidth: 0 },
@@ -52,6 +52,7 @@ const styles = StyleSheet.create({
   caretOpen: { transform: [{ rotate: '180deg' }] },
   tips: { paddingRight: 14, paddingBottom: 9, paddingLeft: 18, gap: 3 },
   tip: { flexDirection: 'row' },
-  bullet: { ...text, width: 14, textAlign: 'center' },
-  tipText: { ...text, flex: 1 },
+    bullet: { ...text, width: 14, textAlign: 'center' },
+    tipText: { ...text, flex: 1 },
+  });
 });

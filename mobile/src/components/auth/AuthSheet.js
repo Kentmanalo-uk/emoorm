@@ -6,7 +6,7 @@ import { useRouter } from 'expo-router';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import AuthHeader from '../AuthHeader';
 import { liquidGlass } from '../Glass';
-import { font, t } from '../../theme';
+import { font, t, themed } from '../../theme';
 
 const CLOSE_MS = 260;
 const DISMISS_PX = 110;
@@ -113,7 +113,7 @@ export function HelpLink({ style }) {
   );
 }
 
-const styles = StyleSheet.create({
+const styles = themed(() => StyleSheet.create({
   root: { flex: 1 },
   backdrop: { backgroundColor: 'rgba(15, 23, 42, 0.42)' },
   sheet: { flex: 1, backgroundColor: t.neutral[0] },
@@ -121,4 +121,4 @@ const styles = StyleSheet.create({
   content: { flexGrow: 1, paddingHorizontal: 20 },
   help: { alignSelf: 'center', minHeight: 44, justifyContent: 'center', marginTop: 32 },
   helpText: { fontSize: 14, lineHeight: 22.4, color: t.neutral[500], ...font(500) },
-});
+}));

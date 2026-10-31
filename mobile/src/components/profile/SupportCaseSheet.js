@@ -4,10 +4,10 @@ import {
   TextInput, View, useWindowDimensions,
 } from 'react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
-import { PaperPlaneRightIcon, XIcon } from 'phosphor-react-native';
+import { PaperPlaneRightIcon, XIcon } from '../../lib/icons';
 import apiClient from '../../api/client';
 import { toast } from '../../lib/toast';
-import { font, t } from '../../theme';
+import { font, t, themed } from '../../theme';
 import Select from '../Select';
 import { SheetFrame } from '../Sheet';
 
@@ -140,7 +140,7 @@ export default function SupportCaseSheet({ open, onClose, onOpened }) {
             style={({ pressed }) => [styles.btn, styles.btnGreen, pressed && { backgroundColor: t.primary[700] }, saving && styles.off]}
           >
             {saving ? <ActivityIndicator size={14} color="#fff" /> : <PaperPlaneRightIcon size={14} weight="fill" color="#fff" />}
-            <Text style={[styles.btnText, { color: '#fff' }]}>{saving ? 'Sending…' : 'Start case'}</Text>
+            <Text style={[styles.btnText, { color: t.onBrand }]}>{saving ? 'Sending…' : 'Start case'}</Text>
           </Pressable>
         </View>
       </ScrollView>
@@ -154,7 +154,7 @@ export default function SupportCaseSheet({ open, onClose, onOpened }) {
   );
 }
 
-const styles = StyleSheet.create({
+const styles = themed(() => StyleSheet.create({
   root: { flex: 1, justifyContent: 'flex-end' },
   backdrop: { backgroundColor: 'rgba(15, 23, 42, 0.4)' },
   panel: {
@@ -188,4 +188,4 @@ const styles = StyleSheet.create({
   btnGreen: { backgroundColor: t.primary[600] },
   btnText: { fontSize: 12, lineHeight: 14.4, ...font(500) },
   off: { opacity: 0.6 },
-});
+}));

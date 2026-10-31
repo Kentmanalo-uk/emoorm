@@ -1,7 +1,7 @@
 import { Pressable, StyleSheet, Text, View } from 'react-native';
 import { useRouter } from 'expo-router';
-import { CaretRightIcon, MapPinIcon, PackageIcon } from 'phosphor-react-native';
-import { font, t } from '../../theme';
+import { CaretRightIcon, MapPinIcon, PackageIcon } from '../../lib/icons';
+import { font, t, themed } from '../../theme';
 import ShopTileImage from './ShopTileImage';
 import StoreListLogo from './StoreListLogo';
 import { useStorePeek } from '../peek/StorePeek';
@@ -61,7 +61,7 @@ export default function StoreListCard({ store }) {
   );
 }
 
-const styles = StyleSheet.create({
+const styles = themed(() => StyleSheet.create({
   card: {
     marginHorizontal: -12, padding: 14, backgroundColor: t.neutral[0],
     borderBottomWidth: 1, borderBottomColor: t.neutral[200],
@@ -76,4 +76,4 @@ const styles = StyleSheet.create({
   desc: { marginTop: 10, fontSize: 13.5, lineHeight: 19.575, ...font(400), color: t.neutral[600] },
   previews: { flexDirection: 'row', gap: 6, marginTop: 12 },
   preview: { flex: 1, aspectRatio: 1, overflow: 'hidden', borderRadius: 10, backgroundColor: t.neutral[100] },
-});
+}));

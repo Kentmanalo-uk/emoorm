@@ -1,7 +1,7 @@
 import { useEffect, useRef, useState } from 'react';
 import { Animated, Pressable, StyleSheet, Text, TextInput, View } from 'react-native';
-import { CheckIcon, MinusIcon, PlusIcon, TrashIcon } from 'phosphor-react-native';
-import { font, t } from '../../../theme';
+import { CheckIcon, MinusIcon, PlusIcon, TrashIcon } from '../../../lib/icons';
+import { font, t, themed } from '../../../theme';
 import { MAX_EACH, P, firstImage, peso, priceOf } from './pkfLib';
 import { Thumb } from './PkfBits';
 
@@ -113,7 +113,7 @@ export function PickLoading({ first }) {
   );
 }
 
-const styles = StyleSheet.create({
+const styles = themed(() => StyleSheet.create({
   pick: {
     flexDirection: 'row', alignItems: 'center', gap: 8, paddingVertical: 6, paddingLeft: 4, paddingRight: 8, backgroundColor: t.neutral[0],
   },
@@ -144,4 +144,4 @@ const styles = StyleSheet.create({
 
   loading: { height: 60, backgroundColor: t.neutral[50], overflow: 'hidden' },
   loadingGlow: { backgroundColor: t.neutral[100] },
-});
+}));

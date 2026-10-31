@@ -3,10 +3,10 @@ import {
   ActivityIndicator, Animated, Easing, KeyboardAvoidingView, Modal, Platform, Pressable, ScrollView, StyleSheet, Text, TextInput, View,
 } from 'react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
-import { CaretDownIcon, WarningIcon, XIcon } from 'phosphor-react-native';
+import { CaretDownIcon, WarningIcon, XIcon } from '../../lib/icons';
 import apiClient from '../../api/client';
 import { toast } from '../../lib/toast';
-import { font, t } from '../../theme';
+import { font, t, themed } from '../../theme';
 import { SelectSheet } from '../Select';
 import { SheetFrame } from '../Sheet';
 
@@ -163,7 +163,7 @@ export default function ShopReportSheet({ storeId, targetName, onClose }) {
   );
 }
 
-const styles = StyleSheet.create({
+const styles = themed(() => StyleSheet.create({
   root: { flex: 1, justifyContent: 'flex-end' },
   backdrop: { backgroundColor: 'rgba(0, 0, 0, 0.5)' },
   panel: {
@@ -201,7 +201,7 @@ const styles = StyleSheet.create({
   cancel: { borderWidth: 1, borderColor: t.neutral[300], backgroundColor: t.neutral[0] },
   cancelText: { fontSize: 14, lineHeight: 16.8, ...font(400), color: t.neutral[700] },
   submit: { backgroundColor: t.danger[500] },
-  submitText: { fontSize: 14, lineHeight: 16.8, ...font(500), color: '#fff' },
+  submitText: { fontSize: 14, lineHeight: 16.8, ...font(500), color: t.onBrand },
   disabled: { opacity: 0.5 },
   busy: { flexDirection: 'row', alignItems: 'center', gap: 8 },
-});
+}));

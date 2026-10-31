@@ -2,8 +2,8 @@ import { Share, StyleSheet, Text, View } from 'react-native';
 import { useRouter } from 'expo-router';
 import {
   ArrowSquareOutIcon, ChatCircleTextIcon, MapPinIcon, PackageIcon, ShareNetworkIcon, UserPlusIcon,
-} from 'phosphor-react-native';
-import { t } from '../../theme';
+} from '../../lib/icons';
+import { t, themed } from '../../theme';
 import useAuthStore from '../../store/authStore';
 import { toast } from '../../lib/toast';
 import StoreListLogo from '../shop/StoreListLogo';
@@ -116,7 +116,7 @@ export function StorePeekCard({ store }) {
   );
 }
 
-const styles = StyleSheet.create({
+const styles = themed(() => StyleSheet.create({
   head: { flexDirection: 'row', alignItems: 'center', gap: 14, padding: 16 },
   logo: { width: 64, height: 64, borderRadius: 16 },
   headText: { flex: 1, minWidth: 0, gap: 4 },
@@ -125,4 +125,4 @@ const styles = StyleSheet.create({
   body: { paddingTop: 0, gap: 12 },
   products: { flexDirection: 'row', gap: 8 },
   product: { flex: 1, aspectRatio: 1, overflow: 'hidden', borderRadius: 12, backgroundColor: t.neutral[100] },
-});
+}));

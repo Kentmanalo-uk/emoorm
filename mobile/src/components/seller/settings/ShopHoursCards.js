@@ -1,11 +1,11 @@
 import { useState } from 'react';
 import { Pressable, StyleSheet, Text, TextInput, View } from 'react-native';
-import { AirplaneTiltIcon, CheckIcon } from 'phosphor-react-native';
+import { AirplaneTiltIcon, CheckIcon } from '../../../lib/icons';
 import apiClient from '../../../api/client';
 import Select from '../../Select';
 import { DAYS, shortDate } from '../../shop/shopHours';
 import { toast } from '../../../lib/toast';
-import { font, t } from '../../../theme';
+import { font, t, themed } from '../../../theme';
 import { SellerButton } from './SettingsCard';
 import { DateField, TimeField } from './PickerFields';
 
@@ -192,7 +192,7 @@ export function HoursForm({ store, onSaved }) {
   );
 }
 
-const styles = StyleSheet.create({
+const styles = themed(() => StyleSheet.create({
   // .sst-panel .shc-body on phones: under its row, 16px sides.
   body: { gap: 12, paddingTop: 0, paddingHorizontal: 16, paddingBottom: 16 },
   help: { fontSize: 13.5, lineHeight: 20.9, ...font(400), color: t.neutral[600] },
@@ -231,4 +231,4 @@ const styles = StyleSheet.create({
 
   actions: { flexDirection: 'row', gap: 8 },
   action: { flex: 1 },
-});
+}));

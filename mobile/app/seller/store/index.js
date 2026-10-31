@@ -4,10 +4,10 @@ import { useFocusEffect, useLocalSearchParams, useRouter } from 'expo-router';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import {
   FloppyDiskIcon, ImageIcon, MapPinIcon, PaletteIcon, StorefrontIcon,
-} from 'phosphor-react-native';
+} from '../../../src/lib/icons';
 import apiClient from '../../../src/api/client';
 import { toast } from '../../../src/lib/toast';
-import { font, t } from '../../../src/theme';
+import { font, t, themed } from '../../../src/theme';
 import LoadingSkeleton from '../../../src/components/LoadingSkeleton';
 import LocationPicker from '../../../src/components/maps/LocationPicker';
 import SellerPage, { SellerPrivateLine, sellerPageStyles } from '../../../src/components/seller/SellerPage';
@@ -191,7 +191,7 @@ function CreateStore({ form, setForm, onCreated }) {
   );
 }
 
-const styles = StyleSheet.create({
+const styles = themed(() => StyleSheet.create({
   flex: { flex: 1 },
   loading: { gap: 10, paddingVertical: 16, paddingHorizontal: 4 },
   title: { marginTop: 8, fontSize: 20, lineHeight: 26, color: t.neutral[900], ...font(500) },
@@ -208,6 +208,6 @@ const styles = StyleSheet.create({
     backgroundColor: t.primary[600],
   },
   primaryPressed: { backgroundColor: t.primary[700] },
-  primaryText: { fontSize: 14, lineHeight: 20, color: '#fff', ...font(500) },
+  primaryText: { fontSize: 14, lineHeight: 20, color: t.onBrand, ...font(500) },
   off: { opacity: 0.6 },
-});
+}));

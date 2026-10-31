@@ -2,8 +2,8 @@ import {
   Image, Linking, Modal, Pressable, StyleSheet, Text, View,
 } from 'react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
-import { ArrowSquareOutIcon, XIcon } from 'phosphor-react-native';
-import { font } from '../../../theme';
+import { ArrowSquareOutIcon, XIcon } from '../../../lib/icons';
+import { font, themed } from '../../../theme';
 
 /**
  * A proof photo on the whole screen. The website opens the picture in a new
@@ -34,7 +34,7 @@ export default function PhotoViewer({ uri, title, onClose }) {
   );
 }
 
-const styles = StyleSheet.create({
+const styles = themed(() => StyleSheet.create({
   root: { flex: 1, backgroundColor: 'rgba(0, 0, 0, 0.92)', justifyContent: 'center' },
   img: { width: '100%', height: '80%' },
   bar: {
@@ -44,4 +44,4 @@ const styles = StyleSheet.create({
   title: { flex: 1, fontSize: 15, lineHeight: 22, ...font(500), color: '#fff' },
   btns: { flexDirection: 'row', gap: 8 },
   btn: { width: 40, height: 40, borderRadius: 20, alignItems: 'center', justifyContent: 'center', backgroundColor: 'rgba(0, 0, 0, 0.5)' },
-});
+}));

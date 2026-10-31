@@ -4,10 +4,10 @@ import {
 } from 'react-native';
 import { useFocusEffect, useLocalSearchParams, useRouter } from 'expo-router';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
-import { InfoIcon, PlusIcon } from 'phosphor-react-native';
+import { InfoIcon, PlusIcon } from '../../../src/lib/icons';
 import apiClient from '../../../src/api/client';
 import { toast } from '../../../src/lib/toast';
-import { font, t } from '../../../src/theme';
+import { font, t, themed } from '../../../src/theme';
 import { momentLabel } from '../../../src/lib/availability';
 import SellerPage from '../../../src/components/seller/SellerPage';
 import EmptyState from '../../../src/components/EmptyState';
@@ -447,7 +447,7 @@ export default function SellerTodayScreen() {
   );
 }
 
-const styles = StyleSheet.create({
+const styles = themed(() => StyleSheet.create({
   screen: { flex: 1 },
   // Lets an empty state fill the page and centre in it; room at the end for "Post an item".
   content: { flexGrow: 1, paddingBottom: 100 },
@@ -463,7 +463,7 @@ const styles = StyleSheet.create({
   postIcon: {
     width: 36, height: 36, borderRadius: 18, alignItems: 'center', justifyContent: 'center', backgroundColor: 'rgba(255, 255, 255, 0.18)',
   },
-  postText: { fontSize: 14.5, lineHeight: 19, ...font(600), color: '#fff' },
+  postText: { fontSize: 14.5, lineHeight: 19, ...font(600), color: t.onBrand },
   off: { opacity: 0.6 },
 
   // .stw-banner
@@ -508,4 +508,4 @@ const styles = StyleSheet.create({
   // .stw-foot
   foot: { marginTop: 20, fontSize: 14, lineHeight: 21, ...font(400), color: t.neutral[600] },
   footLink: { color: t.primary[700], textDecorationLine: 'underline' },
-});
+}));

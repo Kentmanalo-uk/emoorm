@@ -2,7 +2,7 @@ import { useEffect, useRef } from 'react';
 import {
   Animated, Easing, StyleSheet, View,
 } from 'react-native';
-import { font } from '../theme';
+import { font, themed, t } from '../theme';
 
 /*
  * Words in a weight wave (the Start selling sticker's, and the signed-out
@@ -13,7 +13,7 @@ import { font } from '../theme';
  * lighter one under it, so there is no see-through dip). Each cell is as wide
  * as the boldest glyph, pulled together a little, so nothing shifts.
  *
- *   <WeightWaveText text="Log in" style={{ fontSize: 15, lineHeight: 18, color: '#fff' }} />
+ *   <WeightWaveText text="Log in" style={{ fontSize: 15, lineHeight: 18, color: t.onBrand }} />
  *
  * style:  size, line height and colour (the weight is the wave's)
  * period: one wave and its rest, in ms
@@ -63,11 +63,11 @@ export default function WeightWaveText({ text, style, period = 2800, paused = fa
   );
 }
 
-const styles = StyleSheet.create({
+const styles = themed(() => StyleSheet.create({
   words: { flexDirection: 'row' },
   sizer: { opacity: 0 },
   layer: { position: 'absolute', left: 0, right: 0, top: 0, textAlign: 'center' },
   regular: { ...font(400) },
   semi: { ...font(600) },
   bold: { ...font(800) },
-});
+}));

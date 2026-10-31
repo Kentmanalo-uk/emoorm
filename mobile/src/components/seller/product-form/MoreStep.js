@@ -1,6 +1,6 @@
 import { Pressable, StyleSheet, Text, View } from 'react-native';
-import { PlusIcon } from 'phosphor-react-native';
-import { font, t } from '../../../theme';
+import { PlusIcon } from '../../../lib/icons';
+import { font, t, themed } from '../../../theme';
 import ChoiceGroup from './ChoiceGroup';
 import Model3dNote from './Model3dNote';
 import {
@@ -259,7 +259,7 @@ export default function MoreStep({
   );
 }
 
-const styles = StyleSheet.create({
+const styles = themed(() => StyleSheet.create({
   list: { gap: 10 },
   groups: { gap: 12 },
   addGroup: {
@@ -308,4 +308,4 @@ const styles = StyleSheet.create({
   policyLabel: { fontSize: 14, lineHeight: 22.4, color: t.neutral[800], ...font(600) },
   link: { alignSelf: 'flex-start', minHeight: 32, paddingHorizontal: 2, justifyContent: 'center' },
   linkText: { fontSize: 13, lineHeight: 20.8, color: PF.muted, textDecorationLine: 'underline', ...font(500) },
-});
+}));

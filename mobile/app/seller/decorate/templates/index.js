@@ -1,7 +1,7 @@
 import { Pressable, StyleSheet, Text, View, useWindowDimensions } from 'react-native';
 import { useRouter } from 'expo-router';
-import { CheckIcon } from 'phosphor-react-native';
-import { font, t } from '../../../../src/theme';
+import { CheckIcon } from '../../../../src/lib/icons';
+import { font, t, themed } from '../../../../src/theme';
 import SellerPage from '../../../../src/components/seller/SellerPage';
 import { useSellerShell } from '../../../../src/components/seller/SellerShell';
 import ShopPreview from '../../../../src/components/seller/decorate/ShopPreview';
@@ -72,7 +72,7 @@ export default function SellerTemplatesScreen() {
   );
 }
 
-const styles = StyleSheet.create({
+const styles = themed(() => StyleSheet.create({
   grid: { flexDirection: 'row', flexWrap: 'wrap', gap: GAP },
   card: {
     gap: 3, minWidth: 0, paddingTop: 8, paddingHorizontal: 8, paddingBottom: 12, borderRadius: 16, backgroundColor: t.neutral[0],
@@ -94,13 +94,13 @@ const styles = StyleSheet.create({
     backgroundColor: t.accent[600],
   },
   tagOn: { backgroundColor: t.neutral[0] },
-  tagText: { fontSize: 11.5, lineHeight: 16, color: '#fff', ...font(500) },
+  tagText: { fontSize: 11.5, lineHeight: 16, color: t.onBrand, ...font(500) },
   tagTextOn: { color: t.primary[700] },
   nameRow: { flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between', gap: 8, paddingHorizontal: 4 },
   name: { flexShrink: 1, fontSize: 14.5, lineHeight: 23.2, color: t.neutral[900], ...font(500) },
   swatches: { flexDirection: 'row', flexShrink: 0 },
   // 14px circles with a 2px white border and a 1px outline.
-  swatch: { width: 14, height: 14, borderWidth: 2, borderColor: '#fff', borderRadius: 7, outlineWidth: 1, outlineColor: t.neutral[200], outlineStyle: 'solid' },
+  swatch: { width: 14, height: 14, borderWidth: 2, bordercolor: t.onBrand, borderRadius: 7, outlineWidth: 1, outlineColor: t.neutral[200], outlineStyle: 'solid' },
   swatchNext: { marginLeft: -5 },
   tagline: { paddingHorizontal: 4, fontSize: 12.5, lineHeight: 16.875, color: t.neutral[500], ...font(400) },
-});
+}));

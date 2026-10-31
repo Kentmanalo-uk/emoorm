@@ -1,11 +1,11 @@
 import { useState } from 'react';
 import { Pressable, StyleSheet, Text, View } from 'react-native';
 import { useRouter } from 'expo-router';
-import { ArrowRightIcon, LockSimpleIcon } from 'phosphor-react-native';
+import { ArrowRightIcon, LockSimpleIcon } from '../../src/lib/icons';
 import SellerPage from '../../src/components/seller/SellerPage';
 import { useSellerShell } from '../../src/components/seller/SellerShell';
 import IdentityVerifier from '../../src/components/seller/verification/IdentityVerifier';
-import { font, t } from '../../src/theme';
+import { font, t, themed } from '../../src/theme';
 
 /**
  * /seller/verification (web/src/pages/SellerVerification.jsx; SellerSetup.css
@@ -48,7 +48,7 @@ export default function SellerVerificationScreen() {
   );
 }
 
-const styles = StyleSheet.create({
+const styles = themed(() => StyleSheet.create({
   // .sv-privacy on phones: a green band across the screen, 8px grey under it.
   privacy: {
     flexDirection: 'row', alignItems: 'center', gap: 8, marginHorizontal: -12, paddingVertical: 10, paddingHorizontal: 14,
@@ -61,4 +61,4 @@ const styles = StyleSheet.create({
     paddingHorizontal: 22, borderRadius: 999, backgroundColor: t.primary[600],
   },
   nextText: { fontSize: 15, lineHeight: 20, color: t.neutral[0], ...font(700) },
-});
+}));

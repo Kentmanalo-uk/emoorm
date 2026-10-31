@@ -1,9 +1,10 @@
 import { Platform } from 'react-native';
 import AsyncStorage from '@react-native-async-storage/async-storage';
+import Constants, { ExecutionEnvironment } from 'expo-constants';
 import * as Linking from 'expo-linking';
 import * as WebBrowser from 'expo-web-browser';
 import apiClient from '../../api/client';
-import { API_BASE_URL } from '../../lib/config';
+import { API_BASE_URL, GOOGLE_WEB_CLIENT_ID } from '../../lib/config';
 
 /*
  * "Continue with Google" in the app (Android and iPhone, Expo Go too). Google
@@ -22,6 +23,58 @@ import { API_BASE_URL } from '../../lib/config';
  * The app must answer the shop.emoorm.app scheme (app.json "scheme"); the
  * server only sends a pass back to app links (auth.service).
  */
+
+/*
+ * Android, in a real build: Google signs the phone in itself, through Play
+ * Services, and hands back an ID token made out to the server -- no browser,
+ * no round trip. That also steps around the trap the browser flow fell into:
+ * the app claims every https link on the site as an App Link, so Google's
+ * redirect back to /api/auth/google/app/callback was opened by the app, which
+ * has no such route and showed "page not found".
+ *
+ * Expo Go has no such native code, and iOS has no client of its own yet, so
+ * both keep the browser flow below.
+ */
+const IN_EXPO_GO = Constants.executionEnvironment === ExecutionEnvironment.StoreClient;
+const NATIVE_GOOGLE = Platform.OS === 'android' && !IN_EXPO_GO && Boolean(GOOGLE_WEB_CLIENT_ID);
+const nativeGoogle = () => (NATIVE_GOOGLE ? require('@react-native-google-signin/google-signin') : null);
+
+/**
+ * Signs in through Play Services and swaps Google's ID token for the same
+ * answer as the website's POST /auth/google.
+ * @returns {Promise<String|null>} an error message when it could not start
+ */
+async function signInNatively() {
+  const mod = nativeGoogle();
+  if (!mod) return GOOGLE_MESSAGES.unavailable;
+  const { GoogleSignin, isSuccessResponse } = mod;
+  try {
+    // The audience is the server's, not this app's (lib/config.js).
+    GoogleSignin.configure({ webClientId: GOOGLE_WEB_CLIENT_ID, offlineAccess: false });
+    await GoogleSignin.hasPlayServices({ showPlayServicesUpdateDialog: true });
+    // As the website's prompt=select_account: never sign the last one back
+    // in without asking, so a shared phone can change hands.
+    try { await GoogleSignin.signOut(); } catch { /* nobody was signed in */ }
+    const result = await GoogleSignin.signIn();
+    if (!isSuccessResponse(result)) {
+      deliverGoogleAnswer({ cancelled: true });
+      return null;
+    }
+    const idToken = result.data?.idToken;
+    if (!idToken) return GOOGLE_MESSAGES.unavailable;
+    const body = await apiClient.post('/auth/google', { idToken });
+    deliverGoogleAnswer({ data: body?.data });
+    return null;
+  } catch (err) {
+    // A build signed with a key the Android client does not list.
+    if (err?.code === 'DEVELOPER_ERROR') return GOOGLE_MESSAGES.unavailable;
+    if (String(err?.code) === '12501' || /cancel/i.test(err?.message || '')) {
+      deliverGoogleAnswer({ cancelled: true });
+      return null;
+    }
+    return err?.message || GOOGLE_MESSAGES.unavailable;
+  }
+}
 
 const PENDING_KEY = 'emoorm_google_signin';
 const PENDING_TTL_MS = 15 * 60 * 1000;
@@ -116,6 +169,7 @@ const makeVerifier = () => {
  */
 export async function startGoogleSignIn(after = {}) {
   if (Platform.OS === 'web') return GOOGLE_MESSAGES.unavailable;
+  if (NATIVE_GOOGLE) return signInNatively();
   const verifier = makeVerifier();
   const challenge = base64url(sha256(verifier));
   // This app's own link: shop.emoorm.app://google-signin, or Expo Go's exp://…/--/google-signin.

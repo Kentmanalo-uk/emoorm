@@ -3,9 +3,9 @@ import { StyleSheet, Text, View } from 'react-native';
 import { useRouter } from 'expo-router';
 import {
   ArrowSquareOutIcon, ChecksIcon, StorefrontIcon,
-} from 'phosphor-react-native';
+} from '../../lib/icons';
 import apiClient from '../../api/client';
-import { font, t } from '../../theme';
+import { font, t, themed } from '../../theme';
 import ChatAvatar from '../inbox/ChatAvatar';
 import InboxSpinner from '../inbox/InboxSpinner';
 import { formatTime } from '../inbox/inboxFormat';
@@ -101,7 +101,7 @@ export function ConversationPeekCard({ item, currentUserId }) {
   );
 }
 
-const styles = StyleSheet.create({
+const styles = themed(() => StyleSheet.create({
   head: {
     flexDirection: 'row', alignItems: 'center', gap: 12, paddingHorizontal: 16, paddingVertical: 12,
     borderBottomWidth: 1, borderBottomColor: t.neutral[100],
@@ -115,4 +115,4 @@ const styles = StyleSheet.create({
   mine: { alignSelf: 'flex-end', backgroundColor: t.primary[600] },
   bubbleText: { fontSize: 14, lineHeight: 19, ...font(400), color: t.neutral[800] },
   mineText: { color: t.neutral[0] },
-});
+}));

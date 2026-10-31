@@ -1,6 +1,6 @@
 import { useState } from 'react';
 import { Image, StyleSheet, Text, View } from 'react-native';
-import { font, t } from '../../theme';
+import { font, t, themed } from '../../theme';
 
 /*
  * The website's map markers as native views, for the Apple Maps versions of
@@ -44,14 +44,14 @@ export function MeDot() {
   );
 }
 
-const styles = StyleSheet.create({
+const styles = themed(() => StyleSheet.create({
   drop: { ...PIN_DROP_SIZE, alignItems: 'center', justifyContent: 'flex-start', paddingTop: 1 },
   dropHead: {
-    width: 26, height: 26, borderWidth: 3, borderColor: '#fff', backgroundColor: t.primary[600],
+    width: 26, height: 26, borderWidth: 3, bordercolor: t.onBrand, backgroundColor: t.primary[600],
     borderTopLeftRadius: 13, borderTopRightRadius: 13, borderBottomRightRadius: 13, borderBottomLeftRadius: 0,
     transform: [{ rotate: '-45deg' }], boxShadow: '0px 3px 9px rgba(15, 23, 42, 0.3)',
   },
-  dropDot: { position: 'absolute', top: 7, left: 7, width: 6, height: 6, borderRadius: 3, backgroundColor: '#fff' },
+  dropDot: { position: 'absolute', top: 7, left: 7, width: 6, height: 6, borderRadius: 3, backgroundcolor: t.onBrand },
 
   shop: { ...SHOP_PIN_SIZE },
   shopTip: {
@@ -71,7 +71,7 @@ const styles = StyleSheet.create({
     alignItems: 'center', justifyContent: 'center',
   },
   meDot: {
-    width: 12, height: 12, borderRadius: 6, borderWidth: 2, borderColor: '#fff', backgroundColor: '#2563eb',
+    width: 12, height: 12, borderRadius: 6, borderWidth: 2, bordercolor: t.onBrand, backgroundColor: '#2563eb',
     boxShadow: '0px 1px 4px rgba(0, 0, 0, 0.3)',
   },
-});
+}));

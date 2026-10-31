@@ -3,8 +3,8 @@ import {
   ActivityIndicator, Animated, Easing, Image, Pressable, StyleSheet, Text, TextInput, View,
 } from 'react-native';
 import * as ImagePicker from 'expo-image-picker';
-import { ArrowRightIcon, CheckCircleIcon, CheckIcon, UploadSimpleIcon } from 'phosphor-react-native';
-import { font, t } from '../../../theme';
+import { ArrowRightIcon, CheckCircleIcon, CheckIcon, UploadSimpleIcon } from '../../../lib/icons';
+import { font, ink, t, themed } from '../../../theme';
 import { resolveImg } from '../../../lib/media';
 import { uploadImage } from '../../../lib/upload';
 import { toast } from '../../../lib/toast';
@@ -287,7 +287,7 @@ export function WelcomeSpinner({ still = false }) {
   return <Animated.View accessibilityLabel="Loading" style={[styles.spinner, { transform: [{ rotate }] }]} />;
 }
 
-const styles = StyleSheet.create({
+const styles = themed(() => StyleSheet.create({
   flex: { flex: 1, minWidth: 0 },
 
   btn: {
@@ -305,7 +305,7 @@ const styles = StyleSheet.create({
   btnText: { minHeight: 44, backgroundColor: 'transparent' },
   btnTextPressed: { backgroundColor: t.neutral[100] },
   btnOff: { opacity: 0.5 },
-  btnLabel: { fontSize: 16, lineHeight: 25.6, color: '#fff', ...font(500) },
+  btnLabel: { fontSize: 16, lineHeight: 25.6, color: t.onBrand, ...font(500) },
   btnLabelGhost: { color: t.neutral[800] },
   btnLabelText: { color: t.neutral[600] },
 
@@ -343,7 +343,7 @@ const styles = StyleSheet.create({
   pillOn: { borderColor: t.primary[600], backgroundColor: t.primary[600] },
   pillText: { fontSize: 14.5, lineHeight: 23.2, color: t.neutral[800], ...font(400) },
   townText: { fontSize: 13.5, lineHeight: 21.6 },
-  pillTextOn: { color: '#fff' },
+  pillTextOn: { color: t.onBrand },
 
   field: { gap: 6 },
   fieldLabel: { fontSize: 14, lineHeight: 22.4, color: t.neutral[700], ...font(500) },
@@ -420,8 +420,8 @@ const styles = StyleSheet.create({
     width: 22,
     height: 22,
     borderRadius: 11,
-    backgroundColor: '#fff',
-    boxShadow: [{ offsetX: 0, offsetY: 1, blurRadius: 3, color: 'rgba(15, 23, 42, 0.25)' }],
+    backgroundColor: t.neutral[0],
+    boxShadow: [{ offsetX: 0, offsetY: 1, blurRadius: 3, color: ink(0.25) }],
   },
 
   points: { gap: 10 },
@@ -432,7 +432,7 @@ const styles = StyleSheet.create({
   doneText: { flex: 1, fontSize: 15, lineHeight: 24, color: t.primary[700], ...font(500) },
 
   note: { fontSize: 13.5, lineHeight: 20.25, color: t.neutral[500], ...font(400) },
-  noteWarn: { color: '#b45309' },
+  noteWarn: { color: t.warning[700] },
   link: { color: t.primary[700], textDecorationLine: 'underline', ...font(500) },
   linkBtn: { alignSelf: 'stretch', alignItems: 'center' },
   linkAlone: { fontSize: 15, lineHeight: 24 },
@@ -473,4 +473,4 @@ const styles = StyleSheet.create({
     borderTopColor: t.primary[600],
     borderRadius: 16,
   },
-});
+}));

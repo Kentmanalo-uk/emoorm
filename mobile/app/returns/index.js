@@ -7,7 +7,7 @@ import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import apiClient from '../../src/api/client';
 import ScreenHeader from '../../src/components/ScreenHeader';
 import { toast } from '../../src/lib/toast';
-import { font, t } from '../../src/theme';
+import { font, t, themed } from '../../src/theme';
 import { OrderCardsSkeleton, OrderTabs } from '../../src/components/orders/OrderBits';
 import OrdersEmpty from '../../src/components/orders/OrdersEmpty';
 import { RETURN_TABS, ReturnCard } from '../../src/components/returns/ReturnBits';
@@ -96,7 +96,7 @@ export default function Returns() {
   );
 }
 
-const styles = StyleSheet.create({
+const styles = themed(() => StyleSheet.create({
   screen: { flex: 1, backgroundColor: t.neutral[0] },
   scroll: { flex: 1 },
   content: { flexGrow: 1, paddingTop: 12, paddingHorizontal: 12, gap: 12 },
@@ -105,4 +105,4 @@ const styles = StyleSheet.create({
   startLink: { minHeight: 32, justifyContent: 'center' },
   startText: { fontSize: 13, lineHeight: 20.8, ...font(500), color: t.primary[600] },
   list: { gap: 12 },
-});
+}));

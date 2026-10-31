@@ -3,7 +3,7 @@ import { StyleSheet, Text, View } from 'react-native';
 import Svg, {
   Circle, Defs, LinearGradient, RadialGradient, Rect, Stop,
 } from 'react-native-svg';
-import { t } from '../../theme';
+import { t, themed } from '../../theme';
 
 /*
  * The painted pieces of the Sell on Emoorm page (web/src/pages/Sell.css):
@@ -12,13 +12,13 @@ import { t } from '../../theme';
  */
 
 // --t-accent-500 → --t-primary-600, as `linear-gradient(95deg, …)`.
-export const SWEEP = [
+export const SWEEP = themed(() => [
   [0, t.accent[500]], [0.06, t.accent[500]], [0.94, t.primary[600]], [1, t.primary[600]],
-];
+]);
 // The closing band's button ends on the lighter green (--t-primary-500).
-export const SWEEP_LIGHT = [
+export const SWEEP_LIGHT = themed(() => [
   [0, t.accent[500]], [0.06, t.accent[500]], [0.94, t.primary[500]], [1, t.primary[500]],
-];
+]);
 
 const uid = (raw) => raw.replace(/[^a-zA-Z0-9]/g, '');
 

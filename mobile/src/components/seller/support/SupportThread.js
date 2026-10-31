@@ -5,21 +5,24 @@ import {
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import {
   CaretLeftIcon, ChatsCircleIcon, LockSimpleIcon, PaperPlaneRightIcon,
-} from 'phosphor-react-native';
+} from '../../../lib/icons';
 import ChatSafetyNotice from '../../inbox/ChatSafetyNotice';
 import Glass, { liquidGlass } from '../../Glass';
-import { font, t } from '../../../theme';
+import { font, t, themed } from '../../../theme';
 import EmptyState from '../../EmptyState';
 import {
   Badge, Message, RatingPrompt, isMine,
 } from './SupportParts';
 
 // .sc-composer on phones: white, a hairline above.
-const COMPOSER_FALLBACK = {
+/* A function, not a table: this is handed to a component whole, and
+   React Native freezes the style it is given. A fresh object each time
+   keeps the colours of the palette in use. */
+const composerFallback = () => ({
   backgroundColor: t.neutral[0],
   borderTopWidth: 1,
   borderTopColor: t.neutral[150],
-};
+});
 
 /**
  * An open case, full screen over the Seller Center's bars (web
@@ -60,7 +63,7 @@ export default function SupportThread({
 
   const composer = (
     <Glass
-      fallbackStyle={COMPOSER_FALLBACK}
+      fallbackStyle={composerFallback()}
       style={[styles.composer, { paddingBottom: 8 + insets.bottom }, liquidGlass && styles.floating]}
       onLayout={liquidGlass ? (e) => setComposerHeight(e.nativeEvent.layout.height) : undefined}
     >
@@ -152,7 +155,7 @@ export default function SupportThread({
   );
 }
 
-const styles = StyleSheet.create({
+const styles = themed(() => StyleSheet.create({
   screen: { flex: 1, backgroundColor: t.neutral[0] },
   flex: { flex: 1 },
 
@@ -187,4 +190,4 @@ const styles = StyleSheet.create({
   send: {
     flexShrink: 0, width: 42, height: 42, borderRadius: 21, alignItems: 'center', justifyContent: 'center', backgroundColor: t.primary[600],
   },
-});
+}));

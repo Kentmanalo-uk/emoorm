@@ -3,12 +3,12 @@ import { ScrollView, StyleSheet, Text, View } from 'react-native';
 import { Redirect, useLocalSearchParams, useRouter } from 'expo-router';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import * as ImagePicker from 'expo-image-picker';
-import { MapPinIcon } from 'phosphor-react-native';
+import { MapPinIcon } from '../../../src/lib/icons';
 import apiClient from '../../../src/api/client';
 import { uploadImage } from '../../../src/lib/upload';
 import { fetchMunicipalities } from '../../../src/lib/referenceData';
 import { toast } from '../../../src/lib/toast';
-import { font, t } from '../../../src/theme';
+import { font, t, themed } from '../../../src/theme';
 import LoadingSkeleton from '../../../src/components/LoadingSkeleton';
 import LocationPicker from '../../../src/components/maps/LocationPicker';
 import OrderConfirmDialog from '../../../src/components/orders/OrderConfirmDialog';
@@ -266,7 +266,7 @@ function StorePart({ part }) {
   );
 }
 
-const styles = StyleSheet.create({
+const styles = themed(() => StyleSheet.create({
   flex: { flex: 1 },
   loading: { gap: 10, paddingVertical: 16, paddingHorizontal: 4 },
   // .seller-card on phones: edge to edge, white; its header is hidden on a part's page.
@@ -280,4 +280,4 @@ const styles = StyleSheet.create({
   actions: {
     marginTop: 8, paddingHorizontal: 16, paddingBottom: 16, borderTopWidth: 1, borderTopColor: t.neutral[100],
   },
-});
+}));

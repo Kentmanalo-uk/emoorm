@@ -2,8 +2,8 @@ import { Linking, StyleSheet, Text, View } from 'react-native';
 import { useRouter } from 'expo-router';
 import {
   ArrowRightIcon, EyeIcon, PhoneIcon, UserIcon,
-} from 'phosphor-react-native';
-import { font, t } from '../../theme';
+} from '../../lib/icons';
+import { font, t, themed } from '../../theme';
 import ProductImage from '../ProductImage';
 import { variationImage } from '../../lib/variationImage';
 import {
@@ -77,7 +77,7 @@ function SellerOrderPeekCard({ order, statusColor }) {
   );
 }
 
-const styles = StyleSheet.create({
+const styles = themed(() => StyleSheet.create({
   head: {
     flexDirection: 'row', alignItems: 'center', gap: 12, paddingHorizontal: 16, paddingVertical: 14,
     borderBottomWidth: 1, borderBottomColor: t.neutral[100],
@@ -96,4 +96,4 @@ const styles = StyleSheet.create({
   },
   buyer: { fontSize: 15, lineHeight: 19, ...font(500), color: t.neutral[900] },
   total: { fontSize: 18, lineHeight: 22, ...font(500), color: t.primary[700] },
-});
+}));

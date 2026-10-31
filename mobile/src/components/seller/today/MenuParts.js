@@ -4,8 +4,8 @@ import {
 } from 'react-native';
 import {
   DotsThreeIcon, ForkKnifeIcon, MagnifyingGlassIcon, PlusIcon,
-} from 'phosphor-react-native';
-import { font, t } from '../../../theme';
+} from '../../../lib/icons';
+import { font, t, themed } from '../../../theme';
 import { resolveImg } from '../../../lib/media';
 import { saleInfo } from '../../../lib/variantPricing';
 import { isOpen, momentLabel, whenLabel } from '../../../lib/availability';
@@ -34,9 +34,9 @@ export const menuStatus = (item, now = Date.now()) => {
   return { tone: 'idle', text: 'Not taking orders yet' };
 };
 
-const TONE = {
+const TONE = themed(() => ({
   live: t.primary[700], soon: t.warning[700], out: t.danger[600], idle: t.neutral[500],
-};
+}));
 const APPROVAL = { PENDING: 'Waiting for approval', HIDDEN: 'Hidden from buyers' };
 
 function Thumb({ images, size }) {
@@ -182,7 +182,7 @@ export function AddFromProductsSheet({
   );
 }
 
-const styles = StyleSheet.create({
+const styles = themed(() => StyleSheet.create({
   // .stw-item
   row: {
     flexDirection: 'row', alignItems: 'center', gap: 12, padding: 12,
@@ -200,7 +200,7 @@ const styles = StyleSheet.create({
     minHeight: 40, paddingHorizontal: 18, alignItems: 'center', justifyContent: 'center',
     borderRadius: 999, backgroundColor: t.primary[600],
   },
-  postText: { fontSize: 15, lineHeight: 20, ...font(500), color: '#fff' },
+  postText: { fontSize: 15, lineHeight: 20, ...font(500), color: t.onBrand },
   more: { width: 40, height: 40, alignItems: 'center', justifyContent: 'center', borderRadius: 20 },
   off: { opacity: 0.55 },
 
@@ -220,4 +220,4 @@ const styles = StyleSheet.create({
   confirm: { gap: 14, paddingBottom: 4 },
   hint: { fontSize: 15, lineHeight: 22.5, ...font(400), color: t.neutral[700] },
   empty: { paddingVertical: 12, paddingHorizontal: 4 },
-});
+}));

@@ -1,5 +1,6 @@
 import { Tabs } from 'expo-router';
 import SellerTabBar from '../../../src/components/seller/SellerTabBar';
+import { t } from '../../../src/theme';
 
 // The phone tab bar's five pages (web SellerLayout PHONE_TABS): Home, My
 // products, Chat, Marketing, Me. Every other Seller Center page is outside
@@ -9,7 +10,7 @@ import SellerTabBar from '../../../src/components/seller/SellerTabBar';
 // background is Liquid Glass.
 export default function SellerTabsLayout() {
   return (
-    <Tabs screenOptions={{ headerShown: false, sceneStyle: { backgroundColor: '#fff' } }} tabBar={(props) => <SellerTabBar {...props} />}>
+    <Tabs screenOptions={{ headerShown: false, sceneStyle: { backgroundColor: t.neutral[0] } }} tabBar={(props) => <SellerTabBar {...props} />}>
       <Tabs.Screen name="index" options={{ title: 'Home' }} />
       <Tabs.Screen name="products" options={{ title: 'My products' }} />
       <Tabs.Screen name="messages" options={{ title: 'Chat' }} />

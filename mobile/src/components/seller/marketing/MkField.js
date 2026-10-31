@@ -1,6 +1,6 @@
 import { Children } from 'react';
 import { StyleSheet, Text, View } from 'react-native';
-import { font, t } from '../../../theme';
+import { font, t, themed } from '../../../theme';
 
 /*
  * A labelled field in a Seller Center sheet (web SellerMobile.css .scm-field
@@ -28,7 +28,7 @@ export function MkFieldRow({ children }) {
   );
 }
 
-export const fieldStyles = StyleSheet.create({
+export const fieldStyles = themed(() => StyleSheet.create({
   field: { minWidth: 0, gap: 6, marginBottom: 12 },
   label: { fontSize: 13, lineHeight: 20.8, ...font(400), color: t.neutral[600] },
   input: {
@@ -45,4 +45,4 @@ export const fieldStyles = StyleSheet.create({
   half: { flex: 1, minWidth: 0 },
   // .smk-sheet-note
   note: { marginTop: 4, marginBottom: 12, fontSize: 14, lineHeight: 22.4, ...font(400), color: t.neutral[500] },
-});
+}));

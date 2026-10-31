@@ -3,7 +3,7 @@ import {
   Image, Pressable, ScrollView, StyleSheet, Text, View, useWindowDimensions,
 } from 'react-native';
 import { useLocalSearchParams, useRouter } from 'expo-router';
-import { ArrowRightIcon, MapPinIcon } from 'phosphor-react-native';
+import { ArrowRightIcon, MapPinIcon } from '../../../src/lib/icons';
 import apiClient from '../../../src/api/client';
 import EmptyState from '../../../src/components/EmptyState';
 import PublicHeader from '../../../src/components/public/PublicHeader';
@@ -11,7 +11,7 @@ import {
   MunicipalityGalleryStack, MunicipalityProductCard, MunicipalitySeal, MunicipalitySectionHead, MunicipalityStoreRow,
 } from '../../../src/components/public/MunicipalityParts';
 import { resolveImg } from '../../../src/lib/media';
-import { font, t } from '../../../src/theme';
+import { font, t, themed } from '../../../src/theme';
 import { PageLoader } from '../../../src/components/BrandLoader';
 
 /*
@@ -148,7 +148,7 @@ export default function MunicipalityShowcase() {
   );
 }
 
-const styles = StyleSheet.create({
+const styles = themed(() => StyleSheet.create({
   screen: { flex: 1, backgroundColor: t.neutral[50] },
   scroll: { flex: 1, backgroundColor: t.neutral[50] },
   page: { flexGrow: 1, backgroundColor: t.neutral[50] },
@@ -232,4 +232,4 @@ const styles = StyleSheet.create({
 
   // The section's empty state on a white card.
   empty: { borderRadius: 12, backgroundColor: t.neutral[0] },
-});
+}));

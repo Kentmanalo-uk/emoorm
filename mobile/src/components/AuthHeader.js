@@ -1,7 +1,7 @@
 import { Pressable, StyleSheet, Text, View } from 'react-native';
-import { XIcon } from 'phosphor-react-native';
+import { XIcon } from '../lib/icons';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
-import { font, t } from '../theme';
+import { font, t, themed } from '../theme';
 import { liquidGlass } from './Glass';
 
 /**
@@ -43,7 +43,7 @@ export default function AuthHeader({ onClose, onSwitch, switchLabel, switchBold 
   );
 }
 
-const styles = StyleSheet.create({
+const styles = themed(() => StyleSheet.create({
   bar: {
     flexDirection: 'row',
     alignItems: 'center',
@@ -75,4 +75,4 @@ const styles = StyleSheet.create({
   switchPressed: { backgroundColor: t.primary[50] },
   switchText: { fontSize: 15, lineHeight: 24, color: t.primary[700], ...font(500) },
   switchBold: { ...font(700) },
-});
+}));

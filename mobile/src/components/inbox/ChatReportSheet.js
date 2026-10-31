@@ -1,9 +1,9 @@
 import { useEffect, useState } from 'react';
 import { Pressable, ScrollView, StyleSheet, Text, TextInput, View } from 'react-native';
-import { CaretDownIcon, CheckIcon, WarningIcon, XIcon } from 'phosphor-react-native';
+import { CaretDownIcon, CheckIcon, WarningIcon, XIcon } from '../../lib/icons';
 import apiClient from '../../api/client';
 import { toast } from '../../lib/toast';
-import { font, t } from '../../theme';
+import { font, t, themed } from '../../theme';
 import InboxSheet from './InboxSheet';
 
 /*
@@ -141,7 +141,7 @@ export default function ChatReportSheet({
   );
 }
 
-const styles = StyleSheet.create({
+const styles = themed(() => StyleSheet.create({
   sheet: { borderTopLeftRadius: 16, borderTopRightRadius: 16 },
   inner: { paddingTop: 18, paddingHorizontal: 16 },
   head: { flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between', marginBottom: 16 },
@@ -177,4 +177,4 @@ const styles = StyleSheet.create({
   submit: { flex: 1, minHeight: 44, alignItems: 'center', justifyContent: 'center', borderRadius: 8, backgroundColor: t.danger[500] },
   submitText: { fontSize: 14, color: t.neutral[0], ...font(500) },
   disabled: { opacity: 0.5 },
-});
+}));

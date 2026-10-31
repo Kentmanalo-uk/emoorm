@@ -5,12 +5,12 @@ import {
 import { useRouter } from 'expo-router';
 import {
   CalendarCheckIcon, CheckCircleIcon, HandshakeIcon, MapPinIcon, PhoneIcon, ReceiptIcon,
-} from 'phosphor-react-native';
+} from '../../lib/icons';
 import apiClient from '../../api/client';
 import ProductImage from '../ProductImage';
 import OrderConfirmDialog from '../orders/OrderConfirmDialog';
 import { toast } from '../../lib/toast';
-import { font, t } from '../../theme';
+import { font, ink, t, themed } from '../../theme';
 import {
   TALKING, clock, day, dealStatus, heads, orderPath, peso, telHref, when,
 } from './offerText';
@@ -31,12 +31,12 @@ import { MeetupSheet, PriceSheet, RecordSheet } from './DealSheets';
 /** A weight as the website draws it on this side's pages. */
 export const dealWeight = (side, weight) => font(side === 'seller' ? weight : Math.min(weight, 500));
 
-const TONES = {
+const TONES = themed(() => ({
   amber: { bg: t.warning[100], fg: t.warning[800] },
   blue: { bg: t.sky[100], fg: '#075985' },
   green: { bg: t.primary[100], fg: t.primary[800] },
   gray: { bg: t.neutral[100], fg: t.neutral[600] },
-};
+}));
 
 /** Where a deal stands, as a small pill (.of-badge). */
 export function DealBadge({ status, side, style }) {
@@ -294,10 +294,10 @@ export default function DealCard({ deal, side, onChanged, compact = false }) {
   );
 }
 
-const styles = StyleSheet.create({
+const styles = themed(() => StyleSheet.create({
   deal: {
     width: '100%', maxWidth: 380, gap: 10, padding: 14, borderRadius: 18, backgroundColor: t.neutral[0],
-    boxShadow: [{ offsetX: 0, offsetY: 6, blurRadius: 24, color: 'rgba(15, 23, 42, 0.08)' }],
+    boxShadow: [{ offsetX: 0, offsetY: 6, blurRadius: 24, color: ink(0.08) }],
   },
   top: { flexDirection: 'row', alignItems: 'center', gap: 10 },
   img: { width: 48, height: 48, overflow: 'hidden', borderRadius: 12, backgroundColor: t.neutral[100] },
@@ -336,4 +336,4 @@ const styles = StyleSheet.create({
 
   badge: { alignSelf: 'flex-start', maxWidth: '100%', paddingHorizontal: 9, borderRadius: 999 },
   badgeText: { fontSize: 11.5, lineHeight: 18 },
-});
+}));

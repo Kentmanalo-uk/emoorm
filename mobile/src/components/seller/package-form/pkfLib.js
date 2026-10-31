@@ -1,4 +1,4 @@
-import { t } from '../../../theme';
+import { t, themed } from '../../../theme';
 import { activeSalePrice } from '../../../lib/variantPricing';
 import { productKind } from '../productKinds';
 
@@ -33,7 +33,7 @@ export const NOTICE_HOURS = ['2', '6', '12', '24', '48', '72', '168'];
 export const KIND_TAGS = { READY_TO_EAT: 'Ready to eat', COOK_TO_ORDER: 'Paluto' };
 
 /** The form's colours (.pkf custom properties). */
-export const P = {
+export const P = themed(() => ({
   green: t.primary[600],
   greenDark: t.primary[700],
   greenSoft: t.primary[50],
@@ -41,7 +41,7 @@ export const P = {
   ink: t.neutral[900],
   muted: t.neutral[500],
   danger: t.danger[600],
-};
+}));
 
 /** "1 day", "2 days", "6 hours", "1 week". */
 export const aheadText = (hours) => {

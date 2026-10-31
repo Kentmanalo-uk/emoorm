@@ -5,7 +5,7 @@ import {
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { create } from 'zustand';
 import { GlassView } from 'expo-glass-effect';
-import { font, t } from '../theme';
+import { font, ink, t, themed, veil } from '../theme';
 import { liquidGlass } from './Glass';
 import GradientIcon from './GradientIcon';
 
@@ -378,13 +378,13 @@ export function PeekBody({ children, style }) {
   return <View style={[styles.body, style]}>{children}</View>;
 }
 
-export const peekText = StyleSheet.create({
+export const peekText = themed(() => StyleSheet.create({
   title: { fontSize: 17, lineHeight: 22, ...font(500), color: t.neutral[900] },
   sub: { fontSize: 13, lineHeight: 18, ...font(400), color: t.neutral[500] },
   body: { fontSize: 14, lineHeight: 20, ...font(400), color: t.neutral[700] },
-});
+}));
 
-const styles = StyleSheet.create({
+const styles = themed(() => StyleSheet.create({
   layer: { ...StyleSheet.absoluteFill, zIndex: 9000, elevation: 9000 },
   dim: { backgroundColor: 'rgba(15, 23, 42, 0.45)' },
   // iOS 26: lighter, so the glass menu reads as glass.
@@ -396,7 +396,7 @@ const styles = StyleSheet.create({
     overflow: 'hidden',
     borderRadius: 18,
     backgroundColor: t.neutral[0],
-    boxShadow: [{ offsetX: 0, offsetY: 18, blurRadius: 44, color: 'rgba(15, 23, 42, 0.28)' }],
+    boxShadow: [{ offsetX: 0, offsetY: 18, blurRadius: 44, color: ink(0.28) }],
   },
   cardPressed: { opacity: 0.92 },
   body: { gap: 4, paddingHorizontal: 16, paddingTop: 12, paddingBottom: 14 },
@@ -405,16 +405,16 @@ const styles = StyleSheet.create({
   menuBox: { minWidth: 210 },
   menu: { overflow: 'hidden', borderRadius: 18 },
   // Not iOS 26: the white panel with a soft shadow.
-  menuPlain: { backgroundColor: t.neutral[0], boxShadow: [{ offsetX: 0, offsetY: 10, blurRadius: 30, color: 'rgba(15, 23, 42, 0.2)' }] },
+  menuPlain: { backgroundColor: t.neutral[0], boxShadow: [{ offsetX: 0, offsetY: 10, blurRadius: 30, color: ink(0.2) }] },
   menuGlass: { backgroundColor: 'transparent' },
   action: {
     flexDirection: 'row', alignItems: 'center', gap: 12,
     minHeight: 48, paddingLeft: 14, paddingRight: 20,
   },
-  actionRule: { borderTopWidth: StyleSheet.hairlineWidth, borderTopColor: 'rgba(15, 23, 42, 0.14)' },
-  actionRuleGlass: { borderTopWidth: StyleSheet.hairlineWidth, borderTopColor: 'rgba(15, 23, 42, 0.1)' },
-  actionPressed: { backgroundColor: 'rgba(15, 23, 42, 0.06)' },
-  actionPressedGlass: { backgroundColor: 'rgba(255, 255, 255, 0.35)' },
+  actionRule: { borderTopWidth: StyleSheet.hairlineWidth, borderTopColor: ink(0.14) },
+  actionRuleGlass: { borderTopWidth: StyleSheet.hairlineWidth, borderTopColor: ink(0.1) },
+  actionPressed: { backgroundColor: ink(0.06) },
+  actionPressedGlass: { backgroundColor: veil(0.35) },
   actionText: { flexShrink: 1, fontSize: 16, lineHeight: 20, ...font(400), color: t.neutral[900] },
   destructive: { color: t.danger[600] },
-});
+}));

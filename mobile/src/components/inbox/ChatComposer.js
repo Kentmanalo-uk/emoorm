@@ -1,8 +1,8 @@
 import { forwardRef, useState } from 'react';
 import { Image, Platform, Pressable, StyleSheet, Text, TextInput, View } from 'react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
-import { ImageIcon, PaperPlaneTiltIcon, PushPinIcon, TagIcon, XIcon } from 'phosphor-react-native';
-import { font, t } from '../../theme';
+import { ImageIcon, PaperPlaneTiltIcon, PushPinIcon, TagIcon, XIcon } from '../../lib/icons';
+import { font, t, themed, veil } from '../../theme';
 import Glass from '../Glass';
 import InboxSpinner from './InboxSpinner';
 
@@ -116,7 +116,7 @@ const ChatComposer = forwardRef(function ChatComposer({
 
 export default ChatComposer;
 
-const styles = StyleSheet.create({
+const styles = themed(() => StyleSheet.create({
   composer: { paddingTop: 8, paddingHorizontal: 8 },
   composerLook: { borderTopWidth: 1, borderTopColor: t.neutral[150], backgroundColor: t.neutral[0] },
   attachments: { flexDirection: 'row', flexWrap: 'wrap', alignItems: 'center', gap: 8, paddingTop: 2, paddingHorizontal: 4, paddingBottom: 8 },
@@ -126,7 +126,7 @@ const styles = StyleSheet.create({
     position: 'absolute', top: 4, right: 4, width: 20, height: 20, borderRadius: 10, alignItems: 'center', justifyContent: 'center',
     backgroundColor: 'rgba(17, 24, 39, 0.7)',
   },
-  attachBusy: { ...StyleSheet.absoluteFill, alignItems: 'center', justifyContent: 'center', backgroundColor: 'rgba(255, 255, 255, 0.6)' },
+  attachBusy: { ...StyleSheet.absoluteFill, alignItems: 'center', justifyContent: 'center', backgroundColor: veil(0.6) },
   chip: {
     flexDirection: 'row', alignItems: 'center', gap: 6, maxWidth: '100%', paddingVertical: 5, paddingLeft: 10, paddingRight: 6,
     borderRadius: 999, backgroundColor: t.primary[50],
@@ -156,4 +156,4 @@ const styles = StyleSheet.create({
   send: { width: 40, height: 40, borderRadius: 20, alignItems: 'center', justifyContent: 'center', flexShrink: 0 },
   sendPressed: { backgroundColor: 'rgba(34, 197, 94, 0.1)' },
   sendOff: { opacity: 0.35 },
-});
+}));

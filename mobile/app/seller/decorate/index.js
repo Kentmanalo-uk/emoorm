@@ -1,6 +1,6 @@
 import { Pressable, StyleSheet, Text, View } from 'react-native';
 import { useRouter } from 'expo-router';
-import { font, t } from '../../../src/theme';
+import { font, t, themed } from '../../../src/theme';
 import SellerPage from '../../../src/components/seller/SellerPage';
 import { useSellerShell } from '../../../src/components/seller/SellerShell';
 import ShopPreview from '../../../src/components/seller/decorate/ShopPreview';
@@ -93,7 +93,7 @@ export default function SellerDecorateScreen() {
   );
 }
 
-const styles = StyleSheet.create({
+const styles = themed(() => StyleSheet.create({
   body: { gap: 12 },
   // .sdc-block on phones: edge to edge, an 8px grey band under each but the last.
   block: { marginHorizontal: -12, borderBottomWidth: 8, borderBottomColor: t.neutral[100], backgroundColor: t.neutral[0] },
@@ -111,6 +111,6 @@ const styles = StyleSheet.create({
     minWidth: 96, height: 40, paddingHorizontal: 20, alignItems: 'center', justifyContent: 'center', borderRadius: 999, backgroundColor: t.primary[600],
   },
   startPressed: { backgroundColor: t.primary[700] },
-  startText: { fontSize: 14, lineHeight: 20, color: '#fff', ...font(500) },
+  startText: { fontSize: 14, lineHeight: 20, color: t.onBrand, ...font(500) },
   note: { marginTop: 8, fontSize: 12.5, lineHeight: 20, color: t.neutral[500], ...font(400) },
-});
+}));

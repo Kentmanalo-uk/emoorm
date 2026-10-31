@@ -4,10 +4,10 @@ import {
 } from 'react-native';
 import { useRouter } from 'expo-router';
 import Svg, { G, Path, Rect } from 'react-native-svg';
-import { PrinterIcon, QrCodeIcon, XIcon } from 'phosphor-react-native';
+import { PrinterIcon, QrCodeIcon, XIcon } from '../../../lib/icons';
 import { activateKeepAwakeAsync, deactivateKeepAwake } from 'expo-keep-awake';
 import { resolveImg } from '../../../lib/media';
-import { font, t } from '../../../theme';
+import { font, t, themed } from '../../../theme';
 import { useReducedMotion } from '../SellerGuideArt';
 import {
   logoHole, modulePath, qrMatrix, shopQrLabel, shopQrUrl,
@@ -297,7 +297,7 @@ export default function ShopQrPop({ store, originRef, onActive }) {
   );
 }
 
-const styles = StyleSheet.create({
+const styles = themed(() => StyleSheet.create({
   // A quiet round 42px button in line with the shop's name.
   icon: {
     width: 42,
@@ -324,7 +324,7 @@ const styles = StyleSheet.create({
     paddingBottom: 18,
     paddingHorizontal: 20,
     borderRadius: 24,
-    backgroundColor: '#FFFFFF',
+    backgroundcolor: t.onBrand,
     backfaceVisibility: 'hidden',
   },
   back: {
@@ -352,7 +352,7 @@ const styles = StyleSheet.create({
   },
   closePressed: { backgroundColor: t.neutral[200] },
 
-  code: { backgroundColor: '#FFFFFF' },
+  code: { backgroundcolor: t.onBrand },
 
   foot: { alignItems: 'center', alignSelf: 'stretch', marginTop: 6 },
   scan: { fontSize: 15, lineHeight: 22, ...font(500), color: t.neutral[900], textAlign: 'center' },
@@ -363,4 +363,4 @@ const styles = StyleSheet.create({
   },
   posterPressed: { backgroundColor: t.primary[50] },
   posterText: { fontSize: 13, lineHeight: 18, ...font(500), color: t.primary[700] },
-});
+}));

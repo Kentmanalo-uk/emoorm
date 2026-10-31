@@ -1,5 +1,5 @@
 import { StyleSheet, Text, View } from 'react-native';
-import { font, t } from '../../../theme';
+import { font, t, themed } from '../../../theme';
 import { Field, Hint, PF, Segmented } from './parts';
 
 const NOT_BY_COURIER = {
@@ -52,11 +52,11 @@ export default function WayField({
 }
 
 /** .pf-derived: a value worked out for the seller, on a light grey box. */
-export const derivedStyles = StyleSheet.create({
+export const derivedStyles = themed(() => StyleSheet.create({
   box: {
     justifyContent: 'center', gap: 2, minHeight: 46, paddingVertical: 8, paddingHorizontal: 14,
     borderRadius: 12, backgroundColor: t.neutral[50],
   },
   strong: { fontSize: 15, lineHeight: 24, color: PF.ink, ...font(700) },
   small: { fontSize: 12, lineHeight: 19.2, color: PF.muted, ...font(400) },
-});
+}));

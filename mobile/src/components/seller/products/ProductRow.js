@@ -2,8 +2,8 @@ import { useState } from 'react';
 import { Image, Pressable, StyleSheet, Text, View } from 'react-native';
 import {
   DotsThreeIcon, PackageIcon, PencilSimpleIcon, PlusIcon, WarningCircleIcon,
-} from 'phosphor-react-native';
-import { font, t } from '../../../theme';
+} from '../../../lib/icons';
+import { font, t, themed } from '../../../theme';
 import { resolveImg } from '../../../lib/media';
 import { isOpen as windowOpen, isTodayProduct, windowState } from '../../../lib/availability';
 import { isStockless, priceUnit, productKind } from '../productKinds';
@@ -137,8 +137,9 @@ export function Badge({ tone, Icon, label, small = false }) {
   );
 }
 
-const KIND_TONE = { bg: t.primary[50], fg: t.primary[700] };
-const TODAY_TONE = { bg: t.accent[50], fg: t.accent[700] };
+// Read on use, so the badges follow the mode.
+const KIND_TONE = { get bg() { return t.primary[50]; }, get fg() { return t.primary[700]; } };
+const TODAY_TONE = { get bg() { return t.accent[50]; }, get fg() { return t.accent[700]; } };
 
 // The stock cell: what the product has left, in its kind's words.
 function Stock({ product, kind }) {
@@ -217,7 +218,7 @@ export function ProductRowSkeleton() {
   );
 }
 
-const styles = StyleSheet.create({
+const styles = themed(() => StyleSheet.create({
   // .products-table tbody tr: padding 14, 16px corners, white; the card runs
   // edge to edge (the .seller-card around the list cancels the 12px gutter).
   card: {
@@ -276,4 +277,4 @@ const styles = StyleSheet.create({
   noteIcon: { marginTop: 3 },
   noteText: { flex: 1, fontSize: 12.5, lineHeight: 18.75, color: t.danger[700], ...font(400) },
   noteStrong: { ...font(700) },
-});
+}));

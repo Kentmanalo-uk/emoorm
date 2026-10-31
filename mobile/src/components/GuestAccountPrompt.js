@@ -2,7 +2,7 @@ import { useRouter } from 'expo-router';
 import { View, Text, StyleSheet } from 'react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import Button from './Button';
-import { colors, radius, spacing, typography } from '../theme';
+import { colors, radius, spacing, typography, themed } from '../theme';
 
 export default function GuestAccountPrompt({ Icon, title, message, redirect, embedded = false }) {
   const router = useRouter();
@@ -33,7 +33,7 @@ export default function GuestAccountPrompt({ Icon, title, message, redirect, emb
   );
 }
 
-const styles = StyleSheet.create({
+const styles = themed(() => StyleSheet.create({
   screen: { flex: 1, justifyContent: 'center', paddingHorizontal: spacing.xl, backgroundColor: colors.bgSecondary },
   content: { width: '100%', maxWidth: 420, alignSelf: 'center', alignItems: 'center', padding: spacing.xl, borderRadius: radius.lg, backgroundColor: colors.white },
   embeddedContent: { marginHorizontal: spacing.lg, marginBottom: spacing.lg, borderWidth: StyleSheet.hairlineWidth, borderColor: colors.borderLight },
@@ -44,4 +44,4 @@ const styles = StyleSheet.create({
   actions: { width: '100%', marginTop: spacing.xl, gap: spacing.sm },
   embeddedActions: { flexDirection: 'row', marginTop: spacing.lg },
   embeddedAction: { flex: 1 },
-});
+}));

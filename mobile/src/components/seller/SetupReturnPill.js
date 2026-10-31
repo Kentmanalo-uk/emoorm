@@ -1,8 +1,8 @@
 import { Pressable, StyleSheet, Text, View } from 'react-native';
 import { usePathname, useRouter } from 'expo-router';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
-import { ArrowLeftIcon, XIcon } from 'phosphor-react-native';
-import { font, t } from '../../theme';
+import { ArrowLeftIcon, XIcon } from '../../lib/icons';
+import { font, ink, t, themed } from '../../theme';
 import { clearSetupReturn, useSetupReturn } from '../../lib/setupReturn';
 
 /**
@@ -37,7 +37,7 @@ export default function SetupReturnPill() {
   );
 }
 
-const styles = StyleSheet.create({
+const styles = themed(() => StyleSheet.create({
   wrap: { ...StyleSheet.absoluteFill, alignItems: 'center', justifyContent: 'flex-end', zIndex: 250 },
   pill: {
     flexDirection: 'row',
@@ -46,12 +46,12 @@ const styles = StyleSheet.create({
     padding: 4,
     borderRadius: 999,
     backgroundColor: t.neutral[900],
-    boxShadow: [{ offsetX: 0, offsetY: 8, blurRadius: 24, color: 'rgba(15, 23, 42, 0.25)' }],
+    boxShadow: [{ offsetX: 0, offsetY: 8, blurRadius: 24, color: ink(0.25) }],
   },
   back: {
     flexDirection: 'row', alignItems: 'center', gap: 8, minHeight: 40, paddingHorizontal: 16, borderRadius: 999, backgroundColor: t.primary[600],
   },
   backPressed: { backgroundColor: t.primary[700] },
-  backText: { fontSize: 14, lineHeight: 20, color: '#fff', ...font(500) },
+  backText: { fontSize: 14, lineHeight: 20, color: t.onBrand, ...font(500) },
   close: { width: 36, height: 36, borderRadius: 18, alignItems: 'center', justifyContent: 'center' },
-});
+}));

@@ -1,9 +1,9 @@
 import { Pressable, StyleSheet, Text, View } from 'react-native';
 import { useRouter } from 'expo-router';
-import { ClockIcon, MapPinIcon, StarIcon } from 'phosphor-react-native';
+import { ClockIcon, MapPinIcon, StarIcon } from '../lib/icons';
 import { isEndingSoon, shortLeft, windowState } from '../lib/availability';
 import { saleInfo } from '../lib/variantPricing';
-import { font, t } from '../theme';
+import { font, t, themed, veil } from '../theme';
 import { ProductStars } from './ProductStats';
 import ProductImage from './ProductImage';
 import { peso, SaleWas } from './SaleTag';
@@ -113,14 +113,14 @@ export default function TodayCard({ item, result = false, onPress, style }) {
   );
 }
 
-const styles = StyleSheet.create({
+const styles = themed(() => StyleSheet.create({
   card: { minWidth: 0, overflow: 'hidden', borderRadius: 12, backgroundColor: t.neutral[0] },
   image: { width: '100%', aspectRatio: 1, overflow: 'hidden', backgroundColor: t.neutral[100] },
   leftBadge: {
     position: 'absolute', right: 6, bottom: 6, paddingVertical: 1, paddingHorizontal: 6, borderRadius: 3, overflow: 'hidden',
-    backgroundColor: 'rgba(17, 24, 39, 0.72)', color: '#fff', fontSize: 11, lineHeight: 16.5, ...font(500),
+    backgroundColor: 'rgba(17, 24, 39, 0.72)', color: t.onBrand, fontSize: 11, lineHeight: 16.5, ...font(500),
   },
-  cover: { ...StyleSheet.absoluteFill, alignItems: 'center', justifyContent: 'center', backgroundColor: 'rgba(255, 255, 255, 0.72)' },
+  cover: { ...StyleSheet.absoluteFill, alignItems: 'center', justifyContent: 'center', backgroundColor: veil(0.72) },
   coverText: { fontSize: 14, lineHeight: 22.4, ...font(500), color: t.neutral[800] },
 
   info: { flex: 1, paddingTop: 8, paddingHorizontal: 10, paddingBottom: 10, gap: 3 },
@@ -149,4 +149,4 @@ const styles = StyleSheet.create({
   ratingText: { color: t.neutral[700] },
   newText: { color: t.primary[700] },
   place: { flexDirection: 'row', alignItems: 'center', gap: 3, minWidth: 0 },
-});
+}));

@@ -1,8 +1,8 @@
 import { useEffect, useRef, useState } from 'react';
 import { Animated, Easing, Modal, Pressable, StyleSheet, Text } from 'react-native';
 import { useRouter } from 'expo-router';
-import { DotsThreeIcon } from 'phosphor-react-native';
-import { font, t } from '../../theme';
+import { DotsThreeIcon } from '../../lib/icons';
+import { font, ink, t, themed } from '../../theme';
 import { GlassBackdrop, liquidGlass } from '../Glass';
 import { closeMenu, enterRow, menuPopStyle, menuRowStyle, openMenu } from '../menuMotion';
 
@@ -101,7 +101,7 @@ function MenuRow({ item: it, index, onPress }) {
   );
 }
 
-const styles = StyleSheet.create({
+const styles = themed(() => StyleSheet.create({
   btn: { width: 42, height: 42, borderRadius: 21, alignItems: 'center', justifyContent: 'center' },
   btnPressed: { backgroundColor: t.neutral[100] },
   pop: {
@@ -111,8 +111,8 @@ const styles = StyleSheet.create({
     borderRadius: 14,
     backgroundColor: t.neutral[0],
     boxShadow: [
-      { offsetX: 0, offsetY: 12, blurRadius: 32, color: 'rgba(15, 23, 42, 0.18)' },
-      { offsetX: 0, offsetY: 2, blurRadius: 6, color: 'rgba(15, 23, 42, 0.06)' },
+      { offsetX: 0, offsetY: 12, blurRadius: 32, color: ink(0.18) },
+      { offsetX: 0, offsetY: 2, blurRadius: 6, color: ink(0.06) },
     ],
   },
   // iOS 26: the glass is the panel; the website's white and shadow go.
@@ -120,4 +120,4 @@ const styles = StyleSheet.create({
   row: { flexDirection: 'row', alignItems: 'center', gap: 10, paddingVertical: 11, paddingHorizontal: 12, borderRadius: 10 },
   rowPressed: { backgroundColor: t.neutral[100] },
   rowText: { fontSize: 14, lineHeight: 22.4, ...font(400) },
-});
+}));

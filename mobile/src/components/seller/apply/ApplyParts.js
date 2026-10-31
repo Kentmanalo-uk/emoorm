@@ -4,7 +4,7 @@ import {
 } from 'react-native';
 import {
   CameraIcon, CheckIcon, FileTextIcon, MoneyIcon, XIcon,
-} from 'phosphor-react-native';
+} from '../../../lib/icons';
 import { SvgXml } from 'react-native-svg';
 import * as ImagePicker from 'expo-image-picker';
 import apiClient from '../../../api/client';
@@ -12,7 +12,7 @@ import { ENDPOINTS } from '../../../api/endpoints';
 import { toast } from '../../../lib/toast';
 import { uploadImage, uploadKycDocument } from '../../../lib/upload';
 import { resolveImg } from '../../../lib/media';
-import { font, t } from '../../../theme';
+import { font, t, themed } from '../../../theme';
 import { GCASH_LOGO, QRPH_LOGO } from '../fulfillment/paymentLogos';
 
 /*
@@ -377,7 +377,7 @@ export function NoteLine({ children }) {
   return <Text style={styles.noteLine}>{children}</Text>;
 }
 
-const styles = StyleSheet.create({
+const styles = themed(() => StyleSheet.create({
   section: { paddingVertical: 18, paddingHorizontal: 16, borderRadius: 16, backgroundColor: t.neutral[0] },
   head: { flexDirection: 'row', alignItems: 'flex-start', gap: 12, marginBottom: 16 },
   stepNum: { width: 30, height: 30, borderRadius: 15, alignItems: 'center', justifyContent: 'center', backgroundColor: BRAND_SOFT },
@@ -485,4 +485,4 @@ const styles = StyleSheet.create({
   noteTitle: { fontSize: 15, lineHeight: 21, color: t.neutral[900], ...font(600) },
   noteTitleReject: { color: t.danger[700] },
   noteLine: { marginTop: 2, fontSize: 13.5, lineHeight: 20.25, color: t.neutral[600], ...font(400) },
-});
+}));

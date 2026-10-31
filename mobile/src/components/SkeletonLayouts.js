@@ -1,5 +1,5 @@
 import { View, StyleSheet } from 'react-native';
-import { colors, radius, spacing } from '../theme';
+import { colors, radius, spacing, themed } from '../theme';
 import { PageLoader } from './BrandLoader';
 
 export function ListSkeleton({ rows = 6, imageSize = 44 }) {
@@ -14,7 +14,7 @@ export function ProfileSkeleton() {
   return <PageLoader />;
 }
 
-const styles = StyleSheet.create({
+const styles = themed(() => StyleSheet.create({
   list: { paddingHorizontal: spacing.lg, paddingVertical: spacing.sm, gap: spacing.sm },
   listRow: {
     minHeight: 76,
@@ -30,4 +30,4 @@ const styles = StyleSheet.create({
   product: { width: '47.5%', gap: spacing.sm },
   profile: { flex: 1, gap: spacing.lg, padding: spacing.lg },
   profileHeader: { flexDirection: 'row', alignItems: 'center', gap: spacing.md },
-});
+}));

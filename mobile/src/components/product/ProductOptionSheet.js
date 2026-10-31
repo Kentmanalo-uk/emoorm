@@ -4,12 +4,12 @@ import {
   useWindowDimensions,
 } from 'react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
-import { MinusIcon, PlusIcon, TruckIcon, XIcon } from 'phosphor-react-native';
+import { MinusIcon, PlusIcon, TruckIcon, XIcon } from '../../lib/icons';
 import ProductImage from '../ProductImage';
 import {
   pricedVariation, priceRange, stockedVariation, stockForSelection, unitPriceFor,
 } from '../../lib/variantPricing';
-import { font, t } from '../../theme';
+import { font, t, themed } from '../../theme';
 import { SheetFrame } from '../Sheet';
 import { peso } from './productLib';
 import { imagedVariation, optionImage } from '../../lib/variationImage';
@@ -272,11 +272,11 @@ export default function ProductOptionSheet({
   );
 }
 
-const styles = StyleSheet.create({
+const styles = themed(() => StyleSheet.create({
   root: { flex: 1, justifyContent: 'flex-end' },
   scrim: { backgroundColor: 'rgba(15, 23, 42, 0.5)' },
   sheet: {
-    borderTopLeftRadius: 20, borderTopRightRadius: 20, backgroundColor: '#fff',
+    borderTopLeftRadius: 20, borderTopRightRadius: 20, backgroundColor: t.neutral[0],
     boxShadow: [{ offsetX: 0, offsetY: -8, blurRadius: 30, color: 'rgba(15, 23, 42, 0.18)' }],
   },
   glassClose: {
@@ -295,10 +295,10 @@ const styles = StyleSheet.create({
   priceUnit: { fontSize: 14 },
   stock: { alignSelf: 'flex-start', paddingVertical: 2, paddingHorizontal: 8, borderRadius: 6, backgroundColor: t.primary[50] },
   stockText: { fontSize: 12, lineHeight: 19.2, ...font(400), color: t.primary[700] },
-  stockLow: { backgroundColor: '#fff7ed' },
-  stockLowText: { color: '#c2410c' },
-  stockOut: { backgroundColor: '#fef2f2' },
-  stockOutText: { color: '#b91c1c' },
+  stockLow: { backgroundColor: t.orange[100] },
+  stockLowText: { color: t.orange[700] },
+  stockOut: { backgroundColor: t.danger[50] },
+  stockOutText: { color: t.danger[700] },
   picked: { fontSize: 13.5, lineHeight: 21.6, ...font(400), color: t.neutral[500] },
   banner: {
     flexDirection: 'row', alignItems: 'center', gap: 8, marginHorizontal: 16, marginBottom: 4, paddingVertical: 9, paddingHorizontal: 12,
@@ -317,22 +317,22 @@ const styles = StyleSheet.create({
     minHeight: 42, paddingVertical: 8, paddingHorizontal: 10, borderWidth: 1, borderColor: t.neutral[200], borderRadius: 10,
     backgroundColor: t.neutral[50], alignItems: 'center', justifyContent: 'center', gap: 2,
   },
-  optionOn: { borderColor: t.accent[500], backgroundColor: '#fdf2f8' },
+  optionOn: { borderColor: t.accent[500], backgroundColor: t.accent[50] },
   optionThumb: { width: 44, height: 44, marginBottom: 2, borderRadius: 8, overflow: 'hidden', backgroundColor: t.neutral[100] },
-  optionError: { borderColor: '#fca5a5' },
+  optionError: { borderColor: t.danger[300] },
   optionSoldOut: { opacity: 0.5 },
   optionText: { fontSize: 13.5, lineHeight: 16.875, ...font(400), color: t.neutral[800], textAlign: 'center' },
   optionTextOn: { color: t.accent[600] },
   optionPrice: { fontSize: 12, lineHeight: 15, ...font(400), color: t.neutral[500] },
-  optionSoldOutText: { fontSize: 11.5, lineHeight: 14.4, ...font(400), color: '#b91c1c' },
-  error: { marginTop: 6, fontSize: 12.5, lineHeight: 20, ...font(400), color: '#dc2626' },
+  optionSoldOutText: { fontSize: 11.5, lineHeight: 14.4, ...font(400), color: t.danger[700] },
+  error: { marginTop: 6, fontSize: 12.5, lineHeight: 20, ...font(400), color: t.danger[600] },
   qtyRow: { flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between', paddingTop: 16 },
   qtyTitle: { marginBottom: 0 },
   qty: { flexDirection: 'row', alignItems: 'center', overflow: 'hidden', borderWidth: 1, borderColor: t.neutral[200], borderRadius: 10 },
   qtyBtn: { width: 38, height: 36, alignItems: 'center', justifyContent: 'center', backgroundColor: t.neutral[50] },
   qtyInput: {
     width: 48, height: 46, padding: 0, borderLeftWidth: 1, borderRightWidth: 1, borderColor: t.neutral[200],
-    fontSize: 15, ...font(400), color: t.neutral[900], textAlign: 'center', backgroundColor: '#fff', outlineStyle: 'none',
+    fontSize: 15, ...font(400), color: t.neutral[900], textAlign: 'center', backgroundColor: t.neutral[0], outlineStyle: 'none',
   },
   note: { marginTop: 6, fontSize: 12, lineHeight: 19.2, ...font(400), color: t.neutral[500], textAlign: 'right' },
   foot: { paddingTop: 10, paddingHorizontal: 16, borderTopWidth: 1, borderTopColor: t.neutral[150] },
@@ -344,7 +344,7 @@ const styles = StyleSheet.create({
   confirmCart: { backgroundColor: t.accent[50], borderWidth: 1.5, borderColor: t.accent[500] },
   cartText: { color: t.accent[600] },
   confirmOff: { opacity: 0.5 },
-  confirmText: { fontSize: 16, lineHeight: 18.4, ...font(500), color: '#fff' },
+  confirmText: { fontSize: 16, lineHeight: 18.4, ...font(500), color: t.onBrand },
   confirmSmall: { fontSize: 12, lineHeight: 19.2, ...font(400), color: 'rgba(255,255,255,0.9)' },
   busy: { flexDirection: 'row', alignItems: 'center', gap: 8 },
-});
+}));

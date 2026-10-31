@@ -1,7 +1,7 @@
 import { useEffect, useState } from 'react';
 import { ScrollView, View, Text, StyleSheet } from 'react-native';
 import { useLocalSearchParams } from 'expo-router';
-import { MapPinIcon, ShoppingBagIcon, SlidersHorizontalIcon, SquaresFourIcon } from 'phosphor-react-native';
+import { MapPinIcon, ShoppingBagIcon, SlidersHorizontalIcon, SquaresFourIcon } from '../src/lib/icons';
 import apiClient from '../src/api/client';
 import Button from '../src/components/Button';
 import TextField from '../src/components/TextField';
@@ -17,7 +17,7 @@ import Sheet, { SheetButton, SheetOption } from '../src/components/Sheet';
 import LoadingSkeleton from '../src/components/LoadingSkeleton';
 import StarRating from '../src/components/StarRating';
 import { MODES } from '../src/lib/availability';
-import { font, spacing, t } from '../src/theme';
+import { font, spacing, t, themed } from '../src/theme';
 
 /*
  * Every shared piece, for comparing with the website's phone view.
@@ -219,7 +219,7 @@ export default function DesignSystemDemo() {
   );
 }
 
-const styles = StyleSheet.create({
+const styles = themed(() => StyleSheet.create({
   container: { padding: 12, gap: spacing.xl, backgroundColor: t.neutral[100] },
   section: { gap: spacing.sm },
   sectionTitle: { fontSize: 18, lineHeight: 24, ...font(500), color: t.neutral[900] },
@@ -244,4 +244,4 @@ const styles = StyleSheet.create({
   sheetGridCell: { flexBasis: '45%', flexGrow: 1, maxWidth: '48.6%' },
   sheetRule: { height: 8, backgroundColor: t.neutral[50] },
   sheetLabel: { marginTop: 14, marginBottom: 8, fontSize: 13, lineHeight: 20, color: t.neutral[500] },
-});
+}));

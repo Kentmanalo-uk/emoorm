@@ -1,7 +1,7 @@
 import { Image, Pressable, StyleSheet, Text, TextInput, View } from 'react-native';
-import { EyeSlashIcon, QuestionIcon } from 'phosphor-react-native';
+import { EyeSlashIcon, QuestionIcon } from '../../../lib/icons';
 import { resolveImg } from '../../../lib/media';
-import { font, t } from '../../../theme';
+import { font, t, themed } from '../../../theme';
 import { shortDate } from '../analytics/format';
 
 /** The first picture of a product's images (web lib/media firstImage). */
@@ -77,7 +77,7 @@ export default function QuestionCard({
   );
 }
 
-const styles = StyleSheet.create({
+const styles = themed(() => StyleSheet.create({
   // .seller-card.sq-item: edge to edge on phones, an 8px grey band under it.
   item: {
     gap: 8, marginHorizontal: -12, padding: 16, backgroundColor: t.neutral[0],
@@ -106,4 +106,4 @@ const styles = StyleSheet.create({
   primaryPressed: { backgroundColor: t.primary[700] },
   primaryText: { fontSize: 13.5, lineHeight: 18, color: t.neutral[0], ...font(600) },
   off: { opacity: 0.6 },
-});
+}));

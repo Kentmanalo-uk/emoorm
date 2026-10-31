@@ -1,7 +1,7 @@
 import { useEffect, useState } from 'react';
 import { ActivityIndicator, StyleSheet, View } from 'react-native';
 import { useLocalSearchParams, useRouter } from 'expo-router';
-import { t } from '../../../src/theme';
+import { t, themed } from '../../../src/theme';
 import apiClient from '../../../src/api/client';
 import { toast } from '../../../src/lib/toast';
 import { fetchCategories } from '../../../src/lib/referenceData';
@@ -133,6 +133,6 @@ export default function SellerProductFormScreen() {
   );
 }
 
-const styles = StyleSheet.create({
+const styles = themed(() => StyleSheet.create({
   loading: { flex: 1, alignItems: 'center', justifyContent: 'center' },
-});
+}));

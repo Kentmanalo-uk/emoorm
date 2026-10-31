@@ -20,7 +20,9 @@ import { MINDORO_CENTER, PHILIPPINES_BOUNDS } from './mapUtils';
 
 const LEAFLET = 'https://unpkg.com/leaflet@1.9.4/dist';
 
-const CSS = `
+// Built on each map, not once when this module loads, so the page inside
+// the WebView takes the palette in use.
+const css = () => `
 html, body, #map { margin: 0; padding: 0; width: 100%; height: 100%; }
 body { background: ${t.neutral[150]}; -webkit-tap-highlight-color: transparent; font-family: -apple-system, system-ui, sans-serif; }
 #map { background: ${t.neutral[150]}; }
@@ -135,7 +137,7 @@ const SCRIPT = `
       if (under) { map.removeLayer(under); under = null; }
       if (over) { map.removeLayer(over); over = null; }
       if (S.route && S.route.line && S.route.line.length) {
-        under = L.polyline(S.route.line, { color: '#ffffff', weight: 9, opacity: 0.9 }).addTo(map);
+        under = L.polyline(S.route.line, { color: t.onBrand, weight: 9, opacity: 0.9 }).addTo(map);
         over = L.polyline(S.route.line, { color: '#059669', weight: 5, opacity: 0.95, dashArray: S.route.byRoad ? null : '8 10' }).addTo(map);
         if (shopMarker) shopMarker.setZIndexOffset(1000);
       }
@@ -176,7 +178,7 @@ export default function leafletHtml(init) {
 <meta charset="utf-8" />
 <meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=1, user-scalable=no" />
 <link rel="stylesheet" href="${LEAFLET}/leaflet.css" />
-<style>${CSS}</style>
+<style>${css()}</style>
 </head><body>
 <div id="map"></div>
 <script src="${LEAFLET}/leaflet.js"></script>

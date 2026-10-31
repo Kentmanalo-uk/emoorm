@@ -1,7 +1,7 @@
 import { useEffect, useRef, useState } from 'react';
 import { Pressable, ScrollView, StyleSheet, Text, TextInput, View } from 'react-native';
-import { MagnifyingGlassIcon, SlidersHorizontalIcon, XIcon } from 'phosphor-react-native';
-import { font, t } from '../../../theme';
+import { MagnifyingGlassIcon, SlidersHorizontalIcon, XIcon } from '../../../lib/icons';
+import { font, t, themed } from '../../../theme';
 import { PHONE_QUICK_TABS, countFor, tabLabel } from './productRules';
 
 /*
@@ -119,7 +119,7 @@ export default function ProductsFilterBar({
   );
 }
 
-const styles = StyleSheet.create({
+const styles = themed(() => StyleSheet.create({
   // .spm-filterbar: white, inside the page's 12px gutter.
   bar: { backgroundColor: t.neutral[0] },
   toolbar: { paddingTop: 14, paddingHorizontal: 16, paddingBottom: 8 },
@@ -148,7 +148,7 @@ const styles = StyleSheet.create({
   more: { marginLeft: 'auto' },
   moreIcon: { justifyContent: 'center', width: 34, minWidth: 34, paddingHorizontal: 0 },
   chipText: { fontSize: 13.5, lineHeight: 20, color: t.neutral[700], ...font(500) },
-  chipTextOn: { color: '#fff' },
+  chipTextOn: { color: t.onBrand },
   count: { fontSize: 13.5, lineHeight: 20, color: t.neutral[500], ...font(500), fontVariant: ['tabular-nums'] },
   countOn: { color: 'rgba(255, 255, 255, 0.82)' },
-});
+}));

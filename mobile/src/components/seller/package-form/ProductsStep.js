@@ -2,8 +2,8 @@ import { forwardRef, useState } from 'react';
 import {
   Pressable, StyleSheet, Text, TextInput, View,
 } from 'react-native';
-import { MagnifyingGlassIcon, PackageIcon, XIcon } from 'phosphor-react-native';
-import { font, t } from '../../../theme';
+import { MagnifyingGlassIcon, PackageIcon, XIcon } from '../../../lib/icons';
+import { font, ink, t, themed } from '../../../theme';
 import EmptyState from '../../EmptyState';
 import { productKind } from '../productKinds';
 import { KIND_TAGS, P, peso } from './pkfLib';
@@ -123,7 +123,7 @@ export function PackageTotal({ lines, units, worth, style }) {
   );
 }
 
-const styles = StyleSheet.create({
+const styles = themed(() => StyleSheet.create({
   search: {
     flexDirection: 'row',
     alignItems: 'center',
@@ -164,10 +164,10 @@ const styles = StyleSheet.create({
     backgroundColor: P.greenSoft,
     boxShadow: [
       { offsetX: 0, offsetY: 0, blurRadius: 0, spreadDistance: 1, color: t.primary[100] },
-      { offsetX: 0, offsetY: 6, blurRadius: 16, color: 'rgba(15, 23, 42, 0.08)' },
+      { offsetX: 0, offsetY: 6, blurRadius: 16, color: ink(0.08) },
     ],
   },
   totalText: { fontSize: 13.5, lineHeight: 21.6, color: P.muted, ...font(400) },
   totalTextOn: { color: t.neutral[700] },
   totalStrong: { fontSize: 14.5, lineHeight: 23.2, color: P.greenDark, ...font(500) },
-});
+}));

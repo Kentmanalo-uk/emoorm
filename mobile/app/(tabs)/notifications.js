@@ -6,13 +6,13 @@ import {
   BellSlashIcon, ChatCircleDotsIcon, CheckCircleIcon, ChecksIcon, HandshakeIcon, InfoIcon, MagnifyingGlassIcon, PackageIcon,
   QuestionIcon, ScalesIcon, ShoppingBagIcon, StarIcon, StorefrontIcon, TagIcon, TrashIcon, WarningCircleIcon, XCircleIcon,
   XIcon,
-} from 'phosphor-react-native';
+} from '../../src/lib/icons';
 import apiClient from '../../src/api/client';
 import { toast } from '../../src/lib/toast';
 import { getCachedData, setCachedData } from '../../src/lib/dataCache';
 import { notificationHref } from '../../src/lib/notificationLink';
 import useAuthStore from '../../src/store/authStore';
-import { font, t } from '../../src/theme';
+import { font, t, themed } from '../../src/theme';
 import EmptyState from '../../src/components/EmptyState';
 import ShellBarButton from '../../src/components/ShellBarButton';
 import { useTabBarScroll } from '../../src/components/Glass';
@@ -39,10 +39,10 @@ const AUDIENCE = 'BUYER';
 const CACHE_KEY = `notifications:${AUDIENCE}`;
 
 // web TYPE_CONFIG: the kind's icon and colour.
-const C = {
+const C = themed(() => ({
   info: t.info[500], green: t.primary[600], greenLight: t.primary[500], orange: t.orange[500],
   danger: t.danger[500], warning: t.warning[500], neutral: t.neutral[500], success: t.success[600],
-};
+}));
 const TYPE_CONFIG = {
   ORDER_RECEIVED: { Icon: ShoppingBagIcon, color: C.info },
   ORDER_CONFIRMED: { Icon: CheckCircleIcon, color: C.green },
@@ -452,7 +452,7 @@ function NotificationRow({ notif, first, onOpen, onMarkRead, onDelete }) {
   );
 }
 
-const styles = StyleSheet.create({
+const styles = themed(() => StyleSheet.create({
   screen: { flex: 1, backgroundColor: t.neutral[0] },
   content: { flexGrow: 1, paddingBottom: 24 },
   head: { height: 48 },
@@ -512,4 +512,4 @@ const styles = StyleSheet.create({
   pageBtnOff: { opacity: 0.4 },
   pageBtnText: { fontSize: 14, lineHeight: 16.8, color: t.neutral[700], ...font(400) },
   pageText: { fontSize: 13, lineHeight: 20.8, color: t.neutral[500], ...font(400) },
-});
+}));

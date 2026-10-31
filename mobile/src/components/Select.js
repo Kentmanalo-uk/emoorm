@@ -3,8 +3,8 @@ import {
   Animated, Easing, Modal, Platform, Pressable, ScrollView, StyleSheet, Text, View, useWindowDimensions,
 } from 'react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
-import { CaretDownIcon, CheckIcon } from 'phosphor-react-native';
-import { font, t } from '../theme';
+import { CaretDownIcon, CheckIcon } from '../lib/icons';
+import { font, t, themed } from '../theme';
 import { SheetFrame } from './Sheet';
 
 /*
@@ -104,7 +104,7 @@ export default function Select({
   );
 }
 
-const styles = StyleSheet.create({
+const styles = themed(() => StyleSheet.create({
   field: { marginBottom: 16 },
   label: { marginBottom: 8, fontSize: 14, lineHeight: 20, ...font(500), color: t.neutral[800] },
   error: { marginTop: 4, fontSize: 12, lineHeight: 16, ...font(400), color: t.danger[600] },
@@ -143,4 +143,4 @@ const styles = StyleSheet.create({
   optionText: { flexShrink: 1, fontSize: 16, lineHeight: 20.8, ...font(400), color: t.neutral[800] },
   optionOn: { ...font(600), color: t.primary[700] },
   optionDisabled: { color: t.neutral[400] },
-});
+}));

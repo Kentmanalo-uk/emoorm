@@ -3,12 +3,12 @@ import { Pressable, ScrollView, StyleSheet, Text, TextInput, View } from 'react-
 import { useFocusEffect, useLocalSearchParams, useRouter } from 'expo-router';
 import {
   ArrowsClockwiseIcon, ChatTextIcon, EnvelopeOpenIcon, FunnelIcon, MagnifyingGlassIcon, StorefrontIcon, XIcon,
-} from 'phosphor-react-native';
+} from '../../src/lib/icons';
 import apiClient from '../../src/api/client';
 import { toast } from '../../src/lib/toast';
 import { getCachedData, setCachedData } from '../../src/lib/dataCache';
 import useAuthStore from '../../src/store/authStore';
-import { font, t } from '../../src/theme';
+import { font, t, themed } from '../../src/theme';
 import EmptyState from '../../src/components/EmptyState';
 import ShellBarButton from '../../src/components/ShellBarButton';
 import ShellPageMenu from '../../src/components/ShellPageMenu';
@@ -230,7 +230,7 @@ function MessagesList() {
   );
 }
 
-const styles = StyleSheet.create({
+const styles = themed(() => StyleSheet.create({
   screen: { flex: 1, backgroundColor: t.neutral[0] },
   content: { flexGrow: 1, paddingBottom: 16 },
   list: { paddingTop: 6 },
@@ -249,4 +249,4 @@ const styles = StyleSheet.create({
     borderColor: t.primary[600], borderRadius: 999, backgroundColor: t.primary[50],
   },
   filterPillText: { fontSize: 13, lineHeight: 16, color: t.primary[700], ...font(400) },
-});
+}));

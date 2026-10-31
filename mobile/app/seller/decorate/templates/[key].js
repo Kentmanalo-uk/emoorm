@@ -4,10 +4,10 @@ import {
 } from 'react-native';
 import { useLocalSearchParams, useRouter } from 'expo-router';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
-import { CaretRightIcon, CheckIcon } from 'phosphor-react-native';
+import { CaretRightIcon, CheckIcon } from '../../../../src/lib/icons';
 import apiClient from '../../../../src/api/client';
 import { toast } from '../../../../src/lib/toast';
-import { font, t } from '../../../../src/theme';
+import { font, t, themed, veil } from '../../../../src/theme';
 import Glass from '../../../../src/components/Glass';
 import SellerPage, { SellerPrivateLine, sellerPageStyles } from '../../../../src/components/seller/SellerPage';
 import { useSellerShell } from '../../../../src/components/seller/SellerShell';
@@ -84,7 +84,7 @@ export default function SellerTemplatePreviewScreen() {
         ) : null}
       </ScrollView>
 
-      <Glass fallbackStyle={BAR_FALLBACK} style={[styles.bar, { paddingBottom: 10 + insets.bottom }]}>
+      <Glass fallbackStyle={barFallback()} style={[styles.bar, { paddingBottom: 10 + insets.bottom }]}>
         <Pressable
           accessibilityRole="button"
           accessibilityState={{ disabled: applying || inUse, busy: applying }}
@@ -104,13 +104,16 @@ export default function SellerTemplatePreviewScreen() {
 }
 
 // .stp-apply-bar on Android and older iPhones: white at 98% with a hairline above.
-const BAR_FALLBACK = {
-  backgroundColor: 'rgba(255, 255, 255, 0.98)',
+/* A function, not a table: this is handed to a component whole, and
+   React Native freezes the style it is given. A fresh object each time
+   keeps the colours of the palette in use. */
+const barFallback = () => ({
+  backgroundColor: veil(0.98),
   borderTopWidth: 1,
   borderTopColor: t.neutral[200],
-};
+});
 
-const styles = StyleSheet.create({
+const styles = themed(() => StyleSheet.create({
   flex: { flex: 1 },
   body: { gap: 12 },
   missing: { marginTop: 10, marginBottom: 2, fontSize: 13.5, lineHeight: 19.575, color: t.neutral[500], ...font(400) },
@@ -146,6 +149,6 @@ const styles = StyleSheet.create({
   btnPressed: { backgroundColor: t.primary[700] },
   btnOff: { opacity: 0.6 },
   btnDone: { backgroundColor: t.primary[50] },
-  btnText: { fontSize: 16, lineHeight: 20, color: '#fff', ...font(500) },
+  btnText: { fontSize: 16, lineHeight: 20, color: t.onBrand, ...font(500) },
   btnTextDone: { color: t.primary[700] },
-});
+}));

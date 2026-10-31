@@ -4,8 +4,8 @@ import {
 } from 'react-native';
 import { Stack, useFocusEffect } from 'expo-router';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
-import { CalendarPlusIcon, CheckCircleIcon, CheckIcon, InfoIcon } from 'phosphor-react-native';
-import { font, t } from '../../../theme';
+import { CalendarPlusIcon, CheckCircleIcon, CheckIcon, InfoIcon } from '../../../lib/icons';
+import { font, ink, t, themed } from '../../../theme';
 import apiClient from '../../../api/client';
 import { toast } from '../../../lib/toast';
 import { useCartSettings } from '../../cart/cartSettings';
@@ -770,7 +770,7 @@ export default function ProductForm({
   );
 }
 
-const styles = StyleSheet.create({
+const styles = themed(() => StyleSheet.create({
   flex: { flex: 1 },
   pf: { gap: 12, minWidth: 0 },
 
@@ -799,7 +799,7 @@ const styles = StyleSheet.create({
 
   done: {
     alignItems: 'center', gap: 10, marginTop: 12, paddingVertical: 28, paddingHorizontal: 18, borderRadius: 16,
-    backgroundColor: t.neutral[0], boxShadow: [{ offsetX: 0, offsetY: 1, blurRadius: 2, color: 'rgba(15, 23, 42, 0.06)' }],
+    backgroundColor: t.neutral[0], boxShadow: [{ offsetX: 0, offsetY: 1, blurRadius: 2, color: ink(0.06) }],
   },
   doneTitle: { fontSize: 20, lineHeight: 28, color: PF.ink, textAlign: 'center', ...font(600) },
   doneText: { fontSize: 14, lineHeight: 21, color: PF.muted, textAlign: 'center', ...font(400) },
@@ -813,5 +813,5 @@ const styles = StyleSheet.create({
   btnPrimary: { backgroundColor: PF.green },
   btnText: { fontSize: 15, lineHeight: 20, ...font(600) },
   btnTextGhost: { color: t.neutral[700] },
-  btnTextPrimary: { color: '#fff' },
-});
+  btnTextPrimary: { color: t.onBrand },
+}));

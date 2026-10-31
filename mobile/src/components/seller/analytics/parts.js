@@ -2,11 +2,11 @@ import { useEffect, useRef } from 'react';
 import {
   Animated, Easing, Image, Pressable, StyleSheet, Text, View,
 } from 'react-native';
-import { ArrowDownIcon, ArrowUpIcon, ArrowsClockwiseIcon, DownloadSimpleIcon } from 'phosphor-react-native';
+import { ArrowDownIcon, ArrowUpIcon, ArrowsClockwiseIcon, DownloadSimpleIcon } from '../../../lib/icons';
 import EmptyState from '../../EmptyState';
 import LoadingSkeleton from '../../LoadingSkeleton';
 import { resolveImg } from '../../../lib/media';
-import { font, t } from '../../../theme';
+import { font, ink, t, themed } from '../../../theme';
 import DateRangePicker from './DateRangePicker';
 
 /*
@@ -182,7 +182,7 @@ export const anStyles = StyleSheet.create({
   half: { flexBasis: '45%', flexGrow: 1 },
 });
 
-const styles = StyleSheet.create({
+const styles = themed(() => StyleSheet.create({
   actions: { width: '100%', gap: 8, marginBottom: 12 },
   actionRow: { flexDirection: 'row', gap: 8 },
   actionBtn: {
@@ -208,7 +208,7 @@ const styles = StyleSheet.create({
   kpiHint: { fontSize: 11.5, lineHeight: 15.5, color: t.neutral[500], ...font(400) },
   delta: { flexDirection: 'row', alignItems: 'center', gap: 2, marginTop: 4, paddingVertical: 2, paddingHorizontal: 6, borderRadius: 6 },
   deltaUp: { backgroundColor: t.secondary[50] },
-  deltaDown: { backgroundColor: '#fdeeee' },
+  deltaDown: { backgroundColor: t.danger[50] },
   deltaText: { fontSize: 12, lineHeight: 16, ...font(700) },
 
   thumb: { width: 36, height: 36, borderRadius: 8, overflow: 'hidden', backgroundColor: t.neutral[100] },
@@ -217,7 +217,7 @@ const styles = StyleSheet.create({
 
   topRow: {
     flexDirection: 'row', alignItems: 'center', gap: 12, paddingVertical: 12, paddingHorizontal: 16,
-    borderBottomWidth: 1, borderBottomColor: 'rgba(15, 23, 42, 0.05)',
+    borderBottomWidth: 1, borderBottomColor: ink(0.05),
   },
   topRowLast: { borderBottomWidth: 0 },
   topRank: { width: 18, fontSize: 12, lineHeight: 16, color: t.neutral[500], ...font(700) },
@@ -231,4 +231,4 @@ const styles = StyleSheet.create({
   toggleBtnOn: { backgroundColor: t.primary[600] },
   toggleText: { fontSize: 12.5, lineHeight: 16, color: t.neutral[500], ...font(500) },
   toggleTextOn: { color: t.neutral[0] },
-});
+}));

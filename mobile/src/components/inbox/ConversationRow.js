@@ -1,6 +1,6 @@
 import { Pressable, StyleSheet, Text, View } from 'react-native';
-import { StorefrontIcon } from 'phosphor-react-native';
-import { font, t } from '../../theme';
+import { StorefrontIcon } from '../../lib/icons';
+import { font, t, themed } from '../../theme';
 import ChatAvatar from './ChatAvatar';
 import { GradientFill } from './InboxGradient';
 import { formatTime } from './inboxFormat';
@@ -69,7 +69,7 @@ export default function ConversationRow({
 }
 
 
-const styles = StyleSheet.create({
+const styles = themed(() => StyleSheet.create({
   row: {
     flexDirection: 'row',
     alignItems: 'center',
@@ -93,4 +93,4 @@ const styles = StyleSheet.create({
     borderRadius: 9999, backgroundColor: t.primary[600], alignItems: 'center', justifyContent: 'center',
   },
   badgeText: { fontSize: 10.5, lineHeight: 12.6, color: t.neutral[0], ...font(500) },
-});
+}));

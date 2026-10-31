@@ -3,9 +3,9 @@ import {
   Animated, BackHandler, Easing, Image, Linking, PanResponder, Platform, Pressable, StyleSheet, View, useWindowDimensions,
 } from 'react-native';
 import { useRouter } from 'expo-router';
-import { XIcon } from 'phosphor-react-native';
+import { XIcon } from '../../lib/icons';
 import { appPath } from '../../lib/notificationLink';
-import { t } from '../../theme';
+import { ink, t, themed, veil } from '../../theme';
 
 /*
  * Home's banner block on phones (web/src/pages/Home.jsx + Home.css):
@@ -272,7 +272,7 @@ export function PromotionPopup({ banner, onClose }) {
   );
 }
 
-const styles = StyleSheet.create({
+const styles = themed(() => StyleSheet.create({
   carousel: { width: '100%', overflow: 'hidden', backgroundColor: t.neutral[100] },
   track: { flexDirection: 'row', height: '100%' },
   slideImage: { width: '100%', height: '100%' },
@@ -283,10 +283,10 @@ const styles = StyleSheet.create({
   dot: { width: 12, height: 20, alignItems: 'center', justifyContent: 'center' },
   dotActiveTarget: { width: 24 },
   dotMark: {
-    width: 5, height: 5, borderRadius: 3, backgroundColor: 'rgba(255, 255, 255, 0.55)',
-    boxShadow: [{ offsetX: 0, offsetY: 0, blurRadius: 3, color: 'rgba(15, 23, 42, 0.25)' }],
+    width: 5, height: 5, borderRadius: 3, backgroundColor: veil(0.55),
+    boxShadow: [{ offsetX: 0, offsetY: 0, blurRadius: 3, color: ink(0.25) }],
   },
-  dotMarkActive: { width: 16, backgroundColor: '#fff' },
+  dotMarkActive: { width: 16, backgroundColor: t.neutral[0] },
 
   // Phones: two banners side by side, 4px apart, square corners.
   // 7px under the carousel (the grid's 0.5rem gap at the phone's 14px root).
@@ -309,4 +309,4 @@ const styles = StyleSheet.create({
     position: 'absolute', top: -12, right: -12, width: 34, height: 34, borderRadius: 17,
     alignItems: 'center', justifyContent: 'center', borderWidth: 2, borderColor: t.neutral[0], backgroundColor: t.secondary[950],
   },
-});
+}));

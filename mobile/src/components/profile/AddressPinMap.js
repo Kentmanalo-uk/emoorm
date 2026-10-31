@@ -1,7 +1,7 @@
 import { useEffect, useMemo, useRef, useState } from 'react';
 import { Image, Linking, PanResponder, Platform, Pressable, StyleSheet, Text, View } from 'react-native';
-import { MapPinIcon } from 'phosphor-react-native';
-import { font, t } from '../../theme';
+import { MapPinIcon } from '../../lib/icons';
+import { font, t, themed } from '../../theme';
 
 /*
  * Pin a delivery address on the map (web components/maps/StoreLocationMap.jsx
@@ -152,23 +152,23 @@ export default function AddressPinMap({ value, onChange, height = 260, hint = 'T
   );
 }
 
-const styles = StyleSheet.create({
+const styles = themed(() => StyleSheet.create({
   locate: { flexDirection: 'row', alignItems: 'center', gap: 6, alignSelf: 'flex-start', marginBottom: 8, paddingVertical: 7 },
   locateText: { fontSize: 12, lineHeight: 16, color: t.primary[700], ...font(500) },
   frame: { width: '100%', overflow: 'hidden', borderRadius: 12, backgroundColor: t.neutral[150] },
   tile: { position: 'absolute', width: TILE, height: TILE },
   marker: { position: 'absolute', width: 28, height: 36, alignItems: 'center', justifyContent: 'center' },
   markerDrop: {
-    width: 26, height: 26, borderWidth: 3, borderColor: '#fff', backgroundColor: t.primary[600],
+    width: 26, height: 26, borderWidth: 3, bordercolor: t.onBrand, backgroundColor: t.primary[600],
     borderTopLeftRadius: 13, borderTopRightRadius: 13, borderBottomRightRadius: 13, borderBottomLeftRadius: 0,
     transform: [{ rotate: '-45deg' }], boxShadow: '0px 3px 9px rgba(15, 23, 42, 0.3)',
   },
-  markerDot: { position: 'absolute', top: 7, left: 7, width: 6, height: 6, borderRadius: 3, backgroundColor: '#fff' },
+  markerDot: { position: 'absolute', top: 7, left: 7, width: 6, height: 6, borderRadius: 3, backgroundColor: t.neutral[0] },
   zoom: {
     position: 'absolute', top: 10, left: 10, borderWidth: 2, borderColor: 'rgba(0, 0, 0, 0.2)', borderRadius: 4,
-    backgroundColor: '#fff', overflow: 'hidden',
+    backgroundColor: t.neutral[0], overflow: 'hidden',
   },
-  zoomBtn: { width: 30, height: 30, alignItems: 'center', justifyContent: 'center', backgroundColor: '#fff' },
+  zoomBtn: { width: 30, height: 30, alignItems: 'center', justifyContent: 'center', backgroundColor: t.neutral[0] },
   zoomTop: { borderBottomWidth: 1, borderBottomColor: '#ccc' },
   zoomText: { fontSize: 22, lineHeight: 30, fontWeight: '700', color: '#000' },
   zoomOff: { color: '#bbb' },
@@ -176,4 +176,4 @@ const styles = StyleSheet.create({
   attributionText: { fontSize: 12, lineHeight: 16.8, color: '#333' },
   attributionLink: { color: '#0078a8' },
   coords: { marginTop: 7, fontSize: 12, lineHeight: 19.2, color: t.neutral[500], ...font(400) },
-});
+}));

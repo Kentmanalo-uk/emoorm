@@ -5,7 +5,7 @@ import {
 import { Stack, useLocalSearchParams, useRouter } from 'expo-router';
 import {
   ArrowsDownUpIcon, MagnifyingGlassIcon, MapPinIcon, ShoppingBagIcon, SquaresFourIcon, XIcon,
-} from 'phosphor-react-native';
+} from '../src/lib/icons';
 import apiClient from '../src/api/client';
 import Chip from '../src/components/Chip';
 import EmptyState from '../src/components/EmptyState';
@@ -15,7 +15,7 @@ import TodayChoiceSheet from '../src/components/today/TodayChoiceSheet';
 import { isOpen, MODES } from '../src/lib/availability';
 import { fetchCategories, fetchMunicipalities } from '../src/lib/referenceData';
 import useAuthStore from '../src/store/authStore';
-import { font, t } from '../src/theme';
+import { font, t, themed } from '../src/theme';
 import { PageLoader } from '../src/components/BrandLoader';
 
 const SORTS = [
@@ -299,7 +299,7 @@ export default function AvailableToday() {
   );
 }
 
-const styles = StyleSheet.create({
+const styles = themed(() => StyleSheet.create({
   screen: { flex: 1, backgroundColor: t.neutral[0] },
   scroll: { flex: 1 },
   grow: { flexGrow: 1 },
@@ -339,4 +339,4 @@ const styles = StyleSheet.create({
   morePressed: { backgroundColor: t.primary[50] },
   moreBusy: { opacity: 0.6 },
   moreText: { fontSize: 16, lineHeight: 24, ...font(500), color: t.primary[700] },
-});
+}));

@@ -1,8 +1,8 @@
 import { useEffect, useRef, useState } from 'react';
 import { Animated, Easing, Modal, Platform, Pressable, StyleSheet, Text, View } from 'react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
-import { QuestionIcon, WarningIcon } from 'phosphor-react-native';
-import { font, t } from '../../theme';
+import { QuestionIcon, WarningIcon } from '../../lib/icons';
+import { font, t, themed } from '../../theme';
 
 const native = Platform.OS !== 'web';
 
@@ -73,7 +73,7 @@ export default function CartConfirmDialog({
   );
 }
 
-const styles = StyleSheet.create({
+const styles = themed(() => StyleSheet.create({
   backdrop: { ...StyleSheet.absoluteFill, backgroundColor: 'rgba(15, 23, 42, 0.5)' },
   dock: { flex: 1, justifyContent: 'flex-end' },
   panel: {
@@ -93,7 +93,7 @@ const styles = StyleSheet.create({
   btnCancel: { backgroundColor: t.neutral[100] },
   btnDanger: { backgroundColor: t.danger[600] },
   btnPrimary: { backgroundColor: t.primary[600] },
-  btnText: { fontSize: 14, lineHeight: 18, ...font(600), color: '#fff' },
+  btnText: { fontSize: 14, lineHeight: 18, ...font(600), color: t.onBrand },
   btnTextCancel: { color: t.neutral[700] },
   w500: font(500),
-});
+}));

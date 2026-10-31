@@ -4,8 +4,8 @@ import {
 } from 'react-native';
 import {
   CheckIcon, StorefrontIcon, TrashIcon, UploadSimpleIcon, WarningCircleIcon,
-} from 'phosphor-react-native';
-import { font, t } from '../../../theme';
+} from '../../../lib/icons';
+import { font, t, themed } from '../../../theme';
 import { resolveImg } from '../../../lib/media';
 import Sheet from '../../Sheet';
 import ProfileAddressPicker from '../../profile/ProfileAddressPicker';
@@ -235,7 +235,7 @@ export function ThemePreview({ name, logo, banner, primary, secondary }) {
         <View style={styles.tpInfo}>
           <Text style={styles.tpName} numberOfLines={1}>{name}</Text>
           <View style={styles.tpRow}>
-            <Text style={[styles.tpBtn, { backgroundColor: p, color: '#fff' }]}>Follow</Text>
+            <Text style={[styles.tpBtn, { backgroundColor: p, color: t.onBrand }]}>Follow</Text>
             <Text style={[styles.tpBtn, styles.tpGhost, { borderColor: p, color: p }]}>Message</Text>
           </View>
           <View style={styles.tpRow}>
@@ -276,7 +276,7 @@ export function PickupAddressField({ value, shopTown, municipalities, onChange }
   );
 }
 
-const styles = StyleSheet.create({
+const styles = themed(() => StyleSheet.create({
   field: { gap: 6 },
   labelRow: { flexDirection: 'row', alignItems: 'center', gap: 4 },
   label: { fontSize: 13, lineHeight: 20.8, color: t.neutral[700], ...font(600) },
@@ -432,4 +432,4 @@ const styles = StyleSheet.create({
   tpBadge: {
     overflow: 'hidden', paddingVertical: 3, paddingHorizontal: 8, borderRadius: 6, fontSize: 11, lineHeight: 17.6, ...font(400),
   },
-});
+}));

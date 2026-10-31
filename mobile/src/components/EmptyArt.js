@@ -3,6 +3,7 @@ import { View } from 'react-native';
 import Svg, {
   Circle, Defs, Ellipse, G, LinearGradient, Path, Rect, Stop,
 } from 'react-native-svg';
+import { ikionShapes } from '../lib/ikionNative';
 import {
   ArrowCounterClockwiseIcon, ArrowUpRightIcon, BellIcon, CalendarBlankIcon, CameraIcon, ChartBarIcon, ChartLineUpIcon,
   ChatCircleDotsIcon, ChatCircleTextIcon, ChatTeardropTextIcon, CheckCircleIcon, ClockCounterClockwiseIcon, ClockIcon,
@@ -12,7 +13,7 @@ import {
   PercentIcon, PiggyBankIcon, PlusIcon, ReceiptIcon, RocketLaunchIcon, ShieldCheckIcon, ShoppingBagIcon, ShoppingCartIcon,
   SmileyIcon, SparkleIcon, SquaresFourIcon, StarIcon, StorefrontIcon, TagIcon, TicketIcon, TrayIcon, TrendUpIcon,
   TruckIcon, UploadSimpleIcon, UserPlusIcon, UsersThreeIcon, WrenchIcon,
-} from 'phosphor-react-native';
+} from '../lib/icons';
 import { t } from '../theme';
 
 /**
@@ -100,9 +101,8 @@ const sparklePath = (x, y, r) => {
 // Icons on a gold badge are drawn in dark amber (the peso on the sticker's coin).
 const GOLD_INK = '#92400e';
 
-// A Phosphor icon's filled paths (its 256-unit drawing), to place inside the
-// scene's own <Svg> instead of nesting another <Svg>.
-const iconPaths = (Icon) => Icon({}).props.weights.get('fill');
+// An icon's filled shapes (its 24-unit drawing) go inside the scene's own
+// <Svg> instead of nesting another <Svg> (ikionShapes).
 
 export default function EmptyArt({ name, size = 96, style }) {
   const scene = SCENES[name] || SCENES.inbox;
@@ -112,10 +112,10 @@ export default function EmptyArt({ name, size = 96, style }) {
   const url = (part) => `url(#${id}-${part})`;
 
   // ── Building blocks ──
-  // A Phosphor icon, `s` wide, its corner at (x, y).
+  // An icon, `s` wide, its corner at (x, y).
   const icon = (Icon, x, y, s, fill = '#ffffff') => (
-    <G transform={`translate(${x} ${y}) scale(${s / 256})`} fill={fill}>
-      {iconPaths(Icon)}
+    <G transform={`translate(${x} ${y}) scale(${s / 24})`} fill={fill}>
+      {ikionShapes(Icon, { paint: fill })}
     </G>
   );
   // A round sticker badge (the Start selling coin): a gradient disc with a

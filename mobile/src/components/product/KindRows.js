@@ -1,8 +1,8 @@
 import { Pressable, StyleSheet, Text, View } from 'react-native';
 import { useRouter } from 'expo-router';
-import { CaretRightIcon } from 'phosphor-react-native';
+import { CaretRightIcon } from '../../lib/icons';
 import ProductImage from '../ProductImage';
-import { font, t } from '../../theme';
+import { font, t, themed } from '../../theme';
 import { parseImages } from './productLib';
 import {
   PACKAGE_KINDS, ageLabel, animalLabel, cookDaysLabel, minOrder, prepLabel, productKind, sexLabel, weightLabel,
@@ -133,11 +133,11 @@ export const hasKindRows = (product) => {
   return kind === 'PACKAGE' && Array.isArray(product?.packageItems) && product.packageItems.length > 0;
 };
 
-const styles = StyleSheet.create({
+const styles = themed(() => StyleSheet.create({
   fact: { fontSize: 14, lineHeight: 21, ...font(500), color: t.neutral[900] },
   note: { lineHeight: 21.7, ...font(400) },
   pkgSum: { marginBottom: 6, fontSize: 13, lineHeight: 20.8, ...font(500), color: t.neutral[500] },
-  pkgList: { overflow: 'hidden', borderWidth: 1, borderColor: t.neutral[200], borderRadius: 10, backgroundColor: '#fff' },
+  pkgList: { overflow: 'hidden', borderWidth: 1, borderColor: t.neutral[200], borderRadius: 10, backgroundColor: t.neutral[0] },
   pkgItem: { flexDirection: 'row', alignItems: 'center', gap: 10, paddingVertical: 7, paddingLeft: 7, paddingRight: 10 },
   pkgLine: { borderTopWidth: 1, borderTopColor: t.neutral[100] },
   pkgPressed: { backgroundColor: t.neutral[50] },
@@ -145,4 +145,4 @@ const styles = StyleSheet.create({
   pkgQty: { flexShrink: 0, minWidth: 28, fontSize: 14, lineHeight: 22.4, ...font(500), color: t.primary[700] },
   pkgName: { flex: 1, minWidth: 0, fontSize: 14, lineHeight: 18.9, ...font(400), color: t.neutral[900] },
   pkgCaret: { flexShrink: 0 },
-});
+}));

@@ -1,6 +1,6 @@
 import { forwardRef } from 'react';
 import { Pressable, StyleSheet } from 'react-native';
-import { t } from '../theme';
+import { t, themed } from '../theme';
 
 /**
  * A plain icon button for a page's top bar (web phone-app.css "Plain icons:
@@ -27,7 +27,7 @@ const ShellBarButton = forwardRef(function ShellBarButton({ label, onPress, disa
 
 export default ShellBarButton;
 
-const styles = StyleSheet.create({
+const styles = themed(() => StyleSheet.create({
   button: { width: 40, height: 40, borderRadius: 20, alignItems: 'center', justifyContent: 'center', flexShrink: 0 },
   pressed: { backgroundColor: t.neutral[100] },
-});
+}));

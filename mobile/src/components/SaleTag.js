@@ -1,9 +1,9 @@
 import { useEffect, useState } from 'react';
 import { StyleSheet, Text, View } from 'react-native';
 import Svg, { Defs, LinearGradient, Rect, Stop } from 'react-native-svg';
-import { LightningIcon } from 'phosphor-react-native';
+import { LightningIcon } from '../lib/icons';
 import { saleInfo } from '../lib/variantPricing';
-import { font, t } from '../theme';
+import { font, t, themed } from '../theme';
 
 /*
  * Sale prices as on the website (web/src/components/ui/SaleTag.jsx): the
@@ -80,7 +80,7 @@ export function SaleEnds({ product, style }) {
   );
 }
 
-const styles = StyleSheet.create({
+const styles = themed(() => StyleSheet.create({
   was: { flexDirection: 'row', alignItems: 'center', gap: 6 },
   wasCompact: { gap: 4 },
   wasOld: { fontSize: 13, lineHeight: 13, ...font(400), color: t.neutral[500], textDecorationLine: 'line-through' },
@@ -104,5 +104,5 @@ const styles = StyleSheet.create({
     flexDirection: 'row', alignItems: 'center', alignSelf: 'flex-start', gap: 4,
     paddingVertical: 4, paddingHorizontal: 8, borderRadius: 999, overflow: 'hidden',
   },
-  endsText: { fontSize: 12, lineHeight: 19, ...font(500), color: '#fff' },
-});
+  endsText: { fontSize: 12, lineHeight: 19, ...font(500), color: t.onBrand },
+}));

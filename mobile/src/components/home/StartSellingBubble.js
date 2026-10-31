@@ -8,12 +8,12 @@ import * as Haptics from 'expo-haptics';
 import Svg, {
   Circle, Defs, G, LinearGradient, Path, Rect, Stop,
 } from 'react-native-svg';
-import { XIcon } from 'phosphor-react-native';
+import { XIcon } from '../../lib/icons';
 import useAuthStore from '../../store/authStore';
 import { floatingTabBar, tabBarTop } from '../Glass';
 import { LinearFill, SWEEP } from '../sell/SellArt';
 import WeightWaveText from '../WeightWaveText';
-import { t } from '../../theme';
+import { t, themed } from '../../theme';
 
 /*
  * Home's floating "Start selling" bubble (shopping apps' floating promo
@@ -239,7 +239,7 @@ export default function StartSellingBubble() {
   );
 }
 
-const styles = StyleSheet.create({
+const styles = themed(() => StyleSheet.create({
   item: { position: 'absolute', left: 0, top: 0, width: ITEM_W, alignItems: 'center' },
   stage: { width: SIZE, height: SIZE },
   ring: {
@@ -248,19 +248,19 @@ const styles = StyleSheet.create({
   },
   face: {
     flex: 1, borderRadius: SIZE / 2, alignItems: 'center', justifyContent: 'center',
-    backgroundColor: '#fff', borderWidth: 1.5, borderColor: '#fff', overflow: 'hidden',
+    backgroundColor: t.neutral[0], borderWidth: 1.5, bordercolor: t.onBrand, overflow: 'hidden',
   },
   pressed: { transform: [{ scale: 0.94 }] },
   pill: {
     zIndex: 1, alignSelf: 'center', marginTop: -9, height: 22, paddingHorizontal: 9, borderRadius: 11,
-    justifyContent: 'center', overflow: 'hidden', borderWidth: 1.5, borderColor: '#fff',
+    justifyContent: 'center', overflow: 'hidden', borderWidth: 1.5, bordercolor: t.onBrand,
     boxShadow: [{ offsetX: 0, offsetY: 3, blurRadius: 8, color: 'rgba(219, 39, 119, 0.28)' }],
   },
-  pillText: { fontSize: 11, lineHeight: 14, color: '#fff' },
+  pillText: { fontSize: 11, lineHeight: 14, color: t.onBrand },
   close: {
     zIndex: 2, position: 'absolute', top: -4, right: -6, width: 20, height: 20, borderRadius: 10,
     alignItems: 'center', justifyContent: 'center', backgroundColor: 'rgba(15, 23, 42, 0.62)',
-    borderWidth: 1.5, borderColor: '#fff',
+    borderWidth: 1.5, bordercolor: t.onBrand,
   },
   closePressed: { backgroundColor: 'rgba(15, 23, 42, 0.85)' },
-});
+}));

@@ -2,8 +2,8 @@ import { useEffect, useRef, useState } from 'react';
 import {
   AccessibilityInfo, Animated, Easing, Platform, Pressable, StyleSheet, Text, TextInput, View,
 } from 'react-native';
-import { PaperPlaneTiltIcon } from 'phosphor-react-native';
-import { font, t } from '../../theme';
+import { PaperPlaneTiltIcon } from '../../lib/icons';
+import { font, t, themed } from '../../theme';
 import { hasTriedMoormy, useMoormyChat } from './moormyChat';
 import MoormyAvatar from './MoormyAvatar';
 import { AiTag, GradientFill, MMY } from './InboxGradient';
@@ -235,7 +235,7 @@ export default function MoormyEntry({ userId, firstName, onOpen }) {
   );
 }
 
-const styles = StyleSheet.create({
+const styles = themed(() => StyleSheet.create({
   intro: {
     marginTop: 10,
     marginHorizontal: 12,
@@ -280,4 +280,4 @@ const styles = StyleSheet.create({
   askSend: { width: 42, height: 42, borderRadius: 21, alignItems: 'center', justifyContent: 'center', overflow: 'visible' },
   askSendOn: { boxShadow: '0px 4px 12px -4px rgba(236, 72, 153, 0.6)' },
   askSendOff: { opacity: 0.4 },
-});
+}));

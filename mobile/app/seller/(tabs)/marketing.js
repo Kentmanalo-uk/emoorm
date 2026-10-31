@@ -3,7 +3,7 @@ import { Image, Pressable, Share, StyleSheet, Text, View } from 'react-native';
 import { useFocusEffect, useRouter } from 'expo-router';
 import {
   LockSimpleIcon, MegaphoneIcon, PackageIcon, PaintBrushIcon, ShareNetworkIcon, TagIcon, UsersIcon,
-} from 'phosphor-react-native';
+} from '../../../src/lib/icons';
 import apiClient from '../../../src/api/client';
 import { toast } from '../../../src/lib/toast';
 import { BACKEND_URL, resolveImg } from '../../../src/lib/media';
@@ -19,7 +19,7 @@ import ToolIcon from '../../../src/components/seller/marketing/ToolIcon';
 import ShopVouchers from '../../../src/components/seller/marketing/ShopVouchers';
 import AnnounceSheet from '../../../src/components/seller/marketing/AnnounceSheet';
 import { getSellerFollowerStats, shortDate } from '../../../src/components/seller/marketing/marketingLib';
-import { font, t } from '../../../src/theme';
+import { font, t, themed } from '../../../src/theme';
 import { PageLoader } from '../../../src/components/BrandLoader';
 
 /*
@@ -243,7 +243,7 @@ export default function SellerMarketingScreen() {
   );
 }
 
-const styles = StyleSheet.create({
+const styles = themed(() => StyleSheet.create({
   // .sh-body: 12px between the sections.
   body: { gap: 12 },
 
@@ -268,7 +268,7 @@ const styles = StyleSheet.create({
   noteText: { flex: 1, minWidth: 0, fontSize: 14, lineHeight: 22.4, ...font(400), color: t.neutral[800] },
   // .sh-notice-cta
   cta: { paddingVertical: 7, paddingHorizontal: 14, borderRadius: 999, backgroundColor: t.primary[600] },
-  ctaText: { fontSize: 13, lineHeight: 20.8, ...font(500), color: '#fff' },
+  ctaText: { fontSize: 13, lineHeight: 20.8, ...font(500), color: t.onBrand },
 
   // .sh-tools / .sh-tool
   tools: { flexDirection: 'row', gap: 4, paddingBottom: 2 },
@@ -295,4 +295,4 @@ const styles = StyleSheet.create({
   itemName: { fontSize: 14, lineHeight: 22.4, ...font(500), color: t.neutral[900] },
   itemMessage: { fontSize: 14, lineHeight: 19.6, ...font(400), color: t.neutral[800] },
   itemSmall: { fontSize: 12.5, lineHeight: 20, ...font(400), color: t.neutral[500] },
-});
+}));

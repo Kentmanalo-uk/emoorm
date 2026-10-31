@@ -1,16 +1,16 @@
 import { ActivityIndicator, Pressable, ScrollView, StyleSheet, Text, View } from 'react-native';
-import { font, t } from '../../theme';
+import { font, t, themed } from '../../theme';
 import { PageLoader } from '../BrandLoader';
 
 /* Small pieces My Orders and Returns share (Orders.css phone rules). */
 
-const TONES = {
+const TONES = themed(() => ({
   neutral: { bg: t.neutral[100], fg: t.neutral[600] },
   accent: { bg: t.success[50], fg: t.primary[700] },
   success: { bg: t.success[100], fg: t.primary[700] },
   warning: { bg: t.warning[50], fg: t.warning[700] },
   danger: { bg: t.danger[50], fg: t.danger[700] },
-};
+}));
 
 /** .order-status-badge: a pill in one of the muted tones. */
 export function OrderBadge({ label, tone = 'neutral', style }) {
@@ -113,7 +113,7 @@ export const cardShadow = {
   shadowColor: '#0f172a', shadowOffset: { width: 0, height: 1 }, shadowOpacity: 0.04, shadowRadius: 2, elevation: 1,
 };
 
-const styles = StyleSheet.create({
+const styles = themed(() => StyleSheet.create({
   badge: { flexShrink: 0, paddingVertical: 3, paddingHorizontal: 10, borderRadius: 999 },
   badgeText: { fontSize: 11.5, lineHeight: 18.4, ...font(500) },
 
@@ -156,4 +156,4 @@ const styles = StyleSheet.create({
   skRow: { flexDirection: 'row', alignItems: 'center', gap: 12 },
   skSpread: { flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between', gap: 12 },
   skLines: { flex: 1, minWidth: 0, gap: 7 },
-});
+}));

@@ -1,8 +1,8 @@
 import { Pressable, RefreshControl, ScrollView, StyleSheet, Text, View } from 'react-native';
 import { usePathname, useRouter } from 'expo-router';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
-import { CaretRightIcon, LockSimpleIcon } from 'phosphor-react-native';
-import { font, t } from '../../theme';
+import { CaretRightIcon, LockSimpleIcon } from '../../lib/icons';
+import { font, t, themed } from '../../theme';
 import { useSellerShell } from './SellerShell';
 import { SellerBackBar, SellerTabHeader } from './SellerTopBars';
 import { PHONE_OWN_HEADER, PHONE_TABS, cleanSellerPath, sellerHref } from './sellerRoutes';
@@ -92,12 +92,12 @@ export function SellerPrivateLine() {
 }
 
 /** For pages that bring their own list: the page background and gutters. */
-export const sellerPageStyles = StyleSheet.create({
+export const sellerPageStyles = themed(() => StyleSheet.create({
   screen: { flex: 1, backgroundColor: t.neutral[0] },
   content: { paddingTop: 4, paddingHorizontal: 12, paddingBottom: 16 },
-});
+}));
 
-const styles = StyleSheet.create({
+const styles = themed(() => StyleSheet.create({
   screen: sellerPageStyles.screen,
   flex: { flex: 1 },
   content: sellerPageStyles.content,
@@ -113,4 +113,4 @@ const styles = StyleSheet.create({
     backgroundColor: t.neutral[0],
   },
   privateText: { flex: 1, fontSize: 14, lineHeight: 22.4, color: t.neutral[800], ...font(400) },
-});
+}));

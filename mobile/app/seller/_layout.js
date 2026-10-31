@@ -6,7 +6,7 @@ import { AccountSwitchHost } from '../../src/components/RoleSwitchOverlay';
 import { SellerShellProvider } from '../../src/components/seller/SellerShell';
 import SellerPhoneGuide from '../../src/components/seller/SellerPhoneGuide';
 import SetupReturnPill from '../../src/components/seller/SetupReturnPill';
-import { t } from '../../src/theme';
+import { t, themed } from '../../src/theme';
 
 /**
  * The Seller Center shell (web/src/components/layout/SellerLayout.jsx, phones):
@@ -43,6 +43,6 @@ export default function SellerLayout() {
   );
 }
 
-const styles = StyleSheet.create({
+const styles = themed(() => StyleSheet.create({
   screen: { flex: 1, backgroundColor: t.neutral[0] },
-});
+}));

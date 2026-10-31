@@ -7,8 +7,8 @@ import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { CameraView, useCameraPermissions } from 'expo-camera';
 import {
   ArrowClockwiseIcon, CameraIcon, UploadSimpleIcon, XIcon,
-} from 'phosphor-react-native';
-import { font } from '../../theme';
+} from '../../lib/icons';
+import { font, themed } from '../../theme';
 
 /** A government ID card's width over its height (web lib/idCardCheck ID_RATIO). */
 export const ID_RATIO = 1.586;
@@ -188,7 +188,7 @@ export default function IdCamera({ side, onCapture, onUpload, onClose }) {
   );
 }
 
-const styles = StyleSheet.create({
+const styles = themed(() => StyleSheet.create({
   cam: { flex: 1, overflow: 'hidden', backgroundColor: '#000' },
   hidden: { opacity: 0 },
   ring: { position: 'absolute', borderWidth: RING, borderColor: DIM, borderRadius: RING + 16 },
@@ -231,7 +231,7 @@ const styles = StyleSheet.create({
 
   error: { alignItems: 'center', gap: 14, maxWidth: 360 },
   errorText: { color: 'rgba(255, 255, 255, 0.9)', fontSize: 15, lineHeight: 22.5, textAlign: 'center', ...font(400) },
-});
+}));
 
 /** A web camera shot is a data: URL; the form needs it as a file. */
 export const assetToUpload = async (picked, fallbackName) => {

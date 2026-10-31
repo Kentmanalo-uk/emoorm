@@ -1,7 +1,7 @@
 import { Image, Linking, Platform, Pressable, StyleSheet, Text, View } from 'react-native';
-import { MapPinIcon, NavigationArrowIcon, StorefrontIcon, XIcon } from 'phosphor-react-native';
+import { MapPinIcon, NavigationArrowIcon, StorefrontIcon, XIcon } from '../../lib/icons';
 import { resolveImg } from '../../lib/media';
-import { font, t } from '../../theme';
+import { font, ink, t, themed } from '../../theme';
 
 /*
  * The pieces of Home's "Discover Stores" map that every phone draws the same
@@ -76,7 +76,7 @@ export function StoreMapCard({ store, onClose, onOpen }) {
   );
 }
 
-const styles = StyleSheet.create({
+const styles = themed(() => StyleSheet.create({
   fill: { width: '100%', height: '100%' },
 
   pin: { width: 44, height: 54 },
@@ -87,11 +87,11 @@ const styles = StyleSheet.create({
   avatar: {
     width: 44, height: 44, borderRadius: 22, borderWidth: 3, borderColor: t.primary[600], backgroundColor: t.neutral[0],
     overflow: 'hidden', alignItems: 'center', justifyContent: 'center',
-    boxShadow: [{ offsetX: 0, offsetY: 3, blurRadius: 6, color: 'rgba(15, 23, 42, 0.3)' }],
+    boxShadow: [{ offsetX: 0, offsetY: 3, blurRadius: 6, color: ink(0.3) }],
   },
-  pinTipApprox: { backgroundColor: '#f59e0b' },
+  pinTipApprox: { backgroundColor: t.warning[500] },
   pinTipSelected: { backgroundColor: t.accent[500] },
-  avatarApprox: { borderColor: '#f59e0b', borderStyle: 'dashed' },
+  avatarApprox: { borderColor: t.warning[500], borderStyle: 'dashed' },
   avatarSelected: { borderColor: t.accent[500], borderStyle: 'solid' },
   avatarInitial: { fontSize: 17, lineHeight: 22, ...font(500), color: t.primary[600] },
   avatarImage: { ...StyleSheet.absoluteFill, backgroundColor: t.neutral[0] },
@@ -99,7 +99,7 @@ const styles = StyleSheet.create({
   card: {
     position: 'absolute', left: 12, right: 12, bottom: 12, alignItems: 'center',
     paddingTop: 16, paddingHorizontal: 14, paddingBottom: 14, borderRadius: 12, backgroundColor: t.neutral[0],
-    boxShadow: [{ offsetX: 0, offsetY: 6, blurRadius: 16, color: 'rgba(15, 23, 42, 0.2)' }],
+    boxShadow: [{ offsetX: 0, offsetY: 6, blurRadius: 16, color: ink(0.2) }],
   },
   cardClose: { position: 'absolute', top: 4, right: 4, width: 40, height: 40, borderRadius: 20, alignItems: 'center', justifyContent: 'center', zIndex: 1 },
   cardAvatar: {
@@ -119,4 +119,4 @@ const styles = StyleSheet.create({
   cardBtnPrimary: { backgroundColor: t.primary[600] },
   cardBtnText: { fontSize: 13, lineHeight: 18, ...font(500), color: t.primary[700] },
   cardBtnTextPrimary: { color: t.neutral[0] },
-});
+}));

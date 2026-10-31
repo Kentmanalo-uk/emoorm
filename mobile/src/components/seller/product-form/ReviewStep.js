@@ -1,6 +1,6 @@
 import { Image, Pressable, StyleSheet, Text, View } from 'react-native';
-import { ImageIcon, PencilSimpleIcon } from 'phosphor-react-native';
-import { font, t } from '../../../theme';
+import { ImageIcon, PencilSimpleIcon } from '../../../lib/icons';
+import { font, t, themed, veil } from '../../../theme';
 import { resolveImg } from '../../../lib/media';
 import { kindFacts, priceUnit } from '../productKinds';
 import { peso } from './formState';
@@ -89,7 +89,7 @@ export default function ReviewStep({ draft, kind, way, todayQty, sections, onEdi
   );
 }
 
-const styles = StyleSheet.create({
+const styles = themed(() => StyleSheet.create({
   preview: { overflow: 'hidden', borderWidth: 1, borderColor: PF.line, borderRadius: 16, backgroundColor: t.neutral[0] },
   img: { aspectRatio: 4 / 3, backgroundColor: t.neutral[100] },
   imgFill: { width: '100%', height: '100%', resizeMode: 'cover' },
@@ -97,7 +97,7 @@ const styles = StyleSheet.create({
   noImgText: { color: t.neutral[400], fontSize: 13, lineHeight: 20.8, ...font(400) },
   badge: {
     position: 'absolute', top: 10, left: 10, paddingVertical: 4, paddingHorizontal: 10, borderRadius: 999, overflow: 'hidden',
-    backgroundColor: 'rgba(255, 255, 255, 0.95)', color: PF.greenDark, fontSize: 12, lineHeight: 19.2, ...font(700),
+    backgroundColor: veil(0.95), color: PF.greenDark, fontSize: 12, lineHeight: 19.2, ...font(700),
   },
   body: { gap: 8, minWidth: 0, paddingVertical: 16, paddingHorizontal: 18 },
   name: { fontSize: 17, lineHeight: 22.1, color: PF.ink, ...font(600) },
@@ -119,4 +119,4 @@ const styles = StyleSheet.create({
   rowLineText: { fontSize: 13.5, lineHeight: 21.6, color: t.neutral[600], ...font(400) },
   edit: { flexDirection: 'row', alignItems: 'center', gap: 4, flexShrink: 0, minHeight: 32, paddingHorizontal: 4 },
   editText: { fontSize: 13, lineHeight: 20.8, color: PF.greenDark, ...font(600) },
-});
+}));

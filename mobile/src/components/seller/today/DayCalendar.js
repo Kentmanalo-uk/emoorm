@@ -1,7 +1,7 @@
 import { useMemo, useState } from 'react';
 import { Pressable, StyleSheet, Text, View } from 'react-native';
-import { CaretLeftIcon, CaretRightIcon } from 'phosphor-react-native';
-import { font, t } from '../../../theme';
+import { CaretLeftIcon, CaretRightIcon } from '../../../lib/icons';
+import { font, t, themed } from '../../../theme';
 import {
   MONTH_NAMES, WEEKDAY_NAMES, addDays, dayMs, shortDay, weekday,
 } from './todayTime';
@@ -101,7 +101,7 @@ export default function DayCalendar({
   );
 }
 
-const styles = StyleSheet.create({
+const styles = themed(() => StyleSheet.create({
   // .dcal
   box: {
     paddingTop: 10, paddingHorizontal: 8, paddingBottom: 8, borderWidth: 1, borderColor: t.neutral[200], borderRadius: 14,
@@ -118,6 +118,6 @@ const styles = StyleSheet.create({
   dayOn: { backgroundColor: t.primary[600], borderColor: t.primary[600] },
   dayText: { fontSize: 14, lineHeight: 20, ...font(400), color: t.neutral[800] },
   todayText: { ...font(600), color: t.primary[700] },
-  dayTextOn: { ...font(600), color: '#fff' },
+  dayTextOn: { ...font(600), color: t.onBrand },
   dayTextOff: { color: t.neutral[300] },
-});
+}));

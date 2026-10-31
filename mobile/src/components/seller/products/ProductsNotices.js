@@ -1,6 +1,6 @@
 import { Pressable, StyleSheet, Text, View } from 'react-native';
-import { PackageIcon, ProhibitIcon, WarningCircleIcon } from 'phosphor-react-native';
-import { font, t } from '../../../theme';
+import { PackageIcon, ProhibitIcon, WarningCircleIcon } from '../../../lib/icons';
+import { font, t, themed } from '../../../theme';
 
 /*
  * My products' "what needs doing" rows (web SellerProducts.jsx .spm-notices:
@@ -78,7 +78,7 @@ function Notice({ tone, Icon, title, text, cta, role = 'button', onPress }) {
 }
 
 
-const styles = StyleSheet.create({
+const styles = themed(() => StyleSheet.create({
   // .spm-notices: 10px apart, 12px above the search panel.
   list: { gap: 10, marginBottom: 12 },
   // .sh-notice, edge to edge with the grey band under it.
@@ -96,5 +96,5 @@ const styles = StyleSheet.create({
   title: { fontSize: 14.5, lineHeight: 23.2, color: t.neutral[900], ...font(400) },
   sub: { fontSize: 12.5, lineHeight: 17.5, color: t.neutral[500], ...font(400) },
   cta: { paddingVertical: 7, paddingHorizontal: 14, borderRadius: 999, backgroundColor: t.primary[600] },
-  ctaText: { fontSize: 13, lineHeight: 20.8, color: '#fff', ...font(500) },
-});
+  ctaText: { fontSize: 13, lineHeight: 20.8, color: t.onBrand, ...font(500) },
+}));

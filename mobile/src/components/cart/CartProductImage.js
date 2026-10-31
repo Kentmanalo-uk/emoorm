@@ -2,7 +2,7 @@ import { useEffect, useState } from 'react';
 import { Image, StyleSheet, View } from 'react-native';
 import apiClient from '../../api/client';
 import { resolveImg } from '../../lib/media';
-import { t } from '../../theme';
+import { t, themed } from '../../theme';
 
 const BRAND_ICON = require('../../../assets/brand-icon.png');
 
@@ -46,8 +46,8 @@ export default function CartProductImage({ src, style }) {
   );
 }
 
-const styles = StyleSheet.create({
+const styles = themed(() => StyleSheet.create({
   image: { width: '100%', height: '100%', backgroundColor: t.neutral[100] },
   fallback: { width: '100%', height: '100%', overflow: 'hidden', backgroundColor: t.neutral[100] },
   mark: { width: '100%', height: '100%', opacity: 0.12 },
-});
+}));

@@ -3,7 +3,7 @@ import { StyleSheet, Text, TextInput, View } from 'react-native';
 import Sheet, { SheetButton } from '../../Sheet';
 import Select from '../../Select';
 import MkField, { fieldStyles } from './MkField';
-import { font, t } from '../../../theme';
+import { font, t, themed } from '../../../theme';
 
 /*
  * Marketing's composer (web/src/pages/SellerMarketing.jsx PhoneSheet +
@@ -85,7 +85,7 @@ export default function AnnounceSheet({
   );
 }
 
-const styles = StyleSheet.create({
+const styles = themed(() => StyleSheet.create({
   // .smk-field textarea (rows 4)
   textarea: {
     minHeight: 110, paddingVertical: 12, paddingHorizontal: 12, borderWidth: 1, borderColor: t.neutral[200], borderRadius: 12,
@@ -98,4 +98,4 @@ const styles = StyleSheet.create({
   previewLabel: { fontSize: 12, lineHeight: 19.2, ...font(400), color: t.neutral[500] },
   previewTitle: { fontSize: 14, lineHeight: 22.4, ...font(500), color: t.neutral[900] },
   previewText: { fontSize: 13.5, lineHeight: 21.6, ...font(400), color: t.neutral[700] },
-});
+}));

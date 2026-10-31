@@ -4,10 +4,10 @@ import {
 } from 'react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { useLocalSearchParams, useRouter } from 'expo-router';
-import { CaretDownIcon, StarIcon } from 'phosphor-react-native';
+import { CaretDownIcon, StarIcon } from '../../src/lib/icons';
 import apiClient from '../../src/api/client';
 import { toast } from '../../src/lib/toast';
-import { font, t } from '../../src/theme';
+import { font, t, themed } from '../../src/theme';
 import SellerPage, { sellerPageStyles } from '../../src/components/seller/SellerPage';
 import { SellerChip } from '../../src/components/seller/SellerChips';
 import { SelectSheet } from '../../src/components/Select';
@@ -235,7 +235,7 @@ export default function SellerReviewsScreen() {
   );
 }
 
-const styles = StyleSheet.create({
+const styles = themed(() => StyleSheet.create({
   flex: { flex: 1 },
   // .seller-header .reviews-summary (phones: one row)
   summary: { flexDirection: 'row', alignItems: 'center', gap: 8, marginBottom: 12 },
@@ -265,4 +265,4 @@ const styles = StyleSheet.create({
   },
   pageBtnText: { fontSize: 13, lineHeight: 18, ...font(500), color: t.neutral[700] },
   off: { opacity: 0.5 },
-});
+}));

@@ -1,7 +1,7 @@
 import { useEffect, useRef } from 'react';
 import { Animated, Easing, Platform, Pressable, StyleSheet, Text, View } from 'react-native';
-import { CaretDownIcon } from 'phosphor-react-native';
-import { font, t } from '../theme';
+import { CaretDownIcon } from '../lib/icons';
+import { font, t, themed } from '../theme';
 
 /*
  * The website's phone chips, one look per `variant`:
@@ -21,13 +21,13 @@ import { font, t } from '../theme';
  * Chips that turn on (pill, seller) pop like the website's (motion.css).
  */
 
-const LOOKS = {
+const LOOKS = themed(() => ({
   filter: { iconOff: t.neutral[500], iconOn: t.primary[600] },
   today: { iconOff: t.neutral[700], iconOn: t.primary[700] },
   pill: { iconOff: t.neutral[700], iconOn: '#fff', pops: true },
   seller: { iconOff: t.neutral[700], iconOn: '#fff', pops: true },
   suggest: { iconOff: t.neutral[500], iconOn: t.primary[600] },
-};
+}));
 
 export default function Chip({
   label, variant = 'filter', active = false, onPress, icon: Icon, iconSize = 15, caret = false, dot = false,
@@ -75,7 +75,7 @@ export default function Chip({
   );
 }
 
-const styles = StyleSheet.create({
+const styles = themed(() => StyleSheet.create({
   wrap: { flexShrink: 0 },
   chip: { flexDirection: 'row', alignItems: 'center', gap: 6 },
   text: { flexShrink: 1, ...font(400) },
@@ -99,12 +99,12 @@ const styles = StyleSheet.create({
   },
   pillOn: { borderColor: t.primary[600], backgroundColor: t.primary[600] },
   pillText: { fontSize: 14, lineHeight: 22.4, color: t.neutral[700] },
-  pillTextOn: { color: '#fff' },
+  pillTextOn: { color: t.onBrand },
 
   seller: { minHeight: 38, paddingHorizontal: 16, borderRadius: 999, backgroundColor: t.neutral[0] },
   sellerOn: { backgroundColor: t.primary[600] },
   sellerText: { fontSize: 14, lineHeight: 22.4, color: t.neutral[700] },
-  sellerTextOn: { color: '#fff' },
+  sellerTextOn: { color: t.onBrand },
 
   suggest: {
     height: 34, paddingHorizontal: 14, borderWidth: 1, borderColor: t.neutral[200], borderRadius: 999,
@@ -115,4 +115,4 @@ const styles = StyleSheet.create({
   suggestTextOn: { color: t.primary[700] },
 
   dot: { width: 7, height: 7, borderRadius: 4, backgroundColor: t.accent[500] },
-});
+}));

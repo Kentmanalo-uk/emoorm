@@ -6,10 +6,10 @@ import { useRouter } from 'expo-router';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import {
   BowlFoodIcon, CalendarCheckIcon, CheckIcon, ClockIcon, CookingPotIcon, ForkKnifeIcon, LockIcon, MinusIcon, PlusIcon,
-} from 'phosphor-react-native';
+} from '../../../lib/icons';
 import apiClient from '../../../api/client';
 import { toast } from '../../../lib/toast';
-import { font, t } from '../../../theme';
+import { font, t, themed } from '../../../theme';
 import { resolveImg } from '../../../lib/media';
 import { isOpen, momentLabel } from '../../../lib/availability';
 import { saleInfo } from '../../../lib/variantPricing';
@@ -17,7 +17,7 @@ import Glass from '../../Glass';
 import { peso } from '../../SaleTag';
 import { PageLoader } from '../../BrandLoader';
 import SellerPage, { SellerPrivateLine } from '../SellerPage';
-import { SAVEBAR_FALLBACK } from '../PhoneSaveBar';
+import { saveBarFallback } from '../PhoneSaveBar';
 import DayCalendar from './DayCalendar';
 import { TimePanel } from './DateTimeField';
 import { firstImage } from './WindowCard';
@@ -606,7 +606,7 @@ export default function PostForm({ editId = null, again = null, product: product
         </View>
       </ScrollView>
 
-      <Glass fallbackStyle={SAVEBAR_FALLBACK} style={[styles.bar, { paddingBottom: 12 + insets.bottom }]}>
+      <Glass fallbackStyle={saveBarFallback()} style={[styles.bar, { paddingBottom: 12 + insets.bottom }]}>
         <Text style={styles.summary} numberOfLines={2} accessibilityLiveRegion="polite">{summary || 'Fill in the form, then post.'}</Text>
         <Pressable
           accessibilityRole="button"
@@ -622,7 +622,7 @@ export default function PostForm({ editId = null, again = null, product: product
   );
 }
 
-const styles = StyleSheet.create({
+const styles = themed(() => StyleSheet.create({
   flex: { flex: 1 },
   content: { paddingTop: 4, paddingHorizontal: 16 },
   off: { opacity: 0.4 },
@@ -681,7 +681,7 @@ const styles = StyleSheet.create({
   },
   pickOn: { borderColor: t.primary[600], backgroundColor: t.primary[600] },
   pickText: { fontSize: 16, lineHeight: 22, ...font(500), color: t.neutral[800] },
-  pickTextOn: { color: '#fff' },
+  pickTextOn: { color: t.onBrand },
   inline: { flexDirection: 'row', alignItems: 'center', gap: 10 },
   inlineInput: {
     width: 110, minHeight: 48, paddingHorizontal: 12, borderWidth: 1, borderColor: t.neutral[300], borderRadius: 12,
@@ -733,7 +733,7 @@ const styles = StyleSheet.create({
   },
   weekdayOn: { borderColor: t.primary[600], backgroundColor: t.primary[600] },
   weekdayText: { fontSize: 14, lineHeight: 18, ...font(400), color: t.neutral[700] },
-  weekdayTextOn: { ...font(600), color: '#fff' },
+  weekdayTextOn: { ...font(600), color: t.onBrand },
   row: { flexDirection: 'row', flexWrap: 'wrap', alignItems: 'center', gap: 10 },
 
   // "Buyers can order from [10:00 AM] until [2:00 PM]"
@@ -761,5 +761,5 @@ const styles = StyleSheet.create({
     minHeight: 50, alignItems: 'center', justifyContent: 'center', paddingHorizontal: 20, borderRadius: 999, backgroundColor: t.primary[600],
   },
   goPressed: { opacity: 0.8 },
-  goText: { fontSize: 16, lineHeight: 22, ...font(600), color: '#fff' },
-});
+  goText: { fontSize: 16, lineHeight: 22, ...font(600), color: t.onBrand },
+}));

@@ -4,8 +4,8 @@ import { useRouter } from 'expo-router';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import HeaderGlow from './HeaderGlow';
 import Svg, { Circle, Path, Rect } from 'react-native-svg';
-import { MagnifyingGlassIcon } from 'phosphor-react-native';
-import { font, t, text } from '../theme';
+import { MagnifyingGlassIcon } from '../lib/icons';
+import { font, t, text, themed } from '../theme';
 import { fetchCategories } from '../lib/referenceData';
 import { loadRecent, PLACEHOLDER_SUGGESTIONS, POPULAR_SUGGESTIONS, saveRecent } from '../lib/shellSearch';
 
@@ -130,7 +130,7 @@ export function HomeQuickSearch() {
   );
 }
 
-const styles = StyleSheet.create({
+const styles = themed(() => StyleSheet.create({
   header: {
     backgroundColor: t.neutral[0],
     zIndex: 10,
@@ -154,4 +154,4 @@ const styles = StyleSheet.create({
   chip: { paddingVertical: 6, paddingHorizontal: 10, backgroundColor: t.neutral[0] },
   chipPressed: { backgroundColor: t.neutral[100] },
   chipText: { fontSize: 12, lineHeight: 14.4, color: t.neutral[600], ...font(400) },
-});
+}));

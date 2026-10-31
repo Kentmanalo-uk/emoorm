@@ -1,12 +1,12 @@
 import { useEffect, useRef, useState } from 'react';
 import { Image, Pressable, ScrollView, StyleSheet, Text, View } from 'react-native';
 import { useRouter } from 'expo-router';
-import { QuotesIcon, ShoppingCartIcon, StarIcon, StorefrontIcon } from 'phosphor-react-native';
+import { QuotesIcon, ShoppingCartIcon, StarIcon, StorefrontIcon } from '../../lib/icons';
 import ProductImage from '../ProductImage';
 import { SaleWas, peso } from '../SaleTag';
 import { resolveImg } from '../../lib/media';
 import { saleInfo } from '../../lib/variantPricing';
-import { font, t } from '../../theme';
+import { font, ink, t, themed, veil } from '../../theme';
 import { ShopGradient, alpha, mix } from './shopTheme';
 import { useProductPeek } from '../peek/ProductPeek';
 
@@ -326,7 +326,7 @@ function Message({ section: s, accent }) {
     },
     quote: {
       flexDirection: 'column', alignItems: 'center', paddingVertical: 20, paddingHorizontal: 18,
-      backgroundColor: '#fff', borderWidth: 1, borderStyle: 'dashed', borderColor: alpha(accent, 0.45),
+      backgroundColor: t.neutral[0], borderWidth: 1, borderStyle: 'dashed', borderColor: alpha(accent, 0.45),
     },
   }[kind];
   const icon = {
@@ -336,7 +336,7 @@ function Message({ section: s, accent }) {
   }[kind];
   const strong = {
     card: { color: t.neutral[900] },
-    highlight: { color: '#fff' },
+    highlight: { color: t.onBrand },
     quote: { color: accent, fontSize: 13, lineHeight: 20.8, letterSpacing: 0.78, textTransform: 'uppercase', textAlign: 'center' },
   }[kind];
   const body = {
@@ -364,7 +364,7 @@ function Message({ section: s, accent }) {
   );
 }
 
-const styles = StyleSheet.create({
+const styles = themed(() => StyleSheet.create({
   home: { width: '100%', gap: 22, paddingTop: 4, paddingBottom: 12 },
   sec: { gap: 10, minWidth: 0 },
   titleWrap: { paddingHorizontal: 2 },
@@ -377,17 +377,17 @@ const styles = StyleSheet.create({
   slider: { position: 'relative', borderRadius: 18, overflow: 'hidden' },
   dots: { position: 'absolute', left: 0, right: 0, bottom: 10, flexDirection: 'row', justifyContent: 'center', gap: 6 },
   dot: {
-    width: 7, height: 7, borderRadius: 999, backgroundColor: 'rgba(255, 255, 255, 0.6)',
+    width: 7, height: 7, borderRadius: 999, backgroundColor: veil(0.6),
     boxShadow: [{ offsetX: 0, offsetY: 0, blurRadius: 0, spreadDistance: 1, color: 'rgba(0, 0, 0, 0.08)' }],
   },
-  dotOn: { width: 20, backgroundColor: '#fff' },
+  dotOn: { width: 20, backgroundColor: t.neutral[0] },
 
   wideList: { gap: 10 },
   wideItem: { width: '100%', borderRadius: 14, backgroundColor: t.neutral[100] },
   cardsTrack: { gap: 10, paddingBottom: 8 },
   bannerCard: {
     borderRadius: 18, backgroundColor: t.neutral[100],
-    boxShadow: [{ offsetX: 0, offsetY: 6, blurRadius: 18, color: 'rgba(15, 23, 42, 0.12)' }],
+    boxShadow: [{ offsetX: 0, offsetY: 6, blurRadius: 18, color: ink(0.12) }],
   },
 
   grid: { flexDirection: 'row', flexWrap: 'wrap', gap: 10 },
@@ -397,7 +397,7 @@ const styles = StyleSheet.create({
 
   tileWrap: { position: 'relative', minWidth: 0 },
   tile: {
-    flex: 1, overflow: 'hidden', borderWidth: 1, borderColor: t.neutral[200], borderRadius: 14, backgroundColor: '#fff',
+    flex: 1, overflow: 'hidden', borderWidth: 1, borderColor: t.neutral[200], borderRadius: 14, backgroundColor: t.neutral[0],
   },
   tileRow: { flexDirection: 'row', alignItems: 'center' },
   tileImg: { position: 'relative', width: '100%', aspectRatio: 1, overflow: 'hidden', backgroundColor: t.neutral[100] },
@@ -405,11 +405,11 @@ const styles = StyleSheet.create({
   tileImgRow: { width: 84, height: 84, aspectRatio: undefined },
   badge: {
     position: 'absolute', top: 8, left: 8, paddingVertical: 3, paddingHorizontal: 9, borderRadius: 999, overflow: 'hidden',
-    color: '#fff', fontSize: 11, lineHeight: 17.6, ...font(500),
+    color: t.onBrand, fontSize: 11, lineHeight: 17.6, ...font(500),
   },
   out: {
     position: 'absolute', left: 0, right: 0, bottom: 0, padding: 4, backgroundColor: 'rgba(17, 24, 39, 0.7)',
-    color: '#fff', fontSize: 11, lineHeight: 17.6, ...font(400), textAlign: 'center',
+    color: t.onBrand, fontSize: 11, lineHeight: 17.6, ...font(400), textAlign: 'center',
   },
   tileInfo: { gap: 3, paddingTop: 8, paddingHorizontal: 10, paddingBottom: 10 },
   tileInfoBig: { flex: 1, justifyContent: 'center', padding: 14, gap: 6 },
@@ -417,7 +417,7 @@ const styles = StyleSheet.create({
   tileName: { fontSize: 13.5, lineHeight: 17.55, ...font(500), color: t.neutral[900] },
   tileNameBig: { fontSize: 16, lineHeight: 20.8 },
   tileMeta: { flexDirection: 'row', alignItems: 'center', gap: 3 },
-  tileRating: { fontSize: 12, lineHeight: 19.2, ...font(500), color: '#f59e0b' },
+  tileRating: { fontSize: 12, lineHeight: 19.2, ...font(500), color: t.warning[500] },
   tileNew: { fontSize: 12, lineHeight: 19.2, ...font(500), color: t.neutral[500] },
   tileSold: { fontSize: 12, lineHeight: 19.2, ...font(400), color: t.neutral[500] },
   tilePriceRow: { flexDirection: 'row', alignItems: 'center', flexWrap: 'wrap', gap: 4 },
@@ -425,18 +425,18 @@ const styles = StyleSheet.create({
   tilePriceBig: { fontSize: 19, lineHeight: 30.4 },
   cart: {
     position: 'absolute', right: 8, bottom: 8, width: 32, height: 32, borderRadius: 16, alignItems: 'center', justifyContent: 'center',
-    boxShadow: [{ offsetX: 0, offsetY: 4, blurRadius: 10, color: 'rgba(15, 23, 42, 0.18)' }],
+    boxShadow: [{ offsetX: 0, offsetY: 4, blurRadius: 10, color: ink(0.18) }],
   },
   cartRow: { top: '50%', bottom: undefined, marginTop: -16 },
 
   galleryGrid: { flexDirection: 'row', flexWrap: 'wrap', gap: 6 },
   galleryItem: { position: 'relative', overflow: 'hidden', borderRadius: 12, backgroundColor: t.neutral[100] },
   caption: { position: 'absolute', left: 0, right: 0, bottom: 0, paddingTop: 18, paddingHorizontal: 10, paddingBottom: 8 },
-  captionText: { color: '#fff', fontSize: 12, lineHeight: 19.2, ...font(500) },
+  captionText: { color: t.onBrand, fontSize: 12, lineHeight: 19.2, ...font(500) },
 
   msgBox: { flexDirection: 'row', gap: 12, padding: 16, borderRadius: 18 },
   msgIcon: { width: 38, height: 38, borderRadius: 12, alignItems: 'center', justifyContent: 'center', flexShrink: 0 },
   msgText: { flex: 1, gap: 4, minWidth: 0 },
   msgTitle: { fontSize: 15.5, lineHeight: 24.8, ...font(500) },
   msgBody: { fontSize: 14, lineHeight: 21.7, ...font(400) },
-});
+}));

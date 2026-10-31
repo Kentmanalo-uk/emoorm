@@ -1,5 +1,6 @@
 import { useId } from 'react';
 import Svg, { Defs, G, LinearGradient, Stop } from 'react-native-svg';
+import { ikionShapes } from '../../../lib/ikionNative';
 
 /*
  * A tool's filled icon in its own colour, nothing behind it (web
@@ -21,22 +22,21 @@ export const TOOL_GRADIENTS = {
   slate: ['#cbd5e1', '#475569'],
 };
 
-// A Phosphor icon's "fill" paths (its 256-unit drawing), drawn inside our own
-// <Svg> so the gradient can paint them (as EmptyArt does).
-const fillPaths = (Icon) => Icon({}).props.weights.get('fill');
+// The icon's filled shapes (its 24-unit drawing), drawn inside our own <Svg>
+// so the gradient can paint them (as EmptyArt does).
 
 export default function ToolIcon({ Icon, tone = 'green', size = 30 }) {
   const id = `tg${useId().replace(/[^a-zA-Z0-9]/g, '')}`;
   const [from, to] = TOOL_GRADIENTS[tone] || TOOL_GRADIENTS.green;
   return (
-    <Svg width={size} height={size} viewBox="0 0 256 256">
+    <Svg width={size} height={size} viewBox="0 0 24 24">
       <Defs>
         <LinearGradient id={id} x1="0" y1="0" x2="1" y2="1">
           <Stop offset="0" stopColor={from} />
           <Stop offset="1" stopColor={to} />
         </LinearGradient>
       </Defs>
-      <G fill={`url(#${id})`}>{fillPaths(Icon)}</G>
+      <G fill={`url(#${id})`}>{ikionShapes(Icon, { paint: `url(#${id})` })}</G>
     </Svg>
   );
 }

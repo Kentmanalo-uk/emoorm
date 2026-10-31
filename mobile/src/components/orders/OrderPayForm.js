@@ -5,11 +5,11 @@ import {
 import * as ImagePicker from 'expo-image-picker';
 import {
   ArrowSquareOutIcon, CheckIcon, CopyIcon, QrCodeIcon, UploadSimpleIcon,
-} from 'phosphor-react-native';
+} from '../../lib/icons';
 import { resolveImg } from '../../lib/media';
 import { toast } from '../../lib/toast';
 import { uploadPrivateImage } from '../../lib/upload';
-import { font, t } from '../../theme';
+import { font, t, themed } from '../../theme';
 import { peso } from './orderProgress';
 import { OrderButton } from './OrderBits';
 import copyText from './copyText';
@@ -263,7 +263,7 @@ function GcashPay({ amount, number, accountName, qrImage, instructions }) {
   );
 }
 
-const styles = StyleSheet.create({
+const styles = themed(() => StyleSheet.create({
   form: {
     gap: 10, paddingHorizontal: 20, paddingBottom: 16, borderTopWidth: 1, borderTopColor: t.neutral[100], backgroundColor: t.neutral[0],
   },
@@ -282,13 +282,13 @@ const styles = StyleSheet.create({
   muted: { fontSize: 13, lineHeight: 20.8, ...font(400), color: t.neutral[600] },
   missing: { marginTop: 12 },
   panel: { gap: 16, marginTop: 12, padding: 14, backgroundColor: t.neutral[50], borderWidth: 1, borderColor: t.neutral[200] },
-  qr: { alignSelf: 'center', width: 220, maxWidth: '100%', aspectRatio: 1, padding: 6, backgroundColor: '#fff', borderWidth: 1, borderColor: t.neutral[200] },
+  qr: { alignSelf: 'center', width: 220, maxWidth: '100%', aspectRatio: 1, padding: 6, backgroundColor: t.neutral[0], borderWidth: 1, borderColor: t.neutral[200] },
   h4: { fontSize: 16, lineHeight: 24, ...font(500), color: t.neutral[900] },
   sub: { marginTop: 2, marginBottom: 10, fontSize: 13, lineHeight: 20.8, ...font(400), color: t.neutral[600] },
   payee: { flexDirection: 'row', flexWrap: 'wrap', alignItems: 'center', columnGap: 10, rowGap: 4, marginBottom: 6 },
   dt: { minWidth: 96, fontSize: 13, ...font(400), color: t.neutral[500] },
   dd: { fontSize: 13, ...font(500), color: t.neutral[900] },
-  copySmall: { flexDirection: 'row', alignItems: 'center', gap: 4, paddingVertical: 2, paddingHorizontal: 8, borderWidth: 1, borderColor: t.neutral[300], backgroundColor: '#fff' },
+  copySmall: { flexDirection: 'row', alignItems: 'center', gap: 4, paddingVertical: 2, paddingHorizontal: 8, borderWidth: 1, borderColor: t.neutral[300], backgroundColor: t.neutral[0] },
   copySmallText: { fontSize: 12, ...font(500), color: t.neutral[700] },
   note: { marginTop: 10, fontSize: 13, lineHeight: 20.8, ...font(400), color: t.neutral[600] },
 
@@ -309,10 +309,10 @@ const styles = StyleSheet.create({
   gcNameLabel: { fontSize: 12.5, ...font(400), color: t.neutral[500] },
   gcNameValue: { fontSize: 15, ...font(500), color: t.neutral[900] },
   gcOpen: { flexDirection: 'row', alignItems: 'center', justifyContent: 'center', gap: 8, minHeight: 48, paddingHorizontal: 16, borderRadius: 999, backgroundColor: '#007cff' },
-  gcOpenText: { fontSize: 16, ...font(500), color: '#fff' },
+  gcOpenText: { fontSize: 16, ...font(500), color: t.onBrand },
   gcNote: { fontSize: 13.5, lineHeight: 20.25, ...font(400), color: t.neutral[600] },
   gcInstructions: { paddingVertical: 10, paddingHorizontal: 12, borderRadius: 8, backgroundColor: t.neutral[0], fontSize: 13, lineHeight: 18.85, ...font(400), color: t.neutral[700] },
   gcQrToggle: { flexDirection: 'row', alignItems: 'center', gap: 6, alignSelf: 'flex-start' },
   gcQrToggleText: { fontSize: 13.5, ...font(500), color: t.accent[600] },
   gcQr: { alignSelf: 'center', width: 200, maxWidth: '100%', aspectRatio: 1, marginTop: 10, padding: 8, borderWidth: 1, borderColor: t.neutral[200], borderRadius: 8, backgroundColor: t.neutral[0] },
-});
+}));

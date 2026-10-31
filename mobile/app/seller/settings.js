@@ -4,7 +4,7 @@ import { useRouter } from 'expo-router';
 import {
   AirplaneTiltIcon, ArrowCounterClockwiseIcon, CaretRightIcon, ClockIcon, IdentificationCardIcon, MapPinIcon, MoneyIcon,
   MopedIcon, PaintBrushIcon, QrCodeIcon, StorefrontIcon, TrashIcon, TruckIcon, UserIcon,
-} from 'phosphor-react-native';
+} from '../../src/lib/icons';
 import apiClient from '../../src/api/client';
 import SellerPage from '../../src/components/seller/SellerPage';
 import { useSellerShell } from '../../src/components/seller/SellerShell';
@@ -17,7 +17,7 @@ import { SfSwitch } from '../../src/components/seller/fulfillment/FulfillmentPar
 import { qrMethod } from '../../src/components/seller/me/qrPayment';
 import { awayUntil, shortDate, weekLines } from '../../src/components/shop/shopHours';
 import { toast } from '../../src/lib/toast';
-import { font, t } from '../../src/theme';
+import { font, t, themed } from '../../src/theme';
 import { PageLoader } from '../../src/components/BrandLoader';
 
 /*
@@ -400,7 +400,7 @@ export default function SellerSettingsScreen() {
   );
 }
 
-const styles = StyleSheet.create({
+const styles = themed(() => StyleSheet.create({
   grow: { flexGrow: 1 },
   // .sh-body: 12px between the sections (as on Me).
   body: { gap: 12 },
@@ -424,4 +424,4 @@ const styles = StyleSheet.create({
   pendingText: { fontSize: 14, lineHeight: 21.7, ...font(400), color: t.warning[900] },
   pendingHint: { fontSize: 12.5, lineHeight: 19.4, ...font(400), color: t.warning[800] },
   pendingBtn: { marginTop: 6 },
-});
+}));

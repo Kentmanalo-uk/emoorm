@@ -1,6 +1,6 @@
-import { StarIcon as Star } from 'phosphor-react-native';
+import { StarIcon as Star } from '../lib/icons';
 import { View, StyleSheet } from 'react-native';
-import { colors } from '../theme';
+import { colors, themed } from '../theme';
 
 export default function StarRating({ rating = 0, size = 14, max = 5 }) {
   const rounded = Math.round(rating);
@@ -19,6 +19,6 @@ export default function StarRating({ rating = 0, size = 14, max = 5 }) {
   );
 }
 
-const styles = StyleSheet.create({
+const styles = themed(() => StyleSheet.create({
   row: { flexDirection: 'row', gap: 2 },
-});
+}));

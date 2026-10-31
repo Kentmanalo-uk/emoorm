@@ -1,6 +1,6 @@
 import { Pressable, StyleSheet, Text, View } from 'react-native';
-import { ChatTextIcon, ImageSquareIcon, ImagesIcon, StarIcon } from 'phosphor-react-native';
-import { font, t } from '../../../theme';
+import { ChatTextIcon, ImageSquareIcon, ImagesIcon, StarIcon } from '../../../lib/icons';
+import { font, t, themed } from '../../../theme';
 import { ShopGradient } from '../../shop/shopTheme';
 
 /*
@@ -12,12 +12,12 @@ import { ShopGradient } from '../../shop/shopTheme';
 export const KIND_ICON = { banner: ImageSquareIcon, spotlight: StarIcon, gallery: ImagesIcon, message: ChatTextIcon };
 
 // .shb-sec.is-<kind> .shb-sec-icon: linear-gradient(135deg, a, b).
-const KIND_GRADIENT = {
+const KIND_GRADIENT = themed(() => ({
   banner: ['#38bdf8', t.info[600]],
   spotlight: [t.warning[400], '#ea580c'],
   gallery: [t.accent[300], '#c026d3'],
   message: [t.success[400], t.primary[600]],
-};
+}));
 
 /** The kind's white icon on its gradient tile (36 × 36 in a section head, 40 × 40 in the picker). */
 export function KindIcon({ kind, size = 36, radius = 11, iconSize = 18 }) {
@@ -58,13 +58,13 @@ export function ShbLabel({ children, em }) {
   );
 }
 
-export const shb = StyleSheet.create({
+export const shb = themed(() => StyleSheet.create({
   field: { gap: 8, paddingTop: 12 },
   label: { fontSize: 13, lineHeight: 18, ...font(600), color: t.neutral[800] },
   labelEm: { ...font(500), color: t.neutral[500] },
   input: {
     minHeight: 42, paddingVertical: 9, paddingHorizontal: 12,
-    borderWidth: 1.5, borderColor: t.neutral[200], borderRadius: 11, backgroundColor: '#fff',
+    borderWidth: 1.5, borderColor: t.neutral[200], borderRadius: 11, backgroundColor: t.neutral[0],
     fontSize: 14, ...font(400), color: t.neutral[900],
   },
   inputFocus: { borderColor: t.primary[500] },
@@ -73,9 +73,9 @@ export const shb = StyleSheet.create({
   pickedName: { flex: 1, minWidth: 0 },
   pickedNameText: { fontSize: 13.5, lineHeight: 19, ...font(500), color: t.neutral[900] },
   pickedPrice: { fontSize: 12.5, lineHeight: 17, ...font(600), color: t.primary[700] },
-});
+}));
 
-const styles = StyleSheet.create({
+const styles = themed(() => StyleSheet.create({
   kindIcon: { alignItems: 'center', justifyContent: 'center', flexShrink: 0, overflow: 'hidden' },
   iconBtn: { width: 32, height: 32, alignItems: 'center', justifyContent: 'center', borderRadius: 9 },
   iconBtnPressed: { backgroundColor: t.neutral[100] },
@@ -83,7 +83,7 @@ const styles = StyleSheet.create({
   gridRow: { flexDirection: 'row', alignItems: 'flex-start' },
   gridRowStretch: { alignItems: 'stretch' },
   gridCell: { flex: 1, minWidth: 0 },
-});
+}));
 
 /**
  * Two across with a gap, like the website's phone grids

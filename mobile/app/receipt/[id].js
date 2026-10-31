@@ -4,11 +4,11 @@ import {
 } from 'react-native';
 import { useLocalSearchParams, useRouter } from 'expo-router';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
-import { CaretLeftIcon, PrinterIcon } from 'phosphor-react-native';
+import { CaretLeftIcon, PrinterIcon } from '../../src/lib/icons';
 import apiClient from '../../src/api/client';
 import { resolveImg } from '../../src/lib/media';
 import { toast } from '../../src/lib/toast';
-import { font, t } from '../../src/theme';
+import { font, t, themed } from '../../src/theme';
 import {
   carriedFeeLines, peso, receiptDate, statusLabel, trackingLink,
 } from '../../src/components/orders/orderProgress';
@@ -374,9 +374,11 @@ function receiptText(order) {
   return lines.filter((l) => l !== null).join('\n');
 }
 
-const paperText = { fontFamily: SYSTEM, color: t.neutral[900] };
+// Spread into the sheet below, so the getter is read while that sheet is
+// being built and the receipt's ink follows the mode.
+const paperText = { fontFamily: SYSTEM, get color() { return t.neutral[900]; } };
 
-const styles = StyleSheet.create({
+const styles = themed(() => StyleSheet.create({
   screen: { flex: 1, backgroundColor: t.neutral[100] },
   page: { paddingTop: 8, paddingHorizontal: 12 },
   loadingText: { padding: 40, textAlign: 'center', fontSize: 15, lineHeight: 24, ...font(400), color: t.neutral[500] },
@@ -388,10 +390,10 @@ const styles = StyleSheet.create({
     flexDirection: 'row', alignItems: 'center', gap: 8, minHeight: 44, paddingHorizontal: 16, borderRadius: 8, backgroundColor: t.primary[600],
   },
   printBtnPressed: { backgroundColor: t.primary[700] },
-  printText: { fontSize: 14, lineHeight: 16.8, ...font(600), color: '#fff' },
+  printText: { fontSize: 14, lineHeight: 16.8, ...font(600), color: t.onBrand },
 
   paper: {
-    paddingVertical: 18, paddingHorizontal: 14, borderRadius: 12, backgroundColor: '#fff',
+    paddingVertical: 18, paddingHorizontal: 14, borderRadius: 12, backgroundColor: t.neutral[0],
     shadowColor: '#0f172a', shadowOffset: { width: 0, height: 1 }, shadowOpacity: 0.04, shadowRadius: 2, elevation: 1,
   },
   header: { gap: 12, marginBottom: 16, paddingBottom: 16, borderBottomWidth: 2, borderBottomColor: t.neutral[900] },
@@ -460,7 +462,7 @@ const styles = StyleSheet.create({
   footerSmall: { marginBottom: 4, fontSize: 11, lineHeight: 17.6 },
 
   sk: { marginVertical: 16, paddingHorizontal: 12 },
-  skCard: { gap: 12, padding: 14, borderRadius: 14, backgroundColor: '#fff' },
+  skCard: { gap: 12, padding: 14, borderRadius: 14, backgroundColor: t.neutral[0] },
   skSpread: { flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between', gap: 12 },
   skTotal: { paddingTop: 10, borderTopWidth: 1, borderTopColor: t.neutral[150] },
-});
+}));

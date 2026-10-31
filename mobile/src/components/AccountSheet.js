@@ -3,10 +3,10 @@ import { usePathname, useRouter } from 'expo-router';
 import { create } from 'zustand';
 import {
   ArrowsLeftRightIcon, CaretRightIcon, GearIcon, SignOutIcon, UsersThreeIcon,
-} from 'phosphor-react-native';
+} from '../lib/icons';
 import useAuthStore from '../store/authStore';
 import { resolveImg } from '../lib/media';
-import { font, t } from '../theme';
+import { font, t, themed } from '../theme';
 import Sheet, { SheetButton } from './Sheet';
 import { startAccountSwitch } from './RoleSwitchOverlay';
 import { openSwitchAccount } from './SwitchAccountSheet';
@@ -121,7 +121,7 @@ function Row({ Icon, label, onPress, danger = false }) {
   );
 }
 
-const styles = StyleSheet.create({
+const styles = themed(() => StyleSheet.create({
   who: { flexDirection: 'row', alignItems: 'center', gap: 12, paddingVertical: 10 },
   avatar: {
     width: 44, height: 44, borderRadius: 22, overflow: 'hidden', alignItems: 'center', justifyContent: 'center',
@@ -140,4 +140,4 @@ const styles = StyleSheet.create({
   rowText: { flex: 1, fontSize: 15, lineHeight: 22, ...font(500) },
   message: { fontSize: 15, lineHeight: 22, color: t.neutral[600], ...font(400), paddingBottom: 4 },
   danger: { backgroundColor: t.danger[600], borderColor: t.danger[600] },
-});
+}));

@@ -3,7 +3,7 @@ import {
   BackHandler, Pressable, StyleSheet, Text, View,
 } from 'react-native';
 import { useLocalSearchParams } from 'expo-router';
-import { NotePencilIcon } from 'phosphor-react-native';
+import { NotePencilIcon } from '../../src/lib/icons';
 import apiClient from '../../src/api/client';
 import EmptyState from '../../src/components/EmptyState';
 import SellerPage from '../../src/components/seller/SellerPage';
@@ -16,7 +16,7 @@ import {
   LIST_POLL_MS, THREAD_POLL_MS, TOPIC_LABELS, formatTime, titleFor, usePoll,
 } from '../../src/components/seller/support/supportLib';
 import { toast } from '../../src/lib/toast';
-import { font, t } from '../../src/theme';
+import { font, t, themed } from '../../src/theme';
 
 /*
  * /seller/support, "Admin messages" (web/src/pages/SellerSupport.jsx →
@@ -194,7 +194,7 @@ export default function SellerSupportScreen() {
   );
 }
 
-const styles = StyleSheet.create({
+const styles = themed(() => StyleSheet.create({
   content: { flexGrow: 1 },
   // .sc-chat on phones: edge to edge (the page's 12px gutters pulled back), white.
   chat: { flexGrow: 1, minHeight: 360, marginHorizontal: -12, backgroundColor: t.neutral[0] },
@@ -203,8 +203,8 @@ const styles = StyleSheet.create({
     marginTop: 12, marginHorizontal: 12, marginBottom: 10, paddingVertical: 9, paddingHorizontal: 12, borderRadius: 10,
     backgroundColor: t.primary[600],
   },
-  composeText: { fontSize: 13, lineHeight: 20.8, color: '#fff', ...font(600) },
+  composeText: { fontSize: 13, lineHeight: 20.8, color: t.onBrand, ...font(600) },
   loading: {
     paddingVertical: 32, paddingHorizontal: 16, textAlign: 'center', fontSize: 14, lineHeight: 22.4, color: t.neutral[500], ...font(400),
   },
-});
+}));

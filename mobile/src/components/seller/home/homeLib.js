@@ -1,8 +1,8 @@
 import {
   ArrowCounterClockwiseIcon, ChartBarIcon, CookingPotIcon, IdentificationCardIcon, LockSimpleIcon, PackageIcon,
   PlusCircleIcon, ReceiptIcon, StarIcon, WalletIcon, WarningCircleIcon,
-} from 'phosphor-react-native';
-import { t } from '../../../theme';
+} from '../../../lib/icons';
+import { t, themed } from '../../../theme';
 import { sellBlockers, setupNextTo } from '../sellerSetup';
 
 /*
@@ -27,12 +27,12 @@ export const STATUS_META = {
   CANCELLED: { label: 'Cancelled', tint: 'red' },
 };
 
-export const STATUS_COLORS = {
+export const STATUS_COLORS = themed(() => ({
   amber: t.warning[700],
   blue: t.info[700],
   green: t.primary[700],
   red: t.danger[700],
-};
+}));
 
 /** Home's shop tools, each a filled icon in its own colour (a ToolGradients tone). */
 export const HOME_TOOLS = [

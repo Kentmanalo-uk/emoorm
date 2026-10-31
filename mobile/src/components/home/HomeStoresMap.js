@@ -4,7 +4,7 @@ import {
 } from 'react-native';
 import { useRouter } from 'expo-router';
 import Svg, { Polyline } from 'react-native-svg';
-import { font, t } from '../../theme';
+import { font, t, themed } from '../../theme';
 import { StoreMapCard, StoreMapPinFace } from './HomeStoreMapCard';
 
 /*
@@ -320,7 +320,7 @@ function StorePin({ store, x, y, hidden, selected, onPress }) {
   );
 }
 
-const styles = StyleSheet.create({
+const styles = themed(() => StyleSheet.create({
   frame: { width: '100%', overflow: 'hidden', backgroundColor: t.neutral[150] },
   rounded: { borderRadius: 12 },
   fill: { flex: 1 },
@@ -330,15 +330,15 @@ const styles = StyleSheet.create({
   pinOnTop: { zIndex: 2 },
   // The phone's spot: a blue dot in a soft halo.
   me: { position: 'absolute', width: 28, height: 28, borderRadius: 14, alignItems: 'center', justifyContent: 'center', backgroundColor: 'rgba(37, 99, 235, 0.18)' },
-  meDot: { width: 14, height: 14, borderRadius: 7, borderWidth: 2.5, borderColor: '#fff', backgroundColor: '#2563eb' },
+  meDot: { width: 14, height: 14, borderRadius: 7, borderWidth: 2.5, bordercolor: t.onBrand, backgroundColor: '#2563eb' },
   // Leaflet's zoom control (touch size).
   zoom: {
     position: 'absolute', borderWidth: 2, borderColor: 'rgba(0, 0, 0, 0.2)', borderRadius: 4,
-    backgroundColor: '#fff', overflow: 'hidden',
+    backgroundColor: t.neutral[0], overflow: 'hidden',
   },
   // Full screen: on the right, rounder, outlined, under the page's header.
   zoomRight: { borderWidth: 1, borderColor: t.neutral[200], borderRadius: 12 },
-  zoomBtn: { width: 36, height: 36, alignItems: 'center', justifyContent: 'center', backgroundColor: '#fff' },
+  zoomBtn: { width: 36, height: 36, alignItems: 'center', justifyContent: 'center', backgroundColor: t.neutral[0] },
   zoomTop: { borderBottomWidth: 1, borderBottomColor: '#e5e7eb' },
   zoomText: { fontSize: 22, lineHeight: 30, fontWeight: '700', fontFamily: Platform.select({ web: 'Lucida Console, Monaco, monospace', default: undefined }), color: '#000' },
   zoomOff: { color: '#bbb' },
@@ -348,4 +348,4 @@ const styles = StyleSheet.create({
 
   emptyOverlay: { ...StyleSheet.absoluteFill, alignItems: 'center', justifyContent: 'center' },
   emptyText: { fontSize: 13, lineHeight: 20, ...font(400), color: t.neutral[500] },
-});
+}));
