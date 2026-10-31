@@ -46,6 +46,9 @@ const initializeAuth = () => {
 
 localStorage.removeItem('emoorm-cached-accounts');
 
+// The admin session put aside while their seller stands in front of it.
+const ADMIN_ASIDE = 'emoorm-admin-aside';
+
 const useAuthStore = create(
   persist(
     (set, get) => ({
@@ -114,6 +117,68 @@ const useAuthStore = create(
         useWishlistStore.getState().setOwner(null);
       },
 
+      // ── A superadmin standing in for a shop ──────────────────────────
+      // The admin's own session is put aside in sessionStorage -- this tab,
+      // this visit -- and the seller's short-lived one takes its place. It
+      // carries no refresh token, so it cannot be renewed: when it runs out
+      // (or the admin says so) the session set aside comes back.
+      actingAs: null,
+
+      startActAs: (accessToken, sellerUser, until) => {
+        const keep = {
+          user: get().user,
+          accessToken: get().accessToken,
+          refreshToken: get().refreshToken || localStorage.getItem('refreshToken') || null,
+        };
+        try { sessionStorage.setItem(ADMIN_ASIDE, JSON.stringify(keep)); } catch { /* private window */ }
+
+        set({
+          user: sellerUser,
+          accessToken,
+          refreshToken: null,
+          isAuthenticated: true,
+          actingAs: {
+            adminName: keep.user?.fullName || keep.user?.email || 'admin',
+            sellerId: sellerUser?.id,
+            sellerName: sellerUser?.fullName || sellerUser?.email || 'this seller',
+            until: until || null,
+          },
+        });
+        localStorage.setItem('token', accessToken);
+        localStorage.setItem('accessToken', accessToken);
+        localStorage.setItem('user', JSON.stringify(sellerUser));
+        // Not the admin's to renew from in here.
+        localStorage.removeItem('refreshToken');
+        pointListsAt(sellerUser);
+      },
+
+      stopActAs: () => {
+        let kept = null;
+        try { kept = JSON.parse(sessionStorage.getItem(ADMIN_ASIDE) || 'null'); } catch { /* unreadable */ }
+        try { sessionStorage.removeItem(ADMIN_ASIDE); } catch { /* private window */ }
+
+        // Nothing to come back to (another tab, cleared storage): the safe
+        // end is to be nobody rather than to stay as the seller.
+        if (!kept?.accessToken) {
+          get().logout('/login');
+          return false;
+        }
+
+        set({
+          user: kept.user,
+          accessToken: kept.accessToken,
+          refreshToken: kept.refreshToken || null,
+          isAuthenticated: true,
+          actingAs: null,
+        });
+        localStorage.setItem('token', kept.accessToken);
+        localStorage.setItem('accessToken', kept.accessToken);
+        localStorage.setItem('user', JSON.stringify(kept.user));
+        if (kept.refreshToken) localStorage.setItem('refreshToken', kept.refreshToken);
+        pointListsAt(kept.user);
+        return true;
+      },
+
       updateUser: (userData) => {
         set({ user: userData });
         localStorage.setItem('user', JSON.stringify(userData));
@@ -162,6 +227,7 @@ const useAuthStore = create(
       partialize: (state) => ({
         user: state.user,
         accessToken: state.accessToken,
+        actingAs: state.actingAs,
         isAuthenticated: state.isAuthenticated,
       }),
     }
@@ -187,6 +253,8 @@ useAuthStore.subscribe((state, previous) => {
 setAuthHandlers({
   setTokens: (accessToken, refreshToken) => useAuthStore.getState().setTokens(accessToken, refreshToken),
   signOut: () => useAuthStore.getState().logout(),
+  actingAs: () => Boolean(useAuthStore.getState().actingAs),
+  endActingAs: () => useAuthStore.getState().stopActAs(),
 });
 
 // Other tabs: signing in, out or as someone else there shows here too

@@ -13,6 +13,7 @@ const googleService = require('./google.service');
 const { hashPassword, comparePassword } = require('../utils/password');
 const {
   generateTokens,
+  generateActAsToken,
   verifyRefreshToken,
   generateMfaToken,
   generateGoogleProfileToken,
@@ -1396,6 +1397,34 @@ const rejectSeller = async (userId, actor, reason) => {
  * @param {Object} [actor] - Acting admin for scope enforcement
  * @returns {Promise<Object>} Updated user
  */
+/**
+ * Open a seller's account as a superadmin: the same session the seller
+ * would get, minus the refresh token, so it dies on its own in half an hour
+ * (utils/jwt generateActAsToken).
+ *
+ * Only a seller can be opened. An admin cannot be opened by another admin:
+ * that would be a way to borrow someone else's admin rights, which is a
+ * different thing from standing in for a shop.
+ *
+ * @param {String} userId - the seller to open
+ * @param {Object} actor - the superadmin asking
+ * @returns {Promise<{ accessToken, user, expiresAt }>}
+ */
+const actAsUser = async (userId, actor) => {
+  const target = await userRepository.findById(userId);
+  if (!target) throw new ApiError('User not found', 404);
+  if (target.id === actor.id) throw new ApiError('That is your own account', 400);
+  if (['SUPER_ADMIN', 'MUNICIPAL_ADMIN'].includes(target.role)) {
+    throw new ApiError('Admin accounts cannot be opened this way', 403);
+  }
+  if (target.role !== 'SELLER') {
+    throw new ApiError('Only a seller account can be opened', 400);
+  }
+
+  const { token, expiresAt } = generateActAsToken(target, actor);
+  return { accessToken: token, user: adminUserView(target), expiresAt };
+};
+
 const suspendUser = async (userId, actor) => {
   const target = await userRepository.findById(userId);
   if (!target) throw new ApiError('User not found', 404);
@@ -1902,6 +1931,7 @@ module.exports = {
   approveSeller,
   rejectSeller,
   suspendUser,
+  actAsUser,
   activateUser,
   deleteUser,
   setUserRole,

@@ -1,0 +1,90 @@
+/* The bar a superadmin wears while standing in for a shop
+   (components/layout/ActingAsBar.jsx).
+
+   Amber on purpose: the app's own greens mean "yours" and its reds mean
+   "danger", and this is neither. It sits above everything, including the
+   seller's sticky header and the sheets, because it must never be the thing
+   that scrolls away. */
+
+.acting-bar {
+  position: sticky;
+  top: 0;
+  z-index: 2000;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+  min-height: 42px;
+  padding: 7px 16px;
+  background: #b45309;
+  color: #fff;
+  font-size: 13.5px;
+  line-height: 1.35;
+  box-shadow: 0 1px 0 rgba(0, 0, 0, 0.18);
+}
+
+.acting-bar-what {
+  display: flex;
+  align-items: center;
+  gap: 9px;
+  min-width: 0;
+}
+
+.acting-bar-what strong {
+  font-weight: 700;
+}
+
+/* Whose hand is really on it. Quieter than the shop's name, because the
+   name is the thing that stops a mistake. */
+.acting-bar-who {
+  color: rgba(255, 255, 255, 0.82);
+}
+
+.acting-bar-right {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  flex-shrink: 0;
+}
+
+.acting-bar-left {
+  color: rgba(255, 255, 255, 0.86);
+  font-variant-numeric: tabular-nums;
+  white-space: nowrap;
+}
+
+.acting-bar-out {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  min-height: 32px;
+  padding: 0 12px;
+  border: 1px solid rgba(255, 255, 255, 0.5);
+  border-radius: 8px;
+  background: rgba(255, 255, 255, 0.12);
+  color: #fff;
+  font: inherit;
+  font-weight: 600;
+  white-space: nowrap;
+  cursor: pointer;
+}
+
+.acting-bar-out:hover {
+  background: rgba(255, 255, 255, 0.22);
+}
+
+/* On a phone the sentence is the first thing to go, never the way out. */
+@media (max-width: 640px) {
+  .acting-bar {
+    padding: 7px 12px;
+    font-size: 13px;
+  }
+
+  .acting-bar-who {
+    display: none;
+  }
+
+  .acting-bar-left {
+    display: none;
+  }
+}

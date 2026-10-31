@@ -19,7 +19,7 @@ const settle = (config) => {
  * The signed-in session. The auth store registers how to save renewed tokens
  * and how to sign out (setAuthHandlers), so this file need not import it.
  */
-let authHandlers = { setTokens: null, signOut: null };
+let authHandlers = { setTokens: null, signOut: null, actingAs: null, endActingAs: null };
 export const setAuthHandlers = (handlers) => {
   authHandlers = { ...authHandlers, ...handlers };
 };
@@ -38,6 +38,14 @@ const SIGN_IN_STEP = /\/auth\/(login|register|google|refresh-token|forgot-passwo
 // the storage.
 let refreshing = null;
 export const renewSession = () => {
+  // Inside a seller's account, the renewal cookie in this browser is still
+  // the admin's own. Renewing would hand back an ADMIN token while the page
+  // went on showing the seller -- the wrong person holding the wrong screen.
+  // The short session is meant to end, so end it: back to being the admin.
+  if (authHandlers.actingAs?.()) {
+    authHandlers.endActingAs?.();
+    return Promise.reject(new Error('That seller session has ended'));
+  }
   if (!refreshing) {
     const stored = localStorage.getItem('refreshToken');
     refreshing = (stored || readToken()

@@ -154,6 +154,11 @@ const authenticate = async (req, res, next) => {
 
     // Attach user to request object
     req.user = user;
+
+    // A superadmin inside this seller's account (utils/jwt generateActAsToken).
+    // The request is the seller's in every other way -- this only remembers
+    // whose hand is on it, so the audit log can say so.
+    if (decoded.actAs?.by) req.actingAdmin = decoded.actAs;
     touchActivity(user.id);
     next();
   } catch (error) {

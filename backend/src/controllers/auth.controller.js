@@ -364,6 +364,28 @@ const rejectSeller = asyncHandler(async (req, res) => {
  * @route POST /api/auth/users/:id/suspend
  * @access Private (ADMIN only)
  */
+/**
+ * Open a seller's account (Superadmin)
+ * @route POST /api/auth/users/:id/act-as
+ * @access Private (SUPER_ADMIN only)
+ */
+const actAsUser = asyncHandler(async (req, res) => {
+  const result = await authService.actAsUser(req.params.id, req.user);
+
+  // Written down before the door opens, so the record exists even if the
+  // session that follows does nothing at all.
+  await auditLog.record({
+    actor: req.user,
+    action: 'ACT_AS_USER',
+    entity: 'User',
+    entityId: req.params.id,
+    details: { email: result.user?.email, until: result.expiresAt },
+    req,
+  });
+
+  successResponse(res, result, 'Seller account opened');
+});
+
 const suspendUser = asyncHandler(async (req, res) => {
   // The reason is kept in the audit log; the person reads it when they try
   // to sign in, and admins see it in the person's details.
@@ -686,6 +708,7 @@ module.exports = {
   approveSeller,
   rejectSeller,
   suspendUser,
+  actAsUser,
   activateUser,
   deleteUser,
   previewPurgeUser,

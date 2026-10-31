@@ -26,7 +26,11 @@ const record = async ({ actor, action, entity, entityId, details, req, municipal
       action,
       entity,
       entityId: entityId || null,
-      details: details || null,
+      // A superadmin acting as this seller is written down beside the
+      // seller's own name, so nothing done inside the account is anonymous.
+      details: req?.actingAdmin
+        ? { ...(details || {}), actingAdmin: req.actingAdmin }
+        : (details || null),
       ipAddress: req?.ip || req?.headers?.['x-forwarded-for'] || null,
       userAgent: req?.headers?.['user-agent'] || null,
       municipalityId: municipalityId

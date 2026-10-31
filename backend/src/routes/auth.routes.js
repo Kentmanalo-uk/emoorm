@@ -215,6 +215,15 @@ router.post(
   authController.rejectSeller
 );
 
+// Standing in for a shop: a superadmin only, never for another admin
+// (auth.service actAsUser).
+router.post(
+  '/users/:id/act-as',
+  authenticate,
+  authorize('SUPER_ADMIN'),
+  authController.actAsUser
+);
+
 router.post(
   '/users/:id/suspend',
   authenticate,

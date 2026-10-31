@@ -81,7 +81,7 @@ const storeState = (store, stats) => {
 
 export default function AdminUsers({ fixedRole = '' }) {
   const navigate = useNavigate();
-  const { user: actor } = useAuthStore();
+  const { user: actor, startActAs } = useAuthStore();
   const isSuperAdmin = actor?.role === 'SUPER_ADMIN';
   const page$ = PAGES[fixedRole] || PAGES[''];
   const [users, setUsers] = useState([]);
@@ -213,6 +213,33 @@ export default function AdminUsers({ fixedRole = '' }) {
     } catch (err) {
       toast.error(err.message || 'Failed to suspend user');
     } finally {
+      setProcessing(null);
+    }
+  };
+
+  // Step into the shop. The seller's own session comes back and takes the
+  // place of this one; the bar at the top of every page is the way out
+  // (components/layout/ActingAsBar.jsx).
+  const handleActAs = async (u) => {
+    if (!(await confirmAction({
+      title: `Open ${u.fullName}'s account?`,
+      message: 'You will be signed in as this seller and can do anything they can do. It is written in the audit log, and the session ends by itself after 30 minutes.',
+      confirmLabel: 'Open account',
+    }))) return;
+    setProcessing(u.id);
+    try {
+      const res = await axios.post(`/auth/users/${u.id}/act-as`);
+      const { accessToken, user, expiresAt } = res.data || {};
+      if (!accessToken) throw new Error('No session came back');
+      startActAs(accessToken, user, expiresAt);
+      // A whole page load, not a route change. Two reasons: RoleGate locks
+      // admins to /admin/* and would bounce a route change away before the
+      // new role had rendered, and everything this admin has already
+      // fetched is cached under their own name -- a fresh boot is the only
+      // way the shop is read as the shop.
+      window.location.assign('/seller');
+    } catch (err) {
+      toast.error(err.message || 'Could not open that account');
       setProcessing(null);
     }
   };
@@ -630,6 +657,16 @@ export default function AdminUsers({ fixedRole = '' }) {
               <div className="admin-detail-section">
                 <h4>Account Actions</h4>
                 <div className="admin-detail-actions">
+                  {isSuperAdmin && selected.role === 'SELLER' && selected.id !== actor?.id && (
+                    <button
+                      type="button"
+                      className="admin-btn"
+                      disabled={processing === selected.id}
+                      onClick={() => handleActAs(selected)}
+                    >
+                      <Storefront size={14} /> Open seller account
+                    </button>
+                  )}
                   {selected.isActive ? (
                     <button
                       type="button"

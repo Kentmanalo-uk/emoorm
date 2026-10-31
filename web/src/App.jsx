@@ -9,6 +9,7 @@ import RoleGate from './components/RoleGate';
 import ScrollMemory from './components/ScrollMemory';
 import StatusBarTint from './components/StatusBarTint';
 import AppToaster from './components/ui/AppToaster';
+import ActingAsBar from './components/layout/ActingAsBar';
 import NotificationWatcher from './components/NotificationWatcher';
 import ActivityBar from './components/ui/ActivityBar';
 import AccountSwitchOverlay from './components/account/AccountSwitchOverlay';
@@ -433,6 +434,8 @@ function App() {
       <ThemeRuntime />
       <Router>
         <StatusBarTint />
+        {/* A superadmin standing in for a shop, above every page. */}
+        <ActingAsBar />
         <AppToaster />
         <NotificationWatcher />
         {/* Long-press previews of products, shops, chats and notifications. */}

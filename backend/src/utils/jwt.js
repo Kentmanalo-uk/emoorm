@@ -117,6 +117,44 @@ const generateTokens = (user, { jti } = {}) => {
 };
 
 /**
+ * How long a superadmin may stay inside a seller's account before the door
+ * shuts on its own. Short on purpose: there is no refresh token for one of
+ * these, so it cannot be renewed quietly in the background -- when it runs
+ * out the admin is simply themselves again.
+ */
+const ACT_AS_MINUTES = 30;
+
+/**
+ * An access token that signs a superadmin in AS a seller.
+ *
+ * It is an ordinary access token in every way the middleware cares about --
+ * same secret, same algorithm, the seller's own id, role and tokenVersion --
+ * so every seller route accepts it without knowing anything special. The
+ * `actAs` claim rides along so the server can still say who is really
+ * holding it: req.actingAdmin (middleware/auth.js), which the audit log
+ * writes down beside the seller's own name.
+ *
+ * @param {Object} user - the seller being opened
+ * @param {Object} admin - the superadmin opening them
+ * @returns {{ token: String, expiresAt: Date }}
+ */
+const generateActAsToken = (user, admin) => {
+  const token = jwt.sign(
+    {
+      id: user.id,
+      email: user.email,
+      role: user.role,
+      municipalityId: user.municipalityId,
+      tokenVersion: user.tokenVersion ?? 0,
+      actAs: { by: admin.id, byEmail: admin.email },
+    },
+    accessKey(),
+    { algorithm: 'HS256', expiresIn: `${ACT_AS_MINUTES}m` }
+  );
+  return { token, expiresAt: new Date(Date.now() + ACT_AS_MINUTES * 60 * 1000) };
+};
+
+/**
  * Short-lived JWT used to bind a partially authenticated user to a
  * follow-up MFA step. `type` is one of 'mfa-verify' | 'mfa-setup'.
  */
@@ -221,6 +259,8 @@ module.exports = {
   verifyAccessToken,
   verifyRefreshToken,
   generateTokens,
+  generateActAsToken,
+  ACT_AS_MINUTES,
   generateMfaToken,
   verifyMfaToken,
   generateGoogleProfileToken,
