@@ -66,15 +66,39 @@ const ChecksIcon = createIkion('checks', 'ChecksIcon', {
   ],
 });
 
-// One Ikions icon with Phosphor's props.
+/*
+ * One Ikions icon with Phosphor's props.
+ *
+ * The size a page asks for and the stroke its weight implies both pass
+ * through a CSS variable before they are drawn: --icon-zoom scales every
+ * icon, --icon-ink thins or thickens every stroke, and --icon-stroke, if
+ * index.css sets it, is the stroke every outline icon draws at whatever
+ * weight it asked for -- which is how the whole site can read at one
+ * weight without touching a single one of the hundreds of call sites.
+ * Unset, each weight keeps its own stroke; both multipliers are 1.
+ *
+ * Ikions draws size as the svg's width and height attributes and the stroke
+ * as stroke-width, and a style beats an attribute, so this lands on top of
+ * them. A call site's own style still wins over both.
+ */
 function Icon({ of: Ikion, size = '1em', weight = 'regular', mirrored = false, alt, style, ...rest }) {
+  // A number is pixels, as Phosphor reads it; anything else is already a
+  // CSS length ('1em', '100%') and calc() takes it as it is.
+  const length = typeof size === 'number' ? `${size}px` : size;
+  const stroke = STROKE[weight] ?? STROKE.regular;
   return (
     <Ikion
       size={size}
       variant={weight === 'fill' ? 'filled' : 'outline'}
-      strokeWidth={STROKE[weight] ?? STROKE.regular}
+      strokeWidth={stroke}
       title={alt}
-      style={mirrored ? { ...style, transform: 'scaleX(-1)' } : style}
+      style={{
+        width: `calc(${length} * var(--icon-zoom, 1))`,
+        height: `calc(${length} * var(--icon-zoom, 1))`,
+        strokeWidth: `calc(var(--icon-stroke, ${stroke}) * var(--icon-ink, 1))`,
+        ...style,
+        ...(mirrored ? { transform: 'scaleX(-1)' } : null),
+      }}
       {...rest}
     />
   );

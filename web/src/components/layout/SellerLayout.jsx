@@ -651,16 +651,16 @@ export default function SellerLayout() {
       {/* Phone tab bar */}
       <nav className={`sc-tabbar sc-tabbar--app${isPhone && !isTabRoot ? ' is-hidden' : ''}`} aria-label="Seller sections">
         <NavLink to="/seller" end className={tabCls}>
-          {({ isActive }) => <><House size={24} weight={isActive ? 'fill' : 'light'} /><span>Home</span></>}
+          {({ isActive }) => <><House size={21} weight={isActive ? 'fill' : 'light'} /><span>Home</span></>}
         </NavLink>
         <NavLink to="/seller/products" end className={tabCls}>
-          {({ isActive }) => <><Package size={24} weight={isActive ? 'fill' : 'light'} /><span>My products</span></>}
+          {({ isActive }) => <><Package size={21} weight={isActive ? 'fill' : 'light'} /><span>My products</span></>}
         </NavLink>
         <NavLink to="/seller/orders" className={tabCls}>
           {({ isActive }) => (
             <>
               <span className="sc-tab-icon">
-                <Receipt size={24} weight={isActive ? 'fill' : 'light'} />
+                <Receipt size={21} weight={isActive ? 'fill' : 'light'} />
                 {ordersDue > 0 && <b className="sc-tab-badge" aria-label={`${ordersDue} waiting`}>{ordersDue > 9 ? '9+' : ordersDue}</b>}
               </span>
               <span>Orders</span>
@@ -671,7 +671,7 @@ export default function SellerLayout() {
           {({ isActive }) => (
             <>
               <span className="sc-tab-icon">
-                <ChatCircleDots size={24} weight={isActive ? 'fill' : 'light'} />
+                <ChatCircleDots size={21} weight={isActive ? 'fill' : 'light'} />
                 {chatUnread > 0 && <b className="sc-tab-badge">{chatUnread > 9 ? '9+' : chatUnread}</b>}
               </span>
               <span>Chat</span>
@@ -679,7 +679,7 @@ export default function SellerLayout() {
           )}
         </NavLink>
         <NavLink to="/seller/menu" className={tabCls}>
-          {({ isActive }) => <><UserIcon size={24} weight={isActive ? 'fill' : 'light'} /><span>Me</span></>}
+          {({ isActive }) => <><UserIcon size={21} weight={isActive ? 'fill' : 'light'} /><span>Me</span></>}
         </NavLink>
       </nav>
 

@@ -392,34 +392,30 @@
   }
 
   /* ── App tab bar: Home, My products, Chat, Marketing, Me ──────
-     The buyer bottom bar's sizes: 68px, 24px icons, 10px labels, green
-     when active, a red count on Chat. */
+     The buyer bottom bar's sizes: 74px tall, 21px icons scaled by the
+     bar's --icon-zoom, 9px labels, green when active, a red count on
+     Chat. */
   .sc-tabbar.sc-tabbar--app {
     grid-template-columns: repeat(5, minmax(0, 1fr));
-    min-height: 68px;
+    min-height: 74px;
     padding: 7px 6px max(8px, env(safe-area-inset-bottom));
     border-top: 1px solid var(--t-neutral-200, #e5e7eb);
-    background: rgba(255, 255, 255, 0.98);
+    background: var(--t-neutral-0, #fff);
     box-shadow: 0 -4px 16px rgba(15, 23, 42, 0.08);
   }
 
   .sc-tabbar--app .sc-tab {
-    gap: 2px;
+    gap: 3px;
     min-height: 0;
     border-radius: 0;
     color: var(--t-neutral-500, #6b7280);
-    font-size: 11px;
+    font-size: 9px;
     font-weight: 500;
   }
 
   .sc-tabbar--app .sc-tab.is-active {
     color: var(--t-primary-600, #059669);
     font-weight: 500;
-  }
-
-  .sc-tabbar--app .sc-tab svg {
-    width: 24px;
-    height: 24px;
   }
 
   .sc-tabbar--app .sc-tab .sc-tab-icon {
@@ -1124,16 +1120,15 @@
   }
 }
 
-/* Seller tab bar: the same icon and label size as the buyer bottom navigation
-   (28px icons, 11px labels). The admin tab bar shares these styles and keeps its own. */
+/* Seller tab bar: the same icon and label size as the buyer bottom
+   navigation, which the admin bar shares. The sizes themselves are set
+   once -- the label above, the drawing by the bar's --icon-zoom in
+   SellerShellMobile.css -- because an explicit width here would do
+   nothing: lib/icons.jsx writes the size as an inline style, and a style
+   beats a rule. */
 @media (max-width: 768px) {
-  .sc-tabbar--app:not(.acm-tabbar) .sc-tab {
+  .sc-tabbar--app .sc-tab {
     gap: 3px;
-    font-size: 11px;
-  }
-
-  .sc-tabbar--app:not(.acm-tabbar) .sc-tab svg {
-    width: 28px;
-    height: 28px;
+    font-size: 9px;
   }
 }

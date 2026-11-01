@@ -236,6 +236,11 @@
 /* ── Phones: bottom tab bar ─────────────────────────────────── */
 @media (max-width: 768px) {
   .sc-tabbar {
+    /* The buyer bar's icon scale (Header.css .mobile-bottom-nav): this bar
+       is navigation that is never off screen, so its drawings go a step
+       beyond the phone default in index.css. --icon-zoom cascades, so it
+       re-scales every icon inside the bar and nothing outside it. */
+    --icon-zoom: 1.4;
     position: fixed;
     right: 0;
     bottom: 0;
@@ -245,7 +250,7 @@
     grid-template-columns: repeat(5, minmax(0, 1fr));
     min-height: 64px;
     padding: 6px 4px max(8px, env(safe-area-inset-bottom));
-    background: rgba(255, 255, 255, 0.98);
+    background: var(--t-neutral-0, #fff);
     border-top: 1px solid var(--t-neutral-150, #eef0f3);
     box-shadow: var(--elev-raised);
   }
@@ -260,7 +265,7 @@
     min-height: 50px;
     padding: 0;
     font: inherit;
-    font-size: 11px;
+    font-size: 9px;
     font-weight: 500;
     line-height: 1.1;
     color: var(--t-neutral-500, #636b78);

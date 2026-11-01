@@ -40,7 +40,28 @@ body {
    is lighter). Used as a background: `background: var(--header-glow);`
    or the .header-glow class. --header-glow-band is the same colours
    without the bottom edge, to carry the wash up over a gap above a bar. */
+/* ── How big and how heavy every icon is drawn ─────────────────────────
+   Read by the one component every icon goes through (lib/icons.jsx):
+   --icon-zoom multiplies the size a page asked for, --icon-ink multiplies
+   the stroke its weight implies. At 1 an icon is exactly what the call
+   site wrote, which is what desktops still get.
+
+   --icon-stroke overrules the weight a call site asked for: with it set,
+   every outline icon on the site draws at this one stroke, whether the
+   page wrote thin, light, regular or bold. It is the bottom navigation's
+   light weight, which is the weight the whole site is drawn at now --
+   a flat stroke reads as one set of icons rather than a dozen. ('fill'
+   is a different drawing, not a stroke, so it is untouched.) Remove this
+   line and each weight goes back to a stroke of its own.
+
+   On a phone the same icon is asked to do more: it is often the only
+   label a control has, and a thumb is a blunter pointer than a cursor.
+   So they are drawn a fifth larger and a quarter lighter -- bigger to
+   find, thinner so the extra size does not read as heavier. */
 :root {
+  --icon-zoom: 1;
+  --icon-ink: 1;
+  --icon-stroke: 1.5;
   --header-glow-strength: 0.5;
   --header-glow-band:
     linear-gradient(
@@ -811,4 +832,25 @@ input[type="radio"] {
   clip: rect(0 0 0 0);
   white-space: nowrap;
   border: 0;
+}
+
+/* Icons on a phone: a fifth larger, a quarter lighter (see :root above). */
+@media (max-width: 768px) {
+  :root {
+    --icon-zoom: 1.2;
+    --icon-ink: 0.75;
+  }
+}
+
+/* ── Every embedded map stays inside its own box ───────────────────────
+   Leaflet stacks its panes and controls up to z-index 1000 and puts no
+   z-index on the container holding them, so on a phone a map's zoom
+   buttons and attribution rose over the fixed bottom navigation (z-index
+   120) as the page scrolled past. A z-index here makes each map a
+   stacking context: whatever Leaflet draws inside it is painted in this
+   one layer, so the bars stay on top and the map's own controls still
+   stack correctly against each other. */
+.leaflet-container {
+  position: relative;
+  z-index: 0;
 }

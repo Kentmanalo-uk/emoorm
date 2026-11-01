@@ -697,9 +697,18 @@
 }
 
 /* The map, with its "Open full map" pill floating bottom-right (above
-   Leaflet's credit line and controls). */
+   Leaflet's credit line and controls).
+
+   z-index here is what keeps that pill inside the map. Leaflet stacks its
+   own panes and controls up to 1000, so the pill has to sit above them --
+   and a bare z-index that high also cleared the fixed bottom navigation
+   (z-index 120), so the pill rode over the bar as the page scrolled. A
+   z-index on the map makes it a stacking context: everything inside is
+   drawn within this one layer, however high it climbs, so the pill still
+   wins against Leaflet and the bar still wins against the map. */
 .discover-stores-map {
   position: relative;
+  z-index: 0;
 }
 
 /* Where the map goes until it loads (HomeStoresMapLazy): the map's own
