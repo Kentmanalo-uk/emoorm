@@ -81,9 +81,45 @@
   flex: 1;
   min-height: 0;
   display: flex;
+  align-items: stretch;
+  justify-content: center;
+}
+
+/* The photos, side by side in one scroller.
+
+   This is what makes a swipe feel like a swipe. The photo used to be
+   swapped out under your finger: you dragged, nothing moved, and the
+   next one appeared. Here the browser scrolls the track as you drag,
+   carries the momentum when you let go, and snaps to whichever photo is
+   nearest -- the same behaviour as every other gallery on the phone,
+   and none of it animated by hand.
+
+   scroll-behavior is left alone, so a drag is never smoothed (which
+   would lag the finger); the arrows and the grid ask for smooth
+   scrolling per call instead. */
+.rv-track {
+  display: flex;
+  width: 100%;
+  height: 100%;
+  overflow-x: auto;
+  overflow-y: hidden;
+  scroll-snap-type: x mandatory;
+  overscroll-behavior-x: contain;
+  -webkit-overflow-scrolling: touch;
+  scrollbar-width: none;
+}
+
+.rv-track::-webkit-scrollbar { display: none; }
+
+.rv-slide {
+  flex: 0 0 100%;
+  width: 100%;
+  height: 100%;
+  display: flex;
   align-items: center;
   justify-content: center;
-  padding: 0 8px;
+  scroll-snap-align: center;
+  scroll-snap-stop: always;
 }
 
 .rv-media {
@@ -92,6 +128,9 @@
   width: auto;
   height: auto;
   object-fit: contain;
+  /* A drag on a photo must scroll the track, not pick the picture up. */
+  -webkit-user-drag: none;
+  user-select: none;
 }
 
 .rv-step {
@@ -111,6 +150,13 @@
 }
 
 .rv-step:hover { background: rgba(0, 0, 0, 0.7); }
+
+.rv-step:disabled {
+  opacity: 0.25;
+  cursor: default;
+}
+
+.rv-step:disabled:hover { background: rgba(0, 0, 0, 0.45); }
 .rv-step--prev { left: 10px; }
 .rv-step--next { right: 10px; }
 
@@ -120,9 +166,11 @@
   .rv-step { display: none; }
 }
 
+/* The track runs edge to edge now that the stage has no padding, so
+   the rail keeps its own inset from the screen. */
 .rv-rail {
   position: absolute;
-  right: 10px;
+  right: 14px;
   bottom: 12px;
   display: flex;
   flex-direction: column;
@@ -312,7 +360,9 @@
    make the sheet no better than a separate page. The photo shrinks to
    the strip above the sheet and sits at the top of it, so what is being
    talked about stays in view. */
-.rv.is-commenting .rv-stage {
+/* The slide still fills the stage, so it is the photo inside it that
+   moves to the top -- not the stage. */
+.rv.is-commenting .rv-slide {
   align-items: flex-start;
 }
 

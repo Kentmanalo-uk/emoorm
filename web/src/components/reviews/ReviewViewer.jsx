@@ -32,17 +32,84 @@ export default function ReviewViewer({ items, index, product, social, onIndexCha
 
   const [grid, setGrid] = useState(false);
   const [expanded, setExpanded] = useState(false);
-  const touch = useRef(null);
+  const track = useRef(null);
+  const settle = useRef(null);
+  // Put there, not scrolled there: true for the first positioning and
+  // for a photo picked out of the grid.
+  const jump = useRef(true);
+  // Set when the index changed because the track was scrolled, so the
+  // effect below knows not to scroll it again.
+  const fromScroll = useRef(false);
 
   const safeIndex = Math.min(Math.max(index, 0), Math.max(items.length - 1, 0));
   const current = items[safeIndex];
   const review = current?.review;
 
+  // Clamped, not wrapped. The photos are one scroller now, and there is
+  // no way to scroll from the last to the first without travelling back
+  // through all of them -- so the ends are ends, and the arrows say so.
   const go = useCallback((next) => {
     if (!items.length) return;
-    onIndexChange((next + items.length) % items.length);
+    onIndexChange(Math.min(Math.max(next, 0), items.length - 1));
     setExpanded(false);
   }, [items.length, onIndexChange]);
+
+  /** Which slide the track is sitting on, from where it is scrolled to. */
+  const nearest = () => {
+    const el = track.current;
+    if (!el || !el.clientWidth) return safeIndex;
+    return Math.round(el.scrollLeft / el.clientWidth);
+  };
+
+  /**
+   * The browser does the animating. A drag scrolls the track and
+   * scroll-snap settles it; this only notices where it landed, once it
+   * has stopped moving, and tells the rest of the viewer.
+   */
+  const onScroll = () => {
+    clearTimeout(settle.current);
+    settle.current = setTimeout(() => {
+      const at = nearest();
+      if (at !== safeIndex) { fromScroll.current = true; onIndexChange(at); setExpanded(false); }
+    }, 90);
+  };
+
+  // An index changed from somewhere else -- an arrow, a key, the grid --
+  // slides the track there. When the change came from scrolling, the
+  // track is already there and this does nothing, which is what stops
+  // the two from chasing each other.
+  //
+  // `jump` is the exception: landing on photo 9 from the list, or from
+  // the grid, should put you there rather than scroll you through the
+  // eight in between. It is cleared on the first run whether or not that
+  // run had anywhere to scroll to -- an earlier version only cleared it
+  // when it moved, so opening on photo 1 left the flag set and every
+  // arrow after it jumped.
+  useEffect(() => {
+    const el = track.current;
+    if (!el || grid || !el.clientWidth) return;
+    // The track moved itself. Scrolling it again here would be fighting
+    // the finger: this fires 90ms into a drag that has paused, long
+    // before it is let go, and the photo would be yanked out from under
+    // it towards whichever one is currently nearest.
+    if (fromScroll.current) { fromScroll.current = false; return; }
+    const instant = jump.current;
+    jump.current = false;
+    const to = safeIndex * el.clientWidth;
+    if (Math.abs(el.scrollLeft - to) < 2) return;
+    el.scrollTo({ left: to, behavior: instant ? 'auto' : 'smooth' });
+  }, [safeIndex, grid]);
+
+  // Only the photo in front of you plays.
+  useEffect(() => {
+    const el = track.current;
+    if (!el) return;
+    el.querySelectorAll('video').forEach((v, i) => {
+      if (i === safeIndex) v.play?.().catch(() => {}); else v.pause?.();
+    });
+  }, [safeIndex]);
+
+  useEffect(() => () => clearTimeout(settle.current), []);
 
   // Arrow keys page, as in every other gallery. Escape belongs to the
   // focus trap, so it is not handled twice here.
@@ -63,18 +130,6 @@ export default function ReviewViewer({ items, index, product, social, onIndexCha
     return () => { document.body.style.overflow = previous; };
   }, []);
 
-  const onTouchStart = (e) => {
-    touch.current = { x: e.touches[0].clientX, y: e.touches[0].clientY };
-  };
-  const onTouchEnd = (e) => {
-    if (!touch.current) return;
-    const dx = e.changedTouches[0].clientX - touch.current.x;
-    const dy = e.changedTouches[0].clientY - touch.current.y;
-    touch.current = null;
-    // Sideways, and far enough to be a swipe rather than a tap or a scroll.
-    if (Math.abs(dx) > 50 && Math.abs(dx) > Math.abs(dy)) go(safeIndex + (dx < 0 ? 1 : -1));
-  };
-
   const onShare = () => {
     if (!product) return;
     share({
@@ -89,7 +144,6 @@ export default function ReviewViewer({ items, index, product, social, onIndexCha
   const reviewer = review?.user || review?.buyer || {};
   const { liked, count } = social.likeOf(review);
   const comments = social.commentsOf(review);
-  const src = resolveImg(current.src) || current.src;
 
   return (
     <div
@@ -122,7 +176,7 @@ export default function ReviewViewer({ items, index, product, social, onIndexCha
               <button
                 type="button"
                 className={`rv-cell${i === safeIndex ? ' is-current' : ''}`}
-                onClick={() => { onIndexChange(i); setGrid(false); }}
+                onClick={() => { jump.current = true; onIndexChange(i); setGrid(false); }}
                 aria-label={`Photo ${i + 1} of ${items.length}`}
               >
                 {item.kind === 'video'
@@ -138,17 +192,55 @@ export default function ReviewViewer({ items, index, product, social, onIndexCha
             {review?.rating ? <><Star size={13} weight="fill" /> {review.rating}.0 &middot; bought this</> : null}
           </p>
 
-          <div className="rv-stage" onTouchStart={onTouchStart} onTouchEnd={onTouchEnd}>
+          <div className="rv-stage">
             {items.length > 1 && (
-              <button type="button" className="rv-step rv-step--prev" onClick={() => go(safeIndex - 1)} aria-label="Previous photo">
+              <button
+                type="button"
+                className="rv-step rv-step--prev"
+                onClick={() => go(safeIndex - 1)}
+                disabled={safeIndex === 0}
+                aria-label="Previous photo"
+              >
                 <CaretLeft size={22} weight="bold" />
               </button>
             )}
-            {current.kind === 'video'
-              ? <video className="rv-media" src={src} controls autoPlay playsInline />
-              : <img className="rv-media" src={src} alt={review?.comment || 'Review photo'} />}
+
+            {/* Every photo, side by side in one scroller. The drag, the
+                momentum and the snap are the browser's own, which is why
+                it feels like the rest of the phone rather than like a
+                picture being swapped out. */}
+            <div className="rv-track" ref={track} onScroll={onScroll}>
+              {items.map((item, i) => {
+                // Only what is on screen or just off it is fetched. The
+                // slides still take their width either way, so the track
+                // scrolls the same whether or not a photo has loaded.
+                const near = Math.abs(i - safeIndex) <= 2;
+                const url = resolveImg(item.src) || item.src;
+                return (
+                  <div className="rv-slide" key={`${item.review?.id}-${item.src}-${i}`}>
+                    {!near ? null : item.kind === 'video' ? (
+                      <video className="rv-media" src={url} controls playsInline preload="metadata" />
+                    ) : (
+                      <img
+                        className="rv-media"
+                        src={url}
+                        alt={i === safeIndex ? (item.review?.comment || 'Review photo') : ''}
+                        draggable={false}
+                      />
+                    )}
+                  </div>
+                );
+              })}
+            </div>
+
             {items.length > 1 && (
-              <button type="button" className="rv-step rv-step--next" onClick={() => go(safeIndex + 1)} aria-label="Next photo">
+              <button
+                type="button"
+                className="rv-step rv-step--next"
+                onClick={() => go(safeIndex + 1)}
+                disabled={safeIndex === items.length - 1}
+                aria-label="Next photo"
+              >
                 <CaretRight size={22} weight="bold" />
               </button>
             )}

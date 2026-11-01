@@ -148,10 +148,24 @@ export default function ReviewViewer({ items, index, product, social, onClose })
                 data={items}
                 horizontal
                 pagingEnabled
+                // Snaps rather than coasting: a swipe lands on the next
+                // photo instead of drifting through two.
+                decelerationRate="fast"
+                snapToInterval={width}
+                snapToAlignment="start"
+                disableIntervalMomentum
                 showsHorizontalScrollIndicator={false}
                 initialScrollIndex={at}
                 getItemLayout={(_, i) => ({ length: width, offset: width * i, index: i })}
                 keyExtractor={(item, i) => `${item.review?.id}-${i}`}
+                // While the finger is still down. Without it the
+                // counter and the rail only catch up once the scroll has
+                // stopped, so a slow drag reads a photo behind.
+                onScroll={(e) => {
+                  const near = Math.round(e.nativeEvent.contentOffset.x / width);
+                  if (near !== at && near >= 0 && near < items.length) setAt(near);
+                }}
+                scrollEventThrottle={16}
                 onMomentumScrollEnd={(e) => {
                   setAt(Math.round(e.nativeEvent.contentOffset.x / width));
                 }}
