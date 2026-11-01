@@ -1,4 +1,5 @@
 import { Stack, usePathname, useRouter } from 'expo-router';
+import { Observe, ObserveRoot, useObserve } from 'expo-observe';
 import * as SplashScreen from 'expo-splash-screen';
 import * as Font from 'expo-font';
 import { loadFontsByFetch } from '../src/lib/devFonts';
@@ -104,7 +105,16 @@ Text.defaultProps.style = [{ fontFamily: fontFamily.regular }, Text.defaultProps
 TextInput.defaultProps = TextInput.defaultProps || {};
 TextInput.defaultProps.style = [{ fontFamily: fontFamily.regular }, TextInput.defaultProps.style];
 
-export default function RootLayout() {
+/*
+ * How long the app takes to become usable, and how long each screen takes
+ * to open, on the EAS dashboard (Observe). The router integration names the
+ * screens; markInteractive below says when the waiting is actually over.
+ *
+ * One configure call only: each one replaces the last.
+ */
+Observe.configure({ integrations: { 'expo-router': true } });
+
+function RootLayout() {
   // ThemeGate sets the palette and remounts the app when it changes, so
   // every page is painted by the same one.
   return (
@@ -113,6 +123,10 @@ export default function RootLayout() {
     </ThemeGate>
   );
 }
+
+// Wrapped on the way out: Observe times from the very first render, so it
+// has to sit on what expo-router actually mounts.
+export default ObserveRoot.wrap(RootLayout);
 
 function AppRoot() {
   const scheme = useResolvedScheme();
@@ -157,6 +171,16 @@ function AppRoot() {
       router.replace({ pathname: seller ? '/seller-login' : '/login', params: { redirect: pathname } });
     }
   }, [fontsLoaded, isHydrated, pathname, requiresLogin, router]);
+
+  // The app is "interactive" when the opening splash lifts and the first
+  // page is really there -- the same condition BrandSplash waits on, not
+  // the first render, which is still a blank screen behind the splash.
+  // Only the first call in a session is recorded.
+  const { markInteractive } = useObserve();
+  const ready = isHydrated && fontsLoaded && !requiresLogin;
+  useEffect(() => {
+    if (ready) markInteractive();
+  }, [ready, markInteractive]);
 
   return (
     <SafeAreaProvider>

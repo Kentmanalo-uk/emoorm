@@ -40,3 +40,6 @@ yarn-error.*
 /ios
 /android
 tools/shots/
+
+# The signing key's password, for an EAS cloud build. Never commit it.
+credentials.json
