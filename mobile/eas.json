@@ -14,8 +14,7 @@
       "environment": "preview"
     },
     "production": {
-      "environment": "production",
-      "uploadSourceMaps": true
+      "environment": "production"
     }
   },
   "submit": {
