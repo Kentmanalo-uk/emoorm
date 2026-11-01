@@ -25,6 +25,10 @@ export const DEFAULT_APP_SETTINGS = {
   moormoveEnabled: false,
   // 3D / AR product views, switched on by the super admin.
   product3dEnabled: true,
+  // How long a new order waits for its shop before it is cancelled on its
+  // own, in hours. Two days unless the super admin changes it; the server
+  // holds the same default.
+  orderConfirmHours: 48,
 };
 
 /**

@@ -45,6 +45,12 @@ model AppSetting {
   /// How many admins a town's admin team may have, its primary admin included.
   adminTeamMax Int @default(5) @map("admin_team_max")
 
+  /// How long a new order waits for the shop to confirm it before it cancels
+  /// on its own and its stock goes back, in hours. 48 (two days) unless a
+  /// super admin changes it. Available Today orders keep their own, much
+  /// shorter window: those are sold for a few hours, not a few days.
+  orderConfirmHours Int @default(48) @map("order_confirm_hours")
+
   /// MoorMove rider delivery (move.emoorm.shop) for the whole marketplace.
   /// Off until a super admin turns it on; it also needs MOORMOVE_API_URL and
   /// MOORMOVE_SECRET in the environment.

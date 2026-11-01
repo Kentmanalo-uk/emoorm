@@ -693,9 +693,9 @@ const orderSummary = (order, items) => {
 /**
  * To the shop owner: someone ordered. Who and what, with a button to the
  * order. The buyer's phone and street stay in the Seller Center.
- * @param {{ seller: {email, fullName}, store: {name}, order: Object, items: Array, buyerName: String, place: String|null, expiryHours: Number }} args
+ * @param {{ seller: {email, fullName}, store: {name}, order: Object, items: Array, buyerName: String, place: String|null, expiryWindow: String }} args
  */
-const sendNewOrderEmail = async ({ seller, store, order, items, buyerName, place = null, expiryHours = 48 }) => {
+const sendNewOrderEmail = async ({ seller, store, order, items, buyerName, place = null, expiryWindow = '2 days' }) => {
   const subject = `New order ${order.orderNumber} for ${store.name}`;
   const url = appUrl('/seller/orders?status=PENDING');
   const summary = orderSummary(order, items);
@@ -706,7 +706,7 @@ const sendNewOrderEmail = async ({ seller, store, order, items, buyerName, place
     `${from} ordered from ${store.name}. Order ${order.orderNumber}:`,
     ...summary.text,
     '',
-    `Confirm it within ${expiryHours} hours or it is cancelled automatically: ${url}`,
+    `Confirm it within ${expiryWindow} or it is cancelled automatically: ${url}`,
     '',
     '— Emoorm',
   ].join('\n');
@@ -714,7 +714,7 @@ const sendNewOrderEmail = async ({ seller, store, order, items, buyerName, place
     ${heading('You have a new order!')}
     ${para(`<strong>${escapeHtml(from)}</strong> ordered from <strong>${escapeHtml(store.name)}</strong>. Order <strong>${escapeHtml(order.orderNumber)}</strong>:`)}
     ${summary.html}
-    ${para(`Confirm it within ${expiryHours} hours, or it is cancelled automatically and the stock goes back to your shop.`)}
+    ${para(`Confirm it within ${expiryWindow}, or it is cancelled automatically and the stock goes back to your shop.`)}
     ${button(url, 'View and confirm the order')}
     ${footer}
   `);

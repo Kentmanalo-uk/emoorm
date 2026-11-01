@@ -173,8 +173,8 @@ const today = (snap, lang = 'en') => {
     tl ? 'Ito ang naghihintay sa iyo:' : "Here's what's waiting for you:",
     ...items.map((item) => `- ${item}`),
     tl
-      ? 'I-confirm ang mga bagong order sa loob ng 48 oras: kusang nakakansela ang mga hindi na-confirm.'
-      : 'Confirm new orders within 48 hours: orders left unconfirmed are cancelled automatically.',
+      ? 'I-confirm ang mga bagong order sa loob ng {{confirmWindow}}: kusang nakakansela ang mga hindi na-confirm.'
+      : 'Confirm new orders within {{confirmWindow}}: orders left unconfirmed are cancelled automatically.',
   ].join('\n');
 };
 
@@ -257,7 +257,7 @@ const TOPICS = [
     related: ['new-order', 'returns', 'not-showing'],
     answer: today,
     links: todayLinks,
-    facts: 'Home (phones) counts orders To confirm and To ship, Returns and Reviews. The sidebar badges count new orders to confirm, return requests to review, unread buyer chats, unread admin messages and products low on stock. New orders must be confirmed within 48 hours or they are cancelled automatically.',
+    facts: 'Home (phones) counts orders To confirm and To ship, Returns and Reviews. The sidebar badges count new orders to confirm, return requests to review, unread buyer chats, unread admin messages and products low on stock. New orders must be confirmed within {{confirmWindow}} or they are cancelled automatically.',
   },
   {
     id: 'add-product',
@@ -429,7 +429,7 @@ const TOPICS = [
     answer: {
       en: [
         'When a new order comes in (**My orders › New**):',
-        '1. **Confirm order** within 48 hours, or it is cancelled automatically.',
+        '1. **Confirm order** within {{confirmWindow}}, or it is cancelled automatically.',
         "2. GCash / QR Ph orders: the buyer pays after you confirm. Check the payment proof and tap **Confirm payment** (or **Reject payment**). You can't go on until the payment is confirmed.",
         '3. Your own delivery: **Packed: ready to ship** › **Out for delivery** › **Mark delivered** with a proof-of-delivery photo.',
         '4. Courier the buyer chose: **Packed: ready to ship** › **Ship with courier** (scan or type the tracking number).',
@@ -440,7 +440,7 @@ const TOPICS = [
       ].join('\n'),
       tl: [
         'Kapag may bagong order (**My orders › New**):',
-        '1. **Confirm order** sa loob ng 48 oras, kung hindi ay kusa itong makakansela.',
+        '1. **Confirm order** sa loob ng {{confirmWindow}}, kung hindi ay kusa itong makakansela.',
         '2. Sa GCash / QR Ph na order: magbabayad ang buyer pagkatapos mong mag-confirm. Tingnan ang payment proof at i-tap ang **Confirm payment** (o **Reject payment**). Hindi ka makakapagpatuloy hangga\'t hindi pa nakumpirma ang bayad.',
         '3. Ikaw ang magde-deliver: **Packed: ready to ship** › **Out for delivery** › **Mark delivered** kasama ang litrato bilang proof of delivery.',
         '4. Courier na pinili ng buyer: **Packed: ready to ship** › **Ship with courier** (i-scan o i-type ang tracking number).',
@@ -484,14 +484,14 @@ const TOPICS = [
       en: [
         '- You can **Cancel order** at any step before it is shipped, delivered or picked up (with a MoorMove rider, cancel the rider first; not once the rider has it); the stock goes back.',
         '- Buyers can cancel only while the order is New or Confirmed.',
-        '- New orders you don\'t confirm within 48 hours are cancelled automatically (not while a payment proof is waiting for you to check).',
+        '- New orders you don\'t confirm within {{confirmWindow}} are cancelled automatically (not while a payment proof is waiting for you to check).',
         '- Cancelling a prepaid order you already confirmed the payment for shows **Refund due**: send the money back, then tap **Mark refunded**.',
         'Many cancellations (30% or more of at least 3 orders in 30 days) put your shop health at **Needs attention**.',
       ].join('\n'),
       tl: [
         '- Puwede mong i-**Cancel order** sa anumang hakbang bago ito maipadala, ma-deliver o ma-pick up (kung may MoorMove rider, i-cancel muna ang rider; hindi na kapag hawak na ito ng rider); babalik ang stock.',
         '- Ang buyer ay makakapag-cancel lang habang New o Confirmed pa ang order.',
-        '- Kusang nakakansela ang mga bagong order na hindi mo na-confirm sa loob ng 48 oras (maliban kung may payment proof na naghihintay na tingnan mo).',
+        '- Kusang nakakansela ang mga bagong order na hindi mo na-confirm sa loob ng {{confirmWindow}} (maliban kung may payment proof na naghihintay na tingnan mo).',
         '- Kapag kinansela mo ang prepaid na order na na-verify mo na, lalabas ang **Refund due**: ibalik ang pera, tapos i-tap ang **Mark refunded**.',
         'Kapag marami ang cancellation (30% o higit pa sa hindi bababa sa 3 order sa loob ng 30 araw), magiging **Needs attention** ang shop health mo.',
       ].join('\n'),

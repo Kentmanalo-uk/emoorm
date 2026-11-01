@@ -4,6 +4,7 @@ const sellerAttention = require('./sellerAttention.service');
 const shopReadiness = require('./shopReadiness.service');
 const guide = require('./sellerAssistantGuide');
 const { createAssistant, firstName } = require('./assistantCore');
+const { orderCopy } = require('../utils/orderWindow');
 
 /**
  * Seller Assistant Service ("Ate Moormy")
@@ -37,7 +38,7 @@ const getSnapshot = async (user) => {
       municipality: { select: { name: true } },
     },
   });
-  if (!store) return { store: null, firstName: firstName(user) };
+  if (!store) return { store: null, firstName: firstName(user), copy: await orderCopy() };
 
   const [setup, attention, liveProducts, products] = await Promise.all([
     sellerSetup.getSetup(user.id).catch(() => null),
@@ -48,6 +49,8 @@ const getSnapshot = async (user) => {
   const waiting = Object.fromEntries((attention || []).map((q) => [q.key, q.count || 0]));
   return {
     firstName: firstName(user),
+    // Rules a super admin can change, as the guide quotes them ({{name}}).
+    copy: await orderCopy(),
     store: {
       name: store.name,
       town: store.municipality?.name || null,
@@ -80,6 +83,7 @@ const describeSnapshot = (snap) => {
     `Ready to sell: ${snap.readyToSell ? 'yes' : 'no'}${snap.missing.length ? ` — still needed: ${snap.missing.map((k) => STEP_LABELS[k]).join('; ')}` : ''}.`,
     `Buyers get orders by ${modes[s.mode] || 'delivery'}. Payment: ${[s.cash && 'cash', s.qr && `${s.qr} QR`].filter(Boolean).join(' and ') || 'none set'}.`,
     `Products: ${snap.products} (${snap.liveProducts} live to buyers).`,
+    `New orders must be confirmed within ${snap.copy?.confirmWindow || '2 days'} or they are cancelled automatically.`,
     `Waiting now: ${snap.waiting.pendingOrders || 0} new orders to confirm, ${snap.waiting.openReturns || 0} return requests, ${snap.waiting.unreadMessages || 0} unread buyer chats, ${snap.waiting.lowStock || 0} products low on stock.`,
   ];
   return lines.filter(Boolean).join('\n');

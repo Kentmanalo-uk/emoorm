@@ -18,6 +18,7 @@ const DEFAULT_SETTINGS = {
   categoryStyle: 'IMAGE',
   availableTodayEnabled: true,
   adminTeamMax: 5,
+  orderConfirmHours: 48,
   moormoveEnabled: false,
   product3dEnabled: true,
 };
@@ -33,6 +34,10 @@ const booleanField = (value, field) => {
   if (value === 'false') return false;
   throw new ApiError(`${field} must be true or false`, 400);
 };
+
+// The window a new order waits for its shop, in hours (one hour to two weeks).
+const MIN_CONFIRM_HOURS = 1;
+const MAX_CONFIRM_HOURS = 24 * 14;
 
 // Money fields are bounded so a typo cannot quote a six-figure delivery fee.
 const MAX_MONEY = 99999;
@@ -222,6 +227,17 @@ const sanitize = (input = {}) => {
     data.adminTeamMax = max;
   }
 
+  // How long a new order waits for its shop. Bounded at both ends: under an
+  // hour and a shop asleep loses every order it was sent; over two weeks and
+  // the buyer's money and the shop's stock sit held with nobody deciding.
+  if (input.orderConfirmHours !== undefined) {
+    const hours = Number(input.orderConfirmHours);
+    if (!Number.isInteger(hours) || hours < MIN_CONFIRM_HOURS || hours > MAX_CONFIRM_HOURS) {
+      throw new ApiError(`orderConfirmHours must be a whole number of hours from ${MIN_CONFIRM_HOURS} to ${MAX_CONFIRM_HOURS}`, 400);
+    }
+    data.orderConfirmHours = hours;
+  }
+
   // MoorMove rider delivery for the whole marketplace (it also needs
   // MOORMOVE_API_URL and MOORMOVE_SECRET on the server).
   if (input.moormoveEnabled !== undefined) {
@@ -234,7 +250,7 @@ const sanitize = (input = {}) => {
   }
 
   if (Object.keys(data).length === 0) {
-    throw new ApiError('Provide an app logo, product placeholder image, theme, checkout pricing, delivery by distance, verification, category style, Available Today, admin team, MoorMove or 3D views setting', 400);
+    throw new ApiError('Provide an app logo, product placeholder image, theme, checkout pricing, delivery by distance, verification, category style, Available Today, admin team, order confirm window, MoorMove or 3D views setting', 400);
   }
   return data;
 };
@@ -265,6 +281,22 @@ const getCheckoutPricing = async () => {
   };
 };
 
+/**
+ * How many hours a new order waits for its shop before it cancels itself.
+ *
+ * The order service asks this rather than holding a constant, so changing it
+ * in Settings takes effect on the next sweep without a deploy. A database
+ * that has not had the column yet reads as the old default, which is the
+ * same number, so nothing changes until a super admin says so.
+ */
+const getOrderConfirmHours = async () => {
+  const settings = await get();
+  const hours = Number(settings.orderConfirmHours);
+  return Number.isInteger(hours) && hours >= MIN_CONFIRM_HOURS && hours <= MAX_CONFIRM_HOURS
+    ? hours
+    : DEFAULT_SETTINGS.orderConfirmHours;
+};
+
 const get = async () => cached.appSettings({}, async () => {
   const settings = await appSettingRepository.findGlobal();
   return settings || DEFAULT_SETTINGS;
@@ -282,4 +314,6 @@ const update = async (input) => {
   return settings;
 };
 
-module.exports = { get, update, getCheckoutPricing, isBuyerVerificationRequired };
+module.exports = {
+  get, update, getCheckoutPricing, isBuyerVerificationRequired, getOrderConfirmHours,
+};

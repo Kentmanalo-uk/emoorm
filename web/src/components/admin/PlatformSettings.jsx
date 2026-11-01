@@ -206,6 +206,52 @@ export function TeamSizeSettings() {
   return <TeamSizeForm key={initial} initial={initial} />;
 }
 
+/* ── Orders: how long a shop has to confirm ───────────────── */
+
+// Whole days are the useful answers, so they are offered as days; an hour
+// count that is not a whole number of days keeps its own entry.
+const CONFIRM_CHOICES = [12, 24, 36, 48, 72, 96, 120, 168];
+const confirmLabel = (hours) => (hours % 24 === 0
+  ? `${hours / 24} day${hours === 24 ? '' : 's'}`
+  : `${hours} hours`);
+
+function ConfirmWindowForm({ initial }) {
+  const [value, setValue] = useState(initial);
+  const { save, saving } = useSaveSettings();
+  const choices = CONFIRM_CHOICES.includes(Number(initial))
+    ? CONFIRM_CHOICES
+    : [...CONFIRM_CHOICES, Number(initial)].sort((a, b) => a - b);
+  const submit = () => {
+    const n = Number(value);
+    if (!Number.isInteger(n) || n < 1 || n > 24 * 14) return toast.error('The confirm window must be a whole number of hours, up to 14 days');
+    if (n === Number(initial)) return toast.success('No changes to save');
+    return save({ orderConfirmHours: n }, `New orders now wait ${confirmLabel(n)}`);
+  };
+  return (
+    <SettingsCard
+      id="order-confirm-window"
+      title="Order confirm window"
+      hint="Available Today orders keep their own, much shorter window: those are sold for a few hours, not a few days."
+      footer={<SaveButton saving={saving} onClick={submit} />}
+    >
+      <SettingRow
+        label="Cancel unconfirmed orders after"
+        help="A new order a shop never confirms is cancelled on its own and its stock goes back. Buyers and sellers both see the countdown on the order."
+      >
+        <select className="admin-input ps-number" value={value} onChange={(e) => setValue(e.target.value)}>
+          {choices.map((h) => <option key={h} value={h}>{confirmLabel(h)}</option>)}
+        </select>
+      </SettingRow>
+    </SettingsCard>
+  );
+}
+
+export function OrderConfirmWindowSettings() {
+  const { settings } = useAppSettings();
+  const initial = String(settings.orderConfirmHours ?? DEFAULT_APP_SETTINGS.orderConfirmHours);
+  return <ConfirmWindowForm key={initial} initial={initial} />;
+}
+
 /* ── Buyers: ID verification ──────────────────────────────── */
 
 export function BuyerVerificationSettings() {

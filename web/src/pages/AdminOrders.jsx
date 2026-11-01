@@ -1,10 +1,11 @@
 import { useEffect, useRef, useState } from 'react';
 import { Link, useSearchParams } from 'react-router-dom';
 import {
-  Eye, X, DownloadSimple, LockSimple, MagnifyingGlass as Search, ChatCircleDots, ArrowCounterClockwise,
+  Eye, X, DownloadSimple, LockSimple, MagnifyingGlass as Search, ChatCircleDots, ArrowCounterClockwise, Clock,
 } from '../lib/icons';
 import toast from 'react-hot-toast';
 import AdminLayout from '../components/admin/AdminLayout';
+import { OrderConfirmWindowSettings } from '../components/admin/PlatformSettings';
 import DetailDrawer from '../components/admin/DetailDrawer';
 import RevealButton from '../components/admin/RevealButton';
 import { rowOpen, rowKeyOpen } from '../components/admin/rowClick';
@@ -58,6 +59,7 @@ function When({ value }) {
 
 export default function AdminOrders() {
   const isSuperAdmin = useAuthStore((s) => s.user?.role === 'SUPER_ADMIN');
+  const [showWindow, setShowWindow] = useState(false);
   const [searchParams, setSearchParams] = useSearchParams();
   const buyerId = searchParams.get('buyerId') || '';
   const storeId = searchParams.get('storeId') || '';
@@ -194,10 +196,21 @@ export default function AdminOrders() {
           <h1 className="admin-page-title">Orders</h1>
           <p className="admin-page-sub">Follow an order for a case: amounts and contact stay private unless you ask</p>
         </div>
-        <button type="button" className="admin-btn admin-btn-gray" disabled={exporting} onClick={handleExport}>
-          <DownloadSimple size={13} /> {exporting ? 'Exporting…' : 'Export CSV'}
-        </button>
+        <div className="admin-toolbar">
+          {isSuperAdmin && (
+            <button type="button" className="admin-btn admin-btn-gray" aria-expanded={showWindow} onClick={() => setShowWindow((v) => !v)}>
+              <Clock size={14} /> Confirm window
+            </button>
+          )}
+          <button type="button" className="admin-btn admin-btn-gray" disabled={exporting} onClick={handleExport}>
+            <DownloadSimple size={13} /> {exporting ? 'Exporting…' : 'Export CSV'}
+          </button>
+        </div>
       </div>
+
+      {/* How long a new order waits for its shop before it cancels itself.
+          A platform rule, so above the list and behind its own button. */}
+      {isSuperAdmin && showWindow && <OrderConfirmWindowSettings />}
 
       <div className="admin-card">
         <div className="admin-card-header">

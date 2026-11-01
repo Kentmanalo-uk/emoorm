@@ -481,8 +481,8 @@ const sellersOrder = async (orderId, sellerUserId) => {
 
 /** The order as the seller's order list shows it (with deliveryPartner and riderDelivery). */
 const sellerOrder = async (orderId) => {
-  const { withDeadline } = require('./order.service');
-  return withDeadline(withRiderDelivery(await orderRepository.findById(orderId)));
+  const { withDeadline, confirmWindowHours } = require('./order.service');
+  return withDeadline(withRiderDelivery(await orderRepository.findById(orderId)), await confirmWindowHours());
 };
 
 const assertRiderOrder = (order) => {

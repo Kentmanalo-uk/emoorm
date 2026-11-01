@@ -196,7 +196,7 @@ const TOPICS = [
     related: ['received', 'payments', 'cancel'],
     links: [{ label: 'My Orders', to: '/profile/orders' }],
     answer: myOrders,
-    facts: 'My Orders (Profile › My Orders) tabs: To Pay (a GCash/QR Ph order the shop confirmed, to pay now), To Ship (waiting for the shop to confirm, payment being checked, or being packed), To Receive (on the way, shipped with a courier, or delivered), To Pick Up (ready at the pickup spot), Completed, Cancelled. The shop must confirm a new order within 48 hours or it is cancelled automatically. View details shows the full progress.',
+    facts: 'My Orders (Profile › My Orders) tabs: To Pay (a GCash/QR Ph order the shop confirmed, to pay now), To Ship (waiting for the shop to confirm, payment being checked, or being packed), To Receive (on the way, shipped with a courier, or delivered), To Pick Up (ready at the pickup spot), Completed, Cancelled. The shop must confirm a new order within {{confirmWindow}} or it is cancelled automatically. View details shows the full progress.',
   },
   {
     id: 'received',

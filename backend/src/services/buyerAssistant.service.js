@@ -3,6 +3,7 @@ const identityVerification = require('./identityVerification.service');
 const appSettings = require('./appSetting.service');
 const guide = require('./buyerAssistantGuide');
 const { createAssistant, firstName } = require('./assistantCore');
+const { orderCopy } = require('../utils/orderWindow');
 
 /**
  * Buyer Assistant Service ("Ate Moormy" in the buyer's Messages)
@@ -48,7 +49,11 @@ const getSnapshot = async (user) => {
   ]);
   const counts = { toPay: 0, toShip: 0, toReceive: 0, toPickUp: 0 };
   for (const o of orders) counts[tabOf(o)] += 1;
-  return { firstName: firstName(user), orders: counts, openReturns, verified, verificationRequired };
+  return {
+    firstName: firstName(user), orders: counts, openReturns, verified, verificationRequired,
+    // Rules a super admin can change, as the guide quotes them ({{name}}).
+    copy: await orderCopy(),
+  };
 };
 
 /** The buyer's status, as lines the model reads. */
@@ -56,6 +61,7 @@ const describeSnapshot = (snap) => [
   `Buyer: ${snap.firstName || 'unknown name'}.`,
   `Open orders in My Orders: To Pay ${snap.orders.toPay}, To Ship ${snap.orders.toShip}, To Receive ${snap.orders.toReceive}, To Pick Up ${snap.orders.toPickUp}.`,
   `Open return requests: ${snap.openReturns}.`,
+  `A shop must confirm a new order within ${snap.copy?.confirmWindow || '2 days'} or it is cancelled automatically.`,
   `Identity verified: ${snap.verified ? 'yes' : 'no'} (needed to check out: ${snap.verificationRequired ? 'yes' : 'no'}).`,
 ].join('\n');
 

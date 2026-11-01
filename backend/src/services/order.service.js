@@ -24,6 +24,7 @@ const deliveryQuoteService = require('./deliveryQuote.service');
 const courierService = require('./courier.service');
 const shopReadiness = require('./shopReadiness.service');
 const availabilityService = require('./availability.service');
+const { windowLabel, confirmWindowHours, FALLBACK_HOURS: PENDING_EXPIRY_HOURS } = require('../utils/orderWindow');
 const moormoveService = require('./moormove.service');
 const unpaidFeeService = require('./unpaidFee.service');
 const { isOpen: riderOpen, withRiderDelivery } = require('./moormove.view');
@@ -730,7 +731,7 @@ const createOrder = async (userId, data) => {
         items: orderItems,
         buyerName: buyer.fullName,
         place: [order.buyerBarangay, town?.name].filter(Boolean).join(', ') || null,
-        expiryHours: PENDING_EXPIRY_HOURS,
+        expiryWindow: windowLabel(await confirmWindowHours()),
       });
     });
   }
@@ -861,7 +862,8 @@ const revealOrderDetails = async (orderId, actor, part) => {
  */
 const getMyOrders = async (userId, options) => {
   const result = await orderRepository.findAll({ ...options, buyerId: userId, forBuyer: true });
-  return { ...result, orders: result.orders.map((o) => withDeadline(withRiderDelivery(o))) };
+  const confirmHours = await confirmWindowHours();
+  return { ...result, orders: result.orders.map((o) => withDeadline(withRiderDelivery(o), confirmHours)) };
 };
 
 /**
@@ -872,11 +874,11 @@ const getMyOrders = async (userId, options) => {
  * Uses the same clocks as the jobs that act on them (expirePendingOrders,
  * expireUnpaidOrders, autoCompleteOrders).
  */
-const withDeadline = (order) => {
+const withDeadline = (order, confirmHours = PENDING_EXPIRY_HOURS) => {
   const hours = (from, h) => (from ? new Date(new Date(from).getTime() + h * 3600 * 1000) : null);
   let deadline = null;
   if (order.status === 'PENDING' && ['PENDING', 'FAILED'].includes(order.paymentStatus)) {
-    deadline = { kind: 'confirm', at: hours(order.createdAt, PENDING_EXPIRY_HOURS) };
+    deadline = { kind: 'confirm', at: hours(order.createdAt, confirmHours) };
   } else if (isDueForPayment(order)) {
     deadline = { kind: 'pay', at: hours(order.updatedAt, PAYMENT_EXPIRY_HOURS) };
   } else if (order.status === 'SHIPPED') {
@@ -904,7 +906,8 @@ const getStoreOrders = async (userId, options) => {
   }
 
   const result = await orderRepository.findAll({ ...options, storeId: store.id });
-  return { ...result, orders: result.orders.map((o) => withDeadline(withRiderDelivery(o))) };
+  const confirmHours = await confirmWindowHours();
+  return { ...result, orders: result.orders.map((o) => withDeadline(withRiderDelivery(o), confirmHours)) };
 };
 
 /** The seller's tab counts: orders per stage (new, unpaid, to ship…). */
@@ -1479,10 +1482,12 @@ const markReceived = async (orderId, userId) => {
   return updated;
 };
 
-// Orders nobody acted on are cancelled so their stock returns to the store.
-const PENDING_EXPIRY_HOURS = Number(process.env.ORDER_PENDING_EXPIRY_HOURS) || 48;
+// Orders nobody acted on are cancelled so their stock returns to the store,
+// after the window a super admin sets (utils/orderWindow).
 
-const expirePendingOrders = async (ageHours = PENDING_EXPIRY_HOURS) => {
+const expirePendingOrders = async (hours) => {
+  const ageHours = hours ?? await confirmWindowHours();
+  const waited = windowLabel(ageHours);
   const before = new Date(Date.now() - ageHours * 60 * 60 * 1000);
   const orders = await orderRepository.findExpiredPending(before);
   let expired = 0;
@@ -1497,7 +1502,7 @@ const expirePendingOrders = async (ageHours = PENDING_EXPIRY_HOURS) => {
         // the lookup must not be swept away.
         fromPaymentStatuses: orderRepository.EXPIRABLE_PAYMENT_STATUSES,
         paymentStatus: order.paymentMethod === 'COD' ? undefined : 'EXPIRED',
-        note: `Not confirmed by the seller within ${ageHours} hours`,
+        note: `Not confirmed by the seller within ${waited}`,
       });
       expired += 1;
     } catch (err) {
@@ -1511,14 +1516,14 @@ const expirePendingOrders = async (ageHours = PENDING_EXPIRY_HOURS) => {
         userId: order.buyerId,
         type: 'ORDER_CANCELLED',
         title,
-        message: `Order ${order.orderNumber} was cancelled because the shop didn't confirm it within ${ageHours} hours.`,
+        message: `Order ${order.orderNumber} was cancelled because the shop didn't confirm it within ${waited}.`,
         relatedId: order.id,
       }),
       order.store?.ownerId && notificationService.createNotification({
         userId: order.store.ownerId,
         type: 'ORDER_CANCELLED',
         title,
-        message: `Order ${order.orderNumber} was cancelled because it wasn't confirmed within ${ageHours} hours. Its stock is back in your shop.`,
+        message: `Order ${order.orderNumber} was cancelled because it wasn't confirmed within ${waited}. Its stock is back in your shop.`,
         relatedId: order.id,
         // The seller's copy belongs in the seller feed, not the buyer bell.
         audience: 'SELLER',
@@ -1577,6 +1582,7 @@ const expireUnpaidOrders = async (ageHours = PAYMENT_EXPIRY_HOURS) => {
 
 module.exports = {
   withDeadline,
+  confirmWindowHours,
   buyerRecord,
   getStoreStageCounts,
   createOrder,

@@ -149,8 +149,20 @@ const createAssistant = ({ guide, getSnapshot, describeSnapshot, prompt }) => {
     return out.map(({ id, question }) => ({ id, question: guide.pick(question, lang) }));
   };
 
+  /**
+   * A guide may quote a rule a super admin can change, such as how long an
+   * order waits to be confirmed. Those are written {{likeThis}} and filled
+   * in here from the snapshot, so the guide's words and the live status can
+   * never tell a person two different numbers. An unknown name is left as
+   * written rather than blanked, so a typo shows up instead of vanishing.
+   */
+  const fill = (text, snap) => String(text ?? '').replace(
+    /\{\{(\w+)\}\}/g,
+    (whole, key) => (snap?.copy?.[key] != null ? String(snap.copy[key]) : whole),
+  );
+
   const guideAnswer = (topic, snap, lang = 'en') => ({
-    reply: typeof topic.answer === 'function' ? topic.answer(snap, lang) : guide.pick(topic.answer, lang),
+    reply: fill(typeof topic.answer === 'function' ? topic.answer(snap, lang) : guide.pick(topic.answer, lang), snap),
     links: typeof topic.links === 'function' ? topic.links(snap) : (topic.links || []),
   });
 
@@ -170,8 +182,8 @@ const createAssistant = ({ guide, getSnapshot, describeSnapshot, prompt }) => {
     describeSnapshot(snap),
     '',
     'EMOORM GUIDE:',
-    guide.OVERVIEW,
-    ...topics.map((t) => `\n## ${t.title}\n${typeof t.answer === 'function' ? t.facts || '' : guide.pick(t.answer, 'en')}`),
+    fill(guide.OVERVIEW, snap),
+    ...topics.map((t) => `\n## ${t.title}\n${fill(typeof t.answer === 'function' ? t.facts || '' : guide.pick(t.answer, 'en'), snap)}`),
   ].join('\n');
 
   /**
