@@ -2,7 +2,7 @@ import { useState } from 'react';
 import { Image, Linking, Pressable, StyleSheet, Text, View, useWindowDimensions } from 'react-native';
 import { useRouter } from 'expo-router';
 import { useVideoPlayer, VideoView } from 'expo-video';
-import { StarIcon, StorefrontIcon } from '../../lib/icons';
+import { ChatCircleDotsIcon, StarIcon, StorefrontIcon, ThumbsUpIcon } from '../../lib/icons';
 import { resolveImg } from '../../lib/media';
 import { font, t, themed } from '../../theme';
 import { localDate } from './productLib';
@@ -43,8 +43,20 @@ function ReviewVideo({ source }) {
  * One buyer review (web/src/components/reviews/ReviewItem.jsx): who wrote
  * it, the stars, the comment, photos or video, and (showReply) the shop's
  * reply. `last` drops the line under it.
+ *
+ * With onOpenMedia, a photo opens the full-screen review viewer at that
+ * photo. Without it, a photo opens in the phone's browser, which is what
+ * every review did before the viewer existed and is still right for the
+ * seller's own list.
+ *
+ * With social (useReviewSocial), the row of actions shows under it. It is
+ * here as well as in the viewer because a review with no photo has no way
+ * into the viewer at all, and those can be the most useful ones to agree
+ * with or ask about.
  */
-export default function ReviewItem({ review, showReply = false, last = false, onOpenImage }) {
+export default function ReviewItem({
+  review, showReply = false, last = false, onOpenImage, onOpenMedia, social,
+}) {
   const router = useRouter();
   const { width } = useWindowDimensions();
   const reviewer = review.user || review.buyer || {};
@@ -77,6 +89,7 @@ export default function ReviewItem({ review, showReply = false, last = false, on
               accessibilityRole="imagebutton"
               accessibilityLabel={`review media ${i + 1}`}
               onPress={() => {
+                if (onOpenMedia) { onOpenMedia(review, i); return; }
                 const uri = resolveImg(src) || src;
                 if (onOpenImage) onOpenImage(uri); else Linking.openURL(uri).catch(() => {});
               }}
@@ -86,6 +99,38 @@ export default function ReviewItem({ review, showReply = false, last = false, on
             </Pressable>
           ))}
           {review.videoUrl ? <View style={[styles.mediaItem, styles.videoBox]}><ReviewVideo source={review.videoUrl} /></View> : null}
+        </View>
+      ) : null}
+      {social ? (
+        <View style={styles.acts}>
+          <Pressable
+            accessibilityRole="button"
+            accessibilityLabel={social.likeOf(review).liked ? 'Remove your helpful mark' : 'Mark this review helpful'}
+            onPress={() => social.toggle(review)}
+            style={[styles.act, social.likeOf(review).liked && styles.actOn]}
+          >
+            <ThumbsUpIcon
+              size={14}
+              weight={social.likeOf(review).liked ? 'fill' : 'regular'}
+              color={social.likeOf(review).liked ? t.primary[700] : t.neutral[600]}
+            />
+            <Text style={[styles.actText, social.likeOf(review).liked && styles.actTextOn]}>
+              {social.likeOf(review).count ? `Helpful ${social.likeOf(review).count}` : 'Helpful'}
+            </Text>
+          </Pressable>
+          <Pressable
+            accessibilityRole="button"
+            accessibilityLabel="Comments on this review"
+            onPress={() => social.openComments(review)}
+            style={styles.act}
+          >
+            <ChatCircleDotsIcon size={14} color={t.neutral[600]} />
+            <Text style={styles.actText}>
+              {social.commentsOf(review)
+                ? `${social.commentsOf(review)} comment${social.commentsOf(review) === 1 ? '' : 's'}`
+                : 'Comment'}
+            </Text>
+          </Pressable>
         </View>
       ) : null}
       {showReply && review.sellerReply ? (
@@ -122,6 +167,20 @@ const styles = themed(() => StyleSheet.create({
   mediaImg: { width: '100%', height: '100%' },
   videoBox: { width: '100%', aspectRatio: 16 / 9, backgroundColor: '#000' },
   video: { width: '100%', height: '100%' },
+  acts: { flexDirection: 'row', gap: 8, marginTop: 10 },
+  act: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 5,
+    paddingHorizontal: 11,
+    paddingVertical: 5,
+    borderRadius: 999,
+    borderWidth: 1,
+    borderColor: t.neutral[200],
+  },
+  actOn: { borderColor: t.primary[600] },
+  actText: { fontSize: 12.5, lineHeight: 20, ...font(500), color: t.neutral[600] },
+  actTextOn: { color: t.primary[700] },
   reply: { marginTop: 10, paddingVertical: 10, paddingHorizontal: 12, borderRadius: 10, backgroundColor: t.neutral[100] },
   replyHead: { flexDirection: 'row', alignItems: 'center', gap: 6, marginBottom: 4 },
   replyHeadText: { fontSize: 12.5, lineHeight: 20, ...font(500), color: t.primary[700] },

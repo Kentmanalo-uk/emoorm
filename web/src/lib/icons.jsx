@@ -42,7 +42,7 @@ import {
   ShareIcon, ShieldAlertIcon, ShieldCheckIcon, ShirtIcon, ShrimpIcon, ShuffleIcon, SignalIcon,
   SkipBackIcon, SkipForwardIcon, SlidersIcon, SmartphoneIcon, SmileIcon, SortIcon, SoupIcon,
   SparklesIcon, SquarePlusIcon, StarIcon, StorefrontIcon, SuccessIcon, SunIcon, SwapIcon, TagIcon,
-  TeamIcon, TicketIcon, TimerIcon, TractorVehicleIcon, TranslateIcon, TrashIcon, TrendingUpIcon,
+  TeamIcon, ThumbsUpIcon, TicketIcon, TimerIcon, TractorVehicleIcon, TranslateIcon, TrashIcon, TrendingUpIcon,
   TruckIcon, UndoIcon, UnlockIcon, UnpinIcon, UploadIcon, UserAddIcon, UserCheckIcon,
   UserCircleIcon, UserIcon, UserRemoveIcon, UserSettingsIcon, UsersIcon, UtensilsIcon, VideoIcon,
   VolumeHighIcon, VolumeOffIcon, WalletIcon, WarningIcon, WifiIcon, WifiOffIcon, WrenchIcon,
@@ -318,6 +318,7 @@ export const Storefront = (props) => <Icon of={StorefrontIcon} {...props} />;
 export const Sun = (props) => <Icon of={SunIcon} {...props} />;
 export const TShirt = (props) => <Icon of={ShirtIcon} {...props} />;
 export const Tag = (props) => <Icon of={TagIcon} {...props} />;
+export const ThumbsUp = (props) => <Icon of={ThumbsUpIcon} {...props} />;
 export const Ticket = (props) => <Icon of={TicketIcon} {...props} />;
 export const Tractor = (props) => <Icon of={TractorVehicleIcon} {...props} />;
 export const Translate = (props) => <Icon of={TranslateIcon} {...props} />;

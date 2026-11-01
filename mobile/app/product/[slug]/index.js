@@ -37,6 +37,8 @@ import { font, ink, t, themed } from '../../../src/theme';
 import ProductOptionSheet from '../../../src/components/product/ProductOptionSheet';
 import ProductQuestions from '../../../src/components/product/ProductQuestions';
 import ReviewItem, { Stars } from '../../../src/components/product/ReviewItem';
+import useReviewSocial from '../../../src/components/reviews/useReviewSocial';
+import useReviewViewer from '../../../src/components/reviews/useReviewViewer';
 import ShippingEstimate from '../../../src/components/product/ShippingEstimate';
 import ReportSheet from '../../../src/components/product/ReportSheet';
 import Product3dSheet, { Product3dChip } from '../../../src/components/product/Product3dSheet';
@@ -106,6 +108,12 @@ function ProductPage({ slug }) {
   const [sameShopProducts, setSameShopProducts] = useState([]);
   const [reviews, setReviews] = useState([]);
   const [ratingStats, setRatingStats] = useState(null);
+
+  // Helpful marks, the comment sheet, and the full-screen viewer a review
+  // photo opens. The viewer pages across every photo on this product, so
+  // it is given the whole list rather than one review.
+  const reviewSocial = useReviewSocial(reviews);
+  const { openMedia: openReviewMedia, viewer: reviewViewer } = useReviewViewer(reviews, product, reviewSocial);
   const [shopUnread, setShopUnread] = useState({ shopId: null, count: 0 });
   const [failedLogo, setFailedLogo] = useState('');
   const [shipQuote, setShipQuote] = useState(null);
@@ -855,9 +863,18 @@ function ProductPage({ slug }) {
           <SectionBody>
             {reviews.length === 0 ? (
               <EmptyState compact art="reviews" text="No reviews yet. Be the first to review this product." />
-            ) : reviews.slice(0, 10).map((r, i, all) => <ReviewItem key={r.id} review={r} last={i === all.length - 1} />)}
+            ) : reviews.slice(0, 10).map((r, i, all) => (
+              <ReviewItem
+                key={r.id}
+                review={r}
+                last={i === all.length - 1}
+                social={reviewSocial}
+                onOpenMedia={openReviewMedia}
+              />
+            ))}
           </SectionBody>
         </ProductSection>
+        {reviewViewer}
 
         {/* Questions and the shop's answers */}
         {product.status === 'APPROVED' ? (

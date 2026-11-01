@@ -40,6 +40,8 @@ import useIdentityGate from '../hooks/useIdentityGate';
 import { usePhoneLayout } from '../hooks/useMobileNav';
 import MoreMenu from '../components/MoreMenu';
 import ReviewItem from '../components/reviews/ReviewItem';
+import { useReviewViewer } from '../components/reviews/ReviewViewer';
+import useReviewSocial from '../components/reviews/useReviewSocial';
 import ProductOptionSheet from '../components/ProductOptionSheet';
 import { useShare } from '../components/ShareSheet';
 import {
@@ -236,6 +238,11 @@ const ProductDetails = () => {
   const [relatedProducts, setRelatedProducts] = useState([]);
   const [sameShopProducts, setSameShopProducts] = useState([]);
   const [reviews, setReviews] = useState([]);
+  // Helpful marks, the comment sheet, and the full-screen viewer a review
+  // photo opens. The viewer pages across every photo on this product, so
+  // it is given the whole list rather than one review.
+  const reviewSocial = useReviewSocial(reviews);
+  const { openMedia: openReviewMedia, viewer: reviewViewer } = useReviewViewer(reviews, product, reviewSocial);
   const [ratingStats, setRatingStats] = useState(null);
 
   // Phones' action bar: unread messages from this shop on Chat, the shop's
@@ -1640,10 +1647,14 @@ const ProductDetails = () => {
                     <EmptyArt name="reviews" size={72} />
                     <span>No reviews yet. Be the first to review this product.</span>
                   </div>
-                ) : reviews.slice(0, 10).map((r) => <ReviewItem key={r.id} review={r} />)}
+                ) : reviews.slice(0, 10).map((r) => (
+                  <ReviewItem key={r.id} review={r} social={reviewSocial} onOpenMedia={openReviewMedia} />
+                ))}
               </div>
             </div>
           </div>
+          {reviewViewer}
+          {reviewSocial.commentsSheet}
 
           {/* Questions and the shop's answers */}
           {product.status === 'APPROVED' && (

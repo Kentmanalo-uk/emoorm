@@ -5,6 +5,7 @@ const { ApiError } = require('../middleware/errorHandler');
 const path = require('path');
 const crypto = require('crypto');
 const reviewController = require('../controllers/review.controller');
+const reviewSocialController = require('../controllers/reviewSocial.controller');
 const { authenticate, authorize } = require('../middleware/auth');
 const config = require('../config/env');
 const { uploadLimiter } = require('../middleware/security');
@@ -83,9 +84,43 @@ router.get(
   reviewController.getSellerReviews
 );
 
+// Which reviews on the page in front of me I have already marked helpful.
+// Static, so before /:id; authenticated, so it is never publicly cached.
+router.get(
+  '/my/likes',
+  authenticate,
+  reviewSocialController.myLikes
+);
+
+// Removing a comment is addressed by the comment, not the review, so this
+// literal path has to come before /:id as well.
+router.delete(
+  '/comments/:commentId',
+  authenticate,
+  reviewSocialController.deleteComment
+);
+
 router.get(
   '/:id',
   reviewController.getReviewById
+);
+
+// The photo viewer's actions: helpful, and the comments under a review.
+router.post(
+  '/:id/like',
+  authenticate,
+  reviewSocialController.toggleLike
+);
+
+router.get(
+  '/:id/comments',
+  reviewSocialController.listComments
+);
+
+router.post(
+  '/:id/comments',
+  authenticate,
+  reviewSocialController.addComment
 );
 
 // Buyer routes

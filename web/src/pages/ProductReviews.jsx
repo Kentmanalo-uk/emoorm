@@ -3,6 +3,8 @@ import { Link, useNavigate, useParams, useSearchParams } from 'react-router-dom'
 import { CaretLeft, CircleNotch, Star } from '../lib/icons';
 import Layout from '../components/layout/Layout';
 import ReviewItem, { Stars } from '../components/reviews/ReviewItem';
+import { useReviewViewer } from '../components/reviews/ReviewViewer';
+import useReviewSocial from '../components/reviews/useReviewSocial';
 import EmptyArt from '../components/ui/EmptyArt';
 import axios from '../lib/axios';
 import { resolveImg } from '../lib/media';
@@ -177,7 +179,7 @@ function ReviewsPage({ slug }) {
           )}
 
           {product && (
-            <ReviewList key={`${product.id}-${rating || 'all'}`} productId={product.id} rating={rating} />
+            <ReviewList key={`${product.id}-${rating || 'all'}`} product={product} rating={rating} />
           )}
         </div>
       </div>
@@ -186,12 +188,19 @@ function ReviewsPage({ slug }) {
 }
 
 /** One filter's list. Keyed by filter, so switching stars starts over. */
-function ReviewList({ productId, rating }) {
+function ReviewList({ product, rating }) {
+  const productId = product.id;
   const [items, setItems] = useState([]);
   const [page, setPage] = useState(1);
   const [totalPages, setTotalPages] = useState(1);
   const [loading, setLoading] = useState(true);
   const [failed, setFailed] = useState(false);
+
+  // Helpful marks and comments for the reviews on screen, and the
+  // full-screen viewer a photo opens. Both are held here, above the list,
+  // so a like made in the viewer is still there in the row behind it.
+  const social = useReviewSocial(items);
+  const { openMedia, viewer } = useReviewViewer(items, product, social);
 
   useEffect(() => {
     let live = true;
@@ -231,8 +240,12 @@ function ReviewList({ productId, rating }) {
   return (
     <div className="prv-card prv-list">
       <div className="pdp-reviews">
-        {items.map((r) => <ReviewItem key={r.id} review={r} showReply />)}
+        {items.map((r) => (
+          <ReviewItem key={r.id} review={r} showReply social={social} onOpenMedia={openMedia} />
+        ))}
       </div>
+      {viewer}
+      {social.commentsSheet}
       {loading && (
         <div className="prv-loading"><CircleNotch size={22} className="prv-spin" /> Loading reviews…</div>
       )}

@@ -477,6 +477,10 @@ model User {
   blocksAgainst UserBlock[]    @relation("BlocksAgainst")
   flaggedMessages MessageFlag[] @relation("FlaggedMessages")
   flagsReviewed   MessageFlag[] @relation("FlagReviewer")
+  reviewLikes     ReviewLike[]
+  reviewComments  ReviewComment[]
+  flaggedReviewComments      ReviewCommentFlag[] @relation("FlaggedReviewComments")
+  reviewCommentFlagsReviewed ReviewCommentFlag[] @relation("ReviewCommentFlagReviewer")
   followedStores StoreFollow[]
   addresses     Address[]
   qrLoginSessions QrLoginSession[]
@@ -1564,6 +1568,11 @@ model Review {
   sellerReply     String?   @db.Text @map("seller_reply")
   sellerRepliedAt DateTime? @map("seller_replied_at")
 
+  /// What other shoppers did with this review: marked it helpful, or
+  /// said something under it. Both are read in the photo viewer.
+  likes    ReviewLike[]
+  comments ReviewComment[]
+
   createdAt DateTime @default(now()) @map("created_at")
   updatedAt DateTime @updatedAt @map("updated_at")
   deletedAt DateTime? @map("deleted_at")
@@ -2234,4 +2243,90 @@ model SecurityCounter {
 
   @@index([expiresAt])
   @@map("security_counters")
+}
+
+/// One shopper marking one review helpful, in the review photo viewer.
+/// The pair is unique, so the button is a toggle rather than a counter
+/// anyone can run up, and the count is read with _count rather than kept
+/// on the review -- nothing else has to stay in step that way.
+model ReviewLike {
+  id        String   @id @default(uuid())
+  reviewId  String   @map("review_id")
+  review    Review   @relation(fields: [reviewId], references: [id], onDelete: Cascade)
+  userId    String   @map("user_id")
+  user      User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+  createdAt DateTime @default(now()) @map("created_at")
+
+  @@unique([reviewId, userId])
+  @@index([userId])
+  @@map("review_likes")
+}
+
+/// A shopper's reply under a review: "does it run small?", "mine arrived
+/// faded too". Flat, not threaded -- a thread needs a moderation story of
+/// its own and this one is already public.
+///
+/// flaggedAt is set when the words tripped the same list chat uses. The
+/// comment still shows: a wrong guess must not silently swallow what
+/// somebody wrote, exactly as in message.service.
+model ReviewComment {
+  id       String @id @default(uuid())
+  reviewId String @map("review_id")
+  review   Review @relation(fields: [reviewId], references: [id], onDelete: Cascade)
+  userId   String @map("user_id")
+  user     User   @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  body String @db.Text
+
+  flaggedAt DateTime? @map("flagged_at")
+  /// Removed by its writer, by the shop whose product it sits under, or
+  /// by an admin. Kept, not erased, so a decision about it can still be
+  /// looked at afterwards.
+  deletedAt DateTime? @map("deleted_at")
+
+  createdAt DateTime @default(now()) @map("created_at")
+  updatedAt DateTime @updatedAt @map("updated_at")
+
+  flag ReviewCommentFlag?
+
+  @@index([reviewId, deletedAt, createdAt])
+  @@index([userId, createdAt])
+  @@index([flaggedAt])
+  @@map("review_comments")
+}
+
+/// The review-comment half of the admin queue, shaped exactly like
+/// MessageFlag so one screen can read both. A second table rather than a
+/// nullable column on that one because message_flags.message_id is live,
+/// NOT NULL and unique: widening it would put a shipped feature at risk
+/// for no gain here.
+model ReviewCommentFlag {
+  id        String        @id @default(uuid())
+  commentId String        @unique @map("comment_id")
+  comment   ReviewComment @relation(fields: [commentId], references: [id], onDelete: Cascade)
+
+  reviewId String @map("review_id")
+  authorId String @map("author_id")
+  author   User   @relation("FlaggedReviewComments", fields: [authorId], references: [id], onDelete: Cascade)
+
+  /// The words that matched, so an admin can judge the guess as well as
+  /// the comment.
+  matched String @db.VarChar(191)
+
+  status ModerationFlagStatus @default(PENDING)
+
+  /// The shop's town, so a municipal admin sees their own.
+  municipalityId String? @map("municipality_id")
+
+  reviewedById String?   @map("reviewed_by_id")
+  reviewedBy   User?     @relation("ReviewCommentFlagReviewer", fields: [reviewedById], references: [id])
+  reviewedAt   DateTime? @map("reviewed_at")
+  notes        String?   @db.Text
+
+  createdAt DateTime @default(now()) @map("created_at")
+
+  @@index([municipalityId, status, createdAt])
+  @@index([authorId])
+  @@index([status, createdAt])
+  @@map("review_comment_flags")
 }

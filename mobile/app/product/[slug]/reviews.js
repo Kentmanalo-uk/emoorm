@@ -11,6 +11,8 @@ import ShellPageMenu from '../../../src/components/ShellPageMenu';
 import { resolveImg } from '../../../src/lib/media';
 import { font, t, themed } from '../../../src/theme';
 import ReviewItem, { Stars } from '../../../src/components/product/ReviewItem';
+import useReviewSocial from '../../../src/components/reviews/useReviewSocial';
+import useReviewViewer from '../../../src/components/reviews/useReviewViewer';
 import { parseImages, peso } from '../../../src/components/product/productLib';
 
 const PAGE_SIZE = 10;
@@ -150,7 +152,7 @@ function ReviewsPage({ slug }) {
               </ScrollView>
             ) : null}
 
-            {product ? <ReviewList key={`${product.id}-${rating || 'all'}`} productId={product.id} rating={rating} /> : null}
+            {product ? <ReviewList key={`${product.id}-${rating || 'all'}`} product={product} rating={rating} /> : null}
           </>
         )}
       </ScrollView>
@@ -159,7 +161,8 @@ function ReviewsPage({ slug }) {
 }
 
 /** One filter's list. Keyed by filter, so switching stars starts over. */
-function ReviewList({ productId, rating }) {
+function ReviewList({ product, rating }) {
+  const productId = product.id;
   const [items, setItems] = useState([]);
   const [page, setPage] = useState(1);
   const [totalPages, setTotalPages] = useState(1);
@@ -185,6 +188,12 @@ function ReviewList({ productId, rating }) {
     return () => { live = false; };
   }, [productId, rating, page]);
 
+  // Helpful marks and comments for the reviews on screen, and the
+  // full-screen viewer a photo opens. Both are held here, above the list,
+  // so a like made in the viewer is still there in the row behind it.
+  const social = useReviewSocial(items);
+  const { openMedia, viewer } = useReviewViewer(items, product, social);
+
   const loadMore = () => { setLoading(true); setPage((p) => p + 1); };
 
   if (failed && items.length === 0) {
@@ -204,7 +213,17 @@ function ReviewList({ productId, rating }) {
 
   return (
     <View style={[styles.card, styles.cardLast, styles.list]}>
-      {items.map((r, i) => <ReviewItem key={r.id} review={r} showReply last={i === items.length - 1} />)}
+      {items.map((r, i) => (
+        <ReviewItem
+          key={r.id}
+          review={r}
+          showReply
+          last={i === items.length - 1}
+          social={social}
+          onOpenMedia={openMedia}
+        />
+      ))}
+      {viewer}
       {loading ? (
         <View style={styles.loading}>
           <ActivityIndicator size="small" color={t.neutral[500]} />

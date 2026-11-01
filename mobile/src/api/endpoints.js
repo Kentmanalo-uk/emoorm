@@ -49,6 +49,13 @@ export const ENDPOINTS = {
     BY_ID: (id) => `/reviews/${id}`,
     SELLER_MINE: '/reviews/seller/mine',
     REPLY: (id) => `/reviews/${id}/reply`,
+    // The photo viewer's actions. MY_LIKES is separate from BY_PRODUCT
+    // because that list is publicly cacheable and this answer differs per
+    // viewer (src/lib/reviewSocial.js calls these).
+    LIKE: (id) => `/reviews/${id}/like`,
+    MY_LIKES: '/reviews/my/likes',
+    COMMENTS: (id) => `/reviews/${id}/comments`,
+    COMMENT: (commentId) => `/reviews/comments/${commentId}`,
   },
   UPLOAD: {
     IMAGE: '/upload/image',

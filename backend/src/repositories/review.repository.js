@@ -9,6 +9,21 @@ const recount = async (review) => {
 };
 
 /**
+ * Prisma's _count, under the names the apps read. Leaving it as _count
+ * would put a Prisma shape in the API, where a rename inside the query
+ * becomes a breaking change outside it.
+ */
+const withCounts = (review) => {
+  if (!review) return review;
+  const { _count, ...rest } = review;
+  return {
+    ...rest,
+    likeCount: _count?.likes ?? 0,
+    commentCount: _count?.comments ?? 0,
+  };
+};
+
+/**
  * Review Repository
  * Handles all database operations related to reviews
  */
@@ -44,7 +59,7 @@ const createReview = async (data) => recount(await prisma.review.create({
  * @returns {Promise<Object|null>} Review or null
  */
 const findById = async (id) => {
-  return prisma.review.findUnique({
+  return withCounts(await prisma.review.findUnique({
     where: { id },
     include: {
       user: {
@@ -63,8 +78,14 @@ const findById = async (id) => {
           municipalityId: true,
         },
       },
+      _count: {
+        select: {
+          likes: true,
+          comments: { where: { deletedAt: null } },
+        },
+      },
     },
-  });
+  }));
 };
 
 /**
@@ -121,6 +142,16 @@ const findAll = async (options = {}) => {
             images: true,
           },
         },
+        // How many found it helpful and how many replied. Both are the
+        // same for every reader, so they can ride along in a response a
+        // shared cache may keep; whether *you* liked it cannot, and is
+        // asked for separately.
+        _count: {
+          select: {
+            likes: true,
+            comments: { where: { deletedAt: null } },
+          },
+        },
       },
       skip: (page - 1) * pageSize,
       take: pageSize,
@@ -130,7 +161,7 @@ const findAll = async (options = {}) => {
   ]);
 
   return {
-    reviews,
+    reviews: reviews.map(withCounts),
     total,
     page,
     pageSize,
@@ -250,6 +281,12 @@ const findAllForStore = async (storeId, options = {}) => {
             slug: true,
           },
         },
+        _count: {
+          select: {
+            likes: true,
+            comments: { where: { deletedAt: null } },
+          },
+        },
       },
       skip: (page - 1) * pageSize,
       take: pageSize,
@@ -259,7 +296,7 @@ const findAllForStore = async (storeId, options = {}) => {
   ]);
 
   return {
-    reviews,
+    reviews: reviews.map(withCounts),
     total,
     page,
     pageSize,
