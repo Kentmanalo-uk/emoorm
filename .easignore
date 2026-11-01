@@ -1,0 +1,48 @@
+# What EAS Build does NOT need in the archive.
+#
+# EAS copies the repository, not just mobile/, so everything here is about
+# the whole tree. Note it REPLACES .gitignore for that copy: anything left
+# out of this file is uploaded, so node_modules and friends are named again
+# below rather than inherited.
+#
+# The reason it exists at all: backend/.claude, backend/.windsurf and
+# backend/.agents hold symlinked skill folders, and Windows refuses to
+# recreate a symlink while cloning ("EPERM: operation not permitted,
+# symlink"), which failed the upload before a build ever started.
+
+# ── The usual ──────────────────────────────────────────────────────────
+node_modules/
+.git/
+.DS_Store
+*.log
+.env
+*.env
+.env.*
+
+# ── Nothing but the app is built here ──────────────────────────────────
+# The server and the website are their own deployments.
+backend/
+web/
+
+# Finished apps, 400 MB of them, and the pictures for the store listing.
+apk/
+apk-react-native/
+google-play-assets/
+
+# ── The app's own throwaways ───────────────────────────────────────────
+# EAS runs prebuild itself, so the native projects are made there; sending
+# ours would ship a local SDK path and a machine's build output.
+mobile/android/
+mobile/ios/
+mobile/.expo/
+mobile/dist/
+
+# The signing key's password. The CLI reads it here and sends the key over
+# its own API before the archive is made -- it must never travel inside it.
+mobile/credentials.json
+
+# ── Working notes, never part of a build ───────────────────────────────
+.claude/
+.windsurf/
+.agents/
+system-overview.txt

@@ -1,0 +1,43 @@
+# What EAS Build does NOT send to the builders.
+#
+# This file is the only list EAS has when the archive is made without git
+# (EAS_NO_VCS=1, which keeps it from shallow-cloning the whole repository
+# and its 730 MB of history). Without git there is no .gitignore to fall
+# back on, so everything that should stay here has to be named below --
+# node_modules alone is the difference between a few MB and 860.
+
+# Installed on the builder from package-lock.json, not shipped.
+node_modules/
+
+# EAS runs prebuild itself. Sending ours would carry this machine's SDK
+# path and its leftover build output.
+android/
+ios/
+
+# Local only.
+.expo/
+dist/
+web-build/
+.kotlin/
+.metro-health-check*
+*.tsbuildinfo
+
+# The signing key and its password. The CLI reads credentials.json here and
+# sends the key over its own API before the archive is made; neither it nor
+# a keystore may travel inside it.
+credentials.json
+*.jks
+*.p8
+*.p12
+*.key
+*.mobileprovision
+*.pem
+
+# Secrets and noise.
+.env
+.env.*
+*.log
+npm-debug.*
+yarn-debug.*
+yarn-error.*
+.DS_Store
