@@ -4,17 +4,18 @@ const orderRepository = require('../repositories/order.repository');
 const notificationService = require('./notification.service');
 const priceOfferService = require('./priceOffer.service');
 const blockService = require('./userBlock.service');
+const strikes = require('./abuseStrike.service');
 const { findBadWords } = require('../utils/badWords');
 const { ApiError } = require('../middleware/errorHandler');
 const prisma = require('../config/database');
 const config = require('../config/env');
 
-// How many flagged messages it takes before chat closes, and for how
-// long. Three because a word list is a guess: one is an accident or a
-// bad guess, three is a person. A week because it has to be long enough
-// to matter and short enough that nobody need remember to undo it.
-const CHAT_STRIKE_LIMIT = 3;
-const CHAT_RESTRICTION_DAYS = 7;
+// The warn-then-restrict ladder now lives in abuseStrike.service, because
+// review comments climb the same one: someone abusive in a chat and then
+// abusive under a review is one person twice, not two people once each.
+// Re-exported here, where callers and tests already look for it.
+const CHAT_STRIKE_LIMIT = strikes.STRIKE_LIMIT;
+const CHAT_RESTRICTION_DAYS = strikes.RESTRICTION_DAYS;
 
 const UPLOAD_FILE = /^\/uploads\/[A-Za-z0-9._-]+$/;
 const privateMedia = require('../lib/privateMedia');
@@ -310,18 +311,7 @@ const getConversation = async (conversationId, userId, { before = null } = {}) =
  * is chat only: they can still buy, sell and be paid, which is exactly
  * why it is not isActive.
  */
-const assertCanChat = async (userId) => {
-  const me = await prisma.user.findUnique({
-    where: { id: userId },
-    select: { chatRestrictedUntil: true },
-  });
-  if (me?.chatRestrictedUntil && me.chatRestrictedUntil > new Date()) {
-    throw new ApiError(
-      'Your messaging is paused while an administrator reviews earlier messages. You can still buy and sell.',
-      403,
-    );
-  }
-};
+const assertCanChat = (userId) => strikes.assertNotRestricted(userId, 'messaging');
 
 /**
  * What happens after a message with a flagged word has already been
@@ -342,36 +332,9 @@ const recordFlag = async (message, conversation, matched) => {
     },
   });
 
-  const after = await prisma.user.update({
-    where: { id: message.senderId },
-    data: { chatStrikes: { increment: 1 } },
-    select: { chatStrikes: true },
-  });
-
-  const reached = after.chatStrikes >= CHAT_STRIKE_LIMIT;
-  if (reached) {
-    // The counter goes back to nought with the restriction, so a week
-    // from now they start fresh rather than one word from another week.
-    await prisma.user.update({
-      where: { id: message.senderId },
-      data: {
-        chatRestrictedUntil: new Date(Date.now() + CHAT_RESTRICTION_DAYS * 86400000),
-        chatStrikes: 0,
-      },
-    });
-  }
-
-  // SYSTEM_ANNOUNCEMENT, as a removed review uses (moderation.service
-  // removeReview): a moderation notice to one person. A type of its own
-  // would mean editing the Prisma enum, the second list in
-  // notification.service and the category maps -- three places to drift.
-  await notificationService.createNotification({
-    userId: message.senderId,
-    type: 'SYSTEM_ANNOUNCEMENT',
-    title: reached ? 'Your messaging is paused' : 'Please keep messages respectful',
-    message: reached
-      ? `Your messages are being reviewed and you cannot send new ones for ${CHAT_RESTRICTION_DAYS} days. You can still buy and sell as normal.`
-      : 'A message you sent was marked for review. Please keep the language respectful.',
+  await strikes.addStrike(message.senderId, {
+    warnTitle: 'Please keep messages respectful',
+    warnMessage: 'A message you sent was marked for review. Please keep the language respectful.',
     relatedId: conversation.id,
   });
 
