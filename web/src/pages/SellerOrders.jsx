@@ -2,7 +2,7 @@ import { useState, useEffect } from 'react';
 import { Link, useNavigate, useOutletContext, useSearchParams } from 'react-router-dom';
 import {
   Eye, CheckCircle, XCircle, Clock, Package, Truck, FileText, Storefront as StoreIcon, MagnifyingGlass, X, Flag, SlidersHorizontal,
-  Printer, Phone, ChatCircleDots, QrCode,
+  Printer, Phone, ChatCircleDots, QrCode, CaretRight, MapPin, User,
 } from '../lib/icons';
 import { usePhoneLayout } from '../hooks/useMobileNav';
 import useFocusTrap from '../hooks/useFocusTrap';
@@ -317,6 +317,132 @@ const ACTION_LABELS = {
   COMPLETED: { label: 'Mark completed', cls: 'action-complete' },
   CANCELLED: { label: 'Cancel order', cls: 'action-cancel' },
 };
+
+/** "Today", "Yesterday", "5 Oct" — the date in as few words as it needs. */
+function shortDate(value) {
+  if (!value) return '';
+  const at = new Date(value);
+  const days = Math.round((new Date().setHours(0, 0, 0, 0) - new Date(at).setHours(0, 0, 0, 0)) / 86400000);
+  if (days === 0) return 'Today';
+  if (days === 1) return 'Yesterday';
+  return at.toLocaleDateString('en-PH', {
+    day: 'numeric',
+    month: 'short',
+    ...(at.getFullYear() === new Date().getFullYear() ? {} : { year: 'numeric' }),
+  });
+}
+
+/**
+ * One order as a card, for phones.
+ *
+ * A seller reading this list is deciding what to do next, so the card is
+ * ordered by what that decision needs: how the order stands, then the thing
+ * being sold -- a picture big enough to know it without reading -- then who
+ * it is for and where it goes. Nothing else earns a place here. Totals,
+ * payment, history and the rest wait in the sheet, which a tap anywhere on
+ * the card opens; only the two buttons along the foot do something else.
+ */
+function PhoneOrderCard({ order, selected, moved, updating, ridersOn, onOpen, onNext, onRider, onCheckPay }) {
+  const s = statusOf(order.status, order.fulfillmentMethod);
+  const items = order.items || [];
+  const first = items[0];
+  const picture = first ? resolveImg(lineImage(first.product, first.selectedVariations)) : null;
+  const totalQty = items.reduce((sum, it) => sum + (Number(it.quantity) || 0), 0);
+  const countLine = items.length === 1 && ['LIVESTOCK', 'PACKAGE'].includes(lineKind(first))
+    ? countLabel(first)
+    : `Qty ${totalQty}`;
+  const next = nextStep(order);
+  const riderNext = riderNextAction(order, ridersOn);
+  const riderLine = isRiderOrder(order) && order.riderDelivery && !['COMPLETED', 'CANCELLED'].includes(order.status)
+    ? riderStatus(order.riderDelivery, 'seller', order)
+    : null;
+  const pickup = order.fulfillmentMethod === 'PICKUP';
+  const number = order.orderNumber || order.id.slice(-6).toUpperCase();
+  const payToCheck = proofToCheck(order);
+  // Nothing is due on an order that is over, so it carries no flags: a
+  // cancelled order wearing a "Today" chip only pulls the eye to the one
+  // row with nothing left to do on it.
+  const settled = ['COMPLETED', 'CANCELLED', 'DELIVERED', 'PICKED_UP'].includes(order.status);
+
+  return (
+    <li
+      id={`so-row-${order.id}`}
+      className={`soc${selected ? ' is-open' : ''}${moved ? ' is-moved' : ''}`}
+    >
+      <button type="button" className="soc-body" onClick={onOpen} aria-label={`Open order #${number}`}>
+        <div className="soc-head">
+          <span className={`seller-badge seller-badge--solid ${s.cls}`}>{s.label}</span>
+          <span className="soc-when">{shortDate(order.createdAt)}</span>
+          <CaretRight size={16} className="soc-go" aria-hidden="true" />
+        </div>
+
+        {/* Only the flags that mean something has to happen by a time. */}
+        {!settled && (
+          <>
+            <TodayTag order={order} />
+            <ConfirmByTag order={order} />
+            <CookTag order={order} />
+            {payToCheck && <span className="soc-flag is-pay">Payment to check</span>}
+            {riderLine?.title && <span className={`soc-flag is-${riderLine.tone}`}>{riderLine.title}</span>}
+          </>
+        )}
+
+        <div className="soc-goods">
+          <span className="soc-pic">
+            {picture
+              ? <img src={picture} alt="" onError={(e) => { e.currentTarget.hidden = true; }} />
+              : <Package size={26} className="soc-pic-none" />}
+            {items.length > 1 && <b className="soc-pic-more">+{items.length - 1}</b>}
+          </span>
+          <span className="soc-what">
+            <strong>{first?.product?.name || first?.productName || 'No items'}</strong>
+            <span className="soc-count">{items.length} {items.length === 1 ? 'item' : 'items'} · {countLine}</span>
+          </span>
+          <span className="soc-total">{peso(order.total)}</span>
+        </div>
+
+        <div className="soc-lines">
+          <span className="soc-line">
+            <User size={15} aria-hidden="true" />
+            <span>{order.buyer?.fullName || 'Buyer'}</span>
+          </span>
+          <span className="soc-line">
+            {pickup ? <StoreIcon size={15} aria-hidden="true" /> : <MapPin size={15} aria-hidden="true" />}
+            <span>{pickup ? 'Picking up at your shop' : (order.deliveryAddress || 'No address given')}</span>
+          </span>
+        </div>
+      </button>
+
+      <div className="soc-act">
+        {order.contactNumber && (
+          <a
+            href={telHref(order.contactNumber)}
+            className="soc-call"
+            aria-label={`Call ${order.buyer?.fullName || 'the buyer'} at ${order.contactNumber}`}
+          >
+            <Phone size={16} /> Call
+          </a>
+        )}
+        {payToCheck ? (
+          <button type="button" className="soc-do is-pay" onClick={onCheckPay}>
+            <QrCode size={15} weight="bold" /> Check payment
+          </button>
+        ) : riderNext ? (
+          <button type="button" className="soc-do" disabled={updating} onClick={() => onRider(riderNext)}>
+            {riderNext === 'cash' ? 'Cash received' : riderNext === 'parcel' ? 'Parcel back' : 'Call a rider'}
+          </button>
+        ) : next ? (
+          <button type="button" className="soc-do" disabled={updating} onClick={() => onNext(next)}>
+            {updating ? <Spinner size={14} /> : null}
+            {ACTION_LABELS[next]?.label || next}
+          </button>
+        ) : (
+          <button type="button" className="soc-do is-quiet" onClick={onOpen}>Details</button>
+        )}
+      </div>
+    </li>
+  );
+}
 
 export default function SellerOrders() {
   const [searchParams, setSearchParams] = useSearchParams();
@@ -885,14 +1011,36 @@ export default function SellerOrders() {
               </div>
             ) : (
               <>
+              {isPhone ? (
+                /* Phones get cards of their own rather than the table folded
+                   up: a card can show where the order is going, which no
+                   column on the computer's table carries. */
+                <ul className="so-cards">
+                  {displayed.map((order) => (
+                    <PhoneOrderCard
+                      key={order.id}
+                      order={order}
+                      selected={selectedOrder?.id === order.id}
+                      moved={movedId === order.id}
+                      updating={updatingId === order.id}
+                      ridersOn={ridersOn}
+                      onOpen={() => setSelectedOrder(selectedOrder?.id === order.id ? null : order)}
+                      onNext={(to) => requestStatusChange(order.id, to)}
+                      onRider={(action) => askRider(order, action)}
+                      onCheckPay={() => {
+                        setSelectedOrder(order);
+                        setTimeout(() => document.getElementById('so-payment-check')?.scrollIntoView({ behavior: 'smooth', block: 'center' }), 120);
+                      }}
+                    />
+                  ))}
+                </ul>
+              ) : (
               <table className="seller-table so-orders-table">
                 <thead>
                   <tr>
-                    {!isPhone && (
-                      <th className="so-col-pick">
-                        <input type="checkbox" checked={allPicked} onChange={pickAll} aria-label="Tick every order on this page" />
-                      </th>
-                    )}
+                    <th className="so-col-pick">
+                      <input type="checkbox" checked={allPicked} onChange={pickAll} aria-label="Tick every order on this page" />
+                    </th>
                     <th className="so-col-num">Order #</th>
                     <th>Products</th>
                     <th className="so-col-buyer">Buyer</th>
@@ -921,16 +1069,14 @@ export default function SellerOrders() {
                         id={`so-row-${order.id}`}
                         className={`${selectedOrder?.id === order.id ? 'row-selected' : ''}${movedId === order.id ? ' is-moved' : ''}`.trim()}
                       >
-                        {!isPhone && (
-                          <td className="so-col-pick">
-                            <input
-                              type="checkbox"
-                              checked={picked.has(order.id)}
-                              onChange={() => togglePick(order.id)}
-                              aria-label={`Tick order #${order.orderNumber}`}
-                            />
-                          </td>
-                        )}
+                        <td className="so-col-pick">
+                          <input
+                            type="checkbox"
+                            checked={picked.has(order.id)}
+                            onChange={() => togglePick(order.id)}
+                            aria-label={`Tick order #${order.orderNumber}`}
+                          />
+                        </td>
                         <td className="order-num">
                           <div title={`#${order.orderNumber || order.id.slice(-6).toUpperCase()}`}>#{order.orderNumber || order.id.slice(-6).toUpperCase()}</div>
                           {orderDate && <div className="so-order-date">{orderDate}</div>}
@@ -1065,6 +1211,7 @@ export default function SellerOrders() {
                   })}
                 </tbody>
               </table>
+              )}
               {pagination.totalPages > 1 && (
                 <div className="so-pagination">
                   <button
@@ -1104,21 +1251,20 @@ export default function SellerOrders() {
               aria-labelledby="so-detail-title"
             >
               <div className="seller-card-header">
-                <h2 id="so-detail-title">Order #{selectedOrder.orderNumber || selectedOrder.id.slice(-6).toUpperCase()}</h2>
+                {/* How the order stands belongs with its number, not as the
+                    first of twenty rows below. */}
+                <div className="so-detail-head">
+                  <h2 id="so-detail-title">#{selectedOrder.orderNumber || selectedOrder.id.slice(-6).toUpperCase()}</h2>
+                  <span className={`seller-badge seller-badge--solid ${statusOf(selectedOrder.status, selectedOrder.fulfillmentMethod).cls}`}>
+                    {statusOf(selectedOrder.status, selectedOrder.fulfillmentMethod).label}
+                  </span>
+                </div>
                 <button type="button" className="seller-icon-btn so-detail-close" onClick={closeDetail} aria-label="Close order details">
                   <X size={18} weight="bold" />
                 </button>
               </div>
               <div className="order-detail-body">
-                {/* Status */}
-                <div className="detail-row">
-                  <span>Status</span>
-                  <span className={`seller-badge seller-badge--solid ${statusOf(selectedOrder.status, selectedOrder.fulfillmentMethod).cls}`}>
-                    {statusOf(selectedOrder.status, selectedOrder.fulfillmentMethod).label}
-                  </span>
-                </div>
-
-                {selectedOrder.respondBy && (
+                {selectedOrder.respondBy && !['COMPLETED', 'CANCELLED', 'DELIVERED', 'PICKED_UP'].includes(selectedOrder.status) && (
                   <div className="detail-row detail-row--col so-today-detail">
                     <span>Available Today</span>
                     <p>
@@ -1149,103 +1295,214 @@ export default function SellerOrders() {
                   ) : null;
                 })()}
 
+                {/* What was ordered, and what it comes to: the two things
+                    a seller checks first, so they lead the sheet. */}
+                <section className="so-sec">
+                  <h3 className="so-sec-t">Order</h3>
+                  <div className="detail-items">
+                    {(selectedOrder.items || []).map(item => (
+                      <div key={item.id} className="detail-item">
+                        <span className="detail-item-pic">
+                          {resolveImg(lineImage(item.product, item.selectedVariations))
+                            ? <img src={resolveImg(lineImage(item.product, item.selectedVariations))} alt="" onError={(e) => { e.currentTarget.hidden = true; }} />
+                            : <Package size={18} />}
+                        </span>
+                        <span>
+                          {item.product?.name || item.productName || item.productId}
+                          {item.selectedVariations && Object.keys(item.selectedVariations).length > 0 && (
+                            <small className="detail-item-variations">
+                              {Object.entries(item.selectedVariations).map(([name, value]) => `${name}: ${value}`).join(' · ')}
+                            </small>
+                          )}
+                          {lineNote(item) && <small className="detail-item-variations">{lineNote(item)}</small>}
+                        </span>
+                        <span>{qtyLabel(item)}</span>
+                        <span>₱{(Number(item.price) * item.quantity).toFixed(2)}</span>
+                      </div>
+                    ))}
+                  </div>
+                  <div className="detail-totals">
+                    <div className="detail-total-row">
+                      <span>Subtotal</span>
+                      <span>₱{Number(selectedOrder.subtotal).toFixed(2)}</span>
+                    </div>
+                    <div className="detail-total-row">
+                      <span>
+                        Delivery fee
+                        {distanceNote(selectedOrder) && <small className="summary-km">{distanceNote(selectedOrder)}</small>}
+                      </span>
+                      <span>
+                        {orderPromo(selectedOrder) && Number(selectedOrder.deliveryFee || 0) === 0
+                          ? 'Free (MoorMove promo)'
+                          : `₱${Number(selectedOrder.deliveryFee || 0).toFixed(2)}`}
+                      </span>
+                    </div>
+                    {Number(selectedOrder.discountAmount) > 0 && (
+                      <div className="detail-total-row">
+                        <span>Discount{selectedOrder.voucherCode ? ` (${selectedOrder.voucherCode})` : ''}</span>
+                        <span>−₱{Number(selectedOrder.discountAmount).toFixed(2)}</span>
+                      </div>
+                    )}
+                    {carriedFeeLines(selectedOrder).map((line) => (
+                      <div key={line.key} className="detail-total-row">
+                        <span>{line.label}</span>
+                        <span>₱{line.amount.toFixed(2)}</span>
+                      </div>
+                    ))}
+                    <div className="detail-total-row detail-total-row--bold">
+                      <span>Total</span>
+                      <span>₱{Number(selectedOrder.total).toFixed(2)}</span>
+                    </div>
+                    {riderFeeNote(selectedOrder) && (
+                      <div className="detail-total-row">
+                        <span>
+                          Your sale
+                          <small className="summary-km">{` · ${riderFeeNote(selectedOrder)}`}</small>
+                        </span>
+                        <span>₱{Number(selectedOrder.shopTotal ?? selectedOrder.total).toFixed(2)}</span>
+                      </div>
+                    )}
+                  </div>
+
+                </section>
+
                 {/* Buyer */}
-                <div className="detail-row">
-                  <span>Buyer</span>
-                  <strong className="so-buyer-cell">
-                    {selectedOrder.buyer?.id
-                      ? <Link to={`/u/${selectedOrder.buyer.id}`} className="profile-link" title="View buyer profile">{selectedOrder.buyer.fullName || '—'}</Link>
-                      : (selectedOrder.buyer?.fullName || '—')}
+                {/* Who it is for: the name on its own line with their record
+                    under it, then every way of reaching them together. */}
+                <section className="so-sec">
+                  <h3 className="so-sec-t">Buyer</h3>
+                  <div className="so-buyer-head">
+                    <strong>
+                      {selectedOrder.buyer?.id
+                        ? <Link to={`/u/${selectedOrder.buyer.id}`} className="profile-link" title="View buyer profile">{selectedOrder.buyer.fullName || '—'}</Link>
+                        : (selectedOrder.buyer?.fullName || '—')}
+                    </strong>
                     <BuyerRecord orderId={selectedOrder.id} />
+                    {selectedOrder.contactNumber && (
+                      <a href={telHref(selectedOrder.contactNumber)} className="so-tel">{selectedOrder.contactNumber}</a>
+                    )}
+                  </div>
+
+                  <div className="so-contact-actions">
                     {selectedOrder.buyer?.id && (
                       <button
                         type="button"
-                        className="so-report-buyer"
-                        onClick={() => setReportBuyer(selectedOrder.buyer)}
-                        title="Report this buyer to their municipal admin"
+                        className="btn-seller-outline"
+                        disabled={openingChat}
+                        onClick={() => messageBuyer(selectedOrder.buyer.id)}
                       >
-                        <Flag size={14} /> Report
+                        <ChatCircleDots size={16} /> Message
                       </button>
                     )}
-                  </strong>
-                </div>
+                    {selectedOrder.contactNumber && (
+                      <a href={telHref(selectedOrder.contactNumber)} className="btn-seller-outline">
+                        <Phone size={16} /> Call
+                      </a>
+                    )}
+                    <button type="button" className="btn-seller-outline" onClick={() => printSlips([selectedOrder])}>
+                      <Printer size={16} /> Slip
+                    </button>
+                  </div>
 
-                <div className="detail-row">
-                  <span>Contact</span>
-                  <strong>
-                    {selectedOrder.contactNumber
-                      ? <a href={telHref(selectedOrder.contactNumber)} className="so-tel">{selectedOrder.contactNumber}</a>
-                      : '—'}
-                  </strong>
-                </div>
-
-                {/* Reach the buyer: chat in the app, or call the order's number. */}
-                <div className="so-contact-actions">
+                  {/* A last resort, so it is kept small and apart from the
+                      three things a seller does every day. */}
                   {selectedOrder.buyer?.id && (
                     <button
                       type="button"
-                      className="btn-seller-outline"
-                      disabled={openingChat}
-                      onClick={() => messageBuyer(selectedOrder.buyer.id)}
+                      className="so-report-buyer"
+                      onClick={() => setReportBuyer(selectedOrder.buyer)}
+                      title="Report this buyer to their municipal admin"
                     >
-                      <ChatCircleDots size={16} /> Message buyer
+                      <Flag size={14} /> Report this buyer
                     </button>
                   )}
-                  {selectedOrder.contactNumber && (
-                    <a href={telHref(selectedOrder.contactNumber)} className="btn-seller-outline">
-                      <Phone size={16} /> Call
-                    </a>
+                </section>
+
+                {/* Where it goes and how: the address, the pin, anything
+                    the buyer asked for, and whoever is carrying it. */}
+                <section className="so-sec">
+                  <h3 className="so-sec-t">{selectedOrder.fulfillmentMethod === 'PICKUP' ? 'Pickup' : 'Delivery'}</h3>
+
+                  {/* The address first: it is what the seller came here for.
+                      How it travels is the line under it. */}
+                  <div className="detail-row detail-row--col">
+                    <p className="detail-address">{selectedOrder.deliveryAddress || '—'}</p>
+                    {selectedOrder.deliveryLatitude != null && (
+                      <a
+                        className="so-map-link"
+                        href={`https://www.google.com/maps/search/?api=1&query=${selectedOrder.deliveryLatitude},${selectedOrder.deliveryLongitude}`}
+                        target="_blank"
+                        rel="noopener noreferrer"
+                      >
+                        <MapPin size={15} /> Open the buyer&apos;s pin in Maps
+                      </a>
+                    )}
+                  </div>
+
+                  {selectedOrder.deliveryNotes && (
+                    <div className="detail-row detail-row--col">
+                      <span>Notes from the buyer</span>
+                      <p className="detail-address">{selectedOrder.deliveryNotes}</p>
+                    </div>
                   )}
-                  <button type="button" className="btn-seller-outline" onClick={() => printSlips([selectedOrder])}>
-                    <Printer size={16} /> Packing slip
-                  </button>
-                </div>
 
-                <div className="detail-row">
-                  <span>Fulfillment</span>
-                  <strong>{selectedOrder.fulfillmentMethod === 'PICKUP' ? 'Store Pickup' : 'Delivery'}</strong>
-                </div>
+                  {selectedOrder.fulfillmentMethod !== 'PICKUP' && (
+                    <div className="detail-row">
+                      <span>Carried by</span>
+                      <strong>
+                        {isRiderOrder(selectedOrder)
+                          ? `A MoorMove rider (buyer's choice)${orderPromo(selectedOrder) ? ' · free delivery promo' : ''}`
+                          : selectedOrder.courierId
+                            ? `${selectedOrder.courierName || selectedOrder.courier?.name} (buyer's choice)${selectedOrder.shippingWeightGrams ? ` · ${(selectedOrder.shippingWeightGrams / 1000).toLocaleString('en-PH', { maximumFractionDigits: 2 })} kg` : ''}`
+                            : 'You'}
+                      </strong>
+                    </div>
+                  )}
+                  {fallbackLine(selectedOrder, 'seller') && (
+                    <p className="rider-actions-note">{fallbackLine(selectedOrder, 'seller')}</p>
+                  )}
 
-                {selectedOrder.fulfillmentMethod !== 'PICKUP' && (
+                  <SellerRiderPanel
+                    order={selectedOrder}
+                    enabled={ridersOn}
+                    busy={updatingId === selectedOrder.id}
+                    onAsk={(action) => askRider(selectedOrder, action)}
+                    onTracking={riderTracking}
+                  />
+
+                  {selectedOrder.fulfillmentProofUrl && (
+                    <div className="detail-row detail-row--col">
+                      <OrderProof order={selectedOrder} resolve={resolveImg} />
+                    </div>
+                  )}
+
+                  {selectedOrder.trackingNumber && (
+                    <div className="detail-row detail-row--col">
+                      <CourierTracking order={selectedOrder} />
+                    </div>
+                  )}
+
+                </section>
+
+                <section className="so-sec">
+                  <h3 className="so-sec-t">Payment</h3>
+
                   <div className="detail-row">
-                    <span>Delivered by</span>
+                    <span>Method</span>
                     <strong>
-                      {isRiderOrder(selectedOrder)
-                        ? `A MoorMove rider (buyer's choice)${orderPromo(selectedOrder) ? ' · free delivery promo' : ''}`
-                        : selectedOrder.courierId
-                          ? `${selectedOrder.courierName || selectedOrder.courier?.name} (buyer's choice)${selectedOrder.shippingWeightGrams ? ` · ${(selectedOrder.shippingWeightGrams / 1000).toLocaleString('en-PH', { maximumFractionDigits: 2 })} kg` : ''}`
-                          : 'You'}
+                      {payLabel(selectedOrder.paymentMethod || 'COD', selectedOrder.fulfillmentMethod === 'PICKUP')}
+                      {selectedOrder.paymentReference && ` — Ref: ${selectedOrder.paymentReference}`}
                     </strong>
                   </div>
-                )}
-                {fallbackLine(selectedOrder, 'seller') && (
-                  <p className="rider-actions-note">{fallbackLine(selectedOrder, 'seller')}</p>
-                )}
 
-                <SellerRiderPanel
-                  order={selectedOrder}
-                  enabled={ridersOn}
-                  busy={updatingId === selectedOrder.id}
-                  onAsk={(action) => askRider(selectedOrder, action)}
-                  onTracking={riderTracking}
-                />
-
-                <div className="detail-row">
-                  <span>Payment</span>
-                  <strong>
-                    {payLabel(selectedOrder.paymentMethod || 'COD', selectedOrder.fulfillmentMethod === 'PICKUP')}
-                    {selectedOrder.paymentReference && ` — Ref: ${selectedOrder.paymentReference}`}
-                  </strong>
-                </div>
-
-                {selectedOrder.paymentStatus && (
-                  <div className="detail-row">
-                    <span>Payment status</span>
-                    <span className={`seller-badge seller-badge--solid ${paymentBadge(selectedOrder)?.cls || ''}`}>
-                      {paymentBadge(selectedOrder)?.label || selectedOrder.paymentStatus}
-                    </span>
-                  </div>
-                )}
+                  {selectedOrder.paymentStatus && (
+                    <div className="detail-row">
+                      <span>Status</span>
+                      <span className={`seller-badge seller-badge--solid ${paymentBadge(selectedOrder)?.cls || ''}`}>
+                        {paymentBadge(selectedOrder)?.label || selectedOrder.paymentStatus}
+                      </span>
+                    </div>
+                  )}
 
                 {qrUnpaid(selectedOrder) && selectedOrder.status === 'PENDING' && (
                   <div className="so-payment-review">
@@ -1327,104 +1584,7 @@ export default function SellerOrders() {
                   </div>
                 )}
 
-                {selectedOrder.fulfillmentProofUrl && (
-                  <div className="detail-row detail-row--col">
-                    <OrderProof order={selectedOrder} resolve={resolveImg} />
-                  </div>
-                )}
-
-                {selectedOrder.trackingNumber && (
-                  <div className="detail-row detail-row--col">
-                    <CourierTracking order={selectedOrder} />
-                  </div>
-                )}
-
-                {/* Address */}
-                <div className="detail-row detail-row--col">
-                  <span>{selectedOrder.fulfillmentMethod === 'PICKUP' ? 'Pickup Location' : 'Delivery Address'}</span>
-                  <p className="detail-address">{selectedOrder.deliveryAddress || '—'}</p>
-                  {selectedOrder.deliveryLatitude != null && (
-                    <a
-                      className="so-map-link"
-                      href={`https://www.google.com/maps/search/?api=1&query=${selectedOrder.deliveryLatitude},${selectedOrder.deliveryLongitude}`}
-                      target="_blank"
-                      rel="noopener noreferrer"
-                    >
-                      Open the buyer's pin in Maps
-                    </a>
-                  )}
-                </div>
-
-                {selectedOrder.deliveryNotes && (
-                  <div className="detail-row detail-row--col">
-                    <span>Notes</span>
-                    <p className="detail-address">{selectedOrder.deliveryNotes}</p>
-                  </div>
-                )}
-
-                {/* Items */}
-                <div className="detail-items">
-                  <p className="detail-items-title">Items</p>
-                  {(selectedOrder.items || []).map(item => (
-                    <div key={item.id} className="detail-item">
-                      <span>
-                        {item.product?.name || item.productName || item.productId}
-                        {item.selectedVariations && Object.keys(item.selectedVariations).length > 0 && (
-                          <small className="detail-item-variations">
-                            {Object.entries(item.selectedVariations).map(([name, value]) => `${name}: ${value}`).join(' · ')}
-                          </small>
-                        )}
-                        {lineNote(item) && <small className="detail-item-variations">{lineNote(item)}</small>}
-                      </span>
-                      <span>{qtyLabel(item)}</span>
-                      <span>₱{(Number(item.price) * item.quantity).toFixed(2)}</span>
-                    </div>
-                  ))}
-                </div>
-
-                {/* Totals */}
-                <div className="detail-totals">
-                  <div className="detail-total-row">
-                    <span>Subtotal</span>
-                    <span>₱{Number(selectedOrder.subtotal).toFixed(2)}</span>
-                  </div>
-                  <div className="detail-total-row">
-                    <span>
-                      Delivery fee
-                      {distanceNote(selectedOrder) && <small className="summary-km">{distanceNote(selectedOrder)}</small>}
-                    </span>
-                    <span>
-                      {orderPromo(selectedOrder) && Number(selectedOrder.deliveryFee || 0) === 0
-                        ? 'Free (MoorMove promo)'
-                        : `₱${Number(selectedOrder.deliveryFee || 0).toFixed(2)}`}
-                    </span>
-                  </div>
-                  {Number(selectedOrder.discountAmount) > 0 && (
-                    <div className="detail-total-row">
-                      <span>Discount{selectedOrder.voucherCode ? ` (${selectedOrder.voucherCode})` : ''}</span>
-                      <span>−₱{Number(selectedOrder.discountAmount).toFixed(2)}</span>
-                    </div>
-                  )}
-                  {carriedFeeLines(selectedOrder).map((line) => (
-                    <div key={line.key} className="detail-total-row">
-                      <span>{line.label}</span>
-                      <span>₱{line.amount.toFixed(2)}</span>
-                    </div>
-                  ))}
-                  <div className="detail-total-row detail-total-row--bold">
-                    <span>Total</span>
-                    <span>₱{Number(selectedOrder.total).toFixed(2)}</span>
-                  </div>
-                  {riderFeeNote(selectedOrder) && (
-                    <div className="detail-total-row">
-                      <span>
-                        Your sale
-                        <small className="summary-km">{` · ${riderFeeNote(selectedOrder)}`}</small>
-                      </span>
-                      <span>₱{Number(selectedOrder.shopTotal ?? selectedOrder.total).toFixed(2)}</span>
-                    </div>
-                  )}
-                </div>
+</section>
 
                 {/* The next step: at the foot of the panel, kept in view on
                     phones while the details scroll. */}

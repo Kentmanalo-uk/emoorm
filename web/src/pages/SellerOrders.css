@@ -272,18 +272,79 @@
   line-height: 1.5;
 }
 
-.detail-items {
-  border-top: 1px solid var(--t-neutral-100, #f3f4f6);
-  padding-top: 12px;
+/* ── The order sheet, in sections ──────────────────────────────────────
+   The sheet used to be one run of twenty label/value rows, which reads as
+   a form rather than an order. Grouping them under four headings -- what
+   was ordered, who for, where to, how paid -- means a seller can find the
+   one line they opened the sheet for without reading the other nineteen. */
+.so-sec {
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+  padding-top: 14px;
+  border-top: 1px solid var(--t-neutral-150, #eef0f3);
 }
 
-.detail-items-title {
-  font-size: 12px;
-  text-transform: uppercase;
-  letter-spacing: 0.05em;
+.so-sec-t {
+  margin: 0;
   color: var(--t-neutral-500, #6b7280);
-  margin: 0 0 8px;
+  font-size: 12px;
   font-weight: 600;
+  letter-spacing: 0.05em;
+  text-transform: uppercase;
+}
+
+/* The name, their record and their number, stacked rather than crammed
+   into the right half of a label/value row. */
+.so-buyer-head {
+  display: flex;
+  flex-direction: column;
+  gap: 3px;
+}
+
+.so-buyer-head strong {
+  color: var(--t-neutral-900, #0f172a);
+  font-size: 16px;
+  font-weight: 600;
+}
+
+.so-buyer-head .so-tel {
+  font-size: 14px;
+}
+
+/* The order number and how the order stands, together in the sheet's head. */
+.so-detail-head {
+  display: flex;
+  min-width: 0;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 8px;
+}
+
+.detail-items {
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+}
+
+/* A line of the order, with the thing itself beside it. */
+.detail-item-pic {
+  display: flex;
+  width: 40px;
+  height: 40px;
+  flex: 0 0 40px;
+  align-items: center;
+  justify-content: center;
+  overflow: hidden;
+  border-radius: 8px;
+  background: var(--t-neutral-100, #f1f5f9);
+  color: var(--t-neutral-400, #94a3b8);
+}
+
+.detail-item-pic img {
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
 }
 
 .detail-item {
@@ -296,8 +357,11 @@
   gap: 8px;
 }
 
-.detail-item span:first-child {
+/* The name of the line takes the slack; the picture, count and price are
+   each as wide as they need to be. */
+.detail-item-pic + span {
   flex: 1;
+  min-width: 0;
 }
 
 .detail-item-variations {
@@ -721,154 +785,274 @@
     background: var(--t-neutral-0, #fff);
   }
 
-  /* Order list: each table row becomes a card */
-  .sc-content .orders-list-card:has(> .so-orders-table) {
+  /* ── Order cards (phones) ─────────────────────────────────────
+     Read top to bottom the card answers, in order: how does this
+     order stand, what was bought, who is it for, where does it go.
+     A tap anywhere on that opens the sheet; the foot holds the two
+     things a seller does without opening anything. */
+  .sc-content .orders-list-card:has(> .so-cards) {
     overflow: visible;
+    padding: 0;
     background: transparent;
     box-shadow: none;
   }
 
-  .sc-content .seller-table.so-orders-table {
-    display: block;
-    min-width: 0;
-    width: 100%;
-  }
-
-  .sc-content .so-orders-table thead {
-    display: none;
-  }
-
-  .sc-content .so-orders-table tbody {
+  .so-cards {
     display: flex;
     flex-direction: column;
     gap: 10px;
+    margin: 0;
+    padding: 0;
+    list-style: none;
   }
 
-  .sc-content .so-orders-table tr {
-    display: grid;
-    grid-template-columns: minmax(0, 1fr) auto;
-    grid-template-areas:
-      "num status"
-      "prod prod"
-      "buyer total"
-      "act act";
-    column-gap: 12px;
-    padding: 14px 14px 0;
-    border-radius: 12px;
+  .soc {
+    border-radius: 14px;
     background: var(--t-neutral-0, #fff);
     box-shadow: var(--elev-card);
   }
 
-  .sc-content .so-orders-table tr.row-selected {
-    box-shadow: inset 0 0 0 2px var(--t-primary-600, #059669);
+  .soc.is-open {
+    box-shadow: inset 0 0 0 2px var(--t-primary-600, #059669), var(--elev-card);
   }
 
-  .sc-content .so-orders-table td {
+  /* The card itself is the button that opens the order, so the whole
+     face of it is the target rather than one small word. */
+  .soc-body {
     display: block;
-    min-width: 0;
-    padding: 0;
+    width: 100%;
+    padding: 12px 14px 0;
     border: 0;
-    background: transparent !important;
+    background: none;
+    font: inherit;
+    text-align: left;
+    cursor: pointer;
+    -webkit-tap-highlight-color: transparent;
   }
 
-  /* Tapping a card (hover, selected) only marks it with its ring: the cells
-     keep their padding, so the card does not change size. */
-  .sc-content .so-orders-table tr:hover td:not(:nth-child(2)),
-  .sc-content .so-orders-table tr.row-selected td:not(:nth-child(2)) {
-    background: transparent !important;
+  .soc-body:active {
+    background: var(--t-neutral-50, #f8fafc);
+    border-radius: 14px 14px 0 0;
   }
 
-  .sc-content .so-orders-table td:nth-child(1) {
-    grid-area: num;
-    font-size: 14px;
-    overflow-wrap: anywhere;
-  }
-
-  .sc-content .so-orders-table td:nth-child(2) {
-    grid-area: prod;
-    margin: 12px 0;
-    padding: 10px;
-    border-radius: 10px;
-    background: var(--t-neutral-50, #f8fafc) !important;
-  }
-
-  .sc-content .so-orders-table td:nth-child(3) {
-    grid-area: buyer;
-    align-self: center;
-  }
-
-  .sc-content .so-orders-table td:nth-child(4) {
-    grid-area: total;
-    align-self: center;
-    font-size: 16px;
-    font-weight: 700;
-    color: var(--t-neutral-900, #0f172a);
-    white-space: nowrap;
-  }
-
-  .sc-content .so-orders-table td:nth-child(5) {
-    grid-area: status;
-    text-align: right;
-  }
-
-  .sc-content .so-orders-table td:nth-child(6) {
-    grid-area: act;
-    /* The 110px the column is given on wide screens would squeeze the
-       buttons into a sliver here: across the card they have the room
-       for their words. */
-    width: auto;
-    margin-top: 12px;
-    padding: 8px 0;
-    border-top: 1px solid var(--t-neutral-100, #f1f5f9);
-  }
-
-  .sc-content .so-orders-table .seller-badge--solid {
-    white-space: nowrap;
-  }
-
-  .sc-content .so-product-thumb {
-    width: 44px;
-    height: 44px;
-  }
-
-  .sc-content .so-product-name {
-    display: block;
-    max-width: none;
-    font-size: 14px;
-  }
-
-  .sc-content .so-buyer {
-    min-width: 0;
-  }
-
-  .sc-content .so-buyer-name {
-    overflow: hidden;
-    text-overflow: ellipsis;
-    white-space: nowrap;
-  }
-
-  .sc-content .so-orders-table .order-row-actions {
-    justify-content: flex-end;
+  .soc-head {
+    display: flex;
+    align-items: center;
     gap: 8px;
   }
 
-  .sc-content .so-orders-table .status-dropdown-btn {
-    width: 44px;
-    height: 36px;
-    border-radius: 8px;
+  .soc-when {
+    margin-left: auto;
+    color: var(--t-neutral-500, #636b78);
+    font-size: 12px;
   }
 
-  .sc-content .so-orders-table .status-dropdown-menu {
-    top: auto;
-    bottom: calc(100% + 6px);
-    min-width: 200px;
+  .soc-go {
+    flex-shrink: 0;
+    color: var(--t-neutral-400, #94a3b8);
+  }
+
+  /* A flag is something with a clock on it, so it sits right under the
+     status where the eye already is. */
+  .soc-flag {
+    display: inline-block;
+    margin-top: 8px;
+    padding: 3px 9px;
+    border-radius: 999px;
+    background: var(--t-neutral-100, #f1f5f9);
+    color: var(--t-neutral-700, #334155);
+    font-size: 11.5px;
+    font-weight: 600;
+  }
+
+  .soc-flag.is-pay,
+  .soc-flag.is-warn {
+    background: var(--t-warning-50, #fffbeb);
+    color: var(--t-warning-800, #92400e);
+  }
+
+  .soc-flag.is-good {
+    background: var(--t-primary-50, #ecfdf5);
+    color: var(--t-primary-700, #047857);
+  }
+
+  .soc .so-today,
+  .soc .so-confirm-by {
+    margin-top: 8px;
+  }
+
+  /* What was bought: the picture carries it, so it is given the room. */
+  .soc-goods {
+    display: flex;
+    align-items: center;
+    gap: 12px;
+    margin-top: 12px;
+  }
+
+  .soc-pic {
+    position: relative;
+    display: flex;
+    flex-shrink: 0;
+    width: 72px;
+    height: 72px;
+    align-items: center;
+    justify-content: center;
+    overflow: hidden;
     border-radius: 12px;
-    box-shadow: var(--elev-popover);
+    background: var(--t-neutral-100, #f1f5f9);
+    color: var(--t-neutral-400, #94a3b8);
   }
 
-  .sc-content .so-orders-table .status-dropdown-item {
+  .soc-pic img {
+    width: 100%;
+    height: 100%;
+    object-fit: cover;
+  }
+
+  /* The rest of the order, counted on the picture rather than drawn as a
+     row of thumbnails nobody can make out at that size. */
+  .soc-pic-more {
+    position: absolute;
+    right: 0;
+    bottom: 0;
+    padding: 2px 7px;
+    border-radius: 8px 0 0 0;
+    background: rgba(15, 23, 42, 0.72);
+    color: var(--t-neutral-0, #fff);
+    font-size: 11px;
+    font-weight: 700;
+  }
+
+  .soc-what {
+    display: flex;
+    flex-direction: column;
+    gap: 3px;
+    min-width: 0;
+  }
+
+  .soc-what strong {
+    display: -webkit-box;
+    overflow: hidden;
+    color: var(--t-neutral-900, #0f172a);
+    font-size: 15px;
+    font-weight: 600;
+    line-height: 1.3;
+    -webkit-box-orient: vertical;
+    -webkit-line-clamp: 2;
+  }
+
+  .soc-count {
+    color: var(--t-neutral-500, #636b78);
+    font-size: 12.5px;
+  }
+
+  .soc-total {
+    margin-left: auto;
+    align-self: flex-start;
+    color: var(--t-neutral-900, #0f172a);
+    font-size: 17px;
+    font-weight: 700;
+    white-space: nowrap;
+  }
+
+  /* Who it is for and where it goes. */
+  .soc-lines {
+    display: flex;
+    flex-direction: column;
+    gap: 6px;
+    margin-top: 12px;
+    padding: 10px 0 12px;
+    border-top: 1px solid var(--t-neutral-100, #f1f5f9);
+  }
+
+  .soc-line {
+    display: flex;
+    gap: 8px;
+    min-width: 0;
+    color: var(--t-neutral-700, #334155);
+    font-size: 13.5px;
+    line-height: 1.35;
+  }
+
+  .soc-line svg {
+    flex-shrink: 0;
+    margin-top: 1px;
+    color: var(--t-neutral-400, #94a3b8);
+  }
+
+  .soc-line > span {
+    display: -webkit-box;
+    overflow: hidden;
+    -webkit-box-orient: vertical;
+    -webkit-line-clamp: 2;
+  }
+
+  .soc-line:first-child > span {
+    color: var(--t-neutral-900, #0f172a);
+    font-weight: 600;
+    -webkit-line-clamp: 1;
+  }
+
+  .soc-act {
+    display: flex;
+    gap: 8px;
+    padding: 10px 14px 12px;
+    border-top: 1px solid var(--t-neutral-100, #f1f5f9);
+  }
+
+  .soc-call,
+  .soc-do {
+    display: inline-flex;
     min-height: 44px;
-    font-size: 14px;
+    align-items: center;
+    justify-content: center;
+    gap: 6px;
+    padding: 0 14px;
+    border: 1px solid transparent;
+    border-radius: 10px;
+    font: inherit;
+    font-size: 13.5px;
+    font-weight: 600;
+    text-decoration: none;
+    cursor: pointer;
+  }
+
+  .soc-call {
+    flex-shrink: 0;
+    border-color: var(--t-neutral-200, #e2e8f0);
+    background: var(--t-neutral-0, #fff);
+    color: var(--t-neutral-700, #334155);
+  }
+
+  /* The one thing to do next, given the width so it reads as the answer. */
+  .soc-do {
+    flex: 1 1 auto;
+    background: var(--t-primary-600, #059669);
+    color: var(--t-neutral-0, #fff);
+  }
+
+  .soc-do.is-pay {
+    background: var(--t-warning-600, #d97706);
+  }
+
+  .soc-do.is-quiet {
+    border-color: var(--t-neutral-200, #e2e8f0);
+    background: var(--t-neutral-0, #fff);
+    color: var(--t-neutral-700, #334155);
+  }
+
+  .soc-do:disabled {
+    opacity: 0.6;
+    cursor: not-allowed;
+  }
+
+  .soc.is-moved {
+    animation: soMoved 1.2s ease;
+  }
+
+  @keyframes soMoved {
+    from { box-shadow: inset 0 0 0 2px var(--t-primary-500, #10b981), var(--elev-card); }
+    to { box-shadow: var(--elev-card); }
   }
 
   /* Order detail: bottom sheet above the tab bar */
@@ -932,17 +1116,17 @@
 
   .sc-content .detail-item {
     display: grid;
-    grid-template-columns: minmax(0, 1fr) auto auto;
-    align-items: start;
+    grid-template-columns: auto minmax(0, 1fr) auto auto;
+    align-items: center;
     gap: 10px;
     padding: 8px 0;
   }
 
-  .sc-content .detail-item span:first-child {
+  .sc-content .detail-item-pic + span {
     overflow-wrap: anywhere;
   }
 
-  .sc-content .detail-item span:not(:first-child) {
+  .sc-content .detail-item span:not(:first-child):not(.detail-item-pic + span) {
     white-space: nowrap;
   }
 
@@ -996,17 +1180,11 @@
   }
 }
 
-/* Reporting a customer sits beside their name in the order detail panel.
+/* Reporting a customer closes the buyer section of the order detail panel.
    Deliberately quiet — it is a last resort, not a primary action. */
-.so-buyer-cell {
-  display: inline-flex;
-  align-items: center;
-  gap: 10px;
-  flex-wrap: wrap;
-}
-
 .so-report-buyer {
   display: inline-flex;
+  align-self: flex-start;
   align-items: center;
   gap: 4px;
   padding: 3px 9px;
