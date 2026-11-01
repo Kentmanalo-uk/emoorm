@@ -15,6 +15,10 @@
     },
     "production": {
       "environment": "production"
+    },
+    "production-local": {
+      "extends": "production",
+      "credentialsSource": "local"
     }
   },
   "submit": {
