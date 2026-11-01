@@ -201,6 +201,20 @@ async function cleanup() {
   await step(() => prisma.productAvailability.deleteMany({ where: { OR: [{ productId: { in: made.products } }, { storeId: { in: made.stores } }] } }));
   await step(() => prisma.product.deleteMany({ where: { OR: [{ id: { in: made.products } }, { storeId: { in: made.stores } }] } }));
   await step(() => prisma.store.deleteMany({ where: { OR: [{ id: { in: made.stores } }, { ownerId: { in: made.users } }] } }));
+  // A report points at the person who filed it, the person it is about and
+  // whoever resolved it, so one left behind holds all three accounts in
+  // place and the delete below fails on a foreign key.
+  await step(() => prisma.report.deleteMany({
+    where: {
+      OR: [
+        { reporterId: { in: made.users } },
+        { reportedSellerId: { in: made.users } },
+        { reportedBuyerId: { in: made.users } },
+        { resolvedById: { in: made.users } },
+        { productId: { in: made.products } },
+      ],
+    },
+  }));
   // Notices sent in the background (a low-stock alert after an order) can
   // land between these deletes; try again shortly when one does.
   for (let attempt = 1; ; attempt += 1) {

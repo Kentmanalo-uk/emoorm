@@ -199,6 +199,15 @@ enum ReportStatus {
   DISMISSED
 }
 
+/// Where a flagged message has got to. A report has UNDER_REVIEW because a
+/// person files it and waits; a flag is raised by the server and is only
+/// ever waiting, acted on, or judged harmless.
+enum ModerationFlagStatus {
+  PENDING
+  REVIEWED
+  DISMISSED
+}
+
 enum NotificationType {
   ORDER_RECEIVED
   ORDER_CONFIRMED
@@ -405,6 +414,14 @@ model User {
   // rejected once it falls behind.
   tokenVersion Int @default(0) @map("token_version")
 
+  /// Messages of theirs that matched the word list and have not yet been
+  /// forgiven by an admin. At CHAT_STRIKE_LIMIT (message.service) chat
+  /// closes for a week and this goes back to nought.
+  chatStrikes Int @default(0) @map("chat_strikes")
+  /// Set while they may not send messages. The account still works: they
+  /// can buy, sell and be paid -- only chat is shut.
+  chatRestrictedUntil DateTime? @map("chat_restricted_until")
+
   // MFA / TOTP (enforced for admins)
   mfaEnabled       Boolean   @default(false) @map("mfa_enabled")
   mfaSecret        String?   @map("mfa_secret") @db.Text
@@ -450,6 +467,10 @@ model User {
   productQuestions ProductQuestion[]
   buyerConversations Conversation[] @relation("BuyerConversations")
   sentMessages  Message[]      @relation("MessageSender")
+  blocksMade    UserBlock[]    @relation("BlocksMade")
+  blocksAgainst UserBlock[]    @relation("BlocksAgainst")
+  flaggedMessages MessageFlag[] @relation("FlaggedMessages")
+  flagsReviewed   MessageFlag[] @relation("FlagReviewer")
   followedStores StoreFollow[]
   addresses     Address[]
   qrLoginSessions QrLoginSession[]
@@ -876,6 +897,66 @@ model StoreFollow {
   @@index([storeId])
   @@index([buyerId])
   @@map("store_follows")
+}
+
+/// One person refusing to deal with another: a seller with a buyer who
+/// will not leave them alone, or a buyer with a shop. Always between two
+/// people, never a person and a shop -- "block this shop" is stored
+/// against whoever owns it, so one row answers the question from either
+/// side (services/userBlock).
+///
+/// It stops messages and new orders. It does not stop a report: being
+/// unable to deal with someone must never mean being unable to report
+/// them.
+model UserBlock {
+  id        String   @id @default(uuid())
+  blockerId String   @map("blocker_id")
+  blockedId String   @map("blocked_id")
+  /// Kept for the person who blocked, not shown to the one blocked.
+  reason    String?  @db.VarChar(200)
+  createdAt DateTime @default(now()) @map("created_at")
+
+  blocker User @relation("BlocksMade", fields: [blockerId], references: [id], onDelete: Cascade)
+  blocked User @relation("BlocksAgainst", fields: [blockedId], references: [id], onDelete: Cascade)
+
+  @@unique([blockerId, blockedId])
+  @@index([blockedId])
+  @@map("user_blocks")
+}
+
+/// A message whose words matched the list, waiting for someone to look.
+/// The message itself was delivered: a word list is a guess, and a wrong
+/// guess must not be able to stop a conversation.
+model MessageFlag {
+  id             String  @id @default(uuid())
+  messageId      String  @unique @map("message_id")
+  message        Message @relation(fields: [messageId], references: [id], onDelete: Cascade)
+
+  conversationId String  @map("conversation_id")
+  senderId       String  @map("sender_id")
+  sender         User    @relation("FlaggedMessages", fields: [senderId], references: [id], onDelete: Cascade)
+
+  /// The words that matched, so an admin can judge the guess as well as
+  /// the message.
+  matched        String  @db.VarChar(191)
+
+  status         ModerationFlagStatus @default(PENDING)
+
+  /// The shop's town, so a municipal admin sees their own, exactly as a
+  /// report is routed.
+  municipalityId String? @map("municipality_id")
+
+  reviewedById   String?   @map("reviewed_by_id")
+  reviewedBy     User?     @relation("FlagReviewer", fields: [reviewedById], references: [id])
+  reviewedAt     DateTime? @map("reviewed_at")
+  notes          String?   @db.Text
+
+  createdAt      DateTime @default(now()) @map("created_at")
+
+  @@index([municipalityId, status, createdAt])
+  @@index([senderId])
+  @@index([status, createdAt])
+  @@map("message_flags")
 }
 
 model StoreServiceArea {
@@ -1683,7 +1764,17 @@ model Message {
   // this set comes from the first version, which kept it, and is never shown.
   unsentAt  DateTime? @map("unsent_at")
 
+  // Set when the words in this message matched the list in
+  // utils/badWords. Stamped with the row, so a message is never stored
+  // without the judgement that was made about it. The queue row that an
+  // admin reads is MessageFlag; this column is what makes the message
+  // itself findable.
+  flaggedAt DateTime? @map("flagged_at")
+
+  flag MessageFlag?
+
   @@index([conversationId, createdAt])
+  @@index([flaggedAt])
   @@map("messages")
 }
 

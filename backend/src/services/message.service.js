@@ -3,9 +3,18 @@ const storeRepository = require('../repositories/store.repository');
 const orderRepository = require('../repositories/order.repository');
 const notificationService = require('./notification.service');
 const priceOfferService = require('./priceOffer.service');
+const blockService = require('./userBlock.service');
+const { findBadWords } = require('../utils/badWords');
 const { ApiError } = require('../middleware/errorHandler');
 const prisma = require('../config/database');
 const config = require('../config/env');
+
+// How many flagged messages it takes before chat closes, and for how
+// long. Three because a word list is a guess: one is an accident or a
+// bad guess, three is a person. A week because it has to be long enough
+// to matter and short enough that nobody need remember to undo it.
+const CHAT_STRIKE_LIMIT = 3;
+const CHAT_RESTRICTION_DAYS = 7;
 
 const UPLOAD_FILE = /^\/uploads\/[A-Za-z0-9._-]+$/;
 const privateMedia = require('../lib/privateMedia');
@@ -219,6 +228,10 @@ const openConversationWithStore = async (userId, storeId) => {
   if (store.ownerId === userId) {
     throw new ApiError('You cannot start a conversation with your own store', 400);
   }
+  // Both gates belong here as well as on send: otherwise a blocked or
+  // restricted person could simply open a fresh thread.
+  await assertCanChat(userId);
+  await blockService.assertNotBlocked(userId, store.ownerId, 'message this shop');
 
   const conversation = await findOrCreateConversation(userId, storeId);
   return getConversation(conversation.id, userId);
@@ -238,6 +251,8 @@ const openConversationWithBuyer = async (sellerUserId, buyerId) => {
   if (buyerId === sellerUserId) {
     throw new ApiError('You cannot start a conversation with yourself', 400);
   }
+  await assertCanChat(sellerUserId);
+  await blockService.assertNotBlocked(sellerUserId, buyerId, 'message this customer');
   // Any order at all, including completed ones: a seller may well need to
   // follow up on a purchase that finished weeks ago.
   const orders = await orderRepository.findAll({ buyerId, storeId: store.id, page: 1, pageSize: 1 });
@@ -291,6 +306,86 @@ const getConversation = async (conversationId, userId, { before = null } = {}) =
 };
 
 /**
+ * Whether this person may send anything at all right now. A restriction
+ * is chat only: they can still buy, sell and be paid, which is exactly
+ * why it is not isActive.
+ */
+const assertCanChat = async (userId) => {
+  const me = await prisma.user.findUnique({
+    where: { id: userId },
+    select: { chatRestrictedUntil: true },
+  });
+  if (me?.chatRestrictedUntil && me.chatRestrictedUntil > new Date()) {
+    throw new ApiError(
+      'Your messaging is paused while an administrator reviews earlier messages. You can still buy and sell.',
+      403,
+    );
+  }
+};
+
+/**
+ * What happens after a message with a flagged word has already been
+ * delivered: it goes into the queue an admin reads, the sender is told,
+ * and at CHAT_STRIKE_LIMIT their chat closes for a week.
+ *
+ * The caller wraps this in a try/catch. The message is stored by the
+ * time it runs, and nothing here is worth losing it for.
+ */
+const recordFlag = async (message, conversation, matched) => {
+  await prisma.messageFlag.create({
+    data: {
+      messageId: message.id,
+      conversationId: conversation.id,
+      senderId: message.senderId,
+      matched: matched.join(', ').slice(0, 191),
+      municipalityId: conversation.store?.municipalityId || null,
+    },
+  });
+
+  const after = await prisma.user.update({
+    where: { id: message.senderId },
+    data: { chatStrikes: { increment: 1 } },
+    select: { chatStrikes: true },
+  });
+
+  const reached = after.chatStrikes >= CHAT_STRIKE_LIMIT;
+  if (reached) {
+    // The counter goes back to nought with the restriction, so a week
+    // from now they start fresh rather than one word from another week.
+    await prisma.user.update({
+      where: { id: message.senderId },
+      data: {
+        chatRestrictedUntil: new Date(Date.now() + CHAT_RESTRICTION_DAYS * 86400000),
+        chatStrikes: 0,
+      },
+    });
+  }
+
+  // SYSTEM_ANNOUNCEMENT, as a removed review uses (moderation.service
+  // removeReview): a moderation notice to one person. A type of its own
+  // would mean editing the Prisma enum, the second list in
+  // notification.service and the category maps -- three places to drift.
+  await notificationService.createNotification({
+    userId: message.senderId,
+    type: 'SYSTEM_ANNOUNCEMENT',
+    title: reached ? 'Your messaging is paused' : 'Please keep messages respectful',
+    message: reached
+      ? `Your messages are being reviewed and you cannot send new ones for ${CHAT_RESTRICTION_DAYS} days. You can still buy and sell as normal.`
+      : 'A message you sent was marked for review. Please keep the language respectful.',
+    relatedId: conversation.id,
+  });
+
+  // The town whose shop the chat belongs to, exactly as a report is routed.
+  if (conversation.store?.municipalityId) {
+    await notificationService.notifyMunicipalAdmins(conversation.store.municipalityId, {
+      type: 'ADMIN_ALERT',
+      title: 'A message was flagged',
+      message: `A message in a chat with ${conversation.store?.name || 'a shop'} matched the word list.`,
+      relatedId: message.id,
+    });
+  }
+};
+/**
  * Send a message. Optionally attaches an orderId (must belong to this buyer/store pair)
  * and/or a productId (must belong to the conversation's store).
  */
@@ -317,6 +412,12 @@ const sendMessage = async (conversationId, userId, { body, imageUrl, orderId, pr
     throw new ApiError('Conversation not found', 404);
   }
   resolveRole(conversation, userId);
+  await assertCanChat(userId);
+  // The other side of this conversation, whichever side I am on.
+  const otherId = conversation.buyerId === userId
+    ? conversation.store.ownerId
+    : conversation.buyerId;
+  await blockService.assertNotBlocked(userId, otherId, 'send a message');
 
   if (orderId) {
     const order = await prisma.order.findUnique({
@@ -343,6 +444,10 @@ const sendMessage = async (conversationId, userId, { body, imageUrl, orderId, pr
   }
 
   const now = new Date();
+  // Judged before the write and stored with it, so a message is never
+  // on record without the judgement made about it. findBadWords does no
+  // I/O and cannot throw.
+  const matched = findBadWords(trimmed);
   const message = await messageRepository.createMessage({
     conversationId,
     senderId: userId,
@@ -350,8 +455,20 @@ const sendMessage = async (conversationId, userId, { body, imageUrl, orderId, pr
     imageUrl: trimmedImageUrl || null,
     orderId: orderId || null,
     productId: productId || null,
+    flaggedAt: matched.length ? now : null,
   });
   await messageRepository.touchConversation(conversationId, now);
+
+  // The message is already sent and readable. Queueing it for review,
+  // counting it against the sender and telling anyone about it are all
+  // things that may fail without taking the message with them.
+  if (matched.length) {
+    try {
+      await recordFlag(message, conversation, matched);
+    } catch (err) {
+      console.error('[sendMessage] flagging failed:', err.message);
+    }
+  }
 
   // Buyer <-> store messages used to emit nothing at all, so the only way to
   // learn you had been written to was to open the thread. Non-blocking: a
@@ -544,6 +661,8 @@ const countUnreadSupportCases = async (userId) => {
 };
 
 module.exports = {
+  CHAT_STRIKE_LIMIT,
+  CHAT_RESTRICTION_DAYS,
   countUnreadChats,
   countUnreadSupportCases,
   countUnreadShopChats,

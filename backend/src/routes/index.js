@@ -111,6 +111,8 @@ mount('/auth/mfa', mfaRoutes);
 mount('/auth/qr', qrLoginRoutes);
 mount('/messages', messageRoutes);
 mount('/follows', require('./storeFollow.routes'));
+// Who refuses to deal with whom (services/userBlock).
+mount('/blocks', require('./block.routes'));
 mount('/addresses', addressRoutes);
 mount('/returns', require('./return.routes'));
 mount('/support', supportRoutes);

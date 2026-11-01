@@ -12,6 +12,9 @@ const conversationInclude = {
       slug: true,
       logo: true,
       ownerId: true,
+      // The shop's town, so a flagged message reaches the admins who look
+      // after it (message.service recordFlag), the same routing a report uses.
+      municipalityId: true,
     },
   },
 };
@@ -155,9 +158,11 @@ const listMessages = async (conversationId, { take = 100, before = null } = {}) 
   return { messages: rows.slice(0, take).reverse(), hasEarlier };
 };
 
-const createMessage = async ({ conversationId, senderId, body, imageUrl = null, orderId = null, productId = null }) =>
+// flaggedAt is stamped by the caller (message.service), so a message and
+// the judgement made about its words are written in the same statement.
+const createMessage = async ({ conversationId, senderId, body, imageUrl = null, orderId = null, productId = null, flaggedAt = null }) =>
   prisma.message.create({
-    data: { conversationId, senderId, body, imageUrl, orderId, productId },
+    data: { conversationId, senderId, body, imageUrl, orderId, productId, flaggedAt },
     include: messageInclude,
   });
 

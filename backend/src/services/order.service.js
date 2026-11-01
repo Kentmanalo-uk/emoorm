@@ -9,6 +9,7 @@ const userRepository = require('../repositories/user.repository');
 const voucherRepository = require('../repositories/voucher.repository');
 const voucherService = require('./voucher.service');
 const notificationService = require('./notification.service');
+const blockService = require('./userBlock.service');
 const { sendNewOrderEmail, sendOrderAcceptedEmail } = require('../utils/email');
 
 // Order emails go out after the response: a slow or failing mail provider
@@ -304,6 +305,10 @@ const createOrder = async (userId, data) => {
   if (store.ownerId === userId) {
     throw new ApiError('You cannot purchase from your own store', 400);
   }
+  // Either of them having drawn the line stops a new order. Orders already
+  // placed are left alone: a block must not strand goods that are paid for
+  // or on their way.
+  await blockService.assertNotBlocked(userId, store.ownerId, 'order from this shop');
   // Orders the shop has not confirmed yet hold its stock for up to two days
   // and each one emails the seller. A buyer may have a few at once, not a
   // pile: beyond this it is hoarding, by a script or by mistake.
