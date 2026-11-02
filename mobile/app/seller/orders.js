@@ -94,7 +94,7 @@ export default function SellerOrdersScreen() {
   // asked (Call a rider, Deliver it myself, Cancel rider, Cash received): { action, order }.
   const [ridersOn, setRidersOn] = useState(false);
   const [riderAsk, setRiderAsk] = useState(null);
-  // Handing an order over asks for a photo first: proof of delivery or of pickup.
+  // Handing an order over offers a photo first: proof of delivery or of pickup.
   const [proofRequest, setProofRequest] = useState(null);
   // Shipping with a courier asks for the courier and the tracking number.
   const [shipRequest, setShipRequest] = useState(null);

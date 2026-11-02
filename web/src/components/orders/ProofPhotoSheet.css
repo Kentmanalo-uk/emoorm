@@ -175,6 +175,14 @@
   gap: 10px;
 }
 
+.proof-swap.has-remove {
+  grid-template-columns: 1fr 1fr auto;
+}
+
+.proof-swap-btn.is-remove {
+  padding: 0 14px;
+}
+
 .proof-swap-btn {
   display: inline-flex;
   align-items: center;

@@ -756,7 +756,7 @@ export default function SellerOrders() {
 
   const displayed = orders;
 
-  // Handing an order over asks for a photo first: proof of delivery or of pickup.
+  // Handing an order over offers a photo first: proof of delivery or of pickup.
   const [proofRequest, setProofRequest] = useState(null);
   // Shipping with a courier asks for the courier and the tracking number.
   const [shipRequest, setShipRequest] = useState(null);

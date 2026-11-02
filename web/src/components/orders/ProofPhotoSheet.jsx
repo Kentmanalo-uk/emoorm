@@ -11,15 +11,16 @@ import '../ui/ConfirmDialog.css';
 import './ProofPhotoSheet.css';
 
 /**
- * Asks the seller for the hand-over photo before an order is marked
- * Delivered (proof of delivery) or Picked up (proof of pickup).
+ * Offers the seller a hand-over photo before an order is marked Delivered
+ * (proof of delivery) or Picked up (proof of pickup). The photo is optional.
  *
  *   <ProofPhotoSheet open kind="DELIVERY" | "PICKUP" orderNumber="…"
  *     onCancel={…} onConfirm={async (proofUrl) => ok} />
  *
  * Add a photo (the camera, or one from the gallery): it goes up straight
- * away, under its preview, and the button turns on once it is up. A failed
- * upload says why and offers Try again; Retake / Change photo swap it. When
+ * away, under its preview, and the button waits while it goes. A failed
+ * upload says why and offers Try again; Retake / Change photo swap it, and
+ * Remove goes back to no photo so the seller can carry on without one. When
  * the status change itself fails (onConfirm answers false), the sheet stays
  * open with the photo already up, so a retry doesn't send it again.
  *
@@ -64,7 +65,7 @@ export default function ProofPhotoSheet({
   const action = replacing ? 'Save photo' : (pickup ? 'Mark picked up' : 'Mark delivered');
   const note = replacing
     ? 'The new photo replaces this one. The buyer is told, and can see it on their order.'
-    : `${hint} The buyer can see this photo on their order.`;
+    : `${hint} This is optional. The buyer can see the photo on their order.`;
 
   const send = async (file) => {
     attempt.current += 1;
@@ -89,12 +90,20 @@ export default function ProofPhotoSheet({
     send(picked);
   };
 
+  // A hand-over can go with no photo; a change needs the new one.
+  const canConfirm = !saving && (photo ? photo.status === 'ready' : !replacing);
+
   const confirm = async () => {
-    if (photo?.status !== 'ready' || saving) return;
+    if (!canConfirm) return;
     setSaving(true);
     // false: the status update failed (already reported); stay open to retry.
-    const ok = await onConfirm?.(photo.url);
+    const ok = await onConfirm?.(photo?.url);
     if (ok === false) setSaving(false);
+  };
+
+  const removePhoto = () => {
+    attempt.current += 1;
+    setPhoto(null);
   };
 
   const Icon = pickup ? Storefront : Truck;
@@ -142,18 +151,23 @@ export default function ProofPhotoSheet({
                 </div>
               )}
             </div>
-            <div className="proof-swap">
+            <div className={`proof-swap${photo ? ' has-remove' : ''}`}>
               <button type="button" className="proof-swap-btn" onClick={() => cameraRef.current?.click()} disabled={busy}>
                 <Camera size={17} /> Retake
               </button>
               <button type="button" className="proof-swap-btn" onClick={() => galleryRef.current?.click()} disabled={busy}>
                 <ImageSquare size={17} /> Change photo
               </button>
+              {photo && (
+                <button type="button" className="proof-swap-btn is-remove" onClick={removePhoto} disabled={saving}>
+                  Remove
+                </button>
+              )}
             </div>
           </>
         ) : (
           <div className="proof-add">
-            <span className="proof-add-label">Add a photo</span>
+            <span className="proof-add-label">Add a photo (optional)</span>
             <div className="proof-pick">
               <button type="button" className="proof-pick-btn is-primary" onClick={() => cameraRef.current?.click()}>
                 <Camera size={22} /> Take photo
@@ -179,8 +193,7 @@ export default function ProofPhotoSheet({
             type="button"
             className="cf-dialog-btn cf-dialog-btn--primary"
             onClick={confirm}
-            disabled={photo?.status !== 'ready' || saving}
-            title={photo?.status === 'ready' ? undefined : 'Add a photo first'}
+            disabled={!canConfirm}
           >
             {saving ? <><CircleNotch size={14} className="animate-spin" style={{ marginRight: 6, verticalAlign: -2 }} />Saving…</> : action}
           </button>

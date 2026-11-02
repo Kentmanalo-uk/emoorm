@@ -13,8 +13,8 @@ import { toast } from '../../../lib/toast';
 import { font, t, themed } from '../../../theme';
 
 /**
- * Asks the seller for the hand-over photo before an order is marked
- * Delivered (proof of delivery) or Picked up (proof of pickup)
+ * Offers the seller a hand-over photo before an order is marked Delivered
+ * (proof of delivery) or Picked up (proof of pickup). The photo is optional
  * (web/src/components/orders/ProofPhotoSheet.jsx + .css, on the cf-dialog
  * bottom sheet of phones).
  *
@@ -22,8 +22,9 @@ import { font, t, themed } from '../../../theme';
  *     onCancel={…} onConfirm={async (proofUrl) => ok} />
  *
  * Add a photo (the camera, or one from the gallery): it goes up straight
- * away, under its preview, and the button turns on once it is up. A failed
- * upload says why and offers Try again; Retake / Change photo swap it. When
+ * away, under its preview, and the button waits while it goes. A failed
+ * upload says why and offers Try again; Retake / Change photo swap it, and
+ * Remove goes back to no photo so the seller can carry on without one. When
  * the status change itself fails (onConfirm answers false), the sheet stays
  * open with the photo already up, so a retry doesn't send it again.
  *
@@ -55,11 +56,12 @@ export default function ProofPhotoSheet({
   const action = replacing ? 'Save photo' : (pickup ? 'Mark picked up' : 'Mark delivered');
   const note = replacing
     ? 'The new photo replaces this one. The buyer is told, and can see it on their order.'
-    : `${hint} The buyer can see this photo on their order.`;
+    : `${hint} This is optional. The buyer can see the photo on their order.`;
   const Icon = pickup ? StorefrontIcon : TruckIcon;
   const uploading = photo?.status === 'uploading';
   const busy = saving || uploading;
-  const ready = photo?.status === 'ready';
+  // A hand-over can go with no photo; a change needs the new one.
+  const canConfirm = !saving && (photo ? photo.status === 'ready' : !replacing);
 
   // Any photo the phone can open (uploadImage makes it a JPEG the server accepts).
   const send = async (asset) => {
@@ -115,11 +117,16 @@ export default function ProofPhotoSheet({
   };
 
   const confirm = async () => {
-    if (!ready || saving) return;
+    if (!canConfirm) return;
     setSaving(true);
     // false: the status update failed (already reported); stay open to retry.
-    const ok = await onConfirm?.(photo.url);
+    const ok = await onConfirm?.(photo?.url);
     if (ok === false) setSaving(false);
+  };
+
+  const removePhoto = () => {
+    attempt.current += 1;
+    setPhoto(null);
   };
 
   const asset = photo?.asset;
@@ -138,11 +145,10 @@ export default function ProofPhotoSheet({
           </Pressable>
           <Pressable
             accessibilityRole="button"
-            accessibilityState={{ disabled: !ready || saving }}
-            accessibilityHint={ready ? undefined : 'Add a photo first'}
-            disabled={!ready || saving}
+            accessibilityState={{ disabled: !canConfirm }}
+            disabled={!canConfirm}
             onPress={confirm}
-            style={[proofStyles.btn, proofStyles.primary, (!ready || saving) && proofStyles.off]}
+            style={[proofStyles.btn, proofStyles.primary, !canConfirm && proofStyles.off]}
           >
             {saving ? <ActivityIndicator size={14} color="#fff" style={proofStyles.spin} /> : null}
             <Text style={[proofStyles.btnText, proofStyles.goText]}>{saving ? 'Saving…' : action}</Text>
@@ -181,7 +187,7 @@ export default function ProofPhotoSheet({
                   <Text style={styles.stateText}>Uploading photo…</Text>
                 </View>
               ) : null}
-              {ready ? (
+              {photo?.status === 'ready' ? (
                 <View style={[styles.state, styles.stateReady]} accessibilityLiveRegion="polite">
                   <CheckCircleIcon size={18} weight="fill" color="#fff" />
                   <Text style={styles.stateText}>Photo added</Text>
@@ -209,11 +215,16 @@ export default function ProofPhotoSheet({
                 <ImageSquareIcon size={17} color={t.neutral[700]} />
                 <Text style={styles.swapText}>Change photo</Text>
               </Pressable>
+              {photo ? (
+                <Pressable accessibilityRole="button" onPress={removePhoto} disabled={saving} style={[styles.swapBtn, styles.swapRemove, saving && proofStyles.off]}>
+                  <Text style={styles.swapText}>Remove</Text>
+                </Pressable>
+              ) : null}
             </View>
           </>
         ) : (
           <View style={styles.add}>
-            <Text style={styles.addLabel}>Add a photo</Text>
+            <Text style={styles.addLabel}>Add a photo (optional)</Text>
             <View style={styles.pick}>
               <Pressable accessibilityRole="button" onPress={takePhoto} style={[styles.pickBtn, styles.pickPrimary]}>
                 <CameraIcon size={22} color={t.primary[700]} />
@@ -277,6 +288,7 @@ const styles = themed(() => StyleSheet.create({
     flex: 1, height: 40, flexDirection: 'row', alignItems: 'center', justifyContent: 'center', gap: 6,
     borderWidth: 1, borderColor: t.neutral[300], borderRadius: 10, backgroundColor: t.neutral[0],
   },
+  swapRemove: { flex: 0, paddingHorizontal: 14 },
   swapText: { fontSize: 13.5, lineHeight: 19, ...font(500), color: t.neutral[700] },
   add: { gap: 8 },
   addLabel: { fontSize: 13.5, lineHeight: 19, ...font(600), color: t.neutral[800] },

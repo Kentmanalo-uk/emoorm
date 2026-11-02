@@ -957,7 +957,7 @@ const updateOrderStatus = async (orderId, userId, newStatus, { proofUrl, cancelR
   }
 
   // Validate status transition (fulfillment-aware). READY is an older state:
-  // orders still in it move on through hand-over (with its proof photo), never
+  // orders still in it move on through hand-over, never
   // straight to COMPLETED.
   const deliveryTransitions = {
     PENDING: ['CONFIRMED', 'CANCELLED'],
@@ -1008,21 +1008,16 @@ const updateOrderStatus = async (orderId, userId, newStatus, { proofUrl, cancelR
     throw new ApiError('Payment must be verified before fulfillment can continue', 409);
   }
 
-  // Handing the order over needs a photo: proof of delivery for delivery
-  // orders, proof of pickup for pickup orders. The validator has already
-  // checked it is an image uploaded to E-MOORM.
+  // Handing the order over may carry a photo, the seller's choice. The
+  // validator has already checked any photo is an image uploaded to E-MOORM.
+  // The time is kept either way: the auto-complete clock runs from it.
   const handOver = (newStatus === 'DELIVERED' && order.fulfillmentMethod !== 'PICKUP')
     || (newStatus === 'PICKED_UP' && order.fulfillmentMethod === 'PICKUP');
-  if (handOver && !proofUrl) {
-    throw new ApiError(
-      order.fulfillmentMethod === 'PICKUP'
-        ? 'Add a photo as proof of pickup'
-        : 'Add a photo as proof of delivery',
-      400,
-    );
-  }
   const proofFields = handOver
-    ? { fulfillmentProofUrl: privateMedia.normalize(String(proofUrl).trim()), fulfillmentProofAt: new Date() }
+    ? {
+      ...(proofUrl ? { fulfillmentProofUrl: privateMedia.normalize(String(proofUrl).trim()) } : {}),
+      fulfillmentProofAt: new Date(),
+    }
     : {};
 
   // Cancellation restores product stock (from whatever stage it is allowed).

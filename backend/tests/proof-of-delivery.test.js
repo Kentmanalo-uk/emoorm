@@ -2,7 +2,8 @@
 // POST /upload/image (a picker that gives the file no type is fine, its bytes
 // decide), and the hand-over takes the URL that answered, also when uploads
 // are served from a CDN. Shop deliveries, the MoorMove "deliver it myself"
-// fallback and pickups all need it; a photo from elsewhere is refused.
+// fallback and pickups all take it; it is optional, and the hand-over time is
+// kept without one. A photo from elsewhere is refused.
 const { test, after } = require('node:test');
 const assert = require('node:assert/strict');
 const fs = require('fs');
@@ -63,7 +64,6 @@ test('Mark delivered takes the uploaded photo: shop delivery, deliver-it-myself,
   const delivery = { fulfillmentMethod: 'DELIVERY', deliveryAddress: 'Test St, Poblacion' };
 
   const own = await h.order(buyer, store, [{ product: item }], { ...delivery, status: 'OUT_FOR_DELIVERY' });
-  assert.equal((await handOver(seller, own, 'DELIVERED')).status, 400, 'a photo is required');
   const done = await handOver(seller, own, 'DELIVERED', url);
   assert.equal(done.status, 200, JSON.stringify(done.body));
   assert.equal(done.body.data.fulfillmentProofUrl, url);
@@ -81,6 +81,28 @@ test('Mark delivered takes the uploaded photo: shop delivery, deliver-it-myself,
   const other = await h.order(buyer, store, [{ product: item }], { ...delivery, status: 'OUT_FOR_DELIVERY' });
   assert.equal((await handOver(seller, other, 'DELIVERED', 'https://example.com/uploads/a.jpg')).status, 400);
   assert.equal((await handOver(seller, other, 'DELIVERED', '/uploads/../.env')).status, 400);
+});
+
+test('a hand-over needs no photo, and still starts the auto-complete clock', async () => {
+  const buyer = await h.user('BUYER');
+  const seller = await h.user('SELLER');
+  const store = await h.shop(seller);
+  const item = await h.product(store);
+
+  const own = await h.order(buyer, store, [{ product: item }], {
+    fulfillmentMethod: 'DELIVERY', deliveryAddress: 'Test St, Poblacion', status: 'OUT_FOR_DELIVERY',
+  });
+  const delivered = await handOver(seller, own, 'DELIVERED');
+  assert.equal(delivered.status, 200, JSON.stringify(delivered.body));
+  assert.equal(delivered.body.data.status, 'DELIVERED');
+  assert.equal(delivered.body.data.fulfillmentProofUrl, null);
+  assert.ok(delivered.body.data.fulfillmentProofAt, 'the time is kept');
+
+  const pickup = await h.order(buyer, store, [{ product: item }], { status: 'READY_FOR_PICKUP' });
+  const picked = await handOver(seller, pickup, 'PICKED_UP', '');
+  assert.equal(picked.status, 200, JSON.stringify(picked.body));
+  assert.equal(picked.body.data.fulfillmentProofUrl, null);
+  assert.ok(picked.body.data.fulfillmentProofAt, 'the time is kept');
 });
 
 test('with uploads behind a CDN, the CDN address the upload answered is accepted', async () => {
