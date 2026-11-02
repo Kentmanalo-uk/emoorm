@@ -24,6 +24,15 @@ const limitTextSearch = (req, res, next) => (req.query?.search ? textSearchLimit
 // A restock from zero tells every follower of the shop, so a seller toggling
 // stock cannot be a notification hose. Keyed on the account (`authenticate`
 // has run), else the address.
+const forYouLimiter = rateLimit({
+  windowMs: 60 * 1000,
+  max: 120,
+  standardHeaders: true,
+  legacyHeaders: false,
+  keyGenerator: (req) => req.user?.id || ipKeyGenerator(req.ip),
+  message: { success: false, message: 'Too many requests. Please wait a moment and try again.' },
+});
+
 const stockAdjustLimiter = rateLimit({
   windowMs: 10 * 60 * 1000,
   max: 30,
@@ -93,6 +102,9 @@ router.post(
   authorize('SELLER'),
   productController.createProduct
 );
+
+// Different for each person, so never in a shared cache. Before /:id.
+router.get('/for-you', optionalAuth, forYouLimiter, productController.getForYou);
 
 // Public list route (optionalAuth attaches req.user for scoping when a token is present)
 router.get(

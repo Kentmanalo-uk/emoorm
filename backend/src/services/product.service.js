@@ -975,6 +975,20 @@ const getProducts = async (rawOptions) => {
 };
 
 /**
+ * Repository rows as the public lists send them: no internals, no 3D view,
+ * and each store saying whether it takes orders yet.
+ * @param {Array} rows - Product rows
+ * @returns {Promise<Array>} Products for the API
+ */
+const toPublicList = async (rows) => {
+  const products = rows.map((p) => toPublicProduct(p)).map(({ model3d, ...p }) => p);
+  const ready = await shopReadiness.readyIds(products.map((p) => p.storeId || p.store?.id), { maxAgeMs: 15 * 1000 });
+  return products.map((p) => (p.store
+    ? { ...p, store: { ...p.store, readyToSell: ready.has(p.storeId || p.store.id) } }
+    : p));
+};
+
+/**
  * Get my products (seller)
  * @param {String} userId - User ID
  * @param {Object} options - Query options
@@ -1685,6 +1699,7 @@ const bulkUpdateProducts = async (userId, ids, action) => {
 };
 
 module.exports = {
+  toPublicList,
   createProduct,
   getProductById,
   getProductBySlug,

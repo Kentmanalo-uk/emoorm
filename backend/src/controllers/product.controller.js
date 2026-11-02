@@ -1,4 +1,5 @@
 const productService = require('../services/product.service');
+const recommendationService = require('../services/recommendation.service');
 const auditLog = require('../services/auditLog.service');
 const {
   successResponse,
@@ -115,6 +116,24 @@ const getProducts = asyncHandler(async (req, res) => {
     // A search with a typo found nothing; these are results for the corrected words.
     result.correctedSearch ? { correctedSearch: result.correctedSearch } : {},
   );
+});
+
+/**
+ * The catalogue in the order that suits this person
+ * @route GET /api/products/for-you
+ * @access Public (signed in adds their orders, cart and wishlist)
+ */
+const getForYou = asyncHandler(async (req, res) => {
+  const { viewed, terms } = req.query;
+  const page = Math.max(1, parseInt(req.query.page, 10) || 1);
+  const pageSize = Math.min(50, Math.max(1, parseInt(req.query.pageSize, 10) || 20));
+  const skip = Math.max(0, parseInt(req.query.skip, 10) || 0);
+  const result = await recommendationService.getForYou({
+    user: req.user, viewed, terms, page, pageSize, skip,
+  });
+  // Different for everyone, and what was searched for is in the address.
+  res.set('Cache-Control', 'private, no-store');
+  paginatedResponse(res, result.products, result.total, result.page, result.pageSize, 'Products retrieved successfully');
 });
 
 /**
@@ -344,6 +363,7 @@ const searchByImage = asyncHandler(async (req, res) => {
 module.exports = {
   createProduct,
   getProducts,
+  getForYou,
   getMyProducts,
   getMyProductSummary,
   getProductById,

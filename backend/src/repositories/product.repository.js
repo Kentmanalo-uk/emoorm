@@ -523,6 +523,64 @@ const rankedSearch = async (where, words, search, page, pageSize) => {
   return { products: await withStatsList(ids.map((id) => byId.get(id)).filter(Boolean)), total, page, pageSize };
 };
 
+// What the "for you" feed scores: enough to rank by, nothing to display.
+const RECOMMEND_SELECT = {
+  id: true,
+  categoryId: true,
+  storeId: true,
+  stock: true,
+  listingKind: true,
+  productType: true,
+  soldCount: true,
+  ratingAvg: true,
+  reviewCount: true,
+  createdAt: true,
+};
+
+/**
+ * Products anyone may be shown, light, for ranking: the same rule as the
+ * public lists.
+ * @param {Object} options - where (more conditions), search (words), ownerId
+ *   (leave this seller's products out), take, orderBy
+ */
+const findRecommendable = ({
+  where = {}, search, ownerId, take, orderBy,
+}) => {
+  const words = search ? termsOf(search) : [];
+  if (search && !words.length) return [];
+  return prisma.product.findMany({
+    where: {
+      ...where,
+      deletedAt: null,
+      status: 'APPROVED',
+      store: {
+        isActive: true,
+        isSuspended: false,
+        isApproved: true,
+        ...(ownerId ? { ownerId: { not: ownerId } } : {}),
+      },
+      ...(words.length ? { AND: whereFor(words) } : {}),
+    },
+    select: RECOMMEND_SELECT,
+    take,
+    ...(orderBy ? { orderBy } : {}),
+  });
+};
+
+/** What a product is, light, whatever its state: a viewed one may be gone now. */
+const findManyLight = (ids) => prisma.product.findMany({
+  where: { id: { in: ids } },
+  select: { id: true, categoryId: true, storeId: true },
+});
+
+/** Full list rows for these ids, in the order given. */
+const findListByIds = async (ids) => {
+  if (!ids.length) return [];
+  const rows = await prisma.product.findMany({ where: { id: { in: ids } }, include: LIST_INCLUDE });
+  const byId = new Map(rows.map((r) => [r.id, r]));
+  return withStatsList(ids.map((id) => byId.get(id)).filter(Boolean));
+};
+
 // Words of live product names, for correcting typos; rebuilt every 10 minutes.
 let vocabulary = { at: 0, words: null };
 const searchVocabulary = async () => {
@@ -807,6 +865,9 @@ module.exports = {
   findManyByIds,
   findBySlug,
   findAll,
+  findRecommendable,
+  findManyLight,
+  findListByIds,
   updateProduct,
   adjustStock,
   softDeleteProduct,
