@@ -240,6 +240,10 @@ const androidShadow = (style) => {
 };
 
 const forPlatform = (sheet) => {
+  // A themed list (a gradient's stops) is not a style sheet: rebuilt key by
+  // key it became an object with no .map, and every gradient that mapped
+  // over it threw, which closed the app on Home in Android release builds.
+  if (Array.isArray(sheet) || !sheet || typeof sheet !== 'object') return sheet;
   if (Platform.OS !== 'android' || ANDROID_SHADOWS === 'keep') return sheet;
   const out = {};
   for (const key of Object.keys(sheet)) {

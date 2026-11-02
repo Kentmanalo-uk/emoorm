@@ -1,19 +1,19 @@
 {
   "name": "E-MOORM",
   "package": "shop.emoorm.app",
-  "version": "2.1.0",
-  "versionCode": 12,
+  "version": "2.3.1",
+  "versionCode": 20,
   "minAndroid": "7.0",
-  "file": "/downloads/E-MOORM-2.1.0.apk",
-  "size": 88281324,
-  "sha256": "2a9a5ee145205f8a1f9d708aeb139a9d88d73aa207ae499abc875ef09c69f0c0",
+  "file": "/downloads/E-MOORM-2.3.1.apk",
+  "size": 41470266,
+  "sha256": "9536656f2ba3e41f4757972e35385dce8cf3fa7db574aea225540bfe6cb5b613",
   "certificateSha256": "9F:60:02:EF:10:02:55:0F:51:DA:63:3E:B5:CF:3B:0D:37:28:2C:B8:08:6C:AF:0F:57:0C:C4:AD:8F:A0:AB:22",
-  "released": "2026-10-20",
+  "released": "2026-11-02",
   "notes": [
-    "Today's menu: see what food shops have ready now, or pre-order for later, and sellers post and edit their menu in the app.",
-    "Delivery by a MoorMove rider at checkout, with the fee shown before you order; sellers can call a rider, cancel one, or deliver it themselves.",
-    "See products in 3D and, on supported phones, view them in your space.",
-    "Opening a shop is five short steps, and each shop sets a delivery fee for every place it delivers to, or free delivery.",
-    "Shop QR posters to save and share, a fresher home page, and smoother menus."
+    "Fixed: the app no longer closes by itself (\"E-MOORM keeps stopping\") after opening Home.",
+    "Products picked for you on Home, based on what you view, search and order.",
+    "Dark mode, new icons, and every product shown as the same clean card.",
+    "Cart: swipe an item for Find similar or Remove, with each shop's picture.",
+    "Product pages open faster and smoother, even on older phones."
   ]
 }

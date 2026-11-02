@@ -75,11 +75,12 @@ if (!flags.includes('--no-build')) {
   console.log('building… (several minutes)');
   execFileSync(path.join(MOBILE, 'android', 'gradlew.bat'), [
     '-p', path.join(MOBILE, 'android'), AAB ? 'bundleRelease' : 'assembleRelease',
-    // The same two architectures as the APK. Play splits an .aab per
-    // device, so adding x86_64 would cost a phone nothing to download --
-    // it would only cover Chromebooks and emulators, at the price of
-    // compiling the native code twice more.
-    '-PreactNativeArchitectures=armeabi-v7a,arm64-v8a',
+    // The .aab carries all four architectures: Play splits it per device,
+    // so a phone downloads only its own, and without x86/x86_64 every
+    // Chromebook and Intel tablet is left out of the supported devices.
+    // The APK stays arm only to stay under GitHub's 100 MB file limit;
+    // --x86 adds x86_64 to it for testing on an emulator.
+    `-PreactNativeArchitectures=${AAB ? 'armeabi-v7a,arm64-v8a,x86,x86_64' : `armeabi-v7a,arm64-v8a${flags.includes('--x86') ? ',x86_64' : ''}`}`,
   ], { cwd: path.join(MOBILE, 'android'), env, stdio: 'inherit', shell: true });
 }
 if (!fs.existsSync(unsigned)) throw new Error(`no build at ${unsigned}`);
@@ -135,6 +136,12 @@ const verify = execFileSync(path.join(BUILD_TOOLS, 'apksigner.bat'), ['verify', 
 const cert = (verify.match(/certificate SHA-256 digest: ([0-9a-f]+)/i) || [])[1];
 if (!cert) throw new Error('apksigner verify failed');
 const certColon = cert.toUpperCase().match(/../g).join(':');
+
+// --test: a build to try on a phone or emulator, not handed out.
+if (flags.includes('--test')) {
+  console.log(`test build ${path.relative(ROOT, signed)} (not published)`);
+  process.exit(0);
+}
 
 // 4. Publish to the site.
 const dataFile = path.join(ROOT, 'web', 'src', 'data', 'androidApp.json');

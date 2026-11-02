@@ -28,6 +28,7 @@ import { AccountSheetHost } from '../src/components/AccountSheet';
 import { ShareSheetHost } from '../src/components/ShareSheet';
 import { HeroFlightHost } from '../src/components/HeroFlight';
 import BrandSplash from '../src/components/BrandSplash';
+import { AppErrorScreen, keepAppOpenOnErrors, markAppUp } from '../src/components/AppErrorScreen';
 import { LoaderOverlayHost } from '../src/components/BrandLoader';
 import { CommerceHudHost } from '../src/components/CommerceHud';
 import { PeekHost } from '../src/components/Peek';
@@ -131,6 +132,13 @@ function RootLayout() {
 // has to sit on what expo-router actually mounts.
 export default ObserveRoot.wrap(RootLayout);
 
+// A screen that throws while drawing shows "Something went wrong" with Try
+// again, instead of closing the app (components/AppErrorScreen).
+export function ErrorBoundary(props) {
+  return <AppErrorScreen {...props} />;
+}
+keepAppOpenOnErrors();
+
 function AppRoot() {
   const scheme = useResolvedScheme();
   const pathname = usePathname();
@@ -195,6 +203,8 @@ function AppRoot() {
   const ready = isHydrated && fontsLoaded && !requiresLogin;
   useEffect(() => {
     if (ready) markInteractive();
+    // From here an error in a tap or a timer is shown, not fatal.
+    if (ready) markAppUp();
   }, [ready, markInteractive]);
 
   return (

@@ -22,6 +22,14 @@ export const SWEEP_LIGHT = themed(() => [
 
 const uid = (raw) => raw.replace(/[^a-zA-Z0-9]/g, '');
 
+// The stops as a real list, whatever they were handed as: SWEEP is a themed
+// value, and one that once arrived as an object with no .map closed the app.
+const listOf = (stops) => {
+  if (Array.isArray(stops)) return stops;
+  if (!stops || typeof stops !== 'object') return [];
+  return Object.keys(stops).filter((k) => /^\d+$/.test(k)).sort((a, b) => a - b).map((k) => stops[k]);
+};
+
 /**
  * A CSS linear-gradient behind its parent (absolute fill). stops: [[offset,
  * colour, opacity?], …]. diagonal: 135deg; else left to right (95deg reads
@@ -34,7 +42,7 @@ export function LinearFill({ stops = SWEEP, radius = 0, diagonal = false, style 
       <Svg width="100%" height="100%">
         <Defs>
           <LinearGradient id={id} x1="0" y1={diagonal ? '0' : '0.5'} x2="1" y2={diagonal ? '1' : '0.5'}>
-            {stops.map(([offset, color, opacity = 1]) => (
+            {listOf(stops).map(([offset, color, opacity = 1]) => (
               <Stop key={`${offset}${color}`} offset={String(offset)} stopColor={color} stopOpacity={opacity} />
             ))}
           </LinearGradient>
@@ -58,7 +66,7 @@ export function Glow({
       <Svg width={size} height={size}>
         <Defs>
           <RadialGradient id={id} cx="50%" cy="50%" r="50%">
-            {stops.map(([offset, color, opacity = 1]) => (
+            {listOf(stops).map(([offset, color, opacity = 1]) => (
               <Stop key={`${offset}${color}${opacity}`} offset={String(offset)} stopColor={color} stopOpacity={opacity} />
             ))}
           </RadialGradient>
