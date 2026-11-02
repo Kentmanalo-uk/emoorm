@@ -5,41 +5,31 @@ const { ApiError } = require('../middleware/errorHandler');
 /**
  * Public profile service.
  *
- * A buyer-only account has a deliberately minimal public face: who they are,
+ * Every account has the same deliberately minimal public face: who they are,
  * roughly where they are, how long they have been around, whether their
  * identity has been checked, and a way to start a chat when one is actually
  * possible. Nothing else — no orders, no reviews, no follows, no stats.
  *
- * A seller's public face is their shop, so the payload only says which store
- * is theirs and the client sends the viewer there.
+ * This is the person, not their business. Someone who owns a shop can still
+ * buy from others, and the seller of that order is asking about the customer,
+ * so the shop is left out of this entirely: it has its own page.
  */
 
-/** The store, but only while it is genuinely open to the public. */
-const activeStore = (store) => (
-  store && store.isActive && !store.isSuspended && store.isApproved !== false && !store.deletedAt && !store.deletionRequestedAt
-    ? { id: store.id, name: store.name, slug: store.slug, logo: store.logo }
-    : null
-);
-
 /**
- * Can this viewer start a conversation with this profile?
+ * Can this viewer start a conversation with this person?
  *
- * Conversations are buyer <-> store, so a chat only exists when one side is
- * a shop: either the profile is a shop the viewer can message, or the viewer
- * owns a shop this person has ordered from. Two buyers can never chat.
+ * Conversations are buyer <-> store, and from a person's page the only one
+ * that can start is their seller's: the viewer owns a shop this person has
+ * ordered from. Two buyers can never chat. Messaging a shop starts on the
+ * shop's page.
  *
  * @param {Object} user - The profile being viewed
- * @param {Object|null} store - The profile's public store, if any
  * @param {Object|null} viewer - The signed-in viewer
  * @returns {Promise<Boolean>} Whether a Chat action should be offered
  */
-const resolveCanChat = async (user, store, viewer) => {
+const resolveCanChat = async (user, viewer) => {
   if (!viewer || viewer.id === user.id) return false;
 
-  // Viewing a shop: anyone signed in who is not its owner may message it.
-  if (store) return true;
-
-  // Viewing a buyer: only their seller, and only once they have ordered.
   if (viewer.role !== 'SELLER') return false;
   const viewerStore = await storeRepository.findByOwnerId(viewer.id);
   if (!viewerStore || viewerStore.deletedAt) return false;
@@ -57,21 +47,18 @@ const getPublicProfile = async (userId, viewer) => {
   const user = await profileRepository.findPublicUser(userId);
   if (!user) throw new ApiError('Profile not found', 404);
 
-  const store = activeStore(user.store);
-
   return {
     id: user.id,
     fullName: user.fullName,
     username: user.username,
     profilePhoto: user.profilePhoto,
+    avatarKey: user.avatarKey,
     municipality: user.municipality,
     province: user.province,
     memberSince: user.createdAt,
     identityVerified: user.identityVerification?.status === 'VERIFIED',
     isOwnProfile: Boolean(viewer && viewer.id === user.id),
-    isSeller: Boolean(store),
-    store,
-    canChat: await resolveCanChat(user, store, viewer),
+    canChat: await resolveCanChat(user, viewer),
   };
 };
 

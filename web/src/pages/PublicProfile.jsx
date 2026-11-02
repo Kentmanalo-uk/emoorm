@@ -1,5 +1,5 @@
 import { useEffect, useState } from 'react';
-import { Link, Navigate, useParams, useNavigate } from 'react-router-dom';
+import { Link, useParams, useNavigate } from 'react-router-dom';
 import { useQuery } from '@tanstack/react-query';
 import {
   SealCheck, MapPin, CalendarBlank, ChatCircle, PencilSimple as Pencil,
@@ -16,10 +16,10 @@ const monthYear = (value) => {
 };
 
 /**
- * The public face of a buyer-only account: who they are, roughly where, how
- * long they have been here and whether their identity was checked — nothing
- * private. A seller account has no page of its own here: its public face is
- * its shop, so we redirect to /store/:slug.
+ * The public face of an account: who they are, roughly where, how long they
+ * have been here and whether their identity was checked — nothing private.
+ * Always the person, even one who owns a shop: a seller opening their buyer
+ * wants the customer, and the shop has its own page at /store/:slug.
  */
 export default function PublicProfile() {
   const { id } = useParams();
@@ -74,11 +74,6 @@ export default function PublicProfile() {
     );
   }
 
-  // A seller's public profile is their shop.
-  if (profile.isSeller && profile.store?.slug) {
-    return <Navigate to={`/store/${profile.store.slug}`} replace />;
-  }
-
   const initial = (profile.fullName || '?').trim().charAt(0).toUpperCase();
   const place = [profile.municipality?.name, profile.province].filter(Boolean).join(', ');
 
@@ -93,7 +88,7 @@ export default function PublicProfile() {
 
       <section className="pp-card pp-head">
         <div className="pp-avatar">
-          <UserAvatar src={profile.profilePhoto} name={initial} alt={profile.fullName} />
+          <UserAvatar src={profile.profilePhoto} person={profile} name={initial} alt={profile.fullName} />
         </div>
 
         <h1 className="pp-name">

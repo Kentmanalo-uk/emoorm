@@ -2,7 +2,7 @@ import { useCallback, useEffect, useState } from 'react';
 import {
   Pressable, ScrollView, StyleSheet, Text, View, useWindowDimensions,
 } from 'react-native';
-import { Redirect, useLocalSearchParams, useRouter } from 'expo-router';
+import { useLocalSearchParams, useRouter } from 'expo-router';
 import {
   CalendarBlankIcon, ChatCircleIcon, MapPinIcon, PencilSimpleIcon, SealCheckIcon,
 } from '../../src/lib/icons';
@@ -14,8 +14,9 @@ import { font, t, text, themed } from '../../src/theme';
 
 /*
  * web/src/pages/PublicProfile.jsx + PublicProfile.css at phone width.
- * The public face of a buyer-only account. A seller account has no page of
- * its own: its public face is its shop, so it goes to /store/:slug.
+ * The public face of an account. Always the person, even one who owns a
+ * shop: a seller opening their buyer wants the customer, and the shop has its
+ * own page at /store/:slug.
  * The name is not a page title on the website (NOT_A_TITLE), so the bar
  * stays empty; the not-found / error heading is moved up into the bar.
  */
@@ -77,11 +78,6 @@ export default function PublicProfile() {
       setOpeningChat(false);
     }
   };
-
-  // A seller's public profile is their shop.
-  if (status === 'ready' && profile?.isSeller && profile.store?.slug) {
-    return <Redirect href={`/store/${profile.store.slug}`} />;
-  }
 
   const shell = (title, children) => (
     <View style={styles.screen}>
