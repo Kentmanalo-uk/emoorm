@@ -26,6 +26,7 @@ const {
 const sessionService = require('./session.service');
 const prisma = require('../config/database');
 const shopReadiness = require('./shopReadiness.service');
+const referralService = require('./referral.service');
 const { makeGuard } = require('../utils/attemptGuard');
 const {
   sendPasswordResetEmail,
@@ -193,6 +194,9 @@ const register = async (userData) => {
 
   // A full address is also the first delivery address (My Addresses, checkout).
   await addressService.saveProfileAddress(user.id, { fullName, contactNumber, municipalityId, barangay, address });
+
+  // Joined with an invite code (never stops the sign-up).
+  await referralService.attachAtSignup(user.id, { referralCode: userData.referralCode, referralShop: userData.referralShop });
 
   // The welcome email asks them to confirm the address they typed.
   sendInBackground('welcome', async () => sendWelcomeEmail({ user, confirmUrl: await issueEmailConfirmation(user) }));
@@ -825,6 +829,9 @@ const applyForSeller = async (userId, data = {}) => {
   await ensureSellerStore(user, application, { approved: false });
   const updatedUser = await userRepository.updateUser(userId, { role: 'SELLER' });
 
+  // "Invited by" on the form: a seller who brought them in (never stops the application).
+  await referralService.attachAtSellerApplication(userId, data.referralCode);
+
   // Route the review to the admin of the municipality the SHOP is in, which
   // is not necessarily the municipality on the applicant's own profile.
   await notificationService.notifyMunicipalAdmins(application.shopMunicipalityId, {
@@ -1332,6 +1339,9 @@ const approveSeller = async (userId, actor) => {
     await undoSellerDecision(userId, 'APPROVED', user, application);
     throw err;
   }
+
+  // Brought in by another seller: their seller invite starts counting.
+  await referralService.ensureSellerReferral(userId);
 
   // Notify the newly approved seller (non-blocking on failure).
   try {
@@ -1915,6 +1925,9 @@ const completeGoogleSignup = async (googleToken, data) => {
 
   // A full address is also the first delivery address (My Addresses, checkout).
   await addressService.saveProfileAddress(user.id, { fullName: String(fullName).trim(), contactNumber, municipalityId, barangay, address });
+
+  // Joined with an invite code (never stops the sign-up).
+  await referralService.attachAtSignup(user.id, { referralCode: data.referralCode, referralShop: data.referralShop });
 
   sendInBackground('welcome', () => sendWelcomeEmail({ user }));
 

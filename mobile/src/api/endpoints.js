@@ -89,4 +89,12 @@ export const ENDPOINTS = {
     MARK_READ: (id) => `/messages/conversations/${id}/read`,
     RATE_SERVICE: (id) => `/messages/conversations/${id}/rate-service`,
   },
+  // Invites (src/lib/invite.js): all answer "off" until a super admin turns them on.
+  REFERRALS: {
+    MINE: '/referrals/me',
+    VOUCHERS: '/referrals/vouchers',
+    INVITE: (code) => `/referrals/invite/${encodeURIComponent(code)}`,
+    SHOP: (storeId) => `/referrals/shop/${storeId}`,
+    MY_SHOP: '/referrals/my-shop',
+  },
 };

@@ -35,6 +35,9 @@ export const ACTION_LABELS = {
   CREATE_COURIER: 'Added courier',
   UPDATE_COURIER: 'Updated courier',
   DELETE_COURIER: 'Deleted courier',
+  APPROVE_INVITE: 'Approved held invite',
+  REJECT_INVITE: 'Rejected held invite',
+  UPDATE_SHOP_INVITES: 'Changed shop invite rewards',
 };
 
 export const actionLabel = (code = '') =>

@@ -68,6 +68,7 @@ import { notTakingOrders, opensLabel } from '../lib/availability';
 import Select from '../components/ui/Select';
 import useProductPeek from '../components/peek/useProductPeek';
 import { ShopCoverArt, ShopLogoArt } from '../components/shop/ShopArt';
+import ShopInviteCard from '../components/shop/ShopInviteCard';
 
 const SORTS = [
   { key: 'newest', label: 'Newest', sortBy: 'createdAt', sortOrder: 'desc' },
@@ -657,6 +658,7 @@ export default function StoreDetail() {
 
               {awayNotice}
               {voucherStrip}
+              <ShopInviteCard store={store} />
 
               <div className="shop-m-tabs" role="tablist">
                 {[
@@ -969,6 +971,7 @@ export default function StoreDetail() {
                   ))}
                 </div>
               )}
+              <ShopInviteCard store={store} />
             </div>
             </div>
             </div>

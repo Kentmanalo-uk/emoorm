@@ -363,3 +363,110 @@ export function CategoryStyleSettings() {
     </SettingsCard>
   );
 }
+
+/* ── Invites: switches and limits ─────────────────────────── */
+
+const INVITE_NUMBERS = [
+  ['inviterMonthlyCap', 'Rewards per person a month', 'The most thank-you vouchers one person can earn in a month.', 1, 100],
+  ['voucherDays', 'Days an invite voucher lasts', 'For both the welcome and the thank-you voucher.', 1, 365],
+  ['maxShopReward', 'Most a shop may give (₱)', 'The largest peso discount a shop can set for one invite voucher.', 1, 5000],
+  ['maxShopPercent', 'Most a shop may give (%)', 'The largest percent discount a shop can set for one invite voucher.', 1, 100],
+  ['sellerOrdersToQualify', 'Buyers a new shop needs', 'Different buyers who completed an order there before a seller invite counts.', 1, 50],
+  ['boostDays', 'Days a shop is shown higher', 'How long both shops of a counted seller invite rise in For You.', 1, 60],
+];
+
+function InviteLimitsForm({ initial }) {
+  const [form, setForm] = useState(initial);
+  const { save, saving } = useSaveSettings();
+  const submit = () => {
+    const changes = {};
+    for (const [key, label, , min, max] of INVITE_NUMBERS) {
+      const n = Number(form[key]);
+      if (String(form[key]).trim() === '' || !Number.isInteger(n) || n < min || n > max) {
+        return toast.error(`${label} must be a whole number from ${min} to ${max}`);
+      }
+      if (n !== Number(initial[key])) changes[key] = n;
+    }
+    if (!Object.keys(changes).length) return toast.success('No changes to save');
+    return save({ referralSettings: changes }, 'Invite limits saved');
+  };
+  return (
+    <SettingsCard
+      id="invite-limits"
+      title="Invite limits"
+      hint="Shops set their own invite rewards within these limits, and pay them on their own sales."
+      footer={<SaveButton saving={saving} onClick={submit} />}
+    >
+      {INVITE_NUMBERS.map(([key, label, help, min, max]) => (
+        <SettingRow key={key} label={label} help={help}>
+          <input
+            className="admin-input ps-number"
+            type="number"
+            min={min}
+            max={max}
+            step="1"
+            inputMode="numeric"
+            value={form[key]}
+            onChange={(e) => setForm((f) => ({ ...f, [key]: e.target.value }))}
+          />
+        </SettingRow>
+      ))}
+    </SettingsCard>
+  );
+}
+
+export function InviteSettings() {
+  const { settings } = useAppSettings();
+  const { save, saving } = useSaveSettings();
+  const s = settings.referralSettings || {};
+  const on = s.enabled === true;
+  const initial = Object.fromEntries(INVITE_NUMBERS.map(([key]) => [key, String(s[key] ?? '')]));
+  const flip = (key, v, done) => save({ referralSettings: { [key]: v } }, done);
+  return (
+    <>
+      <SettingsCard id="invites" title="Invites" hint="No cash changes hands: shops reward invites with their own vouchers, and sellers who bring in sellers are shown higher for a while.">
+        <SwitchRow
+          label="Invite friends"
+          help={on
+            ? 'On: everyone has an invite code, sign-up takes one, and shops can turn on invite rewards.'
+            : 'Off: invite codes, invite pages and shop invite rewards are hidden. Vouchers already given still work.'}
+          checked={on}
+          disabled={saving}
+          text="Turn on invites"
+          confirm={(v) => ({
+            title: v ? 'Turn on invites?' : 'Turn off invites?',
+            message: v
+              ? 'Everyone gets an invite code and shops can offer invite rewards from Marketing.'
+              : 'Invite pages and codes stop working for new sign-ups. Vouchers already given stay valid.',
+          })}
+          onChange={(v) => flip('enabled', v, v ? 'Invites are on' : 'Invites are off')}
+        />
+        <SwitchRow
+          label="Shop invite rewards"
+          help="Shops can give a welcome voucher to friends who join through their invite link, and a thank-you voucher to whoever invited them."
+          checked={s.shopInvites !== false}
+          disabled={saving || !on}
+          text="Allow shop invite rewards"
+          onChange={(v) => flip('shopInvites', v, v ? 'Shop invite rewards are allowed' : 'Shop invite rewards are off')}
+        />
+        <SwitchRow
+          label="Seller invites"
+          help="A seller who brings in another seller: once the new shop has served a few buyers, both shops are shown higher in For You."
+          checked={s.sellerInvites !== false}
+          disabled={saving || !on}
+          text="Allow seller invites"
+          onChange={(v) => flip('sellerInvites', v, v ? 'Seller invites are on' : 'Seller invites are off')}
+        />
+        <SwitchRow
+          label="Confirmed mobile number"
+          help="A friend's welcome voucher and the inviter's reward wait for the friend's mobile number to be confirmed by SMS, and one number gets a shop's welcome once. Only works while SMS is set up on the server."
+          checked={s.requireVerifiedPhone !== false}
+          disabled={saving || !on}
+          text="Require a confirmed number"
+          onChange={(v) => flip('requireVerifiedPhone', v, v ? 'A confirmed number is required' : 'A confirmed number is no longer required')}
+        />
+      </SettingsCard>
+      <InviteLimitsForm key={JSON.stringify(initial)} initial={initial} />
+    </>
+  );
+}

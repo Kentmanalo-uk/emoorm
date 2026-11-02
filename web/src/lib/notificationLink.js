@@ -65,6 +65,9 @@ const ROUTES = {
   'buyer-verification': () => '/profile/verification',
   'seller-verification': () => '/seller/verification',
   'seller-setup': () => '/seller',
+  // Invites: the person's Invite friends, and a seller's invite rewards.
+  invites: () => '/profile/invite',
+  'seller-invites': () => '/seller/marketing#invites',
   municipality: ({ id }) => (id ? `/municipality/${enc(id)}` : null),
   'admin-dashboard': () => '/admin',
   // The admin team's chats: the team's, or one with another admin.

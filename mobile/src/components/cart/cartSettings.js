@@ -3,10 +3,10 @@ import apiClient from '../../api/client';
 
 /*
  * What the cart and checkout need from the admin's app settings
- * (web/src/hooks/useAppSettings.js): the platform's default delivery fee.
- * Asked for once per app run.
+ * (web/src/hooks/useAppSettings.js): the platform's default delivery fee,
+ * and whether invites are on (lib/invite). Asked for once per app run.
  */
-export const DEFAULT_CART_SETTINGS = { deliveryFee: 50, requireBuyerVerification: true };
+export const DEFAULT_CART_SETTINGS = { deliveryFee: 50, requireBuyerVerification: true, referralSettings: { enabled: false } };
 
 let cached = null;
 let pending = null;

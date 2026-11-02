@@ -66,6 +66,10 @@ const ROUTES = {
   'seller-setup': () => '/seller',
   municipality: ({ id }) => (id ? `/municipality/${id}` : null),
 
+  // Invites: a friend joined or a reward came in; a seller's invite rewards card.
+  invites: () => '/invite-friends',
+  'seller-invites': () => '/seller/marketing',
+
   // Announcements and anything else open in full on their own page.
   notification: ({ id }) => (id ? `/notification/${id}` : null),
 };

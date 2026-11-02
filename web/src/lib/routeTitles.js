@@ -55,6 +55,8 @@ const RULES = [
   [/^\/profile\/verification/, 'Identity verification', true],
   [/^\/profile\/support/, 'Help & support', true],
   [/^\/profile\/reports/, 'My reports', true],
+  [/^\/profile\/invite/, 'Invite friends', true],
+  [/^\/invite\//, 'You are invited', true],
   [/^\/profile/, 'My account', true],
   [/^\/(login|seller\/login)/, 'Log in', true],
   [/^\/register/, 'Sign up', true],

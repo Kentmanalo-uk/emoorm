@@ -34,8 +34,8 @@ const DISCOUNT_TYPES = [
 const decimal = (text) => text.replace(/[^0-9.]/g, '').replace(/(\..*)\./g, '$1');
 const whole = (text) => text.replace(/[^0-9]/g, '');
 
-/** The voucher's on/off switch (.svc-switch: 40×24, green when on). */
-function VoucherSwitch({ value, onChange, label }) {
+/** The voucher's on/off switch (.svc-switch: 40×24, green when on). Also the invite rewards' switch. */
+export function VoucherSwitch({ value, onChange, label }) {
   const progress = useRef(new Animated.Value(value ? 1 : 0)).current;
   useEffect(() => {
     Animated.timing(progress, { toValue: value ? 1 : 0, duration: 150, useNativeDriver: false }).start();

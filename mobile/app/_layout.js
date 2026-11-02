@@ -85,6 +85,7 @@ const PROTECTED_PATHS = [
   '/addresses',
   '/reviews',
   '/followed-stores',
+  '/invite-friends',
   '/settings',
   '/edit-profile',
   '/seller-apply',

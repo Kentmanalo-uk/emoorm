@@ -6,8 +6,9 @@ import {
   Package, Heart, ChatText as MessageSquare, Bell, Storefront as Store,
   ShoppingBag, Truck, Gear as Settings, QrCode, CaretRight as ChevronRight, Star,
   ShieldCheck, ShieldWarning, Question, EnvelopeSimple,
-  Eye, MapPin, ArrowCounterClockwise, Lifebuoy, Flag, Handshake,
+  Eye, MapPin, ArrowCounterClockwise, Lifebuoy, Flag, Handshake, Gift,
 } from '../lib/icons';
+import useAppSettings from '../hooks/useAppSettings';
 import LanguageRow from '../components/account/LanguageRow';
 import axios from '../lib/axios';
 import useAuthStore from '../store/authStore';
@@ -50,6 +51,7 @@ const Profile = () => {
   const navigate = useNavigate();
   const { user, isAuthenticated } = useAuthStore();
   const isPhone = usePhoneLayout();
+  const { settings: appSettings } = useAppSettings();
   const wishlistCount = useWishlistStore((st) => st.items.length);
 
   // Phones: "My shop" switches to the Seller Center with the same animation
@@ -250,6 +252,7 @@ const Profile = () => {
           <Row to="/profile/followed-stores" icon={Store} label="Followed Stores" hint={followedStores.length || null} />
           <Row to="/profile/reviews" icon={Star} label="My Reviews" hint={reviewCount || null} />
           <Row to="/profile/offers" icon={Handshake} label="My Offers" />
+          {appSettings.referralSettings?.enabled && <Row to="/profile/invite" icon={Gift} label="Invite friends" />}
         </section>
 
         <section className="pf-m-section pf-m-list">

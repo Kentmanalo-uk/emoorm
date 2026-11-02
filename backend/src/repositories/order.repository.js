@@ -577,6 +577,10 @@ const updateStatus = async (id, status, expectedStatus = null, actorId = null, n
   if (settledNow) {
     await refreshStatsForOrders([id]).catch((err) => console.error('[stats] sold count refresh failed:', err.message));
   }
+  // Completed: an invite waiting on this order may count now (never throws).
+  // Required here, not at the top: the referral service reaches back into
+  // services that load this repository.
+  if (status === 'COMPLETED') await require('../services/referral.service').onOrderCompleted(id);
   return updated;
 };
 

@@ -1,6 +1,7 @@
 const prisma = require('../config/database');
 const productRepository = require('../repositories/product.repository');
 const productService = require('./product.service');
+const referralService = require('./referral.service');
 
 /**
  * "For you": the catalogue, ordered by what this person has shown interest in.
@@ -18,7 +19,8 @@ const productService = require('./product.service');
  *      matches, and the best sellers and newest so the feed never runs dry.
  *   3. Score: interest first, then quality and freshness, less for what they
  *      just looked at, already bought or have in their cart, so the feed
- *      moves on. Nothing is left out: every product anyone may see is in it.
+ *      moves on; a little more for shops a seller invite is boosting.
+ *      Nothing is left out: every product anyone may see is in it.
  *   4. Mix: no more than two in a row from one shop.
  *
  * The score uses no randomness beyond a small nudge that changes daily, so
@@ -36,6 +38,8 @@ const TERM_SPILL = 0.5;
 const SCORE = {
   category: 6, store: 3, term: 10, sold: 1, rating: 0.5, fresh: 1, nudge: 0.5,
   seen: -1.5, bought: -3, inCart: -2, soldOut: -4,
+  // A shop a seller invite rewarded (store_boosts), for a few days.
+  boosted: 3,
 };
 const FRESH_DAYS = 30;
 const SOLD_ENOUGH = 50; // Units at which the sold part of a score is full.
@@ -93,7 +97,7 @@ const isSoldOut = (p) => p.stock <= 0 && p.listingKind === 'REGULAR' && p.produc
 /** How well one product suits a profile. */
 const scoreProduct = (p, profile, context) => {
   const {
-    topCategory, topStore, termHits, seen, bought, carted, now, day,
+    topCategory, topStore, termHits, seen, bought, carted, boosted, now, day,
   } = context;
   const ageDays = (now - new Date(p.createdAt).getTime()) / 86400e3;
   const rated = p.reviewCount > 0 ? (p.ratingAvg - 3) / 2 : 0;
@@ -108,6 +112,7 @@ const scoreProduct = (p, profile, context) => {
   if (bought.has(p.id)) score += SCORE.bought;
   if (carted.has(p.id)) score += SCORE.inCart;
   if (isSoldOut(p)) score += SCORE.soldOut;
+  if (boosted.has(p.storeId)) score += SCORE.boosted;
   return score;
 };
 
@@ -129,18 +134,19 @@ const mixShops = (sorted) => {
  * @param {Array} pool - Light product rows
  * @param {Object} profile - From buildProfile
  * @param {Object} [options] - termHits (Map of id to 0..1), seen, bought,
- *   carted and excluded (Sets of ids), now (ms)
+ *   carted and excluded (Sets of ids), boosted (Set of shop ids), now (ms)
  * @returns {Array} The rows, best first
  */
 const rankPool = (pool, profile, {
   termHits = new Map(), seen = new Set(), bought = new Set(), carted = new Set(), excluded = new Set(),
-  now = Date.now(),
+  boosted = new Set(), now = Date.now(),
 } = {}) => {
   const context = {
     termHits,
     seen,
     bought,
     carted,
+    boosted,
     now,
     day: new Date(now).toISOString().slice(0, 10),
     topCategory: Math.max(1, ...profile.categories.values()),
@@ -193,10 +199,11 @@ const searchSignals = async (terms, ownerId) => {
 
 /** This feed's product ids, best first. */
 const rankedIds = async ({ userId, ownerId, viewedIds, terms }) => {
-  const [account, viewed, search] = await Promise.all([
+  const [account, viewed, search, boosted] = await Promise.all([
     accountSignals(userId),
     viewedIds.length ? productRepository.findManyLight(viewedIds) : [],
     searchSignals(terms, ownerId),
+    referralService.boostedStoreIds().catch(() => new Set()),
   ]);
   const byId = new Map(viewed.map((p) => [p.id, p]));
   const viewedInOrder = viewedIds.map((id) => byId.get(id)).filter(Boolean);
@@ -219,6 +226,7 @@ const rankedIds = async ({ userId, ownerId, viewedIds, terms }) => {
     seen: new Set(viewedIds),
     bought: new Set(account.orders.map((p) => p.id)),
     carted: new Set(account.cart.map((p) => p.id)),
+    boosted,
   }).map((p) => p.id);
 };
 

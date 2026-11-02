@@ -58,6 +58,7 @@ const BUYER_RULES = [
   [/^\/profile\/verification/, [B.settings, B.support, B.privacy]],
   [/^\/profile\/support/, [B.help, B.reports, B.orders]],
   [/^\/profile\/reports/, [B.support, B.help]],
+  [/^\/profile\/invite/, [B.stores, B.orders, B.help]],
   [/^\/profile\/messages/, [B.notifications, B.support]],
   [/^\/profile\/notifications/, [B.messages, B.followed]],
   [/^\/help/, [B.support, B.orders, B.about, B.privacy, B.terms]],

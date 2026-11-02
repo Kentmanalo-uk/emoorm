@@ -3,10 +3,12 @@ const prisma = require('../config/database');
 const findByCode = (code) => prisma.voucher.findUnique({ where: { code }, include: { store: { select: { id: true, name: true } } } });
 const findById = (id) => prisma.voucher.findUnique({ where: { id } });
 
-// Platform vouchers (the admin's list) unless a shop is asked for.
+// Platform vouchers (the admin's list) unless a shop is asked for. Invite
+// rewards (one person's own) are in neither list.
 const findAll = async ({ page = 1, pageSize = 20, search = '', storeId = null } = {}) => {
   const where = {
     storeId,
+    ownerId: null,
     ...(search ? { OR: [{ code: { contains: search } }, { description: { contains: search } }] } : {}),
   };
   const [items, total] = await Promise.all([
@@ -34,6 +36,7 @@ const findLiveForStore = (storeId) => {
   return prisma.voucher.findMany({
     where: {
       storeId,
+      ownerId: null,
       isActive: true,
       AND: [
         { OR: [{ startsAt: null }, { startsAt: { lte: now } }] },

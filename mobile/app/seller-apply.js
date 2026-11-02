@@ -23,6 +23,7 @@ import useSideStore from '../src/store/sideStore';
 import { toast } from '../src/lib/toast';
 import { font, t, themed } from '../src/theme';
 import { fetchCategories, fetchMunicipalities } from '../src/lib/referenceData';
+import { cleanCode, readPendingInvite, useReferralSettings } from '../src/lib/invite';
 
 /*
  * /seller/apply (web/src/pages/SellerApply.jsx + SellerApply.css, phones):
@@ -179,6 +180,25 @@ export default function SellerApply() {
   const [municipalities, setMunicipalities] = useState([]);
   const [municipalitiesLoading, setMunicipalitiesLoading] = useState(true);
   const [categories, setCategories] = useState([]);
+  // The seller who invited them (lib/invite): only while seller invites are
+  // on, and not for an account that already joined with someone's code.
+  const referral = useReferralSettings();
+  const sellerInvitesOn = Boolean(referral.enabled && referral.sellerInvites);
+  const [inviteCode, setInviteCode] = useState('');
+  const [invitedBy, setInvitedBy] = useState(null);
+  const showInvite = sellerInvitesOn && !invitedBy;
+
+  useEffect(() => {
+    if (!sellerInvitesOn) return undefined;
+    let live = true;
+    readPendingInvite().then((saved) => {
+      if (live && saved?.as === 'seller') setInviteCode((typed) => typed || saved.code);
+    });
+    apiClient.get(ENDPOINTS.REFERRALS.MINE)
+      .then((res) => { if (live) setInvitedBy(res?.data?.invitedBy || null); })
+      .catch(() => {});
+    return () => { live = false; };
+  }, [sellerInvitesOn]);
 
   const scrollRef = useRef(null);
   const sectionY = useRef({});
@@ -301,6 +321,7 @@ export default function SellerApply() {
         }),
         shopMunicipalityId: form.municipalityId,
         shopBarangay: form.barangay,
+        ...(showInvite && cleanCode(inviteCode) ? { referralCode: cleanCode(inviteCode) } : {}),
         acceptedTerms: true,
       });
       const updated = res?.data || {};
@@ -457,6 +478,18 @@ export default function SellerApply() {
                   ))}
                 </Chips>
               </Field>
+              {showInvite ? (
+                <Field label="Invited by (seller's invite code)" optional hint="The code of the seller who told you about E-MOORM.">
+                  <ApplyInput
+                    value={inviteCode}
+                    onChangeText={(v) => setInviteCode(cleanCode(v))}
+                    placeholder="e.g. MARIA7K2Q"
+                    autoCapitalize="characters"
+                    autoCorrect={false}
+                    maxLength={16}
+                  />
+                </Field>
+              ) : null}
             </Form>
           </Section>
 

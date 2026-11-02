@@ -2,6 +2,7 @@ const appSettingRepository = require('../repositories/appSetting.repository');
 const config = require('../config/env');
 const { cached, invalidate, TAGS } = require('../lib/cachePolicy');
 const { ApiError } = require('../middleware/errorHandler');
+const referralSettings = require('../lib/referralSettings');
 
 const DEFAULT_SETTINGS = {
   id: 'global',
@@ -21,6 +22,8 @@ const DEFAULT_SETTINGS = {
   orderConfirmHours: 48,
   moormoveEnabled: false,
   product3dEnabled: true,
+  // Invites: null is lib/referralSettings' defaults (all off).
+  referralSettings: null,
 };
 
 // How the homepage shows its categories.
@@ -168,7 +171,9 @@ const sanitizeTheme = (input) => {
   return theme;
 };
 
-const sanitize = (input = {}) => {
+// `current`: the stored settings, for the settings kept as one JSON object
+// (a change to one invite limit keeps the others).
+const sanitize = (input = {}, current = null) => {
   const data = {};
 
   for (const field of ['appLogo', 'productPlaceholder']) {
@@ -249,8 +254,13 @@ const sanitize = (input = {}) => {
     data.product3dEnabled = booleanField(input.product3dEnabled, 'product3dEnabled');
   }
 
+  // Invites: switches and limits, merged onto what is stored.
+  if (input.referralSettings !== undefined) {
+    data.referralSettings = referralSettings.merge(current?.referralSettings, input.referralSettings);
+  }
+
   if (Object.keys(data).length === 0) {
-    throw new ApiError('Provide an app logo, product placeholder image, theme, checkout pricing, delivery by distance, verification, category style, Available Today, admin team, order confirm window, MoorMove or 3D views setting', 400);
+    throw new ApiError('Provide an app logo, product placeholder image, theme, checkout pricing, delivery by distance, verification, category style, Available Today, admin team, order confirm window, MoorMove, 3D views or invites setting', 400);
   }
   return data;
 };
@@ -297,13 +307,20 @@ const getOrderConfirmHours = async () => {
     : DEFAULT_SETTINGS.orderConfirmHours;
 };
 
-const get = async () => cached.appSettings({}, async () => {
-  const settings = await appSettingRepository.findGlobal();
-  return settings || DEFAULT_SETTINGS;
-});
+// referralSettings comes out whole (every key, defaults filled in), so the
+// apps and the server read the same values.
+const get = async () => {
+  const settings = await cached.appSettings({}, async () => {
+    const row = await appSettingRepository.findGlobal();
+    return row || DEFAULT_SETTINGS;
+  });
+  return { ...settings, referralSettings: referralSettings.read(settings.referralSettings) };
+};
 
 const update = async (input) => {
-  const settings = await appSettingRepository.upsertGlobal(sanitize(input));
+  // The stored row, not get(): the JSON is merged onto what is really stored.
+  const current = input?.referralSettings !== undefined ? await appSettingRepository.findGlobal() : null;
+  const settings = await appSettingRepository.upsertGlobal(sanitize(input, current));
   await invalidate(TAGS.appSettings);
   // MoorMove switched on or off: its status and the shops it makes ready to
   // sell are asked afresh.
@@ -311,7 +328,7 @@ const update = async (input) => {
     require('./moormove.client').clearStatusCache();
     require('./shopReadiness.service').forget();
   }
-  return settings;
+  return { ...settings, referralSettings: referralSettings.read(settings.referralSettings) };
 };
 
 module.exports = {

@@ -121,6 +121,8 @@ mount('/feedback', feedbackRoutes);
 mount('/banners', bannerRoutes);
 mount('/couriers', courierRoutes);
 mount('/vouchers', voucherRoutes);
+// Invites: codes, shops' invite rewards, seller invites (services/referral).
+mount('/referrals', require('./referral.routes'));
 mount('/app-settings', appSettingRoutes);
 mount('/profiles', require('./profile.routes'));
 mount('/identity-verification', require('./identityVerification.routes'));

@@ -119,6 +119,8 @@ const computeDiscount = (voucher, subtotal) => {
 
 const assertUsable = async (voucher, { userId, subtotal, storeId }) => {
   if (!voucher) throw new ApiError('Voucher not found', 404);
+  // An invite reward is its owner's alone: to anyone else it does not exist.
+  if (voucher.ownerId && voucher.ownerId !== userId) throw new ApiError('Voucher not found', 404);
   if (!voucher.isActive) throw new ApiError('Voucher is not active', 400);
   // A shop's voucher is only for its own orders.
   if (voucher.storeId && storeId && voucher.storeId !== storeId) {
@@ -139,6 +141,7 @@ const assertUsable = async (voucher, { userId, subtotal, storeId }) => {
       throw new ApiError('You have already used this voucher', 400);
     }
   }
+  if (voucher.referralId) await require('./referral.service').assertInviteVoucherUsable(voucher, userId);
 };
 
 const validate = async ({ code, userId, subtotal, storeId }) => {
@@ -216,7 +219,8 @@ const ownStore = async (userId) => {
 const ownVoucher = async (userId, id) => {
   const store = await ownStore(userId);
   const voucher = await voucherRepository.findById(id);
-  if (!voucher || voucher.storeId !== store.id) throw new ApiError('Voucher not found', 404);
+  // Invite rewards are made and kept by referral.service, not edited here.
+  if (!voucher || voucher.storeId !== store.id || voucher.ownerId) throw new ApiError('Voucher not found', 404);
   return voucher;
 };
 

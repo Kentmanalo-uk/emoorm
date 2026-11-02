@@ -1,0 +1,412 @@
+/* Invite friends (ProfileInvite.jsx), as the app's invite-friends screen. */
+.invite-page {
+  padding-bottom: 40px;
+}
+
+.inv-subtitle {
+  margin: 4px 0 0;
+  color: var(--t-neutral-500, #64748b);
+  font-size: 13.5px;
+}
+
+/* The code */
+.inv-hero {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 10px;
+  margin: 14px 0 18px;
+  padding: 22px 18px 18px;
+  border-radius: 16px;
+  background: var(--t-primary-50, #ecfdf5);
+  text-align: center;
+}
+
+.inv-skeleton {
+  min-height: 220px;
+  background: var(--t-neutral-100, #f1f5f9);
+}
+
+.inv-hero-label {
+  color: var(--t-primary-800, #065f46);
+  font-size: 13px;
+  font-weight: 600;
+}
+
+.inv-code {
+  color: var(--t-primary-700, #047857);
+  font-size: 30px;
+  font-weight: 700;
+  letter-spacing: 0.12em;
+  font-variant-numeric: tabular-nums;
+  word-break: break-all;
+}
+
+.inv-hero-actions {
+  display: flex;
+  flex-wrap: wrap;
+  justify-content: center;
+  gap: 8px;
+}
+
+.inv-note {
+  max-width: 520px;
+  margin: 4px 0 0;
+  color: var(--t-neutral-600, #4b5563);
+  font-size: 13px;
+  line-height: 1.5;
+}
+
+.inv-stats {
+  display: flex;
+  flex-wrap: wrap;
+  justify-content: center;
+  gap: 4px 16px;
+  color: var(--t-neutral-600, #4b5563);
+  font-size: 13px;
+}
+
+.inv-stats strong {
+  color: var(--t-neutral-900, #111827);
+}
+
+.inv-invited-by {
+  margin: 0;
+  color: var(--t-neutral-500, #64748b);
+  font-size: 12.5px;
+}
+
+/* Buttons */
+.inv-btn {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: 6px;
+  min-height: 40px;
+  padding: 0 16px;
+  border: 1px solid var(--t-neutral-300, #d1d5db);
+  border-radius: 999px;
+  background: var(--t-neutral-0, #fff);
+  color: var(--t-neutral-800, #1f2937);
+  font: inherit;
+  font-size: 14px;
+  font-weight: 500;
+  text-decoration: none;
+  white-space: nowrap;
+  cursor: pointer;
+}
+
+.inv-btn:hover {
+  border-color: var(--t-primary-600, #059669);
+  color: var(--t-primary-700, #047857);
+}
+
+.inv-btn-primary {
+  border-color: var(--t-primary-600, #059669);
+  background: var(--t-primary-600, #059669);
+  color: #fff;
+}
+
+.inv-btn-primary:hover {
+  background: var(--t-primary-700, #047857);
+  color: #fff;
+}
+
+.inv-btn-small {
+  min-height: 34px;
+  padding: 0 12px;
+  font-size: 13px;
+}
+
+/* Sections */
+.inv-section {
+  margin-top: 20px;
+}
+
+.inv-section h2 {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  margin: 0 0 6px;
+  color: var(--t-neutral-900, #111827);
+  font-size: 15px;
+  font-weight: 600;
+}
+
+.inv-section h2 svg {
+  color: var(--t-primary-600, #059669);
+}
+
+.inv-sellers p {
+  margin: 0 0 10px;
+  color: var(--t-neutral-600, #4b5563);
+  font-size: 13.5px;
+  line-height: 1.5;
+}
+
+.inv-empty {
+  margin: 6px 0;
+  color: var(--t-neutral-500, #64748b);
+  font-size: 13.5px;
+}
+
+/* Rows: plain, a hairline between them (as Followed Stores). */
+.inv-list {
+  margin: 0;
+  padding: 0;
+  list-style: none;
+}
+
+.inv-row {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  padding: 12px 0;
+  border-bottom: 1px solid var(--t-neutral-200, #e5e7eb);
+}
+
+.inv-row:last-child {
+  border-bottom: 0;
+}
+
+.inv-shop-logo,
+.inv-person {
+  display: grid;
+  flex: 0 0 40px;
+  place-items: center;
+  width: 40px;
+  height: 40px;
+  overflow: hidden;
+  border-radius: 50%;
+  background: var(--t-primary-50, #ecfdf5);
+}
+
+.inv-shop-logo img,
+.inv-person img {
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+}
+
+.inv-row-body {
+  display: flex;
+  flex: 1;
+  flex-direction: column;
+  gap: 2px;
+  min-width: 0;
+}
+
+.inv-row-title {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  color: var(--t-neutral-900, #111827);
+  font-size: 14px;
+  font-weight: 600;
+  text-decoration: none;
+}
+
+a.inv-row-title:hover {
+  color: var(--t-primary-700, #047857);
+}
+
+.inv-row-meta {
+  color: var(--t-neutral-500, #64748b);
+  font-size: 12.5px;
+  line-height: 1.45;
+}
+
+.inv-tag {
+  padding: 1px 7px;
+  border-radius: 999px;
+  background: var(--t-neutral-100, #f3f4f6);
+  color: var(--t-neutral-600, #4b5563);
+  font-size: 11px;
+  font-weight: 500;
+}
+
+.inv-voucher-code {
+  display: inline-flex;
+  align-self: flex-start;
+  align-items: center;
+  gap: 5px;
+  margin-top: 4px;
+  padding: 3px 9px;
+  border: 1px dashed var(--t-primary-600, #059669);
+  border-radius: 6px;
+  background: var(--t-primary-50, #ecfdf5);
+  color: var(--t-primary-800, #065f46);
+  font: inherit;
+  font-size: 12.5px;
+  font-weight: 600;
+  letter-spacing: 0.04em;
+  cursor: pointer;
+}
+
+.inv-status {
+  flex: 0 1 auto;
+  max-width: 46%;
+  color: var(--t-neutral-600, #4b5563);
+  font-size: 12.5px;
+  font-weight: 500;
+  text-align: right;
+}
+
+.inv-status.is-good { color: var(--t-primary-700, #047857); }
+.inv-status.is-wait { color: var(--t-warning-700, #b45309); }
+.inv-status.is-bad { color: var(--t-danger-600, #dc2626); }
+
+@media (max-width: 768px) {
+  .invite-page { padding: 0 16px 32px; }
+  .inv-hero { margin-top: 8px; }
+  .inv-code { font-size: 26px; }
+}
+
+/* The invite landing page (InviteLanding.jsx) */
+.invite-landing {
+  display: flex;
+  justify-content: center;
+  padding: 32px 16px 48px;
+}
+
+.invite-card {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 12px;
+  width: 100%;
+  max-width: 440px;
+  padding: 28px 22px;
+  border: 1px solid var(--t-neutral-200, #e5e7eb);
+  border-radius: 18px;
+  background: var(--t-neutral-0, #fff);
+  text-align: center;
+}
+
+.invite-card h1 {
+  margin: 0;
+  color: var(--t-neutral-900, #111827);
+  font-size: 21px;
+  font-weight: 700;
+  line-height: 1.3;
+}
+
+.invite-card p {
+  margin: 0;
+  color: var(--t-neutral-600, #4b5563);
+  font-size: 14px;
+  line-height: 1.55;
+}
+
+.invite-faces {
+  display: flex;
+  align-items: center;
+}
+
+.invite-face {
+  display: grid;
+  place-items: center;
+  width: 64px;
+  height: 64px;
+  overflow: hidden;
+  border: 3px solid var(--t-neutral-0, #fff);
+  border-radius: 50%;
+  background: var(--t-primary-50, #ecfdf5);
+}
+
+.invite-face + .invite-face {
+  margin-left: -14px;
+}
+
+.invite-face img {
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+}
+
+.invite-reward {
+  width: 100%;
+  padding: 12px 14px;
+  border: 1px dashed var(--t-primary-600, #059669);
+  border-radius: 12px;
+  background: var(--t-primary-50, #ecfdf5);
+  color: var(--t-primary-800, #065f46);
+  font-size: 14px;
+  font-weight: 600;
+}
+
+.invite-reward small {
+  display: block;
+  margin-top: 2px;
+  color: var(--t-primary-700, #047857);
+  font-size: 12.5px;
+  font-weight: 500;
+}
+
+.invite-actions {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+  width: 100%;
+  margin-top: 4px;
+}
+
+.invite-actions .inv-btn {
+  width: 100%;
+  min-height: 46px;
+}
+
+/* A shop's invite rewards on its page (StoreDetail). */
+.store-invite-card {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  margin: 12px 0;
+  padding: 12px 14px;
+  border-radius: 12px;
+  background: var(--t-primary-50, #ecfdf5);
+  color: var(--t-primary-900, #064e3b);
+  font-size: 13.5px;
+  line-height: 1.45;
+}
+
+.store-invite-card > svg {
+  flex: 0 0 auto;
+  color: var(--t-primary-600, #059669);
+}
+
+.store-invite-card span {
+  flex: 1;
+}
+
+@media (max-width: 768px) {
+  .store-invite-card { margin: 10px 12px; }
+}
+
+/* Checkout: the buyer's own invite vouchers for this shop. */
+.co-invite-vouchers {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 6px;
+  margin-bottom: 8px;
+}
+
+.co-invite-chip {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  padding: 6px 10px;
+  border: 1px dashed var(--t-primary-600, #059669);
+  border-radius: 8px;
+  background: var(--t-primary-50, #ecfdf5);
+  color: var(--t-primary-800, #065f46);
+  font: inherit;
+  font-size: 12.5px;
+  font-weight: 600;
+  cursor: pointer;
+}
+
+.co-invite-chip:disabled {
+  cursor: default;
+  opacity: 0.6;
+}

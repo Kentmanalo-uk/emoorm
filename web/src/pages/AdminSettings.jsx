@@ -398,6 +398,7 @@ export default function AdminSettings() {
             { to: '/admin/products#product-features', what: 'Available Today and 3D views', where: 'Products' },
             { to: '/admin/categories#category-style', what: 'Homepage categories', where: 'Categories' },
             { to: '/admin/junior-admins#team-size', what: 'Admins per municipality', where: 'Municipal admins' },
+            { to: '/admin/invites#invites', what: 'Invites (referrals)', where: 'Invites' },
           ].map(({ to, what, where }) => (
             <li key={to}>
               <Link to={to}>{what}</Link>

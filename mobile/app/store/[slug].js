@@ -33,6 +33,8 @@ import { GRID_BLEED, GRID_GAP, gridCellWidth } from '../../src/lib/productGrid';
 import { font, t, themed } from '../../src/theme';
 import { PullScrollView } from '../../src/components/PullList';
 import { ShopCoverArt, ShopLogoArt } from '../../src/components/shop/ShopArt';
+import ShopInviteCard from '../../src/components/shop/ShopInviteCard';
+import { savePendingInvite } from '../../src/lib/invite';
 
 /*
  * A shop's page on phones (web/src/pages/StoreDetail.jsx, the is-phone
@@ -67,7 +69,8 @@ function useDebounce(value, delay = 350) {
 }
 
 export default function StoreDetail() {
-  const { slug } = useLocalSearchParams();
+  // ref: a shop link shared with an invite code (/store/<slug>?ref=<CODE>).
+  const { slug, ref: inviteRef } = useLocalSearchParams();
   const router = useRouter();
   const insets = useSafeAreaInsets();
   const { width: screenW } = useWindowDimensions();
@@ -208,6 +211,12 @@ export default function StoreDetail() {
       .catch(() => {});
     return () => { cancelled = true; };
   }, [storeId]);
+
+  // Kept for Sign up, with this shop, for someone without an account (lib/invite).
+  useEffect(() => {
+    if (typeof inviteRef !== 'string' || !inviteRef || isAuthenticated || typeof slug !== 'string') return;
+    savePendingInvite({ code: inviteRef, shop: slug });
+  }, [inviteRef, isAuthenticated, slug]);
 
   const storeSlug = store?.slug;
   useEffect(() => {
@@ -541,6 +550,8 @@ export default function StoreDetail() {
               ))}
             </ScrollView>
           ) : null}
+
+          <ShopInviteCard store={store} signedIn={isAuthenticated} isOwner={isOwnStore} />
 
           <View style={styles.tabs} accessibilityRole="tablist">
             {tabs.map(([key, label]) => {

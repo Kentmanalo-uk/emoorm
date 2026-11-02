@@ -17,6 +17,7 @@ import './AuthSheet.css';
 import './Login.css';
 import { useMunicipalities } from '../hooks/useReferenceData';
 import { BusyLabel } from '../components/ui/Spinner';
+import { clearInvite, inviteFields } from '../lib/invite';
 
 const QR_POLL_INTERVAL_MS = 2000;
 
@@ -397,12 +398,15 @@ const Login = ({ seller = false }) => {
         address: googleForm.street.trim() || undefined,
         password: googleForm.password,
         confirmPassword: googleForm.confirmPassword,
+        // An invite link opened earlier in this browser (lib/invite).
+        ...inviteFields(),
       });
       const data = res.data;
       if (!data?.user || !data?.accessToken) {
         setApiError('Unexpected response from server.');
         return;
       }
+      clearInvite();
       finishLogin(data.user, data.accessToken, data.refreshToken);
     } catch (err) {
       setApiError(err?.response?.data?.message || 'Failed to complete sign-up.');

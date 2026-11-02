@@ -67,6 +67,10 @@ model AppSetting {
   deliveryPerKm      Decimal @default(10) @db.Decimal(10, 2) @map("delivery_per_km")
   deliveryIncludedKm Decimal @default(3)  @db.Decimal(6, 2)  @map("delivery_included_km")
 
+  /// Invites (referral.service SETTINGS): the switches and limits. Null is
+  /// the defaults, which have the whole feature off.
+  referralSettings Json? @map("referral_settings")
+
   createdAt          DateTime @default(now()) @map("created_at")
   updatedAt          DateTime @updatedAt @map("updated_at")
 
@@ -463,6 +467,13 @@ model User {
   phoneVerifiedAt     DateTime? @map("phone_verified_at")
   phoneVerifiedNumber String?   @db.VarChar(20) @map("phone_verified_number")
 
+  // Invites (referral.service): this person's own code, made the first time
+  // it is asked for, and who invited them (set once).
+  referralCode  String?  @unique @db.VarChar(16) @map("referral_code")
+  referredById  String?  @map("referred_by_id")
+  referredBy    User?    @relation("ReferredBy", fields: [referredById], references: [id], onDelete: SetNull)
+  referredUsers User[]   @relation("ReferredBy")
+
   // Relations
   store         Store?
   orders        Order[]
@@ -509,8 +520,13 @@ model User {
   teamMessagesReceived TeamMessage[]  @relation("TeamMessageRecipient")
   teamChatReads        TeamChatRead[]
   refreshSessions      RefreshSession[]
+  invitesSent          Referral[] @relation("ReferralInviter")
+  invitesAccepted      Referral[] @relation("ReferralInvitee")
+  invitesDecided       Referral[] @relation("ReferralDecider")
+  vouchersOwned        Voucher[]  @relation("VoucherOwner")
 
   @@map("users")
+  @@index([referredById])
   @@index([deletedAt, role, municipalityId, createdAt], map: "users_role_municipality_idx")
   @@index([sellerApplicationStatus, deletedAt, sellerApplicationDate], map: "users_seller_application_idx")
   @@index([shopMunicipalityId, sellerApplicationStatus], map: "users_shop_municipality_idx")
@@ -874,6 +890,9 @@ model Store {
   announcements StoreAnnouncement[]
   vouchers      Voucher[]
   productQuestions ProductQuestion[]
+  referralProgram ShopReferralProgram?
+  boosts        StoreBoost[]
+  referrals     Referral[]
 
   @@map("stores")
   @@index([deletedAt, isActive, isSuspended, municipalityId, createdAt], map: "stores_public_idx")
@@ -1948,12 +1967,18 @@ model Voucher {
   // A shop's own voucher, valid only on its orders. Empty = platform voucher.
   storeId         String?             @map("store_id")
   store           Store?              @relation(fields: [storeId], references: [id], onDelete: Cascade)
+  // Only this account may use it (an invite reward). Empty = anyone with the code.
+  ownerId         String?             @map("owner_id")
+  owner           User?               @relation("VoucherOwner", fields: [ownerId], references: [id], onDelete: Cascade)
+  // The invite it was given for (referral.service).
+  referralId      String?             @map("referral_id")
   createdAt       DateTime            @default(now()) @map("created_at")
   updatedAt       DateTime            @updatedAt @map("updated_at")
 
   redemptions VoucherRedemption[]
   orders      Order[]
 
+  @@index([ownerId])
   @@index([code])
   @@index([isActive, expiresAt])
   @@index([storeId, isActive], map: "vouchers_store_idx")
@@ -1973,6 +1998,98 @@ model VoucherRedemption {
 
   @@index([voucherId, userId])
   @@map("voucher_redemptions")
+}
+
+// ==================== INVITES (REFERRALS) ====================
+// No real cash anywhere: a shop pays for its own invite rewards with its own
+// vouchers, and sellers who bring in sellers are paid in visibility.
+
+enum ReferralKind {
+  /// Someone joined with a code (storeId: the shop whose invite link it was).
+  BUYER
+  /// Someone the inviter brought in opened a shop (storeId: that shop).
+  SELLER
+}
+
+enum ReferralStatus {
+  /// Joined; waiting for the order (or the shop's orders) that makes it count.
+  PENDING
+  /// Counted, but something looked off; an admin decides.
+  HELD
+  /// Counted and the inviter was given their reward.
+  REWARDED
+  /// Counted with nothing to give (no program, a cap reached, own shop).
+  COUNTED
+  /// Not counted (an admin said no, or the order was refunded).
+  REJECTED
+}
+
+model Referral {
+  id              String         @id @default(uuid())
+  kind            ReferralKind   @default(BUYER)
+  inviterId       String         @map("inviter_id")
+  inviter         User           @relation("ReferralInviter", fields: [inviterId], references: [id], onDelete: Cascade)
+  inviteeId       String         @map("invitee_id")
+  invitee         User           @relation("ReferralInvitee", fields: [inviteeId], references: [id], onDelete: Cascade)
+  storeId         String?        @map("store_id")
+  store           Store?         @relation(fields: [storeId], references: [id], onDelete: SetNull)
+  status          ReferralStatus @default(PENDING)
+  /// Why it is held, counted without a reward or rejected (a code).
+  reason          String?        @db.VarChar(40)
+  /// The order that made it count.
+  orderId         String?        @map("order_id")
+  welcomeVoucherId String?       @map("welcome_voucher_id")
+  rewardVoucherId  String?       @map("reward_voucher_id")
+  decidedById     String?        @map("decided_by_id")
+  decidedBy       User?          @relation("ReferralDecider", fields: [decidedById], references: [id], onDelete: SetNull)
+  decidedAt       DateTime?      @map("decided_at")
+  countedAt       DateTime?      @map("counted_at")
+  createdAt       DateTime       @default(now()) @map("created_at")
+  updatedAt       DateTime       @updatedAt @map("updated_at")
+
+  @@unique([inviteeId, kind])
+  @@index([inviterId, status, countedAt])
+  @@index([status, createdAt])
+  @@index([storeId])
+  @@map("referrals")
+}
+
+/// A shop's own invite rewards: the friend's welcome voucher and the
+/// inviter's thank-you voucher, both for this shop only. Off until the
+/// seller turns it on.
+model ShopReferralProgram {
+  id             String              @id @default(uuid())
+  storeId        String              @unique @map("store_id")
+  store          Store               @relation(fields: [storeId], references: [id], onDelete: Cascade)
+  isActive       Boolean             @default(false) @map("is_active")
+  welcomeType    VoucherDiscountType @default(FIXED) @map("welcome_type")
+  welcomeValue   Decimal             @default(30) @db.Decimal(10, 2) @map("welcome_value")
+  rewardType     VoucherDiscountType @default(FIXED) @map("reward_type")
+  rewardValue    Decimal             @default(30) @db.Decimal(10, 2) @map("reward_value")
+  /// The most a percent voucher takes off.
+  maxDiscount    Decimal?            @db.Decimal(10, 2) @map("max_discount")
+  minOrderAmount Decimal             @default(200) @db.Decimal(10, 2) @map("min_order_amount")
+  /// Thank-you vouchers the shop gives in a month, at most.
+  monthlyCap     Int                 @default(20) @map("monthly_cap")
+  createdAt      DateTime            @default(now()) @map("created_at")
+  updatedAt      DateTime            @updatedAt @map("updated_at")
+
+  @@map("shop_referral_programs")
+}
+
+/// A shop shown higher in For You until `until` (a seller invite's reward).
+model StoreBoost {
+  id         String   @id @default(uuid())
+  storeId    String   @map("store_id")
+  store      Store    @relation(fields: [storeId], references: [id], onDelete: Cascade)
+  until      DateTime
+  reason     String   @default("SELLER_INVITE") @db.VarChar(40)
+  referralId String?  @map("referral_id")
+  createdAt  DateTime @default(now()) @map("created_at")
+
+  @@index([until])
+  @@index([storeId, until])
+  @@map("store_boosts")
 }
 
 /// How the sender classified their own feedback, so the super admin can read

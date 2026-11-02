@@ -4,7 +4,7 @@ import { useFocusEffect, useRouter } from 'expo-router';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import Svg, { Defs, LinearGradient, Rect, Stop } from 'react-native-svg';
 import {
-  ArrowCounterClockwiseIcon, BellIcon, CaretRightIcon, ChatTextIcon, EnvelopeSimpleIcon, EyeIcon, GearIcon, InfoIcon, ScanIcon,
+  ArrowCounterClockwiseIcon, BellIcon, CaretRightIcon, ChatTextIcon, EnvelopeSimpleIcon, EyeIcon, GearIcon, GiftIcon, InfoIcon, ScanIcon,
   HandshakeIcon, HeartIcon, LifebuoyIcon, FlagIcon, MapPinIcon, PackageIcon, QuestionIcon, ShoppingBagIcon,
   StarIcon, StorefrontIcon, UsersThreeIcon,
 } from '../../src/lib/icons';
@@ -33,6 +33,7 @@ import { openSwitchAccount } from '../../src/components/SwitchAccountSheet';
 import { loadSavedAccounts, useSavedAccounts } from '../../src/store/savedAccounts';
 import { PageLoader } from '../../src/components/BrandLoader';
 import { PullScrollView } from '../../src/components/PullList';
+import { useReferralSettings } from '../../src/lib/invite';
 
 const CACHE_KEY = 'profile:summary';
 
@@ -91,6 +92,8 @@ function SignedIn() {
   const shop = cachedShop && (!cachedShop.ownerId || cachedShop.ownerId === user?.id) ? cachedShop : null;
   const [summary, setSummary] = useState(() => getCacheEntry(CACHE_KEY)?.data || null);
   const [resending, setResending] = useState(false);
+  // Invite friends shows only while a super admin has invites on.
+  const invitesOn = useReferralSettings().enabled;
 
   const [pullKey, setPullKey] = useState(0);
 
@@ -277,6 +280,7 @@ function SignedIn() {
           {user?.role === 'SELLER'
             ? <PfRow first Icon={StorefrontIcon} label="My shop" hint={shop?.name || null} onPress={enterShop} />
             : <PfRow first Icon={ShoppingBagIcon} label="Sell on Emoorm" onPress={() => router.push('/seller-apply')} />}
+          {invitesOn ? <PfRow Icon={GiftIcon} label="Invite friends" onPress={() => router.push('/invite-friends')} /> : null}
           <PfRow Icon={LifebuoyIcon} label="Help & Support" onPress={() => router.push('/support')} />
           <PfRow Icon={FlagIcon} label="My Reports" onPress={() => router.push('/reports')} />
           <PfRow Icon={InfoIcon} label="About Emoorm" onPress={() => router.push('/about')} />

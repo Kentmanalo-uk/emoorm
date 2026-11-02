@@ -362,6 +362,9 @@ const markRefunded = async (id, seller, payload) => {
     }),
   }, { fromStatus: ['APPROVED', 'RECEIVED'] }).catch(staleReturn);
 
+  // An invite that counted on this order may not count any more (never throws).
+  await require('./referral.service').onOrderRefunded(request.orderId, refundedAmount);
+
   await notify(
     request.buyerId,
     'RETURN_REFUNDED',

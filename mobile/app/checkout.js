@@ -5,6 +5,7 @@ import {
   DeviceMobileIcon, MoneyIcon, QrCodeIcon, StorefrontIcon, TruckIcon,
 } from '../src/lib/icons';
 import apiClient from '../src/api/client';
+import { ENDPOINTS } from '../src/api/endpoints';
 import useAuthStore from '../src/store/authStore';
 import useCartStore, { checkLines, patchLines } from '../src/store/cartStore';
 import { buyNowLines, clearBuyNow, saveBuyNow } from '../src/lib/buyNow';
@@ -23,6 +24,7 @@ import { validPin } from '../src/components/maps/mapUtils';
 import { cartPeso as peso, storeDeliveryFee, useCartSettings } from '../src/components/cart/cartSettings';
 import { spanLabel } from '../src/lib/availability';
 import { toast } from '../src/lib/toast';
+import { referralSettingsOf } from '../src/lib/invite';
 import { font, t, themed } from '../src/theme';
 
 /*
@@ -194,6 +196,8 @@ export default function Checkout() {
   const [voucherInput, setVoucherInput] = useState(incomingVoucherCode);
   const [appliedVoucher, setAppliedVoucher] = useState(null);
   const [voucherLoading, setVoucherLoading] = useState(false);
+  // Invite vouchers held for this shop (lib/invite), offered over the voucher field.
+  const [inviteVouchers, setInviteVouchers] = useState([]);
 
   const [savedAddresses, setSavedAddresses] = useState([]);
   const [selectedAddressId, setSelectedAddressId] = useState(null); // null = manual entry
@@ -586,6 +590,19 @@ export default function Checkout() {
       .catch(() => { if (!cancelled) setAppliedVoucher(null); });
     return () => { cancelled = true; };
   }, [subtotal]); // eslint-disable-line react-hooks/exhaustive-deps
+  const invitesOn = referralSettingsOf(settings).enabled;
+  const inviteStoreId = storeIds.length === 1 ? storeIds[0] : null;
+  useEffect(() => {
+    if (!invitesOn || !isAuthenticated || !inviteStoreId) {
+      setInviteVouchers([]);
+      return undefined;
+    }
+    let cancelled = false;
+    apiClient.get(ENDPOINTS.REFERRALS.VOUCHERS, { params: { storeId: inviteStoreId } })
+      .then((res) => { if (!cancelled) setInviteVouchers(Array.isArray(res?.data) ? res.data : []); })
+      .catch(() => { if (!cancelled) setInviteVouchers([]); });
+    return () => { cancelled = true; };
+  }, [invitesOn, isAuthenticated, inviteStoreId]);
 
   const setField = (name) => (value) => {
     setDeliveryForm((prev) => ({ ...prev, [name]: value }));
@@ -1142,6 +1159,8 @@ export default function Checkout() {
             voucherLoading={voucherLoading}
             onApply={() => applyVoucher()}
             onRemove={removeVoucher}
+            inviteVouchers={inviteVouchers}
+            onPickVoucher={(code) => { setVoucherInput(code); applyVoucher(code); }}
           />
         </ScrollView>
 

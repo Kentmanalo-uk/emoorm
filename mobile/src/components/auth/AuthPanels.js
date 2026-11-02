@@ -1,6 +1,7 @@
 import { Image, Pressable, StyleSheet, Text, View } from 'react-native';
 import AuthAddressPicker from './AuthAddressPicker';
 import { AuthErrorBox, AuthField, AuthSubmit } from './AuthForm';
+import InviteCodeField from './InviteCodeField';
 import { font, t, themed } from '../../theme';
 
 /*
@@ -35,7 +36,7 @@ export function AuthTextLink({ label, onPress }) {
 /** First Google sign-in: name, contact, address and a password before the account is made. */
 export function GoogleCompleteProfile({
   profile, form, errors, onChange, onAddressChange, municipalities, municipalitiesLoading,
-  showPassword, onTogglePassword, onSubmit, onCancel, isLoading, apiError,
+  showPassword, onTogglePassword, onSubmit, onCancel, isLoading, apiError, invite,
 }) {
   return (
     <View style={styles.form}>
@@ -88,6 +89,7 @@ export function GoogleCompleteProfile({
         autoCorrect={false}
         error={errors.confirmPassword}
       />
+      <InviteCodeField invite={invite} kind="login" />
 
       <AuthSubmit
         label="Create account & continue"

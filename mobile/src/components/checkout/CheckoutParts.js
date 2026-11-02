@@ -2,10 +2,11 @@ import { ActivityIndicator, Pressable, StyleSheet, Text, TextInput, View } from 
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import Svg, { Circle, Path, Rect } from 'react-native-svg';
 import {
-  CheckCircleIcon, ClockCountdownIcon, StorefrontIcon, TruckIcon, WarningIcon,
+  CheckCircleIcon, ClockCountdownIcon, StorefrontIcon, TicketIcon, TruckIcon, WarningIcon,
 } from '../../lib/icons';
 import CartProductImage from '../cart/CartProductImage';
 import { cartPeso as peso } from '../cart/cartSettings';
+import { offText } from '../../lib/invite';
 import Glass from '../Glass';
 import { font, ink, t, themed } from '../../theme';
 
@@ -229,7 +230,7 @@ export function CheckoutPayLater({ shopName, total, methodLabel }) {
 /** Order Summary with the voucher field (.checkout-summary). */
 export function CheckoutSummary({
   itemCount, subtotal, shipLabel, shipAmount, shipNote = '', shipFree = false, voucher, discountAmount, total, extras = [],
-  voucherInput, onVoucherInput, voucherLoading, onApply, onRemove,
+  voucherInput, onVoucherInput, voucherLoading, onApply, onRemove, inviteVouchers = [], onPickVoucher,
 }) {
   const canApply = !voucherLoading && Boolean(voucherInput.trim()) && subtotal !== 0;
   return (
@@ -266,6 +267,26 @@ export function CheckoutSummary({
 
       <View style={styles.voucher}>
         <Text style={styles.voucherLabel}>Voucher</Text>
+        {/* Invite vouchers held for this shop (lib/invite): one tap applies one. */}
+        {!voucher && inviteVouchers.length > 0 ? (
+          <View style={styles.inviteChips}>
+            {inviteVouchers.map((v) => (
+              <Pressable
+                key={v.id}
+                accessibilityRole="button"
+                accessibilityLabel={`Use ${v.code}`}
+                disabled={voucherLoading}
+                onPress={() => onPickVoucher?.(v.code)}
+                style={({ pressed }) => [styles.inviteChip, pressed && styles.inviteChipPressed]}
+              >
+                <TicketIcon size={15} weight="fill" color={t.danger[700]} />
+                <Text style={styles.inviteChipText}>
+                  Your invite voucher: <Text style={styles.inviteChipCode}>{v.code}</Text> · {offText(v.discountType, v.discountValue, v.maxDiscount)}
+                </Text>
+              </Pressable>
+            ))}
+          </View>
+        ) : null}
         <View style={styles.voucherRow}>
           <TextInput
             value={voucherInput}
@@ -558,6 +579,14 @@ const styles = themed(() => StyleSheet.create({
   voucherBtnText: { fontSize: 13, lineHeight: 15.6, ...font(500), color: t.onBrand },
   voucherBtnTextBack: { color: t.neutral[700] },
   voucherNote: { marginTop: 6, fontSize: 12, lineHeight: 19.2, ...font(400), color: t.primary[600] },
+  inviteChips: { gap: 6, marginBottom: 8 },
+  inviteChip: {
+    flexDirection: 'row', alignItems: 'center', gap: 8, paddingVertical: 7, paddingHorizontal: 10,
+    borderWidth: 1, borderStyle: 'dashed', borderColor: t.danger[300], borderRadius: 10, backgroundColor: t.danger[50],
+  },
+  inviteChipPressed: { opacity: 0.7 },
+  inviteChipText: { flex: 1, minWidth: 0, fontSize: 12.5, lineHeight: 18, ...font(400), color: t.danger[700] },
+  inviteChipCode: { ...font(600), letterSpacing: 0.4 },
 
   bar: { position: 'absolute', left: 0, right: 0, bottom: 0, zIndex: 130 },
   saving: { paddingVertical: 8, paddingHorizontal: 16, backgroundColor: t.accent[50], color: t.accent[600], fontSize: 13, lineHeight: 20.8, ...font(400) },

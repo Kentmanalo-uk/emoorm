@@ -2,9 +2,10 @@ import { NavLink, Outlet } from 'react-router-dom';
 import {
   User, MapPin, Star, Package, Heart, Storefront as Store,
   ChatText as MessageSquare, Bell, Gear as Settings,
-  ArrowCounterClockwise as ReturnsIcon, ShieldCheck, Lifebuoy, Flag, Handshake,
+  ArrowCounterClockwise as ReturnsIcon, ShieldCheck, Lifebuoy, Flag, Handshake, Gift,
 } from '../../lib/icons';
 import Layout from './Layout';
+import useAppSettings from '../../hooks/useAppSettings';
 import '../../pages/Profile.css';
 
 const navItems = [
@@ -17,6 +18,8 @@ const navItems = [
   { to: '/profile/wishlist', label: 'My Wishlist', icon: Heart },
   { to: '/profile/followed-stores', label: 'Followed Stores', icon: Store },
   { to: '/profile/offers', label: 'My Offers', icon: Handshake },
+  // Only while invites are on (Settings → Invites).
+  { to: '/profile/invite', label: 'Invite friends', icon: Gift, invites: true },
   { to: '/profile/messages', label: 'Messages', icon: MessageSquare },
   { to: '/profile/notifications', label: 'Notifications', icon: Bell },
   { to: '/profile/support', label: 'Help & Support', icon: Lifebuoy },
@@ -25,6 +28,8 @@ const navItems = [
 ];
 
 const ProfileLayout = () => {
+  const { settings } = useAppSettings();
+  const invitesOn = settings.referralSettings?.enabled === true;
   return (
     <Layout phoneBackTo="/profile">
       <div className="profile-page">
@@ -32,7 +37,7 @@ const ProfileLayout = () => {
           <div className="profile-grid">
             <aside className="profile-sidebar" aria-label="Account menu">
               <nav className="profile-nav">
-                {navItems.map(({ to, label, icon: Icon, end }) => (
+                {navItems.filter((n) => !n.invites || invitesOn).map(({ to, label, icon: Icon, end }) => (
                   <NavLink
                     key={to}
                     to={to}

@@ -14,6 +14,8 @@ import AuthSheetBar from '../components/AuthSheetBar';
 import AuthHero from '../components/auth/AuthHero';
 import Footer from '../components/layout/Footer';
 import { BusyLabel } from '../components/ui/Spinner';
+import useAppSettings from '../hooks/useAppSettings';
+import { clearInvite, inviteFields, normalizeInviteCode, readInvite } from '../lib/invite';
 import './AuthSheet.css';
 import './Register.css';
 
@@ -55,6 +57,10 @@ const Register = () => {
   const [apiError, setApiError] = useState('');
   const [municipalities, setMunicipalities] = useState([]);
   const [loadingMunicipalities, setLoadingMunicipalities] = useState(true);
+  // Invites: the code of whoever invited them, filled in from an invite link.
+  const { settings } = useAppSettings();
+  const invitesOn = settings.referralSettings?.enabled === true;
+  const [inviteCode, setInviteCode] = useState(() => readInvite()?.code || '');
 
   // Set when the user chose "Continue with Google" and Google confirmed a
   // brand-new email — the rest of this form is reused to finish creating the
@@ -154,6 +160,7 @@ const Register = () => {
     setIsLoading(true);
 
     try {
+      const invite = invitesOn ? inviteFields(inviteCode) : {};
       const response = googleProfile
         ? await axios.post('/auth/google/complete', {
           googleToken: googleProfile.googleToken,
@@ -165,6 +172,7 @@ const Register = () => {
           address: formData.street.trim() || undefined,
           password: formData.password,
           confirmPassword: formData.confirmPassword,
+          ...invite,
         })
         : await axios.post('/auth/register', {
           email: formData.email.toLowerCase().trim(),
@@ -176,6 +184,7 @@ const Register = () => {
           municipalityId: formData.municipalityId,
           barangay: formData.barangay.trim() || undefined,
           address: formData.street.trim() || undefined,
+          ...invite,
         });
 
       // Response structure: { success, message, data: { user, accessToken, refreshToken } }
@@ -184,6 +193,7 @@ const Register = () => {
       const userData = response.data.user;
 
       if (token && userData) {
+        clearInvite();
         storeLogin(userData, token, refreshToken);
         // A typed email gets a confirmation link in its welcome email.
         if (!googleProfile && userData.isVerified === false) {
@@ -482,6 +492,28 @@ const Register = () => {
                     <span className="register-form-error" role="alert">{errors.confirmPassword}</span>
                   )}
                 </div>
+
+                {/* Invite code, when invites are on */}
+                {invitesOn && (
+                  <div className="register-form-group">
+                    <label htmlFor="inviteCode" className="register-form-label">
+                      Invite code <span className="register-form-optional">(optional)</span>
+                    </label>
+                    <input
+                      type="text"
+                      id="inviteCode"
+                      name="inviteCode"
+                      autoComplete="off"
+                      autoCapitalize="characters"
+                      spellCheck={false}
+                      maxLength={16}
+                      className="register-form-input"
+                      placeholder="From the friend who invited you"
+                      value={inviteCode}
+                      onChange={(e) => setInviteCode(normalizeInviteCode(e.target.value))}
+                    />
+                  </div>
+                )}
 
                 {/* API Error Message */}
                 {apiError && (

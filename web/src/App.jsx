@@ -62,6 +62,8 @@ const ProfileVerification = lazy(() => import('./pages/ProfileVerification'));
 const ProfileSupport = lazy(() => import('./pages/ProfileSupport'));
 const ProfileReports = lazy(() => import('./pages/ProfileReports'));
 const ProfileOffers = lazy(() => import('./pages/ProfileOffers'));
+const ProfileInvite = lazy(() => import('./pages/ProfileInvite'));
+const InviteLanding = lazy(() => import('./pages/InviteLanding'));
 const NotFound = lazy(() => import('./pages/NotFound'));
 const HelpCenter = lazy(() => import('./pages/HelpCenter'));
 const Returns = lazy(() => import('./pages/Returns'));
@@ -128,6 +130,7 @@ const AdminTools = lazy(() => import('./pages/AdminTools'));
 const AdminSupport = lazy(() => import('./pages/AdminSupport'));
 const AdminNotifications = lazy(() => import('./pages/AdminNotifications'));
 const AdminReviews = lazy(() => import('./pages/AdminReviews'));
+const AdminInvites = lazy(() => import('./pages/AdminInvites'));
 const AdminReturns = lazy(() => import('./pages/AdminReturns'));
 const About = lazy(() => import('./pages/About'));
 const PrivacyPolicy = lazy(() => import('./pages/PrivacyPolicy'));
@@ -269,6 +272,7 @@ function AppRoutes() {
         <Route path="/stores/map" element={<StoreMap />} />
         <Route path="/today" element={<AvailableToday />} />
         <Route path="/store/:slug" element={<StoreDetail />} />
+        <Route path="/invite/:code" element={<InviteLanding />} />
         <Route path="/u/:id" element={<PublicProfile />} />
         <Route path="/municipality/:id" element={<MunicipalityShowcase />} />
         <Route path="/municipality/:id/gallery" element={<MunicipalityGallery />} />
@@ -314,6 +318,7 @@ function AppRoutes() {
           <Route path="support" element={<ProfileSupport />} />
           <Route path="reports" element={<ProfileReports />} />
           <Route path="offers" element={<ProfileOffers />} />
+          <Route path="invite" element={<ProfileInvite />} />
         </Route>
         <Route path="/help" element={<HelpCenter />} />
         <Route path="/cart" element={<ProtectedRoute gate="cart"><Cart /></ProtectedRoute>} />
@@ -403,6 +408,7 @@ function AppRoutes() {
         <Route path="/admin/notifications" element={<AdminRoute><AdminNotifications /></AdminRoute>} />
         <Route path="/admin/notifications/:id" element={<AdminRoute><NotificationDetail admin /></AdminRoute>} />
         <Route path="/admin/reviews" element={<AdminRoute><AdminReviews /></AdminRoute>} />
+        <Route path="/admin/invites" element={<AdminRoute><AdminInvites /></AdminRoute>} />
         <Route path="/admin/returns" element={<AdminRoute><AdminReturns /></AdminRoute>} />
         <Route path="/admin/settings" element={<AdminRoute><AdminSettings /></AdminRoute>} />
         <Route path="/admin/menu" element={<AdminRoute><AdminMenu /></AdminRoute>} />

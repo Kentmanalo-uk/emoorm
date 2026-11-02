@@ -6,7 +6,7 @@ import {
   EnvelopeSimple, Gear as SettingsIcon, Image as ImageIcon, Ticket, ChatsCircle,
   Star, ArrowCounterClockwise, List, X, ChatCircleDots,
   House, Receipt, UserCircle, SquaresFour, Truck, DeviceMobile, UsersThree, PaperPlaneTilt,
-  IdentificationBadge, MapPin, UserGear, ClockCounterClockwise,
+  IdentificationBadge, MapPin, UserGear, ClockCounterClockwise, Gift,
 } from '../../lib/icons';
 import { resolveImg } from '../../lib/media';
 import useAuthStore from '../../store/authStore';
@@ -21,6 +21,7 @@ import {
 } from '../../hooks/useAdminShellData';
 import ShellSearch from '../layout/ShellSearch';
 import ToolStrip from '../layout/ToolStrip';
+import useAppSettings from '../../hooks/useAppSettings';
 import { adminSearchSources } from '../../lib/shellSearchSources';
 // The admin shell on phones is drawn with the Seller Center's app styles
 // (headers, tab bar, cards). They used to arrive with the Seller Center's
@@ -83,6 +84,8 @@ export default function AdminLayout({ children }) {
   const { user, logout } = useAuthStore();
 
   const isSuperAdmin = user?.role === 'SUPER_ADMIN';
+  const { settings: appSettings } = useAppSettings();
+  const invitesOn = appSettings.referralSettings?.enabled === true;
 
   const [storedCollapsed, toggleCollapsed] = useSidebarCollapse();
   const isCompact = useCompactLayout();
@@ -279,6 +282,12 @@ export default function AdminLayout({ children }) {
             <NavLink to="/admin/reviews" className={navCls} title="Reviews">
               <Star size={17} weight="fill" /> <span>Reviews</span>
             </NavLink>
+            {/* The super admin always (the switch lives there); a town's admin once invites are on. */}
+            {(isSuperAdmin || invitesOn) && (
+              <NavLink to="/admin/invites" className={navCls} title="Invites">
+                <Gift size={17} weight="fill" /> <span>Invites</span>
+              </NavLink>
+            )}
 
             <NavSection label={isSuperAdmin ? 'Messages' : 'Talk to the town'} />
             {/* Admin-to-admin messaging; announcements live here as a tab. */}
@@ -572,6 +581,7 @@ const LABELS = {
   '/admin/support': 'Support',
   '/admin/notifications': 'Notifications',
   '/admin/reviews': 'Reviews',
+  '/admin/invites': 'Invites',
   '/admin/returns': 'Returns',
   '/admin/banners': 'Banners',
   '/admin/couriers': 'Couriers',

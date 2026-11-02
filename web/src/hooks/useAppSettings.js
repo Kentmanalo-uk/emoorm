@@ -29,6 +29,9 @@ export const DEFAULT_APP_SETTINGS = {
   // own, in hours. Two days unless the super admin changes it; the server
   // holds the same default.
   orderConfirmHours: 48,
+  // Invites (referrals): off until the super admin turns them on. The
+  // server sends every key; this is only the shape before it answers.
+  referralSettings: { enabled: false },
 };
 
 /**

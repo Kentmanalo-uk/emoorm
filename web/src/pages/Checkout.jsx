@@ -15,8 +15,11 @@ import {
   NotePencil,
   ClockCountdown,
   Gift,
+  Ticket,
 } from '../lib/icons';
 import toast from 'react-hot-toast';
+import { rewardText } from '../lib/invite';
+import './ProfileInvite.css';
 import Layout from '../components/layout/Layout';
 import axios from '../lib/axios';
 import ProductImage from '../components/ProductImage';
@@ -205,6 +208,19 @@ const Checkout = () => {
   }, [items]);
 
   const storeIds = useMemo(() => Object.keys(itemsByStore), [itemsByStore]);
+
+  // The buyer's own invite vouchers for this shop, one tap to apply.
+  const [inviteVouchers, setInviteVouchers] = useState([]);
+  const invitesOn = settings.referralSettings?.enabled === true;
+  const inviteStoreId = storeIds.length === 1 ? storeIds[0] : null;
+  useEffect(() => {
+    if (!invitesOn || !inviteStoreId) return undefined;
+    let cancelled = false;
+    axios.get('/referrals/vouchers', { params: { storeId: inviteStoreId } })
+      .then((res) => { if (!cancelled) setInviteVouchers(Array.isArray(res.data) ? res.data : []); })
+      .catch(() => {});
+    return () => { cancelled = true; };
+  }, [invitesOn, inviteStoreId]);
 
   // Delivery fees the buyer still owes for failed rider trips, per shop. An
   // order from that shop carries them (the server adds them itself) and
@@ -1559,6 +1575,15 @@ const Checkout = () => {
 
                 <div style={{ marginTop: 12, paddingTop: 12, borderTop: '1px solid var(--t-neutral-200, #e5e7eb)' }}>
                   <label style={{ display: 'block', fontWeight: 600, fontSize: 13, marginBottom: 6 }}>Voucher</label>
+                  {!appliedVoucher && inviteVouchers.length > 0 && (
+                    <div className="co-invite-vouchers" aria-label="Your invite vouchers">
+                      {inviteVouchers.map((v) => (
+                        <button type="button" key={v.id} className="co-invite-chip" onClick={() => applyVoucher(v.code)} disabled={voucherLoading}>
+                          <Ticket size={14} weight="fill" /> {rewardText(v.discountType, v.discountValue, v.maxDiscount)} · {v.code}
+                        </button>
+                      ))}
+                    </div>
+                  )}
                   <div style={{ display: 'flex', gap: 6 }}>
                     <input
                       type="text"

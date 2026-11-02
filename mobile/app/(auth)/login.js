@@ -11,6 +11,7 @@ import {
 } from '../../src/components/auth/AuthForm';
 import { AuthTitle, GoogleCompleteProfile, MfaSetup, MfaVerify } from '../../src/components/auth/AuthPanels';
 import useAuthGoogle from '../../src/components/auth/useAuthGoogle';
+import { useSignupInvite } from '../../src/lib/invite';
 import RoleSwitchOverlay from '../../src/components/RoleSwitchOverlay';
 import useSideStore from '../../src/store/sideStore';
 import { font, t, themed } from '../../src/theme';
@@ -64,6 +65,8 @@ export default function Login({ seller = false }) {
   const [googleFormErrors, setGoogleFormErrors] = useState({});
   const [showGooglePassword, setShowGooglePassword] = useState(false);
   const [completingGoogle, setCompletingGoogle] = useState(false);
+  // A new account made through Google can come with an invite code.
+  const invite = useSignupInvite();
 
   // Only needed once the Google profile step is reached.
   useEffect(() => {
@@ -298,12 +301,14 @@ export default function Login({ seller = false }) {
         address: googleForm.street.trim() || undefined,
         password: googleForm.password,
         confirmPassword: googleForm.confirmPassword,
+        ...invite.fields(),
       });
       const data = res.data;
       if (!data?.user || !data?.accessToken) {
         setApiError('Unexpected response from server.');
         return;
       }
+      await invite.done();
       await finishLogin(data.user, data.accessToken, data.refreshToken);
     } catch {
       setApiError('Failed to complete sign-up.');
@@ -364,6 +369,7 @@ export default function Login({ seller = false }) {
             onTogglePassword={() => setShowGooglePassword((v) => !v)}
             onSubmit={handleCompleteGoogleProfile}
             onCancel={handleCancelGoogleProfile}
+            invite={invite}
             isLoading={completingGoogle}
             apiError={apiError}
           />

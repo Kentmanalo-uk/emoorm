@@ -18,6 +18,8 @@ import qrphLogo from "../assets/payments/qrph.svg";
 import "./SellerApply.css";
 import { useMunicipalities, useCategories } from '../hooks/useReferenceData';
 import useFocusTrap from "../hooks/useFocusTrap";
+import useAppSettings from "../hooks/useAppSettings";
+import { normalizeInviteCode, readInvite } from "../lib/invite";
 
 const MAX_CATEGORIES = 5;
 
@@ -373,6 +375,14 @@ const EMPTY_FORM = {
 export default function SellerApply() {
   const { isAuthenticated, user, updateUser } = useAuthStore();
   const [isSubmitting, setIsSubmitting] = useState(false);
+  // "Invited by": the code of a seller who brought them in, from a seller
+  // invite link (lib/invite), while seller invites are on.
+  const { settings: appSettings } = useAppSettings();
+  const sellerInvitesOn = appSettings.referralSettings?.enabled === true && appSettings.referralSettings?.sellerInvites !== false;
+  const [inviteCode, setInviteCode] = useState(() => {
+    const saved = readInvite();
+    return saved?.as === "seller" ? saved.code : "";
+  });
   // Set once this page's application goes through: the account is a seller
   // from then on, and goes to the guided setup rather than the Seller Center.
   const [applied, setApplied] = useState(false);
@@ -569,6 +579,7 @@ export default function SellerApply() {
         shopMunicipalityId: form.municipalityId,
         shopBarangay: form.barangay,
         acceptedTerms: true,
+        ...(sellerInvitesOn && inviteCode ? { referralCode: inviteCode } : {}),
       });
       const updated = res?.data ?? res;
       setApplied(true);
@@ -981,6 +992,22 @@ export default function SellerApply() {
               <dt>Reviewed by</dt>
               <dd>{reviewer}</dd>
             </dl>
+
+            {sellerInvitesOn && (
+              <div className="apply-field">
+                <label htmlFor="apply-invite">Invited by <span className="field-hint">(optional)</span></label>
+                <input
+                  id="apply-invite"
+                  type="text"
+                  value={inviteCode}
+                  onChange={(e) => setInviteCode(normalizeInviteCode(e.target.value))}
+                  placeholder="The invite code of the seller who told you about Emoorm"
+                  maxLength={16}
+                  autoComplete="off"
+                  spellCheck={false}
+                />
+              </div>
+            )}
 
             <label className="apply-terms-check">
               <input

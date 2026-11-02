@@ -18,6 +18,7 @@ import { sellerHref } from '../../../src/components/seller/sellerRoutes';
 import { meStyles } from '../../../src/components/seller/me/MeParts';
 import ToolIcon from '../../../src/components/seller/marketing/ToolIcon';
 import ShopVouchers from '../../../src/components/seller/marketing/ShopVouchers';
+import ShopInviteRewards from '../../../src/components/seller/marketing/ShopInviteRewards';
 import AnnounceSheet from '../../../src/components/seller/marketing/AnnounceSheet';
 import { getSellerFollowerStats, shortDate } from '../../../src/components/seller/marketing/marketingLib';
 import { font, t, themed } from '../../../src/theme';
@@ -191,6 +192,9 @@ export default function SellerMarketingScreen() {
         </View>
 
         <ShopVouchers key={vouchersKey} />
+
+        {/* Invite rewards: only while invites are on (the "seller-invites" notifications open this page). */}
+        <ShopInviteRewards key={`invites-${vouchersKey}`} />
 
         {/* Sent */}
         <View style={[meStyles.card, meStyles.cardLast]}>

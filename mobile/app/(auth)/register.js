@@ -12,6 +12,8 @@ import {
 import AuthAddressPicker from '../../src/components/auth/AuthAddressPicker';
 import { AuthHint, AuthTitle, Strong } from '../../src/components/auth/AuthPanels';
 import useAuthGoogle from '../../src/components/auth/useAuthGoogle';
+import InviteCodeField from '../../src/components/auth/InviteCodeField';
+import { useSignupInvite } from '../../src/lib/invite';
 import { font, t, themed } from '../../src/theme';
 
 const PASSWORD_RULE = /(?=.*[a-z])(?=.*[A-Z])(?=.*\d)(?=.*[!@#$%^&*(),.?":{}|<>])/;
@@ -53,6 +55,8 @@ export default function Register() {
   const [loadingMunicipalities, setLoadingMunicipalities] = useState(true);
   // Set when Google confirmed a brand-new email: the form finishes that account.
   const [googleProfile, setGoogleProfile] = useState(null);
+  // The invite code, filled in from an invite link opened on this phone.
+  const invite = useSignupInvite();
 
   useEffect(() => {
     let alive = true;
@@ -119,6 +123,7 @@ export default function Register() {
           address: formData.street.trim() || undefined,
           password: formData.password,
           confirmPassword: formData.confirmPassword,
+          ...invite.fields(),
         })
         : await apiClient.post('/auth/register', {
           email: formData.email.toLowerCase().trim(),
@@ -130,12 +135,14 @@ export default function Register() {
           municipalityId: formData.municipalityId,
           barangay: formData.barangay.trim() || undefined,
           address: formData.street.trim() || undefined,
+          ...invite.fields(),
         });
 
       const token = response.data?.accessToken;
       const userData = response.data?.user;
       if (token && userData) {
         await storeLogin(userData, token, response.data.refreshToken);
+        await invite.done();
         // A typed email gets a confirmation link in its welcome email.
         if (!googleProfile && userData.isVerified === false) {
           Toast.show({
@@ -296,6 +303,8 @@ export default function Register() {
             onSubmitEditing={handleSubmit}
             error={errors.confirmPassword}
           />
+
+          <InviteCodeField invite={invite} />
 
           {apiError ? <AuthErrorBox>{apiError}</AuthErrorBox> : null}
 
