@@ -436,7 +436,7 @@ const styles = themed(() => StyleSheet.create({
     ],
   },
   sheetWait: {
-    ...StyleSheet.absoluteFillObject, alignItems: 'center', justifyContent: 'center', backgroundColor: t.neutral[100],
+    ...StyleSheet.absoluteFill, alignItems: 'center', justifyContent: 'center', backgroundColor: t.neutral[100],
   },
   // Edge to edge (the page content is padded 12 at the sides).
   pagerWrap: { alignSelf: 'stretch', marginHorizontal: -12 },
@@ -448,8 +448,8 @@ const styles = themed(() => StyleSheet.create({
   picker: { flexGrow: 1, justifyContent: 'center', gap: 10, paddingHorizontal: 16, paddingTop: 10, paddingBottom: 6 },
   thumb: { alignItems: 'center', gap: 6 },
   thumbArt: { width: THUMB_W, height: (THUMB_W * POSTER_H) / POSTER_W },
-  thumbClip: { ...StyleSheet.absoluteFillObject, borderRadius: 8, overflow: 'hidden', backgroundColor: t.neutral[0] },
-  thumbRing: { ...StyleSheet.absoluteFillObject, borderRadius: 8, borderWidth: 1, borderColor: t.neutral[200] },
+  thumbClip: { ...StyleSheet.absoluteFill, borderRadius: 8, overflow: 'hidden', backgroundColor: t.neutral[0] },
+  thumbRing: { ...StyleSheet.absoluteFill, borderRadius: 8, borderWidth: 1, borderColor: t.neutral[200] },
   thumbRingOn: {
     position: 'absolute', top: -4, left: -4, right: -4, bottom: -4, borderRadius: 12, borderWidth: 2, borderColor: t.primary[600],
   },

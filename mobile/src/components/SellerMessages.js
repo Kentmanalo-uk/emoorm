@@ -1,5 +1,5 @@
 import { useCallback, useEffect, useMemo, useState } from 'react';
-import { FlatList, Pressable, RefreshControl, StyleSheet, Text, TextInput, View } from 'react-native';
+import { Pressable, StyleSheet, Text, TextInput, View } from 'react-native';
 import { useFocusEffect, useLocalSearchParams, useRouter } from 'expo-router';
 import AsyncStorage from '@react-native-async-storage/async-storage';
 import { ChatCircleDotsIcon, MagnifyingGlassIcon, XIcon } from '../lib/icons';
@@ -14,6 +14,7 @@ import { ConversationListSkeleton } from './inbox/InboxSkeletons';
 import { foldText, formatTime } from './inbox/inboxFormat';
 import { SellerPrivateLine, useSellerTabScroll } from './seller/SellerPage';
 import { useConversationPeek } from './peek/ConversationPeek';
+import { PullFlatList } from './PullList';
 
 /*
  * The seller's Chat tab body (web/src/pages/SellerMessages.jsx on phones →
@@ -179,7 +180,7 @@ export default function SellerMessages() {
   );
 
   return (
-    <FlatList showsVerticalScrollIndicator={false} showsHorizontalScrollIndicator={false}
+    <PullFlatList onPull={refresh} showsVerticalScrollIndicator={false} showsHorizontalScrollIndicator={false}
       // Rows far off screen are detached rather than kept mounted;
       // React Native's default keeps about twenty-one screens of them.
       removeClippedSubviews
@@ -195,7 +196,6 @@ export default function SellerMessages() {
       keyboardDismissMode="on-drag"
       ListHeaderComponent={header}
       ListEmptyComponent={empty}
-      refreshControl={<RefreshControl refreshing={refreshing} onRefresh={refresh} colors={[t.primary[600]]} tintColor={t.primary[600]} />}
       renderItem={({ item }) => (
         <BuyerChatRow
           item={item}

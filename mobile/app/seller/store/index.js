@@ -1,5 +1,5 @@
 import { useCallback, useEffect, useRef, useState } from 'react';
-import { Pressable, ScrollView, StyleSheet, Text, View } from 'react-native';
+import { Pressable, StyleSheet, Text, View } from 'react-native';
 import { useFocusEffect, useLocalSearchParams, useRouter } from 'expo-router';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import {
@@ -18,6 +18,7 @@ import {
   DEFAULT_PRIMARY, DEFAULT_SECONDARY, DESCRIPTION_MAX, PART_OF_ANCHOR, aboutProblem, paintColor, partPath, useStoreForm,
 } from '../../../src/components/seller/store/storeLib';
 import { PageLoader } from '../../../src/components/BrandLoader';
+import { PullScrollView } from '../../../src/components/PullList';
 
 /*
  * /seller/store (Shop profile) on phones (web/src/pages/SellerStore.jsx, the
@@ -56,7 +57,7 @@ export default function SellerStoreScreen() {
     );
   }
 
-  if (isNew) return <CreateStore form={form} setForm={setForm} onCreated={reload} />;
+  if (isNew) return <CreateStore form={form} setForm={setForm} onCreated={reload} onReload={reload} />;
 
   const hasLogo = Boolean(form.logo);
   const hasBanner = Boolean(form.bannerImage || form.coverImage);
@@ -108,7 +109,9 @@ export default function SellerStoreScreen() {
  * No shop yet: the website's one-page form ("Create Your Shop") with the
  * fields a new shop needs, then Create Store (POST /stores).
  */
-function CreateStore({ form, setForm, onCreated }) {
+function CreateStore({
+  form, setForm, onCreated, onReload,
+}) {
   const insets = useSafeAreaInsets();
   const { setStore, refreshSetup } = useSellerShell();
   const [saving, setSaving] = useState(false);
@@ -136,7 +139,7 @@ function CreateStore({ form, setForm, onCreated }) {
 
   return (
     <SellerPage scroll={false} privateLine={false}>
-      <ScrollView showsVerticalScrollIndicator={false} showsHorizontalScrollIndicator={false}
+      <PullScrollView onPull={onReload} showsVerticalScrollIndicator={false} showsHorizontalScrollIndicator={false}
         style={styles.flex}
         contentContainerStyle={[sellerPageStyles.content, { paddingBottom: 24 + insets.bottom }]}
         keyboardShouldPersistTaps="handled"
@@ -186,7 +189,7 @@ function CreateStore({ form, setForm, onCreated }) {
             <Text style={styles.primaryText}>{saving ? 'Saving…' : 'Create Store'}</Text>
           </Pressable>
         </View>
-      </ScrollView>
+      </PullScrollView>
     </SellerPage>
   );
 }

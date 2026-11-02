@@ -19,6 +19,7 @@ import {
 import apiClient from '../src/api/client';
 import { ENDPOINTS } from '../src/api/endpoints';
 import useAuthStore from '../src/store/authStore';
+import useSideStore from '../src/store/sideStore';
 import { toast } from '../src/lib/toast';
 import { font, t, themed } from '../src/theme';
 import { fetchCategories, fetchMunicipalities } from '../src/lib/referenceData';
@@ -303,6 +304,8 @@ export default function SellerApply() {
         acceptedTerms: true,
       });
       const updated = res?.data || {};
+      // They asked for a shop: this is them going to it, into its setup.
+      useSideStore.getState().setSide(user?.id, 'shop');
       setApplied(true);
       // The account is a seller now: the shop is set up and private until an
       // admin approves the application, so the Seller Center opens straight away.

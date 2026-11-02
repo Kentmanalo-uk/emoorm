@@ -1,9 +1,6 @@
 import { useEffect, useState } from 'react';
-import { Link } from 'react-router-dom';
-import ProductImage from '../ProductImage';
-import { saleInfo } from '../../lib/variantPricing';
+import ProductTile from '../product/ProductTile';
 import { recentlyViewed, clearRecentlyViewed, onRecentChange } from '../../lib/recentlyViewed';
-import { peso } from '../../lib/format';
 import './RecentlyViewed.css';
 
 /**
@@ -27,11 +24,7 @@ export default function RecentlyViewed({ userId = null, variant = 'phone' }) {
   const row = (
     <div className="pvw-row">
       {items.map((p) => (
-        <Link key={p.id} to={`/product/${p.slug}`} className="pvw-card">
-          <span className="pvw-img"><ProductImage src={p.images?.[0]} alt={p.name} /></span>
-          <span className="pvw-name">{p.name}</span>
-          <span className="pvw-price">{peso(saleInfo(p).price)}</span>
-        </Link>
+        <ProductTile key={p.id} product={p} />
       ))}
     </div>
   );

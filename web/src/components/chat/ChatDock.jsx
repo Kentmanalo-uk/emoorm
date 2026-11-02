@@ -19,6 +19,7 @@ import { pollWhileVisible } from '../../lib/visiblePoll';
 import { useUnreadCounts, countChatRead, refreshChatCounts } from '../../lib/unreadCounts';
 import useFocusTrap from '../../hooks/useFocusTrap';
 import { chatTime } from '../../lib/format';
+import { ShopLogoArt } from '../shop/ShopArt';
 
 const LIST_POLL_MS = 30000;
 const THREAD_POLL_MS = 5000;
@@ -61,6 +62,7 @@ const toItem = (c, kind, userId) => {
     role: c.role,
     name: seller ? c.buyer?.fullName || 'Buyer' : c.store?.name || 'Store',
     avatar: seller ? c.buyer?.profilePhoto : c.store?.logo,
+    shopName: seller ? null : c.store?.name || 'Store',
     subtitle: seller ? 'Customer' : 'Store',
     preview: c.lastMessage
       ? `${c.lastMessage.senderId === userId ? 'You: ' : ''}${c.lastMessage.body || 'Order update'}`
@@ -72,7 +74,8 @@ const toItem = (c, kind, userId) => {
 
 const byTimeDesc = (a, b) => new Date(b.time || 0) - new Date(a.time || 0);
 
-function Avatar({ src, name, icon: Icon }) {
+function Avatar({ src, name, shopName, icon: Icon }) {
+  if (!src && shopName) return <span className="cd-avatar"><ShopLogoArt name={shopName} /></span>;
   return (
     <span className="cd-avatar">
       {src
@@ -293,7 +296,7 @@ export default function ChatDock() {
               className={`cd-list-item${item.key === selectedKey ? ' is-active' : ''}`}
               onClick={() => select(item.kind, item.id)}
             >
-              <Avatar src={item.avatar} name={item.name} icon={item.kind === 'support' ? Headset : null} />
+              <Avatar src={item.avatar} name={item.name} shopName={item.shopName} icon={item.kind === 'support' ? Headset : null} />
               <span className="cd-list-body">
                 <span className="cd-list-top">
                   <strong>{item.name}</strong>
@@ -330,6 +333,7 @@ export default function ChatDock() {
           <Avatar
             src={selectedItem?.avatar}
             name={selectedItem?.name}
+            shopName={selectedItem?.shopName}
             icon={isSupport ? Headset : null}
           />
           <span className="cd-thread-title">

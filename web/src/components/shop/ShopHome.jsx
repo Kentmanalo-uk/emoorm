@@ -5,6 +5,7 @@ import { resolveImg } from '../../lib/media';
 import { saleInfo } from '../../lib/variantPricing';
 import { SaleWas } from '../ui/SaleTag';
 import ProductImage from '../ProductImage';
+import ProductTile from '../product/ProductTile';
 import useProductPeek from '../peek/useProductPeek';
 import { peso } from '../../lib/format';
 import './ShopHome.css';
@@ -59,7 +60,7 @@ function Section({ section: s, lookup, preview, onAddToCart }) {
         {title}
         <div className="shh-spot-list">
           {products.map((p, i) => (
-            <ProductTile
+            <SpotlightTile
               key={p.id}
               product={p}
               preview={preview}
@@ -152,8 +153,16 @@ function Slider({ images, preview }) {
   );
 }
 
-function ProductTile({ product: p, preview, big = false, row = false, onAddToCart }) {
+/** The shared card, or one of the two layouts a shop can pick that it has no shape for. */
+function SpotlightTile({ product: p, preview, big = false, row = false, onAddToCart }) {
   const peekProduct = useProductPeek();
+  if (!big && !row) {
+    return (
+      <div className="shh-tile-wrap">
+        <ProductTile product={p} preview={preview || !p.slug} onAddToCart={onAddToCart && Number(p.stock) !== 0 ? onAddToCart : undefined} />
+      </div>
+    );
+  }
   const images = Array.isArray(p.images) ? p.images : [];
   const rating = Number(p.averageRating || 0);
   const reviews = Number(p.reviewCount || 0);

@@ -1,7 +1,8 @@
 import { useCallback, useEffect, useId, useRef, useState } from 'react';
 import { create } from 'zustand';
 import {
-  Animated, Easing, Image, Linking, Modal, Pressable, ScrollView, Share, StyleSheet, Text, View,
+  Animated, Easing, Image, Linking, Modal, Platform, Pressable, ScrollView, Share, StyleSheet, Text, View,
+  useWindowDimensions,
 } from 'react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import * as Clipboard from 'expo-clipboard';
@@ -45,7 +46,7 @@ const targets = ({ url, title, text }) => {
   const words = encodeURIComponent(text || title);
   return [
     { key: 'copy', label: 'Copy link', Icon: LinkSimpleIcon, color: '#334155', copy: true },
-    { key: 'messenger', label: 'Messenger', Icon: MessengerLogoIcon, color: '#0084FF', gradient: 'messenger', href: `fb-messenger://share/?link=${u}` },
+    { key: 'messenger', label: 'Messenger', Icon: MessengerLogoIcon, color: '#0084FF', gradient: 'messenger', href: `fb-messenger://share/?link=${u}`, copyFirst: true },
     { key: 'facebook', label: 'Facebook', Icon: FacebookLogoIcon, color: '#1877F2', href: `https://www.facebook.com/sharer/sharer.php?u=${u}` },
     // Not a link button: see openInstagram below.
     { key: 'instagram', label: 'Instagram', Icon: InstagramLogoIcon, color: '#E1306C', gradient: 'instagram', instagram: true },
@@ -53,7 +54,7 @@ const targets = ({ url, title, text }) => {
     { key: 'whatsapp', label: 'WhatsApp', Icon: WhatsappLogoIcon, color: '#25D366', href: `https://wa.me/?text=${line}` },
     { key: 'telegram', label: 'Telegram', Icon: TelegramLogoIcon, color: '#229ED9', gradient: 'telegram', href: `https://t.me/share/url?url=${u}&text=${words}` },
     { key: 'x', label: 'X', Icon: XLogoIcon, color: '#000000', href: `https://twitter.com/intent/tweet?url=${u}&text=${words}` },
-    { key: 'sms', label: 'Messages', Icon: ChatTextIcon, color: '#16a34a', href: `sms:?&body=${line}` },
+    { key: 'sms', label: 'Messages', Icon: ChatTextIcon, color: '#16a34a', href: Platform.OS === 'ios' ? `sms:&body=${line}` : `sms:?body=${line}` },
     { key: 'email', label: 'Email', Icon: EnvelopeSimpleIcon, color: '#6b7280', href: `mailto:?subject=${encodeURIComponent(title)}&body=${line}` },
   ];
 };
@@ -62,10 +63,32 @@ const targets = ({ url, title, text }) => {
 // Out is quicker than in, as a sheet being dismissed should be.
 const IN_MS = 260;
 const OUT_MS = 180;
+// The screenshot's clear margin at the sides, and above the sheet.
+const PREVIEW_SIDE = 36;
+const PREVIEW_GAP = 12;
+
+/** The biggest box of this shape that fits the room, in points. */
+const fitted = (shape, room) => {
+  const scale = Math.min(room.width / shape.width, room.height / shape.height);
+  return { width: Math.floor(shape.width * scale), height: Math.floor(shape.height * scale) };
+};
 
 export function ShareSheetView({ payload, heading = 'Share to', preview, onClose }) {
   const insets = useSafeAreaInsets();
   const [copied, setCopied] = useState(false);
+  const screen = useWindowDimensions();
+
+  // A capture is about the shape of the screen, so that holds until the
+  // file's real size arrives. The box then takes that shape exactly: a box
+  // of any other shape shows its own background beside the picture.
+  const [shape, setShape] = useState(null);
+  const [room, setRoom] = useState(null);
+  useEffect(() => {
+    if (!preview) return undefined;
+    let live = true;
+    Image.getSize(preview, (width, height) => { if (live && width && height) setShape({ width, height }); }, () => {});
+    return () => { live = false; };
+  }, [preview]);
 
   // One value drives the dim, the preview and the sheet together, so they
   // arrive and leave as one thing rather than three.
@@ -118,9 +141,10 @@ export function ShareSheetView({ payload, heading = 'Share to', preview, onClose
     }
     await Clipboard.setStringAsync(payload.url).catch(() => {});
     toast.success('Link copied — paste it in Instagram');
-    try {
-      if (await Linking.canOpenURL('instagram://app')) await Linking.openURL('instagram://app');
-    } catch { /* not installed; the link is on the clipboard either way */ }
+    // Not installed: its website, and the link is on the clipboard either way.
+    await Linking.openURL('instagram://app')
+      .catch(() => Linking.openURL('https://www.instagram.com/'))
+      .catch(() => {});
     close();
   };
 
@@ -133,16 +157,21 @@ export function ShareSheetView({ payload, heading = 'Share to', preview, onClose
       setTimeout(close, 450);
       return;
     }
+    // Messenger may open without taking the link: it is ready to paste.
+    if (target.copyFirst) {
+      await Clipboard.setStringAsync(payload.url).catch(() => {});
+      toast.success(`Link copied — paste it in ${target.label} if it isn't there`);
+    }
+    // Opened without asking canOpenURL first. The phone answers that with
+    // "no" for any app not declared in this app's native settings, installed
+    // or not (only https is), and that is what called Messenger "not
+    // installed". Opening is what fails only when nothing can take the link,
+    // and then the phone's own sheet offers whatever is there.
     try {
-      const can = await Linking.canOpenURL(target.href);
-      // A scheme for an app that is not installed (fb-messenger://,
-      // viber://) cannot be opened, and opening it anyway shows the
-      // person an error from the system rather than from us.
-      if (!can) { toast.error(`${target.label} is not installed`); return; }
       await Linking.openURL(target.href);
       close();
     } catch {
-      toast.error(`Could not open ${target.label}`);
+      await more();
     }
   };
 
@@ -173,9 +202,13 @@ export function ShareSheetView({ payload, heading = 'Share to', preview, onClose
       {preview ? (
         <Animated.View
           pointerEvents="none"
-          style={[styles.previewWrap, { opacity: show, transform: [{ scale: grow }] }]}
+          onLayout={(e) => {
+            const { width, height } = e.nativeEvent.layout;
+            setRoom({ width: width - PREVIEW_SIDE * 2, height });
+          }}
+          style={[styles.previewWrap, { bottom: sheetH + PREVIEW_GAP, opacity: show, transform: [{ scale: grow }] }]}
         >
-          <Image source={{ uri: preview }} style={styles.preview} resizeMode="contain" />
+          {room ? <Image source={{ uri: preview }} style={[styles.preview, fitted(shape || screen, room)]} resizeMode="cover" /> : null}
         </Animated.View>
       ) : null}
 
@@ -316,22 +349,17 @@ export default function useShare() {
 
 const styles = themed(() => StyleSheet.create({
   scrim: { ...StyleSheet.absoluteFill, backgroundColor: 'rgba(0,0,0,0.55)' },
-  // The captured page, floating above the sheet. Sized to leave the row
-  // and the buttons room; contain, so a tall page is shown whole rather
-  // than cropped to its middle.
+  // The captured page, floating above the sheet (bottom: the sheet's own
+  // height), in a box of exactly its shape, so a tall page is shown whole.
   previewWrap: {
     position: 'absolute',
     left: 0,
     right: 0,
     top: '6%',
-    bottom: 300,
     alignItems: 'center',
     justifyContent: 'center',
-    paddingHorizontal: 36,
   },
   preview: {
-    width: '100%',
-    height: '100%',
     borderRadius: 12,
     backgroundColor: t.neutral[0],
   },

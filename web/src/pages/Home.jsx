@@ -2,10 +2,10 @@ import { memo, useState, useEffect, useRef, useCallback } from 'react';
 import { Link, useNavigate } from 'react-router-dom';
 import { productKind } from '../lib/productKinds';
 import useSeo from '../lib/seo';
-import { ArrowRight, CaretLeft as ChevronLeft, CaretRight as ChevronRight, MapTrifold, ShoppingCart, Star, Storefront, X } from '../lib/icons';
+import { ArrowRight, CaretLeft as ChevronLeft, CaretRight as ChevronRight, MapTrifold, X } from '../lib/icons';
 import toast from 'react-hot-toast';
 import Layout from '../components/layout/Layout';
-import ProductImage from '../components/ProductImage';
+import ProductTile from '../components/product/ProductTile';
 import HomeStoresMap from '../components/home/HomeStoresMapLazy';
 import StartSellingSticker from '../components/home/StartSellingSticker';
 import HomeShortcuts from '../components/home/HomeShortcuts';
@@ -16,9 +16,6 @@ import EmptyArt from '../components/ui/EmptyArt';
 import { usePhoneLayout } from '../hooks/useMobileNav';
 import { useLanguageIntro } from '../lib/languageIntro';
 import axios from '../lib/axios';
-import { saleInfo } from '../lib/variantPricing';
-import { SaleWas } from '../components/ui/SaleTag';
-import KindPrice from '../components/product/kinds/KindPrice';
 import { resolveImg } from '../lib/media';
 import useCartStore from '../store/cartStore';
 import useAuthStore from '../store/authStore';
@@ -29,10 +26,9 @@ import useFocusTrap from '../hooks/useFocusTrap';
 import { POPULAR_SUGGESTIONS, loadRecent, saveRecent } from '../lib/buyerSearch';
 import CategoryIcon, { CategoryIconGradients } from '../components/CategoryIcon';
 import TodayRail from '../components/today/TodayRail';
-import { ProductTodayTag } from '../components/today/TodayTag';
-import { notTakingOrders } from '../lib/availability';
-import useProductPeek from '../components/peek/useProductPeek';
 import useStorePeek from '../components/peek/useStorePeek';
+import { ShopCoverArt, ShopLogoArt } from '../components/shop/ShopArt';
+import { fetchForYou } from '../lib/forYou';
 
 const EXPLORE_ROWS = 5;
 const EXPLORE_QUERY = { sortBy: 'createdAt', sortOrder: 'desc' };
@@ -126,7 +122,6 @@ const Home = () => {
   const addItem = useCartStore((st) => st.addItem);
   const user = useAuthStore((st) => st.user);
   // Hold a card: its preview with quick actions.
-  const peekProduct = useProductPeek();
 
   const [featuredProducts, setFeaturedProducts] = useState(() => homeCache.featured || []);
   // One batch fills 5 rows of the grid at the current width; fixed per visit so pages line up.
@@ -170,14 +165,14 @@ const Home = () => {
       .catch((err) => console.error('Failed to load home data:', err));
 
     load(
-      axios.get('/products', { params: { pageSize: SUGGESTED, sortBy: 'createdAt', sortOrder: 'desc' } }),
+      fetchForYou(user?.id, { pageSize: SUGGESTED }),
       (res) => {
         setFeaturedProducts(res.data || []);
         patchCache('home', { featured: res.data || [] });
       },
     );
     load(
-      axios.get('/products', { params: { ...EXPLORE_QUERY, page: 1, pageSize: exploreBatch } }),
+      fetchForYou(user?.id, { page: 1, pageSize: exploreBatch, skip: SUGGESTED }),
       (res) => {
         const fresh = res.data || [];
         if ((exploreSaved.explorePage || 1) > 1) {
@@ -222,7 +217,7 @@ const Home = () => {
       },
     );
     return () => { cancelled = true; };
-  }, [user?.municipalityId, exploreBatch, exploreSaved]);
+  }, [user?.municipalityId, user?.id, exploreBatch, exploreSaved]);
 
   // Explore Products loads its next batch on its own as the page nears the
   // bottom, one request at a time. A failure waits for "Try again" (no
@@ -370,26 +365,7 @@ const Home = () => {
           {featuredProducts.length > 0 ? (
             <div className="products-grid is-suggested">
               {featuredProducts.slice(0, SUGGESTED).map((product) => (
-                <Link key={product.id} to={`/product/${product.slug}`} className="product-card" {...peekProduct(product)}>
-                  <div className="product-image">
-                    <ProductImage src={product.images?.[0]} alt={product.name} />
-                    {!notTakingOrders(product) && (
-                    <button
-                      type="button"
-                      className="product-cart-fab"
-                      onClick={(e) => handleAddToCart(e, product)}
-                      aria-label="Add to cart"
-                    >
-                      <ShoppingCart size={16} />
-                    </button>
-                    )}
-                  </div>
-                  <div className="product-info">
-                    <span className="product-name"><ProductTodayTag product={product} />{product.name}</span>
-                    <span className="product-price"><KindPrice product={product}>₱{saleInfo(product).price.toFixed(2)}</KindPrice> <SaleWas product={product} compact /></span>
-                    <ProductStats product={product} />
-                  </div>
-                </Link>
+                <ProductTile key={product.id} product={product} onAddToCart={handleAddToCart} />
               ))}
             </div>
           ) : isPhone ? (
@@ -501,7 +477,7 @@ const Home = () => {
           </div>
           {exploreProducts.length > 0 && (
             <div className="products-grid home-explore-grid">
-              {exploreProducts.map((product) => <HomeProductCard key={product.id} product={product} onAddToCart={handleAddToCart} />)}
+              {exploreProducts.map((product) => <ProductTile key={product.id} product={product} onAddToCart={handleAddToCart} />)}
             </div>
           )}
           {/* Under the grid: a spinner while the next batch loads, "Try again", or the end. */}
@@ -729,64 +705,8 @@ function PromotionPopup({ banner, onClose }) {
   );
 }
 
-/** Stars only from real reviews; sold only from settled orders; else "New". */
-function ProductStats({ product }) {
-  const reviews = Number(product.reviewCount || 0);
-  const rating = Number(product.averageRating || 0);
-  const sold = Number(product.soldCount || 0);
-  if (reviews === 0 && sold === 0) {
-    return (
-      <div className="product-rating-row">
-        <span className="product-review-count product-new">New</span>
-      </div>
-    );
-  }
-  return (
-    <div className="product-rating-row">
-      {reviews > 0 && (
-        <>
-          <div className="product-stars" aria-label={`Rated ${rating.toFixed(1)} of 5`}>
-            {[0, 1, 2, 3, 4].map((i) => (
-              <Star
-                key={i}
-                size={11}
-                weight={i < Math.round(rating) ? 'fill' : 'regular'}
-                color={i < Math.round(rating) ? 'var(--t-warning-500, #f59e0b)' : 'var(--t-neutral-300, #d1d5db)'}
-              />
-            ))}
-          </div>
-          <span className="product-review-count">({reviews})</span>
-        </>
-      )}
-      {sold > 0 && <span className="product-review-count product-sold">{sold} sold</span>}
-    </div>
-  );
-}
-
-const HomeProductCard = memo(function HomeProductCard({ product, onAddToCart }) {
-  const peekProduct = useProductPeek();
-  return (
-    <Link to={`/product/${product.slug}`} className="product-card" {...peekProduct(product)}>
-      <div className="product-image">
-        <ProductImage src={product.images?.[0]} alt={product.name} />
-        {!notTakingOrders(product) && (
-        <button type="button" className="product-cart-fab" onClick={(e) => onAddToCart(e, product)} aria-label="Add to cart">
-          <ShoppingCart size={16} />
-        </button>
-        )}
-      </div>
-      <div className="product-info">
-        <span className="product-name"><ProductTodayTag product={product} />{product.name}</span>
-        <span className="product-price"><KindPrice product={product}>₱{saleInfo(product).price.toFixed(2)}</KindPrice> <SaleWas product={product} compact /></span>
-        <ProductStats product={product} />
-      </div>
-    </Link>
-  );
-});
-
 const HomeStoreCard = memo(function HomeStoreCard({ store }) {
   const peekStore = useStorePeek();
-  const initials = store.name?.split(' ').slice(0, 2).map((word) => word[0]).join('').toUpperCase() || '?';
   const productImages = (store.products || [])
     .map((product) => {
       const image = Array.isArray(product.images) ? product.images[0] : product.images;
@@ -812,15 +732,13 @@ const HomeStoreCard = memo(function HomeStoreCard({ store }) {
           <img key={image.id} src={image.src} alt="" loading="lazy" onError={fallback} />
         )) : cover ? (
           <img src={resolveImg(cover) || cover} alt="" loading="lazy" onError={fallback} />
-        ) : store.logo ? (
-          <img className="home-store-media-blur" src={resolveImg(store.logo) || store.logo} alt="" loading="lazy" />
         ) : (
-          <span className="home-store-media-empty"><Storefront size={28} /></span>
+          <ShopCoverArt name={store.name} />
         )}
       </Link>
       <Link to={to} className="home-store-main">
         <div className="home-store-logo">
-          {store.logo ? <img src={resolveImg(store.logo) || store.logo} alt={`${store.name} logo`} /> : <span>{initials}</span>}
+          {store.logo ? <img src={resolveImg(store.logo) || store.logo} alt={`${store.name} logo`} /> : <ShopLogoArt name={store.name} />}
         </div>
         <div className="home-store-copy">
           <h3>{store.name}</h3>

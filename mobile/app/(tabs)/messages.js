@@ -1,5 +1,5 @@
 import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
-import { FlatList, Pressable, StyleSheet, Text, TextInput, View } from 'react-native';
+import { Pressable, StyleSheet, Text, TextInput, View } from 'react-native';
 import { useFocusEffect, useLocalSearchParams, useRouter } from 'expo-router';
 import {
   ArrowsClockwiseIcon, ChatTextIcon, EnvelopeOpenIcon, FunnelIcon, MagnifyingGlassIcon, StorefrontIcon, XIcon,
@@ -19,6 +19,8 @@ import { useConversationPeek } from '../../src/components/peek/ConversationPeek'
 import MoormyEntry from '../../src/components/inbox/MoormyEntry';
 import { useTabBarScroll } from '../../src/components/Glass';
 import { ConversationListSkeleton } from '../../src/components/inbox/InboxSkeletons';
+import { PullFlatList } from '../../src/components/PullList';
+import MoreProducts from '../../src/components/home/MoreProducts';
 
 /*
  * The buyer's Messages tab (web/src/pages/Messages.jsx →
@@ -43,6 +45,7 @@ function MessagesList() {
   const [conversations, setConversations] = useState(() => getCachedData(LIST_KEY) || []);
   const [loadingList, setLoadingList] = useState(() => !getCachedData(LIST_KEY));
   const [searchQuery, setSearchQuery] = useState('');
+  const [feedKey, setFeedKey] = useState(0);
   const [searchOpen, setSearchOpen] = useState(false);
   const [unreadOnly, setUnreadOnly] = useState(false);
   const openedStore = useRef(null);
@@ -151,7 +154,8 @@ function MessagesList() {
         </ShellBarButton>
         <ShellPageMenu label="Chat options" items={menuItems} />
       </InboxPageHead>
-    <FlatList
+    <PullFlatList
+      onPull={() => { setFeedKey((key) => key + 1); return fetchConversations(); }}
       // Conversations come down in one response with no paging, so the
       // list is as long as the person is chatty; only what is on screen
       // is built. The search box and the filters ride above as a header.
@@ -235,6 +239,7 @@ function MessagesList() {
         ) : null}
         </View>
       )}
+      ListFooterComponent={<MoreProducts refreshKey={feedKey} style={styles.more} />}
     />
     </View>
   );
@@ -242,8 +247,9 @@ function MessagesList() {
 
 const styles = themed(() => StyleSheet.create({
   screen: { flex: 1, backgroundColor: t.neutral[0] },
-  content: { flexGrow: 1, paddingBottom: 16 },
+  content: { flexGrow: 1 },
   list: { paddingTop: 6 },
+  more: { marginTop: 12 },
   listGrow: { flexGrow: 1 },
   search: {
     flexDirection: 'row', alignItems: 'center', gap: 8, minHeight: 44, marginHorizontal: 12, marginBottom: 8,

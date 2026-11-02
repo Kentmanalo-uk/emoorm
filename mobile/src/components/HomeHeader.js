@@ -71,10 +71,10 @@ export default function HomeHeader() {
             style={({ pressed }) => [styles.camera, pressed && styles.cameraPressed]}
             onPress={() => router.push('/search-by-image')}
           >
-            <CameraGlyph color={text.muted} />
+            <CameraGlyph color={text.muted} size={28} />
           </Pressable>
           <Pressable accessibilityRole="button" accessibilityLabel="Search" style={styles.searchButton} onPress={openSearch}>
-            <MagnifyingGlassIcon size={18} color={t.neutral[0]} />
+            <MagnifyingGlassIcon size={28} color={t.neutral[0]} />
           </Pressable>
         </View>
       </View>

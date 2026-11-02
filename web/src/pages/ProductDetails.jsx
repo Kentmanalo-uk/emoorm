@@ -40,6 +40,7 @@ import useIdentityGate from '../hooks/useIdentityGate';
 import { usePhoneLayout } from '../hooks/useMobileNav';
 import MoreMenu from '../components/MoreMenu';
 import ReviewItem from '../components/reviews/ReviewItem';
+import ProductTile from '../components/product/ProductTile';
 import { useReviewViewer } from '../components/reviews/ReviewViewer';
 import useReviewSocial from '../components/reviews/useReviewSocial';
 import ProductOptionSheet from '../components/ProductOptionSheet';
@@ -76,7 +77,7 @@ import {
   buyLabel, preOrderReady,
 } from '../lib/availability';
 import TimeLeft from '../components/ui/TimeLeft';
-import TodayTag, { ProductTodayTag } from '../components/today/TodayTag';
+import TodayTag, {} from '../components/today/TodayTag';
 import ProductQuestions from '../components/product/ProductQuestions';
 import { SaleWas, PriceNotes } from '../components/ui/SaleTag';
 import {
@@ -89,6 +90,7 @@ import {
   quantityBounds, countLabel, soldOutLabel, startsFrom, pageUnit, receiveMode,
 } from '../components/product/kinds/buying';
 import { peso } from '../lib/format';
+import { ShopLogoArt } from '../components/shop/ShopArt';
 
 /** A package's saving: what the items cost one by one, crossed out, and how much less it is. */
 const shortPeso = (n) => `₱${Number(n || 0).toLocaleString('en-PH', { maximumFractionDigits: 2 })}`;
@@ -113,23 +115,6 @@ const renderStars = (rating, size = 14) => (
     />
   ))
 );
-
-// Shelf-card rating: stars only from real review data, "New" when unreviewed.
-const renderShelfRating = (p) => {
-  const count = Number(p.reviewCount ?? 0);
-  return (
-    <div className="product-rating-row">
-      {count > 0 ? (
-        <>
-          <div className="product-stars">{renderStars(p.averageRating, 11)}</div>
-          <span className="product-review-count">({count})</span>
-        </>
-      ) : (
-        <span className="product-review-count">New</span>
-      )}
-    </div>
-  );
-};
 
 // Fulfilment / payment lines come from the store record, never hardcoded;
 // `mode` narrows them to a pickup-only or delivery-only product.
@@ -1541,7 +1526,7 @@ const ProductDetails = () => {
                 <div className="pdp-store-avatar">
                   {product.store.logoUrl || product.store.logo
                     ? <img src={resolveImg(product.store.logoUrl || product.store.logo)} alt={product.store.name} onError={(e) => { e.currentTarget.style.display = 'none'; }} />
-                    : <Store size={22} />}
+                    : <ShopLogoArt name={product.store.name} />}
                 </div>
                 <div>
                   <div className="pdp-store-name">
@@ -1717,16 +1702,7 @@ const ProductDetails = () => {
               </div>
               <div className="pdp-shelf-row">
                 {sameShopProducts.map((p) => (
-                  <Link key={p.id} to={`/product/${p.slug}`} className="product-card" {...peekProduct(p, { store: product.store })}>
-                    <div className="product-image">
-                      <ProductImage src={parseImages(p.images)[0]} alt={p.name} />
-                    </div>
-                    <div className="product-info">
-                      <span className="product-name"><ProductTodayTag product={p} />{p.name}</span>
-                      <span className="product-price"><KindPrice product={p}>{peso(saleInfo(p).price)}</KindPrice> <SaleWas product={p} compact /></span>
-                      {renderShelfRating(p)}
-                    </div>
-                  </Link>
+                  <ProductTile key={p.id} product={p} store={product.store} />
                 ))}
               </div>
             </div>
@@ -1743,16 +1719,7 @@ const ProductDetails = () => {
               </div>
               <div className="pdp-shelf-grid">
                 {relatedProducts.map((p) => (
-                  <Link key={p.id} to={`/product/${p.slug}`} className="product-card" {...peekProduct(p)}>
-                    <div className="product-image">
-                      <ProductImage src={parseImages(p.images)[0]} alt={p.name} />
-                    </div>
-                    <div className="product-info">
-                      <span className="product-name"><ProductTodayTag product={p} />{p.name}</span>
-                      <span className="product-price"><KindPrice product={p}>{peso(saleInfo(p).price)}</KindPrice> <SaleWas product={p} compact /></span>
-                      {renderShelfRating(p)}
-                    </div>
-                  </Link>
+                  <ProductTile key={p.id} product={p} />
                 ))}
               </div>
             </div>

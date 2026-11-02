@@ -17,6 +17,7 @@ import './Stores.css';
 import { StoreCardsSkeleton } from '../components/ui/PageSkeletons';
 import PageMenu from '../components/layout/PageMenu';
 import useStorePeek from '../components/peek/useStorePeek';
+import { ShopLogoArt } from '../components/shop/ShopArt';
 
 const PAGE_SIZE = 20;
 // Each list as it showed last time.
@@ -298,10 +299,6 @@ export default function Stores() {
   );
 }
 
-const initialsOf = (name) => (name
-  ? name.split(' ').slice(0, 2).map((w) => w[0]).join('').toUpperCase()
-  : '?');
-
 // The API returns the logo as `logo`; older rows may carry `logoUrl`.
 const logoOf = (store) => {
   const raw = store.logoUrl || store.logo;
@@ -316,7 +313,7 @@ function StoreLogo({ store, className }) {
       {src && !failed ? (
         <img src={src} alt="" onError={() => setFailed(true)} />
       ) : (
-        <span>{initialsOf(store.name)}</span>
+        <ShopLogoArt name={store.name} />
       )}
     </div>
   );

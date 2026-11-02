@@ -1,6 +1,6 @@
 import { useCallback, useEffect, useState } from 'react';
 import {
-  Pressable, ScrollView, StyleSheet, Text, TextInput, View,
+  Pressable, StyleSheet, Text, TextInput, View,
 } from 'react-native';
 import { useLocalSearchParams } from 'expo-router';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
@@ -16,6 +16,7 @@ import { fullStamp } from '../../src/components/orders/orderProgress';
 import {
   RETURN_LABELS, ReturnStatusPill, ReturnsMessage, ReturnsPrimary, returnAmount, returnsText,
 } from '../../src/components/returns/ReturnBits';
+import { PullScrollView } from '../../src/components/PullList';
 
 /*
  * One return request (web/src/pages/ReturnDetail.jsx at phone size): its
@@ -86,7 +87,7 @@ export default function ReturnDetail() {
   return (
     <View style={styles.screen}>
       {header}
-      <ScrollView showsVerticalScrollIndicator={false} showsHorizontalScrollIndicator={false} style={styles.scroll} contentContainerStyle={[styles.content, { paddingBottom: 16 + insets.bottom }]} keyboardShouldPersistTaps="handled">
+      <PullScrollView onPull={load} showsVerticalScrollIndicator={false} showsHorizontalScrollIndicator={false} style={styles.scroll} contentContainerStyle={[styles.content, { paddingBottom: 16 + insets.bottom }]} keyboardShouldPersistTaps="handled">
         <View style={styles.head}>
           <View style={styles.headText}>
             <Text style={styles.eyebrow}>{(item.requestNumber || '').toUpperCase()}</Text>
@@ -191,7 +192,7 @@ export default function ReturnDetail() {
             <ReturnHint Icon={ScalesIcon} text={'The municipal admin is looking at this. You’ll be notified of the decision.'} />
           ) : null}
         </View>
-      </ScrollView>
+      </PullScrollView>
     </View>
   );
 }

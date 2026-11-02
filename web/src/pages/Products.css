@@ -1621,68 +1621,6 @@
     display: none;
   }
 
-  .srch-card {
-    display: flex;
-    flex-direction: column;
-    gap: 4px;
-  }
-
-  .srch-card .product-name {
-    display: -webkit-box;
-    overflow: hidden;
-    -webkit-box-orient: vertical;
-    -webkit-line-clamp: 2;
-  }
-
-  .srch-card-price {
-    color: var(--t-primary-700, #047857);
-    font-size: 17px;
-    font-weight: 700;
-    font-variant-numeric: tabular-nums;
-  }
-
-  .srch-card-meta {
-    display: flex;
-    align-items: center;
-    gap: 8px;
-    color: var(--t-neutral-500, #6b7280);
-    font-size: 12.5px;
-  }
-
-  .srch-card-meta > span + span {
-    padding-left: 8px;
-    border-left: 1px solid var(--t-neutral-200, #e5e7eb);
-  }
-
-  .srch-card-rating {
-    display: inline-flex;
-    align-items: center;
-    gap: 3px;
-    color: var(--t-neutral-700, #374151);
-  }
-
-  .srch-card-rating svg {
-    color: #f59e0b;
-  }
-
-  .srch-card-new {
-    color: var(--t-primary-700, #047857);
-  }
-
-  .srch-card-place {
-    display: flex;
-    align-items: center;
-    gap: 3px;
-    overflow: hidden;
-    color: var(--t-neutral-500, #636b78);
-    font-size: 12.5px;
-    white-space: nowrap;
-    text-overflow: ellipsis;
-  }
-
-  .srch-card-place svg {
-    flex-shrink: 0;
-  }
 }
 
 /* Phones: the sort tabs and filter chips share one white band. */

@@ -1,18 +1,17 @@
 import { memo, useRef } from 'react';
 import { Pressable, StyleSheet, Text, View, useWindowDimensions } from 'react-native';
-import { useSafeAreaInsets } from 'react-native-safe-area-context';
-import { useRouter } from 'expo-router';
 import { MapPinIcon, StarIcon } from '../lib/icons';
 import { saleInfo } from '../lib/variantPricing';
 import { font, t, themed } from '../theme';
 import ProductImage from './ProductImage';
 import { ProductStats } from './ProductStats';
-import { canFlyHero, launchHero, productGalleryBox } from './HeroFlight';
-import { resolveImg } from '../lib/media';
+import useOpenProduct from './useOpenProduct';
+import { sizedImg } from '../lib/media';
 import { SaleWas } from './SaleTag';
 import { ProductTodayTag } from './TodayTag';
 import { notTakingOrders } from '../lib/availability';
 import { useProductPeek } from './peek/ProductPeek';
+import { parseImages } from './product/productLib';
 import { isStockless, priceUnit, startsFrom } from './orders/orderLines';
 
 /*
@@ -41,15 +40,17 @@ function ProductCard({
   imageUrl,
   rating = 0,
   reviewCount = 0,
+  priceColor,
+  photoExtra = null,
 }) {
-  const router = useRouter();
+  const openWith = useOpenProduct();
   const p = product || { name, price, averageRating: rating, reviewCount, images: imageUrl ? [imageUrl] : [] };
   const look = variant || (product ? 'home' : 'grid');
+  const photo = parseImages(p.images)[0];
   const result = look === 'result';
   const list = look === 'list';
   const photoRef = useRef(null);
   const photoAspect = useRef(0);
-  const insets = useSafeAreaInsets();
   const { width: screenW } = useWindowDimensions();
   // How wide this card's photo is actually drawn, so the server's
   // matching copy is fetched instead of the 1600px original. A list row
@@ -58,22 +59,14 @@ function ProductCard({
   // one of the sizes the server keeps, so a wrong guess here only costs
   // the next size up.
   const photoWidth = list ? 96 : Math.round(screenW * (result ? 0.5 : 0.48));
-  // Opening the product: the photo flies from the card to the page's gallery.
-  const openProduct = () => {
-    const uri = p.images?.[0] ? resolveImg(p.images[0]) : null;
-    if (!uri || !canFlyHero() || !photoRef.current) {
-      router.push(`/product/${p.slug}`);
-      return;
-    }
-    photoRef.current.measureInWindow((x, y, width, height) => {
-      const flying = launchHero({
-        slug: p.slug, uri, from: { x, y, width, height }, to: productGalleryBox(insets, screenW), aspect: photoAspect.current,
-      });
-      if (!flying) { router.push(`/product/${p.slug}`); return; }
-      // The flight is on screen and moving (native) before the page is built.
-      requestAnimationFrame(() => router.push({ pathname: '/product/[slug]', params: { slug: p.slug, via: 'card' } }));
-    });
-  };
+  const openProduct = () => openWith({
+    slug: p.slug,
+    photo,
+    shown: photo ? sizedImg(photo, photoWidth) : null,
+    seed: p,
+    photoRef,
+    aspect: photoAspect.current,
+  });
   const open = onPress || (p.slug ? openProduct : undefined);
   const peekProduct = useProductPeek();
   const { price: now } = saleInfo(p);
@@ -89,7 +82,7 @@ function ProductCard({
     >
       <View ref={photoRef} collapsable={false} style={[styles.image, list && styles.imageList]}>
         <ProductImage
-          src={p.images?.[0]}
+          src={photo}
           style={StyleSheet.absoluteFill}
           width={photoWidth}
           onLoad={(e) => {
@@ -97,8 +90,9 @@ function ProductCard({
             if (w && h) photoAspect.current = w / h;
           }}
         />
-        {result && p.stock === 0 && !isStockless(p) && !notTakingOrders(p) ? <Text style={[styles.badge, styles.badgeOut]}>Out of Stock</Text> : null}
+        {p.stock === 0 && !isStockless(p) && !notTakingOrders(p) ? <Text style={[styles.badge, styles.badgeOut]}>Out of Stock</Text> : null}
         {result && p.isFeatured ? <Text style={[styles.badge, styles.badgeFeatured]}>Featured</Text> : null}
+        {photoExtra}
       </View>
 
       <View style={[styles.info, list && styles.infoList]}>
@@ -128,7 +122,7 @@ function ProductCard({
         ) : (
           <>
             <View style={[styles.priceRow, styles.priceRowHome]}>
-              <Text style={styles.price}>
+              <Text style={[styles.price, priceColor && { color: priceColor }]}>
                 <KindFrom product={p} base={styles.price} />
                 ₱{now.toFixed(2)}
                 <KindUnit product={p} base={styles.price} />
@@ -139,6 +133,24 @@ function ProductCard({
           </>
         )}
       </View>
+    </Pressable>
+  );
+}
+
+/**
+ * A round button on a card's photo, for what a place adds to the shared card:
+ * at the lower right in `color`, or a quiet white one at the top right.
+ */
+export function CardPhotoButton({ label, onPress, color, top = false, children }) {
+  return (
+    <Pressable
+      accessibilityRole="button"
+      accessibilityLabel={label}
+      onPress={onPress}
+      hitSlop={4}
+      style={[styles.photoBtn, top ? styles.photoBtnTop : { backgroundColor: color || t.primary[600] }]}
+    >
+      {children}
     </Pressable>
   );
 }
@@ -217,6 +229,11 @@ const styles = themed(() => StyleSheet.create({
     fontSize: 11, lineHeight: 14, ...font(500), color: t.onBrand, textTransform: 'uppercase',
   },
   badgeOut: { backgroundColor: t.danger[500] },
+  photoBtn: {
+    position: 'absolute', right: 8, bottom: 8, width: 32, height: 32, borderRadius: 16,
+    alignItems: 'center', justifyContent: 'center', boxShadow: '0px 2px 6px rgba(0, 0, 0, 0.15)',
+  },
+  photoBtnTop: { top: 6, right: 6, bottom: undefined, backgroundColor: t.neutral[0] },
   badgeFeatured: { backgroundColor: t.warning[500] },
 }));
 

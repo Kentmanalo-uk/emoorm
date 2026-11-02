@@ -210,7 +210,7 @@ function AppRoot() {
             name="product/[slug]"
             // Opened from a product card: the page fades in while the card's
             // photo flies to its gallery (components/HeroFlight).
-            options={({ route }) => (route.params?.via === 'card' ? { animation: 'fade', animationDuration: 260 } : {})}
+            options={({ route }) => (route.params?.via === 'card' ? { animation: 'fade', animationDuration: 220 } : {})}
           />
           <Stack.Screen name="store/[slug]" />
           {/* Search swaps in at once (no slide), and so do its results: a

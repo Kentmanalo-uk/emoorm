@@ -2,14 +2,35 @@
    Home sections, its cards the size of the product cards around it. */
 .today-rail {
   padding: 48px 0 0;
-  /* White heading on it, so it starts from the full brand pink. Fixed colours:
-     the same in dark mode, where the theme's pinks are reversed. */
-  background: linear-gradient(to bottom, #db2777, rgba(219, 39, 119, 0)), var(--t-neutral-100, #f5f5f5);
+  background: var(--t-neutral-100, #f5f5f5);
 }
 
 .today-rail > .container {
   max-width: 1280px;
   padding: 0 32px;
+}
+
+/* The pink wash. White heading on it, so it starts from the full brand pink;
+   fixed colours, the same in dark mode, where the theme's pinks are reversed.
+   Computers: it stops at the page's side padding, as a band of its own with
+   room inside it. Phones run it edge to edge (below). */
+@media (min-width: 769px) {
+  .today-rail > .container {
+    position: relative;
+    padding: 24px 52px 24px;
+  }
+
+  .today-rail > .container::before {
+    content: '';
+    position: absolute;
+    inset: 0 32px;
+    border-radius: 8px 8px 0 0;
+    background: linear-gradient(to bottom, #db2777, rgba(219, 39, 119, 0));
+  }
+
+  .today-rail > .container > * {
+    position: relative;
+  }
 }
 
 .today-rail .section-header {

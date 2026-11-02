@@ -1,0 +1,82 @@
+/* CartSwipeRow.jsx: a phone cart line that slides to show its two actions. */
+.csr {
+  position: relative;
+  overflow: hidden;
+  background: var(--t-neutral-0, #fff);
+}
+
+.csr-actions {
+  position: absolute;
+  inset: 0;
+  display: flex;
+  justify-content: flex-end;
+}
+
+.csr-actions button {
+  width: 72px;
+  height: 100%;
+  border: 0;
+  color: #fff;
+  font: inherit;
+  font-size: 13.5px;
+  font-weight: 500;
+  line-height: 18px;
+  cursor: pointer;
+}
+
+.csr-similar { background: #e57373; }
+.csr-remove { background: #dc2626; }
+
+.csr-front {
+  position: relative;
+  background: var(--t-neutral-0, #fff);
+  /* Sideways drags are the line's; up and down stay the page's scroll. */
+  touch-action: pan-y;
+  transition: transform 0.22s cubic-bezier(0.2, 0.8, 0.2, 1);
+}
+
+.csr-front.is-dragging {
+  transition: none;
+  user-select: none;
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .csr-front { transition: none; }
+}
+
+/* The shop's picture before its name (cart-m-store-head). */
+.cart-m-store-logo {
+  display: grid;
+  flex: 0 0 26px;
+  place-items: center;
+  width: 26px;
+  height: 26px;
+  overflow: hidden;
+  border-radius: 50%;
+  background: var(--t-primary-50, #ecfdf5);
+}
+
+.cart-m-store-logo img {
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+}
+
+/* Desktop: Find similar beside the bin. */
+.btn-similar-item {
+  display: inline-grid;
+  place-items: center;
+  width: 36px;
+  height: 36px;
+  padding: 0;
+  border: 0;
+  border-radius: 8px;
+  background: none;
+  color: var(--t-neutral-500, #636b78);
+  cursor: pointer;
+}
+
+.btn-similar-item:hover {
+  background: var(--t-neutral-100, #f3f4f6);
+  color: var(--t-primary-700, #047857);
+}

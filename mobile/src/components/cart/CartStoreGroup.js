@@ -1,12 +1,19 @@
+import { useEffect, useRef, useState } from 'react';
 import { Pressable, StyleSheet, Text, View } from 'react-native';
+import { Image } from 'expo-image';
 import { useRouter } from 'expo-router';
 import {
-  CaretDownIcon, CaretRightIcon, CheckIcon, MinusIcon, PlusIcon, StorefrontIcon, TrashIcon,
+  CaretDownIcon, CaretRightIcon, CheckIcon, MinusIcon, PlusIcon, TrashIcon,
 } from '../../lib/icons';
 import CartProductImage from './CartProductImage';
+import CartSwipeRow from './CartSwipeRow';
+import { sizedImg } from '../../lib/media';
+import useOpenProduct from '../useOpenProduct';
 import { font, t, themed } from '../../theme';
 import { cartPeso } from './cartSettings';
 import { useProductPeek } from '../peek/ProductPeek';
+import toast from '../../lib/toast';
+import { ShopLogoArt } from '../shop/ShopArt';
 
 /*
  * The phone cart's shop groups (web/src/pages/Cart.jsx .cart-m-store, Cart.css
@@ -14,6 +21,10 @@ import { useProductPeek } from '../peek/ProductPeek';
  * shop name ›, then its lines: round check, square photo, one-line name,
  * options pill, price, and a − qty + stepper (a bin at quantity 1).
  */
+
+const LOGO_SIZE = 26;
+// The width a line's photo is asked for at, and flown from when it is opened.
+const PHOTO_BOX = 72;
 
 /** The round selection check (web RoundCheck .cart-m-check): 30px target, 22px circle. */
 export function CartRoundCheck({ checked, disabled, onPress, label }) {
@@ -34,14 +45,52 @@ export function CartRoundCheck({ checked, disabled, onPress, label }) {
   );
 }
 
+/** The shop's logo in a small circle; its generated one if it has none. */
+function ShopLogo({ src, name }) {
+  const uri = src ? sizedImg(src, LOGO_SIZE) : null;
+  const [failed, setFailed] = useState(false);
+  useEffect(() => { setFailed(false); }, [uri]);
+  return (
+    <View style={styles.logo}>
+      {uri && !failed ? (
+        <Image
+          source={{ uri }}
+          style={styles.logoImg}
+          contentFit="cover"
+          cachePolicy="memory-disk"
+          recyclingKey={uri}
+          transition={120}
+          onError={() => setFailed(true)}
+        />
+      ) : <ShopLogoArt name={name} />}
+    </View>
+  );
+}
+
 function CartLine({ item, selected, onToggle, onQuantity, onRemove, onRemoveNow }) {
   const router = useRouter();
-  const open = () => router.push(`/product/${item.slug || item.productId || item.id}`);
+  const openProduct = useOpenProduct();
+  const photoRef = useRef(null);
+  const open = () => openProduct({
+    slug: item.slug || item.productId || item.id,
+    photo: item.image,
+    shown: item.image ? sizedImg(item.image, PHOTO_BOX) : null,
+    photoRef,
+  });
   const options = item.selectedVariations && Object.keys(item.selectedVariations).length > 0
     ? Object.values(item.selectedVariations).join(', ')
     : null;
   const atOne = item.quantity <= 1;
   const maxed = item.quantity >= (item.stock || 999);
+  // Its category when the line knows one, else other things with its name.
+  const findSimilar = () => router.push(item.categoryId
+    ? { pathname: '/products', params: { category: item.categoryId } }
+    : { pathname: '/products', params: { q: item.name } });
+  // Swiped, then tapped: already deliberate, so no "are you sure" after it.
+  const removeSwiped = () => {
+    onRemoveNow();
+    toast.success('Removed from cart');
+  };
   // Held: the product as the line knows it, with Remove from cart.
   const peek = useProductPeek()({
     id: item.productId || item.id,
@@ -59,6 +108,7 @@ function CartLine({ item, selected, onToggle, onQuantity, onRemove, onRemoveNow 
     extra: [{ key: 'remove', label: 'Remove from cart', Icon: TrashIcon, destructive: true, onPress: item.unavailable ? onRemoveNow : onRemove }],
   });
   return (
+    <CartSwipeRow onSimilar={findSimilar} onRemove={removeSwiped}>
     <View style={styles.item}>
       <CartRoundCheck
         checked={!item.unavailable && selected}
@@ -66,8 +116,8 @@ function CartLine({ item, selected, onToggle, onQuantity, onRemove, onRemoveNow 
         onPress={onToggle}
         label={`Select ${item.name}`}
       />
-      <Pressable onPress={open} {...peek} style={[styles.img, item.unavailable && styles.dim]} accessibilityLabel={item.name}>
-        <CartProductImage src={item.image} style={styles.imgFill} />
+      <Pressable ref={photoRef} collapsable={false} onPress={open} {...peek} style={[styles.img, item.unavailable && styles.dim]} accessibilityLabel={item.name}>
+        <CartProductImage src={item.image} style={styles.imgFill} width={PHOTO_BOX} />
       </Pressable>
       <View style={styles.body}>
         <Pressable onPress={open} {...peek} style={styles.nameWrap}>
@@ -118,22 +168,24 @@ function CartLine({ item, selected, onToggle, onQuantity, onRemove, onRemoveNow 
         ) : null}
       </View>
     </View>
+    </CartSwipeRow>
   );
 }
 
 /**
  * group: { storeId, storeName, items }
  * slug: the shop's page (looked up by the screen); without it the name is plain.
+ * logo: the shop's picture, from the same lookup or the line's own copy.
  */
 export default function CartStoreGroup({
-  group, slug, selectedSet, onToggleStore, onToggleItem, onQuantity, onRemove, onRemoveNow,
+  group, slug, logo, selectedSet, onToggleStore, onToggleItem, onQuantity, onRemove, onRemoveNow,
 }) {
   const router = useRouter();
   const purchasable = group.items.filter((it) => !it.unavailable);
   const allOn = purchasable.length > 0 && purchasable.every((it) => selectedSet.has(it.id));
   const nameInner = (
     <>
-      <StorefrontIcon size={17} weight="fill" color={t.primary[600]} />
+      <ShopLogo src={logo} name={group.storeName} />
       <Text style={styles.storeName} numberOfLines={1}>{group.storeName}</Text>
       {slug ? <CaretRightIcon size={14} weight="bold" color={t.neutral[500]} /> : null}
     </>
@@ -187,7 +239,18 @@ const styles = themed(() => StyleSheet.create({
 
   store: { paddingTop: 4, paddingBottom: 8, backgroundColor: t.neutral[0] },
   storeHead: { flexDirection: 'row', alignItems: 'center', gap: 6, paddingTop: 8, paddingRight: 12, paddingBottom: 6, paddingLeft: 8 },
-  storeLink: { flexDirection: 'row', alignItems: 'center', gap: 6, minWidth: 0, flexShrink: 1 },
+  storeLink: { flexDirection: 'row', alignItems: 'center', gap: 8, minWidth: 0, flexShrink: 1 },
+  logo: {
+    width: LOGO_SIZE,
+    height: LOGO_SIZE,
+    borderRadius: LOGO_SIZE / 2,
+    overflow: 'hidden',
+    alignItems: 'center',
+    justifyContent: 'center',
+    flexShrink: 0,
+    backgroundColor: t.primary[50],
+  },
+  logoImg: { width: '100%', height: '100%' },
   storeName: { flexShrink: 1, fontSize: 15, lineHeight: 24, ...font(400), color: t.neutral[900] },
 
   item: { flexDirection: 'row', alignItems: 'center', gap: 8, paddingTop: 10, paddingRight: 12, paddingBottom: 10, paddingLeft: 8 },

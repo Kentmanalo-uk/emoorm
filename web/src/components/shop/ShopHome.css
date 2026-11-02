@@ -224,3 +224,16 @@ a.shh-tile:hover { transform: translateY(-2px); box-shadow: 0 8px 20px rgba(15, 
   .is-strip .shh-gallery-item { flex-basis: 32%; }
   .shh-msg-box { padding: 22px 24px; }
 }
+
+/* The shared product card takes the shop's colour. */
+.shop-home .product-card .product-price {
+  color: var(--shh-accent);
+}
+
+.shop-home .product-cart-fab {
+  background: var(--shh-accent);
+}
+
+.shop-home .shh-tile-wrap > .product-card {
+  height: 100%;
+}

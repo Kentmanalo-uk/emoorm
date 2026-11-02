@@ -1,9 +1,10 @@
-import { Pressable, RefreshControl, ScrollView, StyleSheet, Text, View } from 'react-native';
+import { Pressable, ScrollView, StyleSheet, Text, View } from 'react-native';
 import { usePathname, useRouter } from 'expo-router';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { CaretRightIcon, LockSimpleIcon } from '../../lib/icons';
 import { font, t, themed } from '../../theme';
 import { useSellerShell } from './SellerShell';
+import { PullScrollView } from '../PullList';
 import { SellerBackBar, SellerTabHeader } from './SellerTopBars';
 import { PHONE_OWN_HEADER, PHONE_TABS, cleanSellerPath, sellerHref } from './sellerRoutes';
 import { useTabBarScroll } from '../Glass';
@@ -49,21 +50,23 @@ export default function SellerPage({
     : header;
   const showPrivate = privateLine && !PHONE_OWN_HEADER.includes(path);
   const bottom = isTab ? 16 : 24 + insets.bottom;
+  const Scroller = onRefresh ? PullScrollView : ScrollView;
+  const pullProps = onRefresh ? { onPull: onRefresh, refreshing } : null;
 
   return (
     <View style={styles.screen}>
       {bar || null}
       {scroll ? (
-        <ScrollView showsVerticalScrollIndicator={false} showsHorizontalScrollIndicator={false}
+        <Scroller showsVerticalScrollIndicator={false} showsHorizontalScrollIndicator={false}
+          {...pullProps}
           {...(isTab ? tabScroll : null)}
           style={styles.flex}
           contentContainerStyle={[styles.content, { paddingBottom: bottom }, contentStyle]}
           keyboardShouldPersistTaps="handled"
-          refreshControl={onRefresh ? <RefreshControl refreshing={Boolean(refreshing)} onRefresh={onRefresh} colors={[t.primary[600]]} tintColor={t.primary[600]} /> : undefined}
         >
           {showPrivate ? <SellerPrivateLine /> : null}
           {children}
-        </ScrollView>
+        </Scroller>
       ) : (
         <View style={styles.flex}>
           {showPrivate ? <View style={styles.privateWrap}><SellerPrivateLine /></View> : null}

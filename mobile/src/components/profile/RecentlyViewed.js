@@ -1,13 +1,10 @@
 import { useEffect, useState } from 'react';
 import { Pressable, ScrollView, StyleSheet, Text, View } from 'react-native';
-import { useRouter } from 'expo-router';
-import ProductImage from '../ProductImage';
-import { peso } from '../SaleTag';
-import { saleInfo } from '../../lib/variantPricing';
+import ProductCard from '../ProductCard';
+import { GRID_EDGE, GRID_GAP } from '../../lib/productGrid';
 import { font, t, themed } from '../../theme';
 import { clearRecentlyViewed, onRecentChange, recentlyViewed } from './recentViews';
 import { PfSection, PfTitle } from './ProfileUI';
-import { useProductPeek } from '../peek/ProductPeek';
 
 /**
  * Profile, under My Purchase: the products opened lately on this device,
@@ -15,8 +12,6 @@ import { useProductPeek } from '../peek/ProductPeek';
  * Nothing shows until there are some.
  */
 export default function RecentlyViewed({ userId = null }) {
-  const router = useRouter();
-  const peekProduct = useProductPeek();
   const [items, setItems] = useState([]);
 
   useEffect(() => {
@@ -37,14 +32,8 @@ export default function RecentlyViewed({ userId = null }) {
           <Text style={styles.clearText}>Clear</Text>
         </Pressable>
       </View>
-      <ScrollView showsVerticalScrollIndicator={false} horizontal showsHorizontalScrollIndicator={false} contentContainerStyle={styles.row} style={styles.scroller}>
-        {items.map((p) => (
-          <Pressable key={p.id} accessibilityRole="link" onPress={() => router.push(`/product/${p.slug}`)} {...peekProduct(p)} style={styles.card}>
-            <View style={styles.img}><ProductImage src={p.images?.[0]} style={StyleSheet.absoluteFill} /></View>
-            <Text style={styles.name} numberOfLines={2}>{p.name}</Text>
-            <Text style={styles.price}>{peso(saleInfo(p).price)}</Text>
-          </Pressable>
-        ))}
+      <ScrollView showsVerticalScrollIndicator={false} horizontal showsHorizontalScrollIndicator={false} style={styles.scroller} contentContainerStyle={styles.row}>
+        {items.map((p) => <ProductCard key={p.id} product={p} variant="home" style={styles.card} />)}
       </ScrollView>
     </PfSection>
   );
@@ -54,10 +43,7 @@ const styles = themed(() => StyleSheet.create({
   head: { flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between' },
   clear: { paddingVertical: 4, paddingLeft: 8 },
   clearText: { fontSize: 13, lineHeight: 20.8, color: t.neutral[500], ...font(400) },
-  scroller: { marginHorizontal: -16 },
-  row: { gap: 10, paddingHorizontal: 20, paddingBottom: 4 },
-  card: { width: 112, gap: 4 },
-  img: { width: 112, height: 112, overflow: 'hidden', borderRadius: 10, backgroundColor: t.neutral[100] },
-  name: { fontSize: 13, lineHeight: 16.9, color: t.neutral[800], ...font(400) },
-  price: { fontSize: 13, lineHeight: 20.8, color: t.primary[700], ...font(500) },
+  scroller: { marginHorizontal: -16, backgroundColor: t.neutral[100] },
+  row: { gap: GRID_GAP, padding: GRID_EDGE },
+  card: { width: 150 },
 }));

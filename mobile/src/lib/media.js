@@ -53,4 +53,15 @@ export const sizedImg = (path, widthDp) => {
   return `${BACKEND_URL}${m[1]}${m[2]}-w${pick}.webp`;
 };
 
+/**
+ * The photo for a full-width gallery: the server's largest copy, on any
+ * screen. A sharp phone would otherwise ask for more than the largest copy
+ * and get the stored original, which costs far more to decode for a picture
+ * that looks the same at this size.
+ */
+export const galleryImg = (path, widthDp) => sizedImg(
+  path,
+  Math.min(widthDp, PHOTO_WIDTHS[PHOTO_WIDTHS.length - 1] / PixelRatio.get()),
+);
+
 export default resolveImg;

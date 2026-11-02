@@ -1,5 +1,6 @@
 import { useEffect, useLayoutEffect, useRef } from 'react';
-import { AccessibilityInfo, Animated, Easing, Image, StyleSheet } from 'react-native';
+import { AccessibilityInfo, Animated, Easing, StyleSheet } from 'react-native';
+import { Image } from 'expo-image';
 import { create } from 'zustand';
 import { t, themed } from '../theme';
 
@@ -7,9 +8,15 @@ import { t, themed } from '../theme';
  * The product photo's flight from a product card to the product page.
  * Tapping a card lifts its photo off the card (launchHero) and the product
  * page fades in under it; the photo grows from where it was on the card to
- * where the page's gallery shows it, then melts into the gallery once that
- * has its picture (heroImageReady). The app root renders <HeroFlightHost />
+ * where the page's gallery shows it, then melts into the gallery, which is
+ * holding that same picture (ArrivingPhoto on the page: kept hidden until the
+ * flight lands, or there would be two of it on screen), with the sharp copy
+ * fading in on top when it has loaded. The app root renders <HeroFlightHost />
  * over every screen. Reduce Motion: no flight (the page opens as usual).
+ *
+ * It flies the very picture the card is showing (same address, same engine,
+ * so it comes from memory at once) and not the full-size photo, which would
+ * have to be fetched and decoded again in the middle of the animation.
  *
  * Smoothness: the whole flight runs on the native driver (transforms and
  * opacity only), so it keeps 60fps while JavaScript builds the product page.
@@ -18,11 +25,11 @@ import { t, themed } from '../theme';
  * shape (cover), re-cropping from the card's square to the gallery's 5:6.
  */
 
-const FLY_MS = 380;
+const FLY_MS = 320;
 const FADE_MS = 140;
-// The flight waits this long for the page's own picture after landing (the
-// page may still be loading: the photo holds its place until it shows).
-const WAIT_IMAGE_MS = 3000;
+// The flight waits this long for the page's picture after landing. It is the
+// same picture and in memory, so this is only ever a safety net.
+const WAIT_IMAGE_MS = 700;
 // The path is worked out at this many points (piecewise linear in between).
 const STEPS = 24;
 const EASE = Easing.bezier(0.2, 0.8, 0.2, 1);
@@ -52,6 +59,24 @@ export function launchHero({ slug, uri, from, to, aspect }) {
   useHeroFlight.setState({ flight: { id: `${slug}:${Date.now()}`, slug, uri, from, to, aspect, ready: false } });
   return true;
 }
+
+// The picture each product was last opened from: already in memory, so its
+// page can show it at once, whether the photo flew there or not.
+const CARD_PHOTOS_KEPT = 40;
+const cardPhotos = new Map();
+
+export function rememberCardPhoto(slug, uri) {
+  cardPhotos.delete(slug);
+  cardPhotos.set(slug, uri);
+  if (cardPhotos.size > CARD_PHOTOS_KEPT) cardPhotos.delete(cardPhotos.keys().next().value);
+}
+
+export const cardPhotoOf = (slug) => cardPhotos.get(slug) || null;
+
+/** True while this product's photo is still in the air on its way to the page. */
+export const useHeroArriving = (slug) => useHeroFlight((s) => (
+  Boolean(slug) && s.flight?.slug === slug && !s.flight.landed
+));
 
 /** The page's first gallery picture is on screen. */
 export function heroImageReady(slug) {
@@ -130,6 +155,7 @@ function Flight({ flight }) {
     anim.start(({ finished }) => {
       if (!finished) return;
       landed.current = true;
+      useHeroFlight.setState((s) => (s.flight?.id === id ? { flight: { ...s.flight, landed: true } } : s));
       // The gallery shows its own picture: hand over. Otherwise wait a moment.
       if (useHeroFlight.getState().flight?.ready) melt();
       else imageTimer.current = setTimeout(melt, WAIT_IMAGE_MS);
@@ -168,7 +194,7 @@ function Flight({ flight }) {
           transform: [{ scaleX: at('ix') }, { scaleY: at('iy') }],
         }}
       >
-        <Image source={{ uri }} style={StyleSheet.absoluteFill} resizeMode="cover" fadeDuration={0} />
+        <Image source={{ uri }} style={StyleSheet.absoluteFill} contentFit="cover" cachePolicy="memory-disk" transition={0} />
       </Animated.View>
     </Animated.View>
   );

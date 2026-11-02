@@ -15,14 +15,15 @@ const SHAPES = { path: Path, circle: Circle, rect: Rect, ellipse: Ellipse };
 export const DEFAULT_SIZE = 24;
 export const DEFAULT_STROKE_WIDTH = 1.75;
 
-// The drawing's shapes; parts in the current colour take `paint` if given.
-const draw = (nodes, paint) => nodes.map(([tag, attrs], i) => {
+// The drawing's shapes; parts in the current colour take `paint` if given,
+// and `look` goes on every shape, under whatever a shape says for itself.
+const draw = (nodes, paint, look) => nodes.map(([tag, attrs], i) => {
   const Shape = SHAPES[tag];
   if (!Shape) return null;
   const props = paint
     ? Object.fromEntries(Object.entries(attrs).map(([k, v]) => [k, v === 'currentColor' ? paint : v]))
     : attrs;
-  return <Shape key={i} {...props} />;
+  return <Shape key={i} {...look} {...props} />;
 });
 
 export function createIkion(iconName, displayName, nodes) {
@@ -36,14 +37,14 @@ export function createIkion(iconName, displayName, nodes) {
       : { fill: 'none', stroke: color, strokeWidth, strokeLinecap: 'round', strokeLinejoin: 'round' };
     return (
       <Svg width={size} height={size} viewBox="0 0 24 24" color={color} accessibilityLabel={title} {...rest}>
-        {/* The colour is handed to draw() so any node written as
-            fill="currentColor" -- the cart's wheels, an arrow's head --
-            is painted in it. Without this the literal string survives
-            into react-native-svg, which does not resolve it the way a
-            browser resolves CSS currentColor, and those parts came out
-            in their own colour: the cart looked filled in next to the
-            outline icons beside it. */}
-        <G {...paint}>{draw(nodes[filled ? 'filled' : 'outline'], color)}</G>
+        {/* Every shape is told its own paint rather than inheriting it from
+            the <G>. A shape that loses what it inherited draws with SVG's
+            default, solid black: that was the bottom bar's cart, black and
+            filled now and then among grey outlines, wheels included. The key
+            builds the shapes again when an icon changes style (a tab being
+            left), so nothing of the old style is left on them. Any node
+            written as fill="currentColor" gets the colour the same way. */}
+        <G key={filled ? 'filled' : 'outline'}>{draw(nodes[filled ? 'filled' : 'outline'], color, paint)}</G>
         {children}
       </Svg>
     );

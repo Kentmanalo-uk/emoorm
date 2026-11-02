@@ -38,6 +38,8 @@ import {
   OPEN as OPEN_DEALS, dealStatus, heads, peso as dealPeso, telHref,
 } from '../offers/offerText';
 import { peso } from '../../lib/format';
+import MoreProducts from '../product/MoreProducts';
+import { usePhoneLayout } from '../../hooks/useMobileNav';
 
 const POLL_INTERVAL_MS = 5000;
 // Ate Moormy's chat (buyers only): opened like a conversation, as ?c=moormy.
@@ -144,9 +146,9 @@ function ConversationListItem({
         <UserAvatar
           src={avatar}
           person={isSellerView ? item.buyer : null}
+          shopName={isSellerView ? null : title}
           name={title}
           alt={title}
-          fallbackIcon={isSellerView ? null : StoreIcon}
         />
       </div>
       <div className="msgr-convo-body">
@@ -402,6 +404,7 @@ export default function Messenger({ role = 'buyer', className = '', title = '', 
   // A question typed in Ate Moormy's intro card, asked as her chat opens.
   const [moormyAsk, setMoormyAsk] = useState(null);
   const withMoormy = role === 'buyer';
+  const isPhone = usePhoneLayout();
 
   const messagesEndRef = useRef(null);
   const fileInputRef = useRef(null);
@@ -697,6 +700,7 @@ export default function Messenger({ role = 'buyer', className = '', title = '', 
       title: activeConvo.store?.name || 'Store',
       subtitle: 'Store · Tap to view shop',
       avatar: activeConvo.store?.logo,
+      shopName: activeConvo.store?.name || 'Store',
       icon: <StoreIcon size={16} />,
       link: activeConvo.store?.slug ? `/store/${activeConvo.store.slug}` : null,
     };
@@ -946,6 +950,7 @@ export default function Messenger({ role = 'buyer', className = '', title = '', 
               />
             ))
           )}
+          {role === 'buyer' && isPhone ? <MoreProducts /> : null}
         </div>
       </aside>
 
@@ -979,8 +984,8 @@ export default function Messenger({ role = 'buyer', className = '', title = '', 
                 <CaretLeft size={22} />
               </button>
               <div className="msgr-avatar msgr-avatar-lg">
-                {activeHeader?.avatar || activeHeader?.person
-                  ? <UserAvatar src={activeHeader.avatar} person={activeHeader.person} name={activeHeader.title} alt={activeHeader.title} />
+                {activeHeader?.avatar || activeHeader?.person || activeHeader?.shopName
+                  ? <UserAvatar src={activeHeader.avatar} person={activeHeader.person} shopName={activeHeader.shopName} name={activeHeader.title} alt={activeHeader.title} />
                   : activeHeader?.icon}
               </div>
               <div className="msgr-thread-title">
@@ -1060,8 +1065,8 @@ export default function Messenger({ role = 'buyer', className = '', title = '', 
               {timeline.length === 0 ? (
                 <div className="msgr-messages-empty">
                   <div className="msgr-intro-avatar">
-                    {activeHeader?.avatar || activeHeader?.person
-                      ? <UserAvatar src={activeHeader.avatar} person={activeHeader.person} name={activeHeader.title} alt="" />
+                    {activeHeader?.avatar || activeHeader?.person || activeHeader?.shopName
+                      ? <UserAvatar src={activeHeader.avatar} person={activeHeader.person} shopName={activeHeader.shopName} name={activeHeader.title} alt="" />
                       : activeHeader?.icon}
                   </div>
                   <h3>{activeHeader?.title}</h3>

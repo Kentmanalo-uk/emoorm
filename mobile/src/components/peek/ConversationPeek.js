@@ -71,6 +71,7 @@ export function ConversationPeekCard({ item, currentUserId }) {
       <View style={styles.head}>
         <ChatAvatar
           src={sellerView ? item.buyer?.profilePhoto : item.store?.logo}
+          shopName={sellerView ? null : title}
           name={title}
           size={44}
           bg={t.success[100]}

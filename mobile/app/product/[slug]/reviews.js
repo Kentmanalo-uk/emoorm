@@ -14,6 +14,7 @@ import ReviewItem, { Stars } from '../../../src/components/product/ReviewItem';
 import useReviewSocial from '../../../src/components/reviews/useReviewSocial';
 import useReviewViewer from '../../../src/components/reviews/useReviewViewer';
 import { parseImages, peso } from '../../../src/components/product/productLib';
+import { PullScrollView } from '../../../src/components/PullList';
 
 const PAGE_SIZE = 10;
 const STARS = [5, 4, 3, 2, 1];
@@ -40,6 +41,7 @@ function ReviewsPage({ slug }) {
   const [product, setProduct] = useState(null);
   const [stats, setStats] = useState(null);
   const [missing, setMissing] = useState(false);
+  const [pullKey, setPullKey] = useState(0);
 
   useEffect(() => {
     let live = true;
@@ -55,7 +57,7 @@ function ReviewsPage({ slug }) {
       }
     })();
     return () => { live = false; };
-  }, [slug]);
+  }, [slug, pullKey]);
 
   const pickRating = (value) => router.setParams({ rating: value ? String(value) : undefined });
   const goBack = () => (router.canGoBack() ? router.back() : router.replace(`/product/${slug}`));
@@ -80,7 +82,7 @@ function ReviewsPage({ slug }) {
         </View>
         <ShellPageMenu />
       </View>
-      <ScrollView showsVerticalScrollIndicator={false} showsHorizontalScrollIndicator={false} contentContainerStyle={[styles.page, { paddingBottom: 24 + insets.bottom }]}>
+      <PullScrollView onPull={() => setPullKey((key) => key + 1)} showsVerticalScrollIndicator={false} showsHorizontalScrollIndicator={false} contentContainerStyle={[styles.page, { paddingBottom: 24 + insets.bottom }]}>
         {missing ? (
           <EmptyState
             page
@@ -152,10 +154,10 @@ function ReviewsPage({ slug }) {
               </ScrollView>
             ) : null}
 
-            {product ? <ReviewList key={`${product.id}-${rating || 'all'}`} product={product} rating={rating} /> : null}
+            {product ? <ReviewList key={`${product.id}-${rating || 'all'}-${pullKey}`} product={product} rating={rating} /> : null}
           </>
         )}
-      </ScrollView>
+      </PullScrollView>
     </View>
   );
 }

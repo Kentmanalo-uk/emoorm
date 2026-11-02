@@ -3,9 +3,7 @@ import {
   Animated, Easing, Image, Pressable, StyleSheet, Text, View,
 } from 'react-native';
 import { useRouter } from 'expo-router';
-import { ArrowRightIcon, StarIcon } from '../../lib/icons';
-import apiClient from '../../api/client';
-import { useProductPeek } from '../peek/ProductPeek';
+import { ArrowRightIcon } from '../../lib/icons';
 import { useStorePeek } from '../peek/StorePeek';
 import { resolveImg } from '../../lib/media';
 import { font, t, text, themed } from '../../theme';
@@ -58,41 +56,6 @@ export function MunicipalitySectionHead({ title, label, to }) {
 }
 
 const BRAND_ICON = require('../../../assets/brand-icon.png');
-
-// The admin's product placeholder (App settings → productPlaceholder), asked once.
-let placeholder = null;
-let asked = null;
-const loadPlaceholder = () => {
-  asked = asked || apiClient.get('/app-settings')
-    .then((res) => {
-      const value = res?.data?.productPlaceholder;
-      placeholder = value && value !== '/brand-icon.png' ? resolveImg(value) : null;
-    })
-    .catch(() => {});
-  return asked;
-};
-
-/*
- * The card's photo. Without one the website's placeholder <img> takes the
- * card's "object-fit: cover; 100%" rule, so the faint logo fills the whole
- * tile (not the 70% mark of the shared ProductImage).
- */
-function CardPhoto({ src }) {
-  const uri = src ? resolveImg(src) : null;
-  const [failed, setFailed] = useState(false);
-  const [custom, setCustom] = useState(placeholder);
-  useEffect(() => { setFailed(false); }, [uri]);
-  useEffect(() => {
-    if (uri && !failed) return undefined;
-    let live = true;
-    loadPlaceholder().then(() => { if (live) setCustom(placeholder); });
-    return () => { live = false; };
-  }, [uri, failed]);
-  if (!uri || failed) {
-    return <Image source={custom ? { uri: custom } : BRAND_ICON} style={[styles.fill, styles.placeholder]} resizeMode="cover" />;
-  }
-  return <Image source={{ uri }} style={styles.fill} resizeMode="cover" onError={() => setFailed(true)} />;
-}
 
 const STACK_W = 281; // 78% of the 360px card
 const STACK_H = 180;
@@ -166,35 +129,6 @@ export function MunicipalityGalleryStack({ municipality, id }) {
         <ArrowRightIcon size={15} color={t.primary[700]} />
       </Pressable>
     </View>
-  );
-}
-
-/** .municipality-product-card: photo, two-line name, price, five stars and the review count. */
-export function MunicipalityProductCard({ product, style }) {
-  const router = useRouter();
-  const peek = useProductPeek()(product);
-  return (
-    <Pressable
-      accessibilityRole="link"
-      accessibilityLabel={product.name}
-      onPress={() => router.push(`/product/${product.slug}`)}
-      {...peek}
-      style={[styles.productCard, style]}
-    >
-      <View style={styles.productImage}>
-        <CardPhoto src={product.images?.[0]} />
-      </View>
-      <View style={styles.productInfo}>
-        <Text style={styles.productName} numberOfLines={2}>{product.name}</Text>
-        <Text style={styles.productPrice}>₱{Number(product.price || 0).toFixed(2)}</Text>
-        <View style={styles.rating}>
-          <View style={styles.stars}>
-            {[0, 1, 2, 3, 4].map((star) => <StarIcon key={star} size={11} weight="fill" color={t.warning[500]} />)}
-          </View>
-          <Text style={styles.ratingCount}>({product.reviewCount ?? 0})</Text>
-        </View>
-      </View>
-    </Pressable>
   );
 }
 
@@ -281,14 +215,6 @@ const styles = themed(() => StyleSheet.create({
     borderRadius: 8,
   },
 
-  productCard: { overflow: 'hidden', borderRadius: 12, backgroundColor: t.neutral[0] },
-  productImage: { aspectRatio: 1, overflow: 'hidden', backgroundColor: t.neutral[100] },
-  productInfo: { flex: 1, gap: 4, paddingTop: 8, paddingHorizontal: 10, paddingBottom: 10 },
-  productName: { minHeight: 43.2, fontSize: 16, lineHeight: 21.6, color: t.secondary[950], ...font(500) },
-  productPrice: { marginTop: 2, fontSize: 15, lineHeight: 18, color: t.primary[600], ...font(500) },
-  rating: { flexDirection: 'row', alignItems: 'center', gap: 4, marginTop: 2 },
-  stars: { flexDirection: 'row', alignItems: 'center', gap: 1 },
-  ratingCount: { fontSize: 11, lineHeight: 11, color: text.muted, ...font(400) },
 
   storeRow: {
     flexDirection: 'row',

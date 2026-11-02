@@ -2,6 +2,7 @@ import { Image, Linking, Platform, Pressable, StyleSheet, Text, View } from 'rea
 import { MapPinIcon, NavigationArrowIcon, StorefrontIcon, XIcon } from '../../lib/icons';
 import { resolveImg } from '../../lib/media';
 import { font, ink, t, themed } from '../../theme';
+import { ShopLogoArt } from '../shop/ShopArt';
 
 /*
  * The pieces of Home's "Discover Stores" map that every phone draws the same
@@ -45,7 +46,7 @@ export function StoreMapCard({ store, onClose, onOpen }) {
         <XIcon size={18} color={t.neutral[500]} />
       </Pressable>
       <View style={styles.cardAvatar}>
-        {logo ? <Image source={{ uri: logo }} style={styles.fill} /> : <StorefrontIcon size={34} color={t.primary[600]} />}
+        {logo ? <Image source={{ uri: logo }} style={styles.fill} /> : <ShopLogoArt name={store.name} />}
       </View>
       <Text style={styles.cardName} numberOfLines={1}>{store.name}</Text>
       <View style={styles.cardAddress}>

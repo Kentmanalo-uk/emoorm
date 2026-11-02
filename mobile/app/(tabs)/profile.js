@@ -20,18 +20,19 @@ import { GoogleMark } from '../../src/components/auth/AuthForm';
 import { useTabBarScroll } from '../../src/components/Glass';
 import ShellPageMenu from '../../src/components/ShellPageMenu';
 import LoadingSkeleton from '../../src/components/LoadingSkeleton';
-import RoleSwitchOverlay, { useAccountSwitchStore } from '../../src/components/RoleSwitchOverlay';
+import { startAccountSwitch, useAccountSwitchStore } from '../../src/components/RoleSwitchOverlay';
 import { GradientUserIcon, GreenToolIcon, useSvgId } from '../../src/components/profile/ProfileIcons';
-import { PfRow, PfSection, PfTitle, SignOutRow } from '../../src/components/profile/ProfileUI';
+import { PfRow, PfSection, PfTitle } from '../../src/components/profile/ProfileUI';
 import RecentlyViewed from '../../src/components/profile/RecentlyViewed';
 import { countBuyerTabs, errorText } from '../../src/components/profile/profileLib';
 import { syncWishlist } from '../../src/components/profile/wishlistSync';
-import { openAccountSheet } from '../../src/components/AccountSheet';
+import MoreProducts from '../../src/components/home/MoreProducts';
 import { font, t, themed } from '../../src/theme';
 import HeaderGlow from '../../src/components/HeaderGlow';
 import { openSwitchAccount } from '../../src/components/SwitchAccountSheet';
 import { loadSavedAccounts, useSavedAccounts } from '../../src/store/savedAccounts';
 import { PageLoader } from '../../src/components/BrandLoader';
+import { PullScrollView } from '../../src/components/PullList';
 
 const CACHE_KEY = 'profile:summary';
 
@@ -90,7 +91,8 @@ function SignedIn() {
   const shop = cachedShop && (!cachedShop.ownerId || cachedShop.ownerId === user?.id) ? cachedShop : null;
   const [summary, setSummary] = useState(() => getCacheEntry(CACHE_KEY)?.data || null);
   const [resending, setResending] = useState(false);
-  const [switching, setSwitching] = useState(false);
+
+  const [pullKey, setPullKey] = useState(0);
 
   // From what it showed last time while it is asked for again.
   useFocusEffect(useCallback(() => {
@@ -103,7 +105,7 @@ function SignedIn() {
       })
       .catch((err) => { if (live) toast.error(errorText(err, 'Failed to load profile')); });
     return () => { live = false; };
-  }, [updateUser]));
+  }, [updateUser, pullKey]));
 
   const profile = summary?.profile || null;
   const stats = summary?.stats || { toPayCount: 0, toShipCount: 0, toReceiveCount: 0, toPickupCount: 0 };
@@ -126,10 +128,7 @@ function SignedIn() {
   };
 
   // "My shop": the switch to the Seller Center, with the account-switch screen.
-  const enterShop = () => {
-    setSwitching(true);
-    setTimeout(() => { router.push('/seller'); setTimeout(() => setSwitching(false), 400); }, 750);
-  };
+  const enterShop = () => startAccountSwitch('seller', '/seller', { replace: true });
 
   const name = profile?.fullName || user?.fullName || 'Your account';
   const email = profile?.email || user?.email;
@@ -187,14 +186,18 @@ function SignedIn() {
   if (!summary) {
     return (
       <View style={styles.screen}>
-        <ProfileScroll header={header}><ProfileLoading /></ProfileScroll>
+        <ProfileScroll onPull={() => setPullKey((key) => key + 1)} header={header}><ProfileLoading /></ProfileScroll>
       </View>
     );
   }
 
   return (
     <View style={styles.screen}>
-      <ProfileScroll header={header}>
+      <ProfileScroll
+        onPull={() => setPullKey((key) => key + 1)}
+        header={header}
+        footer={<MoreProducts refreshKey={pullKey} />}
+      >
         {/* Account card: tap to edit the name and photo. */}
         <View style={styles.card}>
           <Pressable
@@ -279,10 +282,7 @@ function SignedIn() {
           <PfRow Icon={InfoIcon} label="About Emoorm" onPress={() => router.push('/about')} />
           <PfRow Icon={GearIcon} label="Settings" onPress={() => router.push('/settings')} />
         </PfSection>
-
-        <SignOutRow onPress={() => openAccountSheet('confirm')} />
       </ProfileScroll>
-      <RoleSwitchOverlay visible={switching} target="seller" />
     </View>
   );
 }
@@ -366,7 +366,9 @@ function Guest() {
  * The page scrolls under its bar, which is fixed at the top as Home's search
  * bar is (the 12px above it stays put too).
  */
-function ProfileScroll({ header, children }) {
+function ProfileScroll({ header, children, footer = null, onPull }) {
+  // Signed out there is nothing of theirs to reload.
+  const List = onPull ? PullScrollView : ScrollView;
   const insets = useSafeAreaInsets();
   const tabScroll = useTabBarScroll();
   return (
@@ -375,13 +377,14 @@ function ProfileScroll({ header, children }) {
       <View style={{ height: insets.top }} />
       <View style={styles.headGap} />
       {header}
-      <ScrollView showsHorizontalScrollIndicator={false}
+      <List onPull={onPull} showsHorizontalScrollIndicator={false}
         style={styles.scroll}
         showsVerticalScrollIndicator={false}
         {...tabScroll}
       >
         <View style={styles.content}>{children}</View>
-      </ScrollView>
+        {footer}
+      </List>
     </>
   );
 }

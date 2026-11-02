@@ -14,6 +14,7 @@ import ShopQrPop from '../components/seller/ShopQrPop';
 import './SellerDashboard.css';
 import { readCache, writeCache } from '../lib/pageCache';
 import PageMenu from '../components/layout/PageMenu';
+import { ShopLogoArt } from '../components/shop/ShopArt';
 
 /*
  * "Me" (phone), drawn like the buyer's Profile: the shop card with its
@@ -114,7 +115,7 @@ export default function SellerMenu() {
           <div className="sme-id sqp-row">
             <Link to="/seller/store" className="sqp-row-link" aria-label="Edit shop profile" />
             <span className="sme-avatar" ref={logoRef}>
-              {store?.logo ? <img src={resolveImg(store.logo)} alt="" /> : name.trim().charAt(0).toUpperCase()}
+              {store?.logo ? <img src={resolveImg(store.logo)} alt="" /> : <ShopLogoArt name={name} />}
             </span>
             <span className="sme-id-text">
               <span className="sqp-name-row">

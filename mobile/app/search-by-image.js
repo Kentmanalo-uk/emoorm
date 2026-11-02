@@ -489,9 +489,10 @@ function ResultsSheet({ results, photo, W, H, insets, onRetake }) {
             numColumns={2}
             columnWrapperStyle={styles.row}
             showsVerticalScrollIndicator={false}
+            style={styles.results}
             contentContainerStyle={{ paddingBottom: insets.bottom + 24 }}
             ListHeaderComponent={(
-              <View>
+              <View style={styles.resultsHead}>
                 <View style={styles.sorts} accessibilityRole="tablist">
                   <SortTab label="Best match" on={sortBy === 'relevance'} onPress={() => setSortBy('relevance')} />
                   <SortTab label="Newest" on={sortBy === 'newest'} onPress={() => setSortBy('newest')} />
@@ -524,7 +525,7 @@ function ResultsSheet({ results, photo, W, H, insets, onRetake }) {
             )}
             renderItem={({ item }) => (
               <View style={{ width: cellW }}>
-                <ProductCard product={item} variant="result" />
+                <ProductCard product={item} variant="home" />
               </View>
             )}
           />
@@ -633,4 +634,6 @@ const styles = themed(() => StyleSheet.create({
   sortDir: { flexDirection: 'column' },
   filters: { gap: 8, paddingTop: 2, paddingHorizontal: 16, paddingBottom: 12 },
   row: { gap: GRID_GAP, paddingHorizontal: GRID_EDGE, marginBottom: GRID_GAP },
+  results: { backgroundColor: t.neutral[100] },
+  resultsHead: { marginBottom: GRID_GAP, backgroundColor: t.neutral[0] },
 }));

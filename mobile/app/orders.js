@@ -1,6 +1,6 @@
 import { useCallback, useEffect, useRef, useState } from 'react';
 import {
-  FlatList, Pressable, RefreshControl, StyleSheet, Text, View,
+  FlatList, Pressable, StyleSheet, Text, View,
 } from 'react-native';
 import { useFocusEffect, useLocalSearchParams, useRouter } from 'expo-router';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
@@ -33,6 +33,7 @@ import { useProductPeek } from '../src/components/peek/ProductPeek';
 import OrderReviewSheet from '../src/components/orders/OrderReviewSheet';
 import OrderDetailsSheet from '../src/components/orders/OrderDetailsSheet';
 import OrdersEmpty from '../src/components/orders/OrdersEmpty';
+import useBrandRefresh from '../src/components/useBrandRefresh';
 
 /*
  * My Orders (web/src/pages/Orders.jsx at phone size): the buyer's tabs, one
@@ -91,7 +92,6 @@ export default function Orders() {
   const [orders, setOrders] = useState(() => cachedOrders || []);
   const [ordersFresh, setOrdersFresh] = useState(false);
   const [isLoading, setIsLoading] = useState(() => !cachedOrders);
-  const [refreshing, setRefreshing] = useState(false);
   const [savedTab, setActiveTab] = useState(() => buyerTabFrom(params.status));
   const activeTab = buyerTabFrom(savedTab);
   const [selectedOrder, setSelectedOrder] = useState(null);
@@ -152,9 +152,10 @@ export default function Orders() {
       toast.error('Failed to load orders');
     } finally {
       setIsLoading(false);
-      setRefreshing(false);
     }
   }, []);
+
+  const pull = useBrandRefresh(() => Promise.all([fetchOrders(), loadPendingReviews()]));
 
   useFocusEffect(useCallback(() => {
     fetchOrders();
@@ -405,7 +406,7 @@ export default function Orders() {
         showsHorizontalScrollIndicator={false}
         style={styles.scroll}
         contentContainerStyle={[styles.content, { paddingBottom: 16 + insets.bottom }, filteredOrders.length === 0 && styles.grow]}
-        refreshControl={<RefreshControl refreshing={refreshing} onRefresh={() => { setRefreshing(true); fetchOrders(); loadPendingReviews(); }} colors={[t.primary[600]]} />}
+        {...pull.listProps}
         keyboardShouldPersistTaps="handled"
         // An order card is tall and expensive: a couple of screenfuls is
         // plenty to keep built, and the rest are detached on Android.
@@ -464,6 +465,7 @@ export default function Orders() {
           ) : null
         )}
       />
+      {pull.indicator}
 
       <OrderDetailsSheet
         open={showOrderDetails && Boolean(selectedOrder)}

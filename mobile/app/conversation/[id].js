@@ -207,6 +207,7 @@ function StoreChat({ id, onBack }) {
       title: activeConvo.store?.name || 'Store',
       subtitle: 'Store · Tap to view shop',
       avatar: activeConvo.store?.logo,
+      shopName: activeConvo.store?.name || 'Store',
       Icon: StorefrontIcon,
       link: activeConvo.store?.slug ? `/store/${activeConvo.store.slug}` : null,
     };
@@ -373,11 +374,12 @@ function StoreChat({ id, onBack }) {
         </Pressable>
         <ChatAvatar
           src={activeHeader.avatar}
+          shopName={activeHeader.shopName}
           name={activeHeader.title}
           size={38}
           fallbackIcon={null}
           style={styles.headAvatar}
-          {...(!activeHeader.avatar ? { fallback: <activeHeader.Icon size={16} color={t.neutral[600]} /> } : {})}
+          {...(!activeHeader.avatar && !activeHeader.shopName ? { fallback: <activeHeader.Icon size={16} color={t.neutral[600]} /> } : {})}
         />
         <Pressable
           accessibilityRole={activeHeader.link ? 'link' : undefined}
@@ -445,7 +447,7 @@ function StoreChat({ id, onBack }) {
               size={64}
               bg={t.primary[50]}
               color={t.primary[600]}
-              {...(!activeHeader.avatar ? { fallback: <activeHeader.Icon size={16} color={t.primary[600]} /> } : {})}
+              {...(!activeHeader.avatar && !activeHeader.shopName ? { fallback: <activeHeader.Icon size={16} color={t.primary[600]} /> } : {})}
             />
             <Text style={styles.introName}>{activeHeader.title}</Text>
             <Text style={styles.introText}>

@@ -31,6 +31,8 @@ import useCartStore, { standaloneLine } from '../../src/store/cartStore';
 import { startBuyNow } from '../../src/lib/buyNow';
 import { GRID_BLEED, GRID_GAP, gridCellWidth } from '../../src/lib/productGrid';
 import { font, t, themed } from '../../src/theme';
+import { PullScrollView } from '../../src/components/PullList';
+import { ShopCoverArt, ShopLogoArt } from '../../src/components/shop/ShopArt';
 
 /*
  * A shop's page on phones (web/src/pages/StoreDetail.jsx, the is-phone
@@ -230,7 +232,6 @@ export default function StoreDetail() {
 
   const hasHome = Array.isArray(home) && home.length > 0;
   const phoneTab = mobileTab === 'home' ? (home === null || hasHome ? 'home' : 'products') : mobileTab;
-  const initials = store.name ? store.name.split(' ').slice(0, 2).map((w) => w[0]).join('').toUpperCase() : '?';
   const banner = store.bannerImage || store.coverImage;
   const stats = store.stats || {};
   const rating = Number(stats.averageRating || 0);
@@ -435,7 +436,7 @@ export default function StoreDetail() {
     <View style={styles.screen} ref={pageShot} collapsable={false}>
       <Stack.Screen options={{ headerShown: false }} />
       {shareSheet}
-      <ScrollView showsVerticalScrollIndicator={false} showsHorizontalScrollIndicator={false}
+      <PullScrollView onPull={fetchStore} showsVerticalScrollIndicator={false} showsHorizontalScrollIndicator={false}
         ref={scrollRef}
         style={styles.scroll}
         contentContainerStyle={styles.scrollBody}
@@ -452,7 +453,7 @@ export default function StoreDetail() {
             />
             {banner ? (
               <Image source={{ uri: resolveImg(banner) }} style={styles.backdropImg} resizeMode="cover" />
-            ) : null}
+            ) : <ShopCoverArt name={store.name} />}
           </View>
 
           <View style={styles.card}>
@@ -460,12 +461,7 @@ export default function StoreDetail() {
               <View style={[styles.logo, !store.logo && styles.logoEmpty]}>
                 {store.logo ? (
                   <Image source={{ uri: resolveImg(store.logo) }} style={styles.logoImg} />
-                ) : (
-                  <>
-                    <ShopGradient angle={135} stops={[[mix(primary, 0.8, '#fff'), 0], [mix(primary, 0.8, '#000'), 1]]} />
-                    <Text style={styles.logoText}>{initials}</Text>
-                  </>
-                )}
+                ) : <ShopLogoArt name={store.name} />}
               </View>
               <View style={styles.idText}>
                 <Pressable style={styles.name} onPress={() => setMobileTab('about')} accessibilityRole="button">
@@ -739,7 +735,7 @@ export default function StoreDetail() {
             ) : null}
           </View>
         ) : null}
-      </ScrollView>
+      </PullScrollView>
 
       {/* Over the cover: clear with white icons, white with dark icons once scrolled. */}
       <Animated.View style={[styles.topbar, { paddingTop: top, height: BAR + top, backgroundColor: barBg, borderBottomColor: barLine }]}>
@@ -860,7 +856,6 @@ const styles = themed(() => StyleSheet.create({
   },
   logoEmpty: {},
   logoImg: { width: '100%', height: '100%', borderRadius: 37, backgroundColor: t.neutral[0] },
-  logoText: { fontSize: 26, lineHeight: 34, ...font(600), color: t.onBrand },
   idText: { flex: 1, minWidth: 0 },
   name: { flexDirection: 'row', alignItems: 'center', gap: 4, maxWidth: '100%', alignSelf: 'flex-start' },
   nameText: { flexShrink: 1, fontSize: 21, lineHeight: 26, ...font(600), color: t.neutral[900] },
@@ -916,7 +911,7 @@ const styles = themed(() => StyleSheet.create({
   tabBar: { position: 'absolute', left: '22%', right: '22%', bottom: -1, height: 3, borderTopLeftRadius: 3, borderTopRightRadius: 3 },
 
   panel: { margin: 12, padding: 16, borderRadius: 16, backgroundColor: t.neutral[0] },
-  homePanel: { paddingTop: 12, paddingHorizontal: 12, paddingBottom: 4 },
+  homePanel: { paddingTop: 12, paddingHorizontal: 12, paddingBottom: 4, backgroundColor: t.neutral[100] },
   cats: { flexDirection: 'row', flexWrap: 'wrap', rowGap: 14, columnGap: 10 },
   cat: { alignItems: 'center', gap: 3 },
   catImg: {
@@ -969,7 +964,7 @@ const styles = themed(() => StyleSheet.create({
   },
   activeCatText: { fontSize: 13, lineHeight: 15.6, ...font(500), color: t.primary[700] },
 
-  productsSection: { paddingTop: 12, paddingHorizontal: 12 },
+  productsSection: { paddingTop: 12, paddingHorizontal: 12, backgroundColor: t.neutral[100] },
   list: { gap: 8 },
   grid: { flexDirection: 'row', flexWrap: 'wrap', gap: GRID_GAP, marginHorizontal: GRID_BLEED },
   // The empty list's white card on the shop's grey page.

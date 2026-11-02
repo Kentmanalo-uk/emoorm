@@ -1,5 +1,5 @@
 import { useCallback, useEffect, useState } from 'react';
-import { Image, Pressable, ScrollView, StyleSheet, Text, View } from 'react-native';
+import { Image, Pressable, StyleSheet, Text, View } from 'react-native';
 import { useLocalSearchParams, useRouter } from 'expo-router';
 import {
   ChatCircleTextIcon, PencilSimpleIcon, StarIcon, StorefrontIcon, TrashIcon,
@@ -18,6 +18,7 @@ import { toast } from '../src/lib/toast';
 import { invalidateCachedData } from '../src/lib/dataCache';
 import { font, t, themed } from '../src/theme';
 import { PageLoader } from '../src/components/BrandLoader';
+import { PullScrollView } from '../src/components/PullList';
 
 /** Five stars the buyer can tap (the website's hover preview is a press here). */
 function StarPicker({ onPick, label }) {
@@ -130,7 +131,7 @@ export default function ProfileReviews() {
   return (
     <View style={styles.screen}>
       <ScreenHeader title="My Reviews" backTo="/profile" />
-      <ScrollView showsVerticalScrollIndicator={false} showsHorizontalScrollIndicator={false} style={{ flex: 1 }} contentContainerStyle={styles.content}>
+      <PullScrollView onPull={load} showsVerticalScrollIndicator={false} showsHorizontalScrollIndicator={false} style={{ flex: 1 }} contentContainerStyle={styles.content}>
         <Text style={styles.subtitle}>Your ratings help other buyers choose and help sellers improve.</Text>
 
         <View style={styles.tabs} accessibilityRole="tablist">
@@ -281,7 +282,7 @@ export default function ProfileReviews() {
             )}
           </View>
         )}
-      </ScrollView>
+      </PullScrollView>
 
       <OrderReviewSheet
         target={target}

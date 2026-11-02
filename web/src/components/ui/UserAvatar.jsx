@@ -1,6 +1,7 @@
 import { useState } from 'react';
 import { resolveImg } from '../../lib/media';
 import Avatar from '../avatars/Avatar';
+import { ShopLogoArt } from '../shop/ShopArt';
 
 /**
  * A person's picture, with the two things every avatar in the app needs.
@@ -23,6 +24,7 @@ import Avatar from '../avatars/Avatar';
  *
  * @param {String} src - Stored photo path or absolute URL
  * @param {String} name - Display name, used for the initial and alt text
+ * @param {String} [shopName] - For a shop: its generated logo stands in
  * @param {{ id, avatarKey }} [person] - Whose picture this is
  * @param {String} [imgClassName] - Class for the <img>
  * @param {String} [fallbackClassName] - Class for the fallback <span>
@@ -33,6 +35,7 @@ export default function UserAvatar({
   src,
   name,
   person = null,
+  shopName = null,
   imgClassName = '',
   fallbackClassName = '',
   fallbackIcon: Icon = null,
@@ -56,6 +59,8 @@ export default function UserAvatar({
   if (person?.id || person?.avatarKey) {
     return <Avatar seed={person.id} name={person.avatarKey} size="100%" className={imgClassName || undefined} />;
   }
+
+  if (shopName) return <ShopLogoArt name={shopName} />;
 
   return (
     <span className={fallbackClassName || undefined} aria-hidden={!name}>

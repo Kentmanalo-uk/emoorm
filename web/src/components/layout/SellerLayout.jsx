@@ -50,6 +50,7 @@ import UserAvatar from '../ui/UserAvatar';
 import { readCache, writeCache } from '../../lib/pageCache';
 import { useUnreadCounts } from '../../lib/unreadCounts';
 import { afterSignOutPath } from '../../lib/afterSignOut';
+import { ShopLogoArt } from '../shop/ShopArt';
 // The business-suite look shared with the admin panel, last so it wins.
 import './suite.css';
 
@@ -228,13 +229,12 @@ export default function SellerLayout() {
   };
 
   const shopName = store?.name || 'My Shop';
-  const shopInitial = shopName.trim().charAt(0).toUpperCase();
   const personalName = user?.fullName || user?.email || 'Personal account';
   const personalInitial = personalName.trim().charAt(0).toUpperCase();
   const shopAvatar = store?.logo ? (
     <img src={resolveImg(store.logo)} alt="" className="sc-user-avatar" />
   ) : (
-    <span className="sc-user-avatar sc-user-avatar--fallback">{shopInitial}</span>
+    <span className="sc-user-avatar sc-user-avatar--fallback" style={{ overflow: 'hidden' }}><ShopLogoArt name={store?.name} /></span>
   );
 
   const crumbs = buildCrumbs(location.pathname);

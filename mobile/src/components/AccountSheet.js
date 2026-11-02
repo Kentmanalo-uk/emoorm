@@ -1,5 +1,5 @@
 import { Image, Pressable, StyleSheet, Text, View } from 'react-native';
-import { usePathname, useRouter } from 'expo-router';
+import { useRouter } from 'expo-router';
 import { create } from 'zustand';
 import {
   ArrowsLeftRightIcon, CaretRightIcon, GearIcon, SignOutIcon, UsersThreeIcon,
@@ -10,6 +10,7 @@ import Avatar from './avatars/Avatar';
 import { font, t, themed } from '../theme';
 import Sheet, { SheetButton } from './Sheet';
 import { startAccountSwitch } from './RoleSwitchOverlay';
+import { useActiveSide } from '../store/sideStore';
 import { openSwitchAccount } from './SwitchAccountSheet';
 
 /*
@@ -38,13 +39,13 @@ export const openAccountSheet = (step = 'menu') => {
 
 export function AccountSheetHost() {
   const router = useRouter();
-  const pathname = usePathname();
   const { open, step, setStep, hide } = useAccountSheet();
   const user = useAuthStore((s) => s.user);
   const logout = useAuthStore((s) => s.logout);
+  const side = useActiveSide();
   if (!user) return null;
 
-  const inSeller = pathname === '/seller' || pathname.startsWith('/seller/');
+  const inSeller = side === 'shop';
   const isSeller = user.role === 'SELLER';
   const photo = resolveImg(user.profilePhoto);
 
@@ -97,8 +98,8 @@ export function AccountSheetHost() {
           Icon={ArrowsLeftRightIcon}
           label={inSeller ? 'Switch to my buyer account' : 'Switch to my seller account'}
           onPress={() => after(() => (inSeller
-            ? startAccountSwitch('personal', '/profile')
-            : startAccountSwitch('seller', '/seller')))}
+            ? startAccountSwitch('personal', '/profile', { replace: true })
+            : startAccountSwitch('seller', '/seller', { replace: true })))}
         />
       ) : null}
       <Row Icon={UsersThreeIcon} label="Switch account" onPress={() => after(openSwitchAccount)} />

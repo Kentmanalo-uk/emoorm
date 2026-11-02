@@ -150,7 +150,7 @@ export function SellerShellProvider({ children }) {
     refreshSetup();
   }, [store?.id, isSeller, pathname, setupComplete, refreshSetup]);
 
-  const switchToPersonal = useCallback(() => startAccountSwitch('personal', '/profile'), []);
+  const switchToPersonal = useCallback(() => startAccountSwitch('personal', '/profile', { replace: true }), []);
 
   // Log out: the account sheet asks first (a bottom sheet on every phone).
   const requestLogout = useCallback(() => openAccountSheet('confirm'), []);

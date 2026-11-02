@@ -1,12 +1,13 @@
 import { useState } from 'react';
 import { Image, Pressable, ScrollView, StyleSheet, Text, useWindowDimensions, View } from 'react-native';
 import { useRouter } from 'expo-router';
-import { ArrowRightIcon, StorefrontIcon } from '../../lib/icons';
+import { ArrowRightIcon } from '../../lib/icons';
 import { resolveImg } from '../../lib/media';
 import { font, t, text, themed } from '../../theme';
 import EmptyState from '../EmptyState';
 import HomeCategoryIcon from './HomeCategoryIcon';
 import { useStorePeek } from '../peek/StorePeek';
+import { ShopCoverArt, ShopLogoArt } from '../shop/ShopArt';
 
 /*
  * The pieces of Home's sections on phones (web/src/pages/Home.jsx and the
@@ -114,7 +115,6 @@ export function HomeStoreCard({ store, width }) {
   const router = useRouter();
   const open = () => router.push(`/store/${store.slug}`);
   const peek = useStorePeek()(store, { onOpen: open });
-  const initials = store.name?.split(' ').slice(0, 2).map((word) => word[0]).join('').toUpperCase() || '?';
   const images = (store.products || [])
     .map((product) => {
       const image = Array.isArray(product.images) ? product.images[0] : product.images;
@@ -152,19 +152,15 @@ export function HomeStoreCard({ store, width }) {
           <StoreThumb key={image.id} src={image.src} style={styles.mediaFlex} />
         )) : cover ? (
           <StoreThumb src={resolveImg(cover) || cover} style={styles.mediaFlex} />
-        ) : store.logo ? (
-          <Image source={{ uri: resolveImg(store.logo) || store.logo }} style={styles.mediaBlur} blurRadius={22} resizeMode="cover" />
         ) : (
-          <View style={styles.mediaEmpty}><StorefrontIcon size={28} color={t.primary[300]} /></View>
+          <View style={styles.mediaFlex}><ShopCoverArt name={store.name} /></View>
         )}
       </View>
       <View style={styles.storeMain}>
         <View style={styles.storeLogo}>
           {store.logo ? (
             <Image source={{ uri: resolveImg(store.logo) || store.logo }} style={styles.fill} resizeMode="cover" />
-          ) : (
-            <Text style={styles.storeInitials}>{initials}</Text>
-          )}
+          ) : <ShopLogoArt name={store.name} />}
         </View>
         <View style={styles.storeCopy}>
           <Text style={styles.storeName} numberOfLines={1}>{store.name}</Text>
@@ -251,8 +247,6 @@ const styles = themed(() => StyleSheet.create({
   mediaBig: { flex: 2 },
   mediaSide: { flex: 1, gap: 2 },
   mediaFlex: { flex: 1 },
-  mediaBlur: { width: '100%', height: '100%', opacity: 0.85, transform: [{ scale: 1.35 }] },
-  mediaEmpty: { flex: 1, alignItems: 'center', justifyContent: 'center' },
   thumb: { backgroundColor: t.neutral[100], overflow: 'hidden', alignItems: 'center', justifyContent: 'center' },
   thumbFallback: { width: '50%', height: '50%', opacity: 0.12 },
   storeMain: { flexDirection: 'row', alignItems: 'flex-start', gap: 12, paddingHorizontal: 14 },
@@ -260,7 +254,6 @@ const styles = themed(() => StyleSheet.create({
     width: 52, height: 52, marginTop: -26, borderRadius: 26, borderWidth: 3, borderColor: t.neutral[0],
     overflow: 'hidden', backgroundColor: t.primary[50], alignItems: 'center', justifyContent: 'center',
   },
-  storeInitials: { fontSize: 15, lineHeight: 19, ...font(500), color: t.primary[600] },
   storeCopy: { flex: 1, minWidth: 0, paddingTop: 8 },
   storeName: { fontSize: 16, lineHeight: 20, ...font(500), color: t.secondary[950] },
   storePlace: { marginTop: 2, fontSize: 12.5, lineHeight: 16.875, ...font(400), color: t.neutral[500] },

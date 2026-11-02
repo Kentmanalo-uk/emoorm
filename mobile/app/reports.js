@@ -1,5 +1,5 @@
 import { useCallback, useEffect, useState } from 'react';
-import { Pressable, ScrollView, StyleSheet, Text, View } from 'react-native';
+import { Pressable, StyleSheet, Text, View } from 'react-native';
 import { useLocalSearchParams, useRouter } from 'expo-router';
 import {
   CheckCircleIcon, ClockIcon, PackageIcon, StorefrontIcon,
@@ -9,6 +9,7 @@ import ScreenHeader from '../src/components/ScreenHeader';
 import { ProfileEmpty } from '../src/components/profile/ProfileUI';
 import { errorText, shortDate } from '../src/components/profile/profileLib';
 import { font, t, themed } from '../src/theme';
+import { PullScrollView } from '../src/components/PullList';
 
 /** Report statuses, with the wording a reporter (not an admin) needs. */
 const STATUS_META = themed(() => ({
@@ -72,7 +73,7 @@ export default function ProfileReports() {
   return (
     <View style={styles.screen}>
       <ScreenHeader title="My Reports" backTo="/profile" />
-      <ScrollView showsVerticalScrollIndicator={false} showsHorizontalScrollIndicator={false} style={{ flex: 1 }} contentContainerStyle={styles.content}>
+      <PullScrollView onPull={load} showsVerticalScrollIndicator={false} showsHorizontalScrollIndicator={false} style={{ flex: 1 }} contentContainerStyle={styles.content}>
         <Text style={styles.subtitle}>Products and sellers you reported, and what your municipal team decided.</Text>
 
         <View style={styles.section}>
@@ -129,7 +130,7 @@ export default function ProfileReports() {
             </View>
           )}
         </View>
-      </ScrollView>
+      </PullScrollView>
     </View>
   );
 }

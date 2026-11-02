@@ -1,18 +1,21 @@
 import { useEffect, useState } from 'react';
 import {
-  Image, Pressable, ScrollView, StyleSheet, Text, View, useWindowDimensions,
+  Image, Pressable, StyleSheet, Text, View, useWindowDimensions,
 } from 'react-native';
 import { useLocalSearchParams, useRouter } from 'expo-router';
 import { ArrowRightIcon, MapPinIcon } from '../../../src/lib/icons';
+import ProductCard from '../../../src/components/ProductCard';
+import { GRID_GAP } from '../../../src/lib/productGrid';
 import apiClient from '../../../src/api/client';
 import EmptyState from '../../../src/components/EmptyState';
 import PublicHeader from '../../../src/components/public/PublicHeader';
 import {
-  MunicipalityGalleryStack, MunicipalityProductCard, MunicipalitySeal, MunicipalitySectionHead, MunicipalityStoreRow,
+  MunicipalityGalleryStack, MunicipalitySeal, MunicipalitySectionHead, MunicipalityStoreRow,
 } from '../../../src/components/public/MunicipalityParts';
 import { resolveImg } from '../../../src/lib/media';
 import { font, t, themed } from '../../../src/theme';
 import { PageLoader } from '../../../src/components/BrandLoader';
+import { PullScrollView } from '../../../src/components/PullList';
 
 /*
  * web/src/pages/MunicipalityShowcase.jsx + MunicipalityShowcase.css and
@@ -50,17 +53,17 @@ function Empty({ art, label }) {
 export default function MunicipalityShowcase() {
   const { id } = useLocalSearchParams();
   const router = useRouter();
-  // Two columns 8px apart inside the 12px gutters.
-  const itemWidth = (Math.min(useWindowDimensions().width, 768) - GUTTER * 2 - 8) / 2;
+  // Two columns, a grid gap apart, inside the 12px gutters.
+  const itemWidth = (Math.min(useWindowDimensions().width, 768) - GUTTER * 2 - GRID_GAP) / 2;
   const [municipality, setMunicipality] = useState(null);
   const [stores, setStores] = useState([]);
   const [products, setProducts] = useState([]);
   const [isLoading, setIsLoading] = useState(true);
   const [error, setError] = useState('');
+  const [pullKey, setPullKey] = useState(0);
 
   useEffect(() => {
     let cancelled = false;
-    setIsLoading(true);
     Promise.all([
       apiClient.get(`/municipalities/${id}`),
       apiClient.get('/stores', { params: { pageSize: 100, municipalityId: id } }),
@@ -76,7 +79,7 @@ export default function MunicipalityShowcase() {
       if (!cancelled) setIsLoading(false);
     });
     return () => { cancelled = true; };
-  }, [id]);
+  }, [id, pullKey]);
 
   const logo = municipality?.logo ? resolveImg(municipality.logo) : null;
   const name = municipality?.name;
@@ -84,7 +87,7 @@ export default function MunicipalityShowcase() {
   return (
     <View style={styles.screen}>
       <PublicHeader title={name || 'Municipality'} />
-      <ScrollView showsVerticalScrollIndicator={false} showsHorizontalScrollIndicator={false} style={styles.scroll} contentContainerStyle={styles.page}>
+      <PullScrollView onPull={() => setPullKey((key) => key + 1)} showsVerticalScrollIndicator={false} showsHorizontalScrollIndicator={false} style={styles.scroll} contentContainerStyle={styles.page}>
         <View style={styles.hero}>
           {/* The seal again, faint and grey, off the right edge behind the band. */}
           {logo ? <Image source={{ uri: logo }} style={styles.heroMark} resizeMode="contain" /> : null}
@@ -124,7 +127,7 @@ export default function MunicipalityShowcase() {
                 {products.length > 0 ? (
                   <View style={styles.grid}>
                     {products.slice(0, 8).map((product) => (
-                      <MunicipalityProductCard key={product.id} product={product} style={{ width: itemWidth }} />
+                      <ProductCard key={product.id} product={product} variant="home" style={{ width: itemWidth }} />
                     ))}
                   </View>
                 ) : <Empty art="products" label="No products are available yet." />}
@@ -143,15 +146,15 @@ export default function MunicipalityShowcase() {
             </>
           )}
         </View>
-      </ScrollView>
+      </PullScrollView>
     </View>
   );
 }
 
 const styles = themed(() => StyleSheet.create({
-  screen: { flex: 1, backgroundColor: t.neutral[50] },
-  scroll: { flex: 1, backgroundColor: t.neutral[50] },
-  page: { flexGrow: 1, backgroundColor: t.neutral[50] },
+  screen: { flex: 1, backgroundColor: t.neutral[100] },
+  scroll: { flex: 1, backgroundColor: t.neutral[100] },
+  page: { flexGrow: 1, backgroundColor: t.neutral[100] },
 
   hero: {
     flexDirection: 'row',
@@ -228,7 +231,7 @@ const styles = themed(() => StyleSheet.create({
 
   section: { marginTop: 20 },
   storeList: { gap: 8 },
-  grid: { flexDirection: 'row', flexWrap: 'wrap', gap: 8 },
+  grid: { flexDirection: 'row', flexWrap: 'wrap', gap: GRID_GAP },
 
   // The section's empty state on a white card.
   empty: { borderRadius: 12, backgroundColor: t.neutral[0] },

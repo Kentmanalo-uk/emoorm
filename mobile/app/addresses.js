@@ -1,6 +1,6 @@
 import { useCallback, useEffect, useRef, useState } from 'react';
 import {
-  ActivityIndicator, KeyboardAvoidingView, Platform, Pressable, ScrollView, StyleSheet, Text, TextInput, View,
+  ActivityIndicator, KeyboardAvoidingView, Platform, Pressable, StyleSheet, Text, TextInput, View,
 } from 'react-native';
 import { useFocusEffect } from 'expo-router';
 import {
@@ -20,6 +20,7 @@ import LocationPicker from '../src/components/maps/LocationPicker';
 import { useFreshAccount } from '../src/components/profile/SettingsParts';
 import { font, t, themed } from '../src/theme';
 import { PageLoader } from '../src/components/BrandLoader';
+import { PullScrollView } from '../src/components/PullList';
 
 const emptyForm = {
   label: '',
@@ -370,9 +371,9 @@ export default function Addresses() {
     <View style={styles.screen}>
       <ScreenHeader title="My Addresses" backTo="/profile" />
       <KeyboardAvoidingView style={{ flex: 1 }} behavior={Platform.OS === 'ios' ? 'padding' : undefined}>
-        <ScrollView showsVerticalScrollIndicator={false} showsHorizontalScrollIndicator={false} style={{ flex: 1 }} contentContainerStyle={[styles.content, formOpen && { paddingTop: 24 }, !isLoading && !formOpen && addresses.length === 0 && styles.grow]} keyboardShouldPersistTaps="handled">
+        <PullScrollView onPull={loadAddresses} showsVerticalScrollIndicator={false} showsHorizontalScrollIndicator={false} style={{ flex: 1 }} contentContainerStyle={[styles.content, formOpen && { paddingTop: 24 }, !isLoading && !formOpen && addresses.length === 0 && styles.grow]} keyboardShouldPersistTaps="handled">
           {body}
-        </ScrollView>
+        </PullScrollView>
       </KeyboardAvoidingView>
       <CartConfirmDialog
         open={Boolean(deleting)}

@@ -54,6 +54,7 @@ import { readCache, writeCache } from '../lib/pageCache';
 import MoreMenu from '../components/MoreMenu';
 import { useShare } from '../components/ShareSheet';
 import './StoreDetail.css';
+import ProductTile from '../components/product/ProductTile';
 import ShopHome from '../components/shop/ShopHome';
 import { awayUntil, shortDate, nowLabel, weekLines } from '../lib/shopHours';
 import { saleInfo } from '../lib/variantPricing';
@@ -63,10 +64,10 @@ import KindPrice from '../components/product/kinds/KindPrice';
 import { isStockless, productKind } from '../lib/productKinds';
 import { StoreSkeleton } from '../components/ui/PageSkeletons';
 import Spinner, { BusyLabel } from '../components/ui/Spinner';
-import { ProductTodayTag } from '../components/today/TodayTag';
 import { notTakingOrders, opensLabel } from '../lib/availability';
 import Select from '../components/ui/Select';
 import useProductPeek from '../components/peek/useProductPeek';
+import { ShopCoverArt, ShopLogoArt } from '../components/shop/ShopArt';
 
 const SORTS = [
   { key: 'newest', label: 'Newest', sortBy: 'createdAt', sortOrder: 'desc' },
@@ -485,9 +486,6 @@ export default function StoreDetail() {
       : null;
   }
 
-  const initials = store.name
-    ? store.name.split(' ').slice(0, 2).map((w) => w[0]).join('').toUpperCase()
-    : '?';
 
   const banner = store.bannerImage || store.coverImage;
   const stats = store.stats || {};
@@ -603,13 +601,13 @@ export default function StoreDetail() {
 
             <div className="shop-m-hero">
               <div className="shop-m-backdrop" aria-hidden="true">
-                {banner ? <img src={resolveImg(banner)} alt="" /> : null}
+                {banner ? <img src={resolveImg(banner)} alt="" /> : <ShopCoverArt name={store.name} />}
               </div>
 
               <div className="shop-m-card">
                 <div className="shop-m-main">
                   <div className="shop-m-logo">
-                    {store.logo ? <img src={resolveImg(store.logo)} alt="" /> : <span>{initials}</span>}
+                    {store.logo ? <img src={resolveImg(store.logo)} alt="" /> : <ShopLogoArt name={store.name} />}
                   </div>
                   <div className="shop-m-id-text">
                     <button type="button" className="shop-m-name" onClick={() => setMobileTab('about')}>
@@ -857,7 +855,7 @@ export default function StoreDetail() {
               {banner ? (
                 <img src={resolveImg(banner)} alt="" />
               ) : (
-                <div className="shop-hero-banner-fallback" />
+                <ShopCoverArt name={store.name} />
               )}
             </div>
 
@@ -867,7 +865,7 @@ export default function StoreDetail() {
                 {store.logo ? (
                   <img src={resolveImg(store.logo)} alt={store.name} />
                 ) : (
-                  <span>{initials}</span>
+                  <ShopLogoArt name={store.name} />
                 )}
               </div>
 
@@ -1104,7 +1102,7 @@ export default function StoreDetail() {
           ) : (
             <div className="shop-grid">
               {products.map((product) => (
-                <ProductCard
+                <ProductTile
                   key={product.id}
                   product={product}
                   store={store}
@@ -1153,58 +1151,6 @@ export default function StoreDetail() {
       )}
       {shareSheet}
     </Layout>
-  );
-}
-
-function ProductCard({ product, store, onAddToCart }) {
-  const peekProduct = useProductPeek();
-  const { price } = saleInfo(product);
-  const images = Array.isArray(product.images) ? product.images : [];
-  const image = images[0] || null;
-
-  return (
-    <Link to={`/product/${product.slug}`} className="product-card" {...peekProduct(product, { store })}>
-      <div className="product-image">
-        <ProductImage src={image} alt={product.name} />
-        {/* On the shop's menu, not posted now: nothing to add yet. */}
-        {!notTakingOrders(product) && (
-        <button
-          type="button"
-          className="product-cart-fab"
-          onClick={(e) => onAddToCart(e, product)}
-          aria-label="Add to cart"
-        >
-          <ShoppingCart size={16} />
-        </button>
-        )}
-      </div>
-      <div className="product-info">
-        <span className="product-name"><ProductTodayTag product={product} />{product.name}</span>
-        <span className="product-price"><KindPrice product={product}>₱{price.toFixed(2)}</KindPrice> <SaleWas product={product} compact /></span>
-        {/* Stars only from real review data; an unrated product says "New". */}
-        {Number(product.reviewCount ?? 0) > 0 ? (
-          <div className="product-rating-row">
-            <div className="product-stars">
-              {[0, 1, 2, 3, 4].map((i) => (
-                <Star
-                  key={i}
-                  size={11}
-                  weight={i < Math.round(Number(product.averageRating || 0)) ? 'fill' : 'regular'}
-                  color={i < Math.round(Number(product.averageRating || 0))
-                    ? 'var(--t-warning-500, #f59e0b)'
-                    : 'var(--t-neutral-300, #d1d5db)'}
-                />
-              ))}
-            </div>
-            <span className="product-review-count">({product.reviewCount})</span>
-          </div>
-        ) : (
-          <div className="product-rating-row">
-            <span className="product-review-count">New</span>
-          </div>
-        )}
-      </div>
-    </Link>
   );
 }
 

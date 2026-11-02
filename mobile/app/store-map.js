@@ -5,7 +5,7 @@ import {
 import { useLocalSearchParams, useRouter } from 'expo-router';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import {
-  CaretDownIcon, CaretLeftIcon, CrosshairSimpleIcon, NavigationArrowIcon, PackageIcon, PathIcon, StorefrontIcon, XIcon,
+  CaretDownIcon, CaretLeftIcon, CrosshairSimpleIcon, NavigationArrowIcon, PackageIcon, PathIcon, XIcon,
 } from '../src/lib/icons';
 import apiClient from '../src/api/client';
 import EmptyState from '../src/components/EmptyState';
@@ -21,6 +21,7 @@ import { awayLabel, openNow } from '../src/components/shop/shopHours';
 import { getCachedData, setCachedData } from '../src/lib/dataCache';
 import { resolveImg } from '../src/lib/media';
 import { font, t, themed } from '../src/theme';
+import { ShopLogoArt } from '../src/components/shop/ShopArt';
 
 /*
  * Discover Stores, full screen (Home's Discover Stores card opens it): every
@@ -383,7 +384,7 @@ function StoreCard({ store, width, height, onOpen, onProduct }) {
     <View style={[styles.card, { width, height }]}>
       <Pressable onPress={onOpen} accessibilityRole="link" accessibilityLabel={`Visit ${store.name}`} style={styles.who}>
         <View style={styles.logo}>
-          {logo ? <Image source={{ uri: logo }} style={StyleSheet.absoluteFill} /> : <StorefrontIcon size={22} weight="fill" color={t.primary[600]} />}
+          {logo ? <Image source={{ uri: logo }} style={StyleSheet.absoluteFill} /> : <ShopLogoArt name={store.name} />}
         </View>
         <View style={styles.nameBox}>
           <Text style={styles.name} numberOfLines={1}>{store.name}</Text>

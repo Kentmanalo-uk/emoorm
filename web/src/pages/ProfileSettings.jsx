@@ -1,7 +1,6 @@
 import { useEffect, useMemo, useRef, useState } from 'react';
 import {
-  Camera, Smiley, CircleNotch as Loader2, FloppyDisk as Save, CheckCircle, SignOut, UsersThree, CaretRight,
-} from '../lib/icons';
+  Camera, Smiley, CircleNotch as Loader2, FloppyDisk as Save, CheckCircle, SignOut, } from '../lib/icons';
 import toast from 'react-hot-toast';
 import axios from '../lib/axios';
 import { resolveImg } from '../lib/media';
@@ -19,7 +18,6 @@ import AccountData from '../components/account/AccountData';
 import PushSetting from '../components/account/PushSetting';
 import PhoneVerify from '../components/account/PhoneVerify';
 import SwitchAccountSheet from '../components/account/SwitchAccountSheet';
-import { useSavedAccounts } from '../lib/savedAccounts';
 import PhoneSettings from './ProfileSettingsPhone';
 import { afterSignOutPath } from '../lib/afterSignOut';
 import {
@@ -63,7 +61,6 @@ function ProfileSettings() {
   const navigate = useNavigate();
   const [signOutOpen, setSignOutOpen] = useState(false);
   const [switchOpen, setSwitchOpen] = useState(false);
-  const otherAccounts = useSavedAccounts((s) => s.accounts.filter((a) => a.id !== user?.id).length);
   const { municipalities, isLoading: municipalitiesLoading } = useMunicipalities();
 
   const [form, setForm] = useState(() => initialProfileState(user));
@@ -457,20 +454,10 @@ function ProfileSettings() {
           />
         </div>
 
-        <button type="button" className="ps-switch-row" onClick={() => setSwitchOpen(true)}>
-          <span className="ps-switch-icon" aria-hidden="true"><UsersThree size={20} weight="fill" /></span>
-          <span className="ps-switch-text">
-            <strong>Switch account</strong>
-            <span>
-              {otherAccounts
-                ? `${otherAccounts} other account${otherAccounts === 1 ? '' : 's'} saved in this browser`
-                : 'Use another account saved in this browser'}
-            </span>
-          </span>
-          <CaretRight size={16} className="ps-switch-chev" aria-hidden="true" />
-        </button>
-
         <footer className="ps-actions ps-actions-signout">
+          <button type="button" className="ps-switch-text-btn" onClick={() => setSwitchOpen(true)}>
+            Switch account
+          </button>
           <button type="button" className="ps-btn ps-btn-signout" onClick={() => setSignOutOpen(true)}>
             <SignOut size={15} weight="bold" /> Sign out
           </button>

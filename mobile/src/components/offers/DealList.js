@@ -62,7 +62,7 @@ function MiniAvatar({ src, name }) {
   );
 }
 
-export default function DealList({ side }) {
+export default function DealList({ side, refreshKey = 0 }) {
   const router = useRouter();
   const tabs = TABS[side];
   const [tab, setTab] = useState(tabs[0].key);
@@ -80,7 +80,7 @@ export default function DealList({ side }) {
         toast.error(err?.message || 'Could not load the deals');
       });
     return () => { live = false; };
-  }, [side, tab]));
+  }, [side, tab, refreshKey]));
 
   const offers = data?.offers || [];
   const counts = data?.counts || {};

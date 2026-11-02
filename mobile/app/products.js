@@ -1,5 +1,5 @@
 import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
-import { ActivityIndicator, FlatList, Image, Pressable, ScrollView, StyleSheet, Text, View, useWindowDimensions } from 'react-native';
+import { ActivityIndicator, Image, Pressable, ScrollView, StyleSheet, Text, View, useWindowDimensions } from 'react-native';
 import { useLocalSearchParams, useRouter } from 'expo-router';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import {
@@ -19,6 +19,7 @@ import { saveRecent } from '../src/lib/shellSearch';
 import { fetchCategories, fetchMunicipalities } from '../src/lib/referenceData';
 import { GRID_EDGE, GRID_GAP, gridCellWidth } from '../src/lib/productGrid';
 import { font, t, themed } from '../src/theme';
+import { PullFlatList } from '../src/components/PullList';
 
 // The API's sortBy and sortOrder for each sort choice (web Products.jsx SORTS).
 const SORTS = {
@@ -366,7 +367,7 @@ export default function Products() {
         </View>
       </Glass>
 
-      <FlatList showsVerticalScrollIndicator={false} showsHorizontalScrollIndicator={false}
+      <PullFlatList onPull={fetchProducts} showsVerticalScrollIndicator={false} showsHorizontalScrollIndicator={false}
         ref={listRef}
         style={styles.list}
         data={body ? [] : products}
@@ -377,7 +378,7 @@ export default function Products() {
         ListEmptyComponent={body}
         renderItem={({ item }) => (
           <View style={[styles.cell, { width: cellW }]}>
-            <ProductCard product={item} variant="result" />
+            <ProductCard product={item} variant="home" />
           </View>
         )}
         // Was on React Native's defaults: windowSize 21 keeps about

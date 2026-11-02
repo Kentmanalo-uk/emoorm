@@ -6,6 +6,7 @@ import AsyncStorage from '@react-native-async-storage/async-storage';
 import { create } from 'zustand';
 import apiClient from '../api/client';
 import useAuthStore from '../store/authStore';
+import useSideStore from '../store/sideStore';
 import { resolveImg } from '../lib/media';
 import { font, ink, t, themed, veil } from '../theme';
 
@@ -20,7 +21,8 @@ import { font, ink, t, themed, veil } from '../theme';
  *
  * Two ways to use it:
  *
- *   startAccountSwitch('personal', '/profile')       (or 'seller', '/seller')
+ *   startAccountSwitch('personal', '/profile', { replace: true })
+ *     (or 'seller', '/seller'; no path to stay on this page, as SideGate does)
  *     with <AccountSwitchHost /> mounted (the Seller Center layout mounts
  *     one; mounting one in app/_layout.js too lets the fade-out run over the
  *     page it lands on: only the first host mounted draws).
@@ -110,6 +112,10 @@ export function AccountSwitchHost() {
     if (!request || !first) return undefined;
     const timer = setTimeout(() => {
       setNavigated({ id: request.id, from: pathname });
+      // This is what moves someone across (store/sideStore): set before the
+      // move, so the page they land on finds them already on its side.
+      useSideStore.getState().setSide(useAuthStore.getState().user?.id, request.target === 'seller' ? 'shop' : 'personal');
+      if (!request.path) return;
       if (request.replace) router.replace(request.path);
       else router.navigate(request.path);
     }, SWITCH_MS);
@@ -119,7 +125,7 @@ export function AccountSwitchHost() {
 
   // Leave once the other side's page is on screen (never later than MAX_WAIT_MS).
   const navigatedNow = Boolean(request && navigated?.id === request.id);
-  const moved = navigatedNow && pathname !== navigated.from;
+  const moved = navigatedNow && (!request.path || pathname !== navigated.from);
   useEffect(() => {
     if (!navigatedNow) return undefined;
     const reqId = request.id;

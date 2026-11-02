@@ -16,6 +16,7 @@ import './ProfileFollowedStores.css';
 import { StoreCardsSkeleton } from '../components/ui/PageSkeletons';
 import Select from '../components/ui/Select';
 import useStorePeek from '../components/peek/useStorePeek';
+import { ShopLogoArt } from '../components/shop/ShopArt';
 
 const SORTS = [
   { key: 'recent', label: 'Recently followed' },
@@ -174,9 +175,6 @@ const ProfileFollowedStores = () => {
 function FollowedStoreCard({ item, busy, onUnfollow, onToggleNotifs }) {
   const { store, notificationsEnabled } = item;
   const peekStore = useStorePeek();
-  const initials = store.name
-    ? store.name.split(' ').slice(0, 2).map((w) => w[0]).join('').toUpperCase()
-    : '?';
   const followers = store.followerCount ?? 0;
   const meta = [store.municipality?.name, `${followers} ${followers === 1 ? 'Follower' : 'Followers'}`]
     .filter(Boolean)
@@ -190,7 +188,7 @@ function FollowedStoreCard({ item, busy, onUnfollow, onToggleNotifs }) {
             {store.logo ? (
               <img src={resolveImg(store.logo)} alt={store.name} />
             ) : (
-              <span>{initials}</span>
+              <ShopLogoArt name={store.name} />
             )}
           </div>
           <div className="followed-title">

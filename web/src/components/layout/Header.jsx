@@ -82,6 +82,10 @@ const PLACEHOLDER_SUGGESTIONS = [
   'Coconut Oil',
 ];
 
+// Lines as thin as the other tabs' on the larger drawing (21 / 24).
+const NAV_BIG = { '--icon-ink': 0.875, translate: '0 -1.5px' };
+const NAV_BIG_PERSON = { '--icon-ink': 0.875 };
+
 const Header = () => {
   const navigate = useNavigate();
   const location = useLocation();
@@ -716,7 +720,7 @@ const Header = () => {
         </Link>
         <Link className={location.pathname.startsWith('/notifications') ? 'is-active' : ''} to="/notifications" aria-current={location.pathname.startsWith('/notifications') ? 'page' : undefined}>
           <span className="mobile-bottom-icon-wrap">
-            <Bell size={21} weight={location.pathname.startsWith('/notifications') ? 'fill' : 'light'} />
+            <Bell size={24} weight={location.pathname.startsWith('/notifications') ? 'fill' : 'light'} style={NAV_BIG} />
             {unreadCount > 0 && <b aria-label={`${unreadCount} unread notifications`}>{unreadCount > 99 ? '99+' : unreadCount}</b>}
           </span>
           <span>Notifications</span>
@@ -727,7 +731,7 @@ const Header = () => {
           aria-current={location.pathname.startsWith('/profile') ? 'page' : undefined}
           onClick={showLanguageTip ? dismissLanguageTip : undefined}
         >
-          <User size={21} weight={location.pathname.startsWith('/profile') ? 'fill' : 'light'} />
+          <User size={24} weight={location.pathname.startsWith('/profile') ? 'fill' : 'light'} style={NAV_BIG_PERSON} />
           <span>Profile</span>
         </Link>
         {/* Phones change the language in Profile (More): point there once. */}

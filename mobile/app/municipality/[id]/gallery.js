@@ -1,6 +1,6 @@
 import { useEffect, useState } from 'react';
 import {
-  Image, Pressable, ScrollView, StyleSheet, Text, View, useWindowDimensions,
+  Image, Pressable, StyleSheet, Text, View, useWindowDimensions,
 } from 'react-native';
 import { useLocalSearchParams, useRouter } from 'expo-router';
 import { ArrowLeftIcon, MapPinIcon } from '../../../src/lib/icons';
@@ -10,6 +10,7 @@ import PublicHeader from '../../../src/components/public/PublicHeader';
 import { MunicipalitySeal } from '../../../src/components/public/MunicipalityParts';
 import { resolveImg } from '../../../src/lib/media';
 import { font, t, text, themed } from '../../../src/theme';
+import { PullScrollView } from '../../../src/components/PullList';
 
 /*
  * web/src/pages/MunicipalityGallery.jsx + MunicipalityGallery.css at phone
@@ -25,6 +26,7 @@ export default function MunicipalityGallery() {
   const { width } = useWindowDimensions();
   const [municipality, setMunicipality] = useState(null);
   const [loading, setLoading] = useState(true);
+  const [pullKey, setPullKey] = useState(0);
 
   useEffect(() => {
     let cancelled = false;
@@ -33,7 +35,7 @@ export default function MunicipalityGallery() {
       .catch(() => { })
       .finally(() => { if (!cancelled) setLoading(false); });
     return () => { cancelled = true; };
-  }, [id]);
+  }, [id, pullKey]);
 
   const gallery = Array.isArray(municipality?.gallery) ? municipality.gallery : [];
   // Two 4:3 columns; the first photo spans both.
@@ -43,7 +45,7 @@ export default function MunicipalityGallery() {
   return (
     <View style={styles.screen}>
       <PublicHeader title={`${municipality?.name || 'Municipality'} Gallery`} />
-      <ScrollView showsVerticalScrollIndicator={false} showsHorizontalScrollIndicator={false} style={styles.screen} contentContainerStyle={styles.page}>
+      <PullScrollView onPull={() => setPullKey((key) => key + 1)} showsVerticalScrollIndicator={false} showsHorizontalScrollIndicator={false} style={styles.screen} contentContainerStyle={styles.page}>
         <View style={styles.header}>
           <Pressable accessibilityRole="link" onPress={() => router.push(`/municipality/${id}`)} style={styles.back}>
             <ArrowLeftIcon size={16} color={t.success[100]} />
@@ -83,7 +85,7 @@ export default function MunicipalityGallery() {
             </View>
           )}
         </View>
-      </ScrollView>
+      </PullScrollView>
     </View>
   );
 }

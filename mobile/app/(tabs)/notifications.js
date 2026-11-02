@@ -1,5 +1,5 @@
 import { useCallback, useEffect, useRef, useState } from 'react';
-import { Pressable, ScrollView, StyleSheet, Text, TextInput, View } from 'react-native';
+import { Pressable, StyleSheet, Text, TextInput, View } from 'react-native';
 import { useFocusEffect, useRouter } from 'expo-router';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import {
@@ -25,6 +25,8 @@ import NotificationCategories, { NOTIFICATION_CATEGORIES, minusOne } from '../..
 import { useNotificationPeek } from '../../src/components/peek/NotificationPeek';
 import { NotificationListSkeleton } from '../../src/components/inbox/InboxSkeletons';
 import { timeAgo } from '../../src/components/inbox/inboxFormat';
+import { PullScrollView } from '../../src/components/PullList';
+import MoreProducts from '../../src/components/home/MoreProducts';
 
 /*
  * The buyer's Notifications tab (web/src/pages/Notifications.jsx with its
@@ -113,6 +115,7 @@ function NotificationList() {
   const [page, setPage] = useState(1);
   const [pagination, setPagination] = useState(() => saved?.pagination || { totalPages: 0, total: 0 });
   const [searchText, setSearchText] = useState('');
+  const [feedKey, setFeedKey] = useState(0);
   const [search, setSearch] = useState('');
   const [searchOpen, setSearchOpen] = useState(false);
   const [confirmClear, setConfirmClear] = useState(false);
@@ -273,7 +276,7 @@ function NotificationList() {
         </ShellBarButton>
         <ShellPageMenu label="Notification options" items={menuItems} />
       </InboxPageHead>
-      <ScrollView showsVerticalScrollIndicator={false} showsHorizontalScrollIndicator={false}
+      <PullScrollView onPull={() => { setFeedKey((key) => key + 1); return fetchNotifications(); }} showsVerticalScrollIndicator={false} showsHorizontalScrollIndicator={false}
         ref={scrollRef}
         style={styles.screen}
         contentContainerStyle={styles.content}
@@ -388,7 +391,8 @@ function NotificationList() {
             </View>
           ) : null}
         </View>
-      </ScrollView>
+        <MoreProducts refreshKey={feedKey} style={styles.more} />
+      </PullScrollView>
 
       <CartConfirmDialog
         open={confirmClear}
@@ -453,6 +457,7 @@ function NotificationRow({ notif, first, onOpen, onMarkRead, onDelete }) {
 }
 
 const styles = themed(() => StyleSheet.create({
+  more: { marginTop: 12 },
   screen: { flex: 1, backgroundColor: t.neutral[0] },
   content: { flexGrow: 1, paddingBottom: 24 },
   head: { height: 48 },

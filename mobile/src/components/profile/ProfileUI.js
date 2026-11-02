@@ -46,6 +46,15 @@ export function PfRow({ Icon, label, hint, onPress, first = false }) {
   );
 }
 
+/** "Switch account", plain text above Log out at the foot of Settings. */
+export function SwitchAccountRow({ onPress }) {
+  return (
+    <Pressable accessibilityRole="button" onPress={onPress} style={({ pressed }) => [styles.switchRow, pressed && styles.switchPressed]}>
+      <Text style={styles.switchText}>Switch account</Text>
+    </Pressable>
+  );
+}
+
 /** "Log out", the full-width row that closes the Profile and Settings pages (.pf-m-signout). */
 export function SignOutRow({ onPress, label = 'Log out' }) {
   return (
@@ -222,6 +231,9 @@ export function PageSubtitle({ children, style }) {
 }
 
 const styles = themed(() => StyleSheet.create({
+  switchRow: { alignItems: 'center', justifyContent: 'center', minHeight: 48, marginTop: 8 },
+  switchPressed: { opacity: 0.6 },
+  switchText: { fontSize: 15, lineHeight: 22, ...font(500), color: t.neutral[800] },
   section: { paddingVertical: 14, paddingHorizontal: 16, backgroundColor: t.neutral[0], borderBottomWidth: 8, borderBottomColor: BAND.color },
   sectionList: { paddingTop: 14, paddingBottom: 4, paddingHorizontal: 0 },
   sectionLast: { borderBottomWidth: 0 },

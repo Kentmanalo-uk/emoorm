@@ -1,7 +1,7 @@
-import { useEffect, useState } from 'react';
+import { useEffect, useRef, useState } from 'react';
 import {
-  ActivityIndicator, FlatList, KeyboardAvoidingView, Modal, Platform,
-  Pressable, StyleSheet, Text, TextInput, View,
+  ActivityIndicator, Animated, Easing, FlatList, KeyboardAvoidingView, Modal, Platform,
+  Pressable, StyleSheet, Text, TextInput, View, useWindowDimensions,
 } from 'react-native';
 import { useRouter } from 'expo-router';
 import { PaperPlaneTiltIcon, TrashIcon, XIcon } from '../../lib/icons';
@@ -11,6 +11,10 @@ import { addReviewComment, deleteReviewComment, listReviewComments } from '../..
 import { font, t, themed } from '../../theme';
 
 const MAX = 600;
+// As components/Sheet.js.
+const OPEN_MS = 380;
+const CLOSE_MS = 240;
+const native = Platform.OS !== 'web';
 
 const when = (value) => {
   const at = new Date(value);
@@ -38,6 +42,24 @@ export default function ReviewComments({ review, onClose, onCountChange }) {
   const router = useRouter();
   const isAuthenticated = useAuthStore((s) => s.isAuthenticated);
   const me = useAuthStore((s) => s.user);
+  const { height: screenH } = useWindowDimensions();
+  const progress = useRef(new Animated.Value(0)).current;
+  const closing = useRef(false);
+
+  useEffect(() => {
+    Animated.timing(progress, {
+      toValue: 1, duration: OPEN_MS, easing: Easing.bezier(0.22, 1, 0.36, 1), useNativeDriver: native,
+    }).start();
+  }, [progress]);
+
+  // Out first, then gone: whoever opened this unmounts it in onClose.
+  const close = () => {
+    if (closing.current) return;
+    closing.current = true;
+    Animated.timing(progress, {
+      toValue: 0, duration: CLOSE_MS, easing: Easing.bezier(0.4, 0, 1, 1), useNativeDriver: native,
+    }).start(() => onClose());
+  };
 
   const [comments, setComments] = useState([]);
   const [loading, setLoading] = useState(true);
@@ -93,18 +115,24 @@ export default function ReviewComments({ review, onClose, onCountChange }) {
   };
 
   return (
-    <Modal visible transparent animationType="slide" onRequestClose={onClose}>
-      <Pressable style={styles.scrim} onPress={onClose} accessibilityLabel="Close comments" />
+    <Modal visible transparent animationType="none" statusBarTranslucent navigationBarTranslucent onRequestClose={close}>
+      <Animated.View style={[styles.scrim, { opacity: progress }]}>
+        <Pressable style={StyleSheet.absoluteFill} onPress={close} accessibilityLabel="Close comments" />
+      </Animated.View>
       <KeyboardAvoidingView
         behavior={Platform.OS === 'ios' ? 'padding' : undefined}
         style={styles.dock}
       >
-        <View style={styles.sheet}>
+        <Animated.View
+          style={[styles.sheet, {
+            transform: [{ translateY: progress.interpolate({ inputRange: [0, 1], outputRange: [screenH, 0] }) }],
+          }]}
+        >
           <View style={styles.top}>
             <Text style={styles.title}>
               {comments.length ? `${comments.length} comment${comments.length === 1 ? '' : 's'}` : 'Comments'}
             </Text>
-            <Pressable accessibilityRole="button" accessibilityLabel="Close comments" onPress={onClose} style={styles.x}>
+            <Pressable accessibilityRole="button" accessibilityLabel="Close comments" onPress={close} style={styles.x}>
               <XIcon size={18} color={t.neutral[700]} />
             </Pressable>
           </View>
@@ -173,14 +201,14 @@ export default function ReviewComments({ review, onClose, onCountChange }) {
               </Pressable>
             </View>
           </View>
-        </View>
+        </Animated.View>
       </KeyboardAvoidingView>
     </Modal>
   );
 }
 
 const styles = themed(() => StyleSheet.create({
-  scrim: { ...StyleSheet.absoluteFillObject, backgroundColor: 'rgba(0,0,0,0.45)' },
+  scrim: { ...StyleSheet.absoluteFill, backgroundColor: 'rgba(0,0,0,0.45)' },
   dock: { flex: 1, justifyContent: 'flex-end' },
   sheet: {
     // Tall enough to be worth opening, short enough to leave the photo

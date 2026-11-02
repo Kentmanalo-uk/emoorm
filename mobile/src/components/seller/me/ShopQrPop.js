@@ -313,9 +313,9 @@ const styles = themed(() => StyleSheet.create({
   iconPressed: { backgroundColor: t.neutral[100], transform: [{ scale: 0.94 }] },
 
   layer: { flex: 1 },
-  dim: { ...StyleSheet.absoluteFillObject, backgroundColor: 'rgba(0, 0, 0, 0.58)' },
+  dim: { ...StyleSheet.absoluteFill, backgroundColor: 'rgba(0, 0, 0, 0.58)' },
   center: {
-    ...StyleSheet.absoluteFillObject, alignItems: 'center', justifyContent: 'center', pointerEvents: 'box-none',
+    ...StyleSheet.absoluteFill, alignItems: 'center', justifyContent: 'center', pointerEvents: 'box-none',
   },
 
   front: {
@@ -328,7 +328,7 @@ const styles = themed(() => StyleSheet.create({
     backfaceVisibility: 'hidden',
   },
   back: {
-    ...StyleSheet.absoluteFillObject,
+    ...StyleSheet.absoluteFill,
     alignItems: 'center',
     justifyContent: 'center',
     backfaceVisibility: 'hidden',

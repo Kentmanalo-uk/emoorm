@@ -13,6 +13,7 @@ import UserAvatar from '../ui/UserAvatar';
 import { ProductTodayTag } from '../today/TodayTag';
 import { notTakingOrders } from '../../lib/availability';
 import { peso } from '../../lib/format';
+import { ShopLogoArt } from '../shop/ShopArt';
 
 /*
  * What the long-press previews show (the use*Peek hooks build the actions):
@@ -64,10 +65,6 @@ export function ProductPeekCard({ product: p }) {
 
 /* ── Shop ── */
 
-const initialsOf = (name) => String(name || '?').trim().split(/\s+/).slice(0, 2).map((w) => w[0])
-  .join('')
-  .toUpperCase();
-
 /** A shop: logo, name, town, product count, what it says and a few products. */
 export function StorePeekCard({ store }) {
   const [logoFailed, setLogoFailed] = useState(false);
@@ -81,7 +78,7 @@ export function StorePeekCard({ store }) {
         <div className="peek-store-logo">
           {logo && !logoFailed
             ? <img src={resolveImg(logo) || logo} alt="" onError={() => setLogoFailed(true)} />
-            : <span>{initialsOf(store.name)}</span>}
+            : <ShopLogoArt name={store.name} />}
         </div>
         <div className="peek-store-text">
           <p className="peek-title">{store.name}</p>
@@ -154,9 +151,9 @@ export function ConversationPeekCard({ item, currentUserId }) {
           <UserAvatar
             src={sellerView ? item.buyer?.profilePhoto : item.store?.logo}
             person={sellerView ? item.buyer : null}
+            shopName={sellerView ? null : title}
             name={title}
             alt=""
-            fallbackIcon={sellerView ? null : Storefront}
           />
         </div>
         <div className="peek-store-text">

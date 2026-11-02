@@ -6,7 +6,7 @@ import {
   Package, Heart, ChatText as MessageSquare, Bell, Storefront as Store,
   ShoppingBag, Truck, Gear as Settings, QrCode, CaretRight as ChevronRight, Star,
   ShieldCheck, ShieldWarning, Question, EnvelopeSimple,
-  Eye, MapPin, ArrowCounterClockwise, Lifebuoy, Flag, SignOut, Handshake,
+  Eye, MapPin, ArrowCounterClockwise, Lifebuoy, Flag, Handshake,
 } from '../lib/icons';
 import LanguageRow from '../components/account/LanguageRow';
 import axios from '../lib/axios';
@@ -16,17 +16,16 @@ import { fetchIdentityStatus } from '../lib/identity';
 import './Profile.css';
 import UserAvatar from '../components/ui/UserAvatar';
 import GoogleMark from '../components/ui/GoogleMark';
-import ConfirmDialog from '../components/ui/ConfirmDialog';
 import useWishlistStore from '../store/wishlistStore';
 import { listMyFollowing } from '../lib/follow';
 import { usePhoneLayout } from '../hooks/useMobileNav';
 import { ProfileSkeleton } from '../components/ui/PageSkeletons';
 import { usePageCache } from '../lib/pageCache';
-import { afterSignOutPath } from '../lib/afterSignOut';
 import { countBuyerTabs } from '../lib/orderProgress';
 import PageMenu from '../components/layout/PageMenu';
 import ToolGradients from '../components/ui/ToolGradients';
 import RecentlyViewed from '../components/account/RecentlyViewed';
+import MoreProducts from '../components/product/MoreProducts';
 
 const IDENTITY_META = {
   NOT_VERIFIED: { label: 'Not Verified', tone: 'neutral', Icon: ShieldWarning, hint: 'Required before you can check out.', action: 'Verify Identity' },
@@ -49,10 +48,9 @@ function Row({ to, icon: Icon, label, hint }) {
 
 const Profile = () => {
   const navigate = useNavigate();
-  const { user, isAuthenticated, logout } = useAuthStore();
+  const { user, isAuthenticated } = useAuthStore();
   const isPhone = usePhoneLayout();
   const wishlistCount = useWishlistStore((st) => st.items.length);
-  const [signOutOpen, setSignOutOpen] = useState(false);
 
   // Phones: "My shop" switches to the Seller Center with the same animation
   // as the header's Seller Center links. Modified clicks keep the browser's
@@ -278,19 +276,7 @@ const Profile = () => {
           <Row to="/profile/settings" icon={Settings} label="Settings" />
         </section>
 
-        <button type="button" className="pf-m-signout" onClick={() => setSignOutOpen(true)}>
-          <SignOut size={18} weight="bold" /> Log out
-        </button>
-
-        <ConfirmDialog
-          open={signOutOpen}
-          title="Log out?"
-          message="You will need to log in again to place orders and see your account."
-          confirmLabel="Log out"
-          danger
-          onConfirm={() => { setSignOutOpen(false); logout(); navigate(afterSignOutPath('/login'), { replace: true }); }}
-          onCancel={() => setSignOutOpen(false)}
-        />
+        <MoreProducts />
       </div>
     );
   }
@@ -437,6 +423,7 @@ const Profile = () => {
       </div>
 
       <RecentlyViewed userId={user?.id} variant="desktop" />
+      <MoreProducts />
 
       {/* Services Section */}
       <div className="profile-section">

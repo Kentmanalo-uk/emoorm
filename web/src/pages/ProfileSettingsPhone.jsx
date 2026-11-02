@@ -3,8 +3,7 @@ import { Navigate, useNavigate } from 'react-router-dom';
 import toast from 'react-hot-toast';
 import {
   UserCircle, EnvelopeSimple, Phone, House, MapPin, ShieldCheck, LockKey, CalendarBlank,
-  SignOut, Camera, Smiley, CircleNotch as Loader2, Database, UsersThree, CaretRight,
-} from '../lib/icons';
+  SignOut, Camera, Smiley, CircleNotch as Loader2, Database, } from '../lib/icons';
 import axios from '../lib/axios';
 import useAuthStore from '../store/authStore';
 import { useMunicipalities } from '../hooks/useReferenceData';
@@ -23,7 +22,6 @@ import AccountData from '../components/account/AccountData';
 import PushSetting from '../components/account/PushSetting';
 import PhoneVerify from '../components/account/PhoneVerify';
 import SwitchAccountSheet from '../components/account/SwitchAccountSheet';
-import { useSavedAccounts } from '../lib/savedAccounts';
 import UserAvatar from '../components/ui/UserAvatar';
 import ConfirmDialog from '../components/ui/ConfirmDialog';
 import Skeleton from '../components/ui/Skeleton';
@@ -85,7 +83,6 @@ function SettingsHub() {
   const [identity, setIdentity] = useState(null);
   const [signOutOpen, setSignOutOpen] = useState(false);
   const [switchOpen, setSwitchOpen] = useState(false);
-  const otherAccounts = useSavedAccounts((s) => s.accounts.filter((a) => a.id !== user?.id).length);
 
   useEffect(() => {
     let cancelled = false;
@@ -181,21 +178,6 @@ function SettingsHub() {
         <SettingsList label="Account">
           <SettingsRow icon={CalendarBlank} label="Member since" value={memberSince} />
           <SettingsRow to={partPath('data')} icon={Database} label="Your data" value="Download a copy, or delete your account" />
-          {/* Opens a sheet, so a button styled as the other rows (SettingsRow only links). */}
-          <li>
-            <button type="button" className="scm-setrow pst-setrow-btn" onClick={() => setSwitchOpen(true)}>
-              <span className="scm-setrow-icon" aria-hidden="true"><UsersThree size={20} weight="fill" /></span>
-              <span className="scm-setrow-text">
-                <strong>Switch account</strong>
-                <span className="scm-setrow-value">
-                  {otherAccounts
-                    ? `${otherAccounts} other account${otherAccounts === 1 ? '' : 's'} saved here`
-                    : 'Use another account saved here'}
-                </span>
-              </span>
-              <CaretRight size={16} className="scm-setrow-chev" aria-hidden="true" />
-            </button>
-          </li>
         </SettingsList>
       </section>
 
@@ -207,6 +189,9 @@ function SettingsHub() {
       )}
       />
 
+      <button type="button" className="ps-switch-text-btn" onClick={() => setSwitchOpen(true)}>
+        Switch account
+      </button>
       <button type="button" className="pf-m-signout" onClick={() => setSignOutOpen(true)}>
         <SignOut size={18} weight="bold" /> Log out
       </button>

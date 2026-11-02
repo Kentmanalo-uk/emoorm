@@ -18,6 +18,7 @@ import { MeCard, MeList, MeRow, meStyles } from '../../../src/components/seller/
 import ShopQrPop from '../../../src/components/seller/me/ShopQrPop';
 import { qrMethod } from '../../../src/components/seller/me/qrPayment';
 import { font, t, themed } from '../../../src/theme';
+import { ShopLogoArt } from '../../../src/components/shop/ShopArt';
 
 /*
  * /seller/menu, "Me" (web/src/pages/SellerMenu.jsx + SellerApp.css .sme-*),
@@ -144,7 +145,7 @@ export default function SellerMeScreen() {
             <View ref={logoRef} collapsable={false} style={[styles.avatar, styles.passThrough, qrOut && styles.away]}>
               {logo
                 ? <Image source={{ uri: logo }} style={styles.avatarImg} />
-                : <Text style={styles.avatarLetter}>{name.trim().charAt(0).toUpperCase()}</Text>}
+                : <ShopLogoArt name={name} />}
             </View>
             <View style={[styles.idText, styles.boxNone]}>
               <View style={[styles.nameRow, styles.boxNone]}>
@@ -301,7 +302,6 @@ const styles = themed(() => StyleSheet.create({
   },
   avatarImg: { width: '100%', height: '100%' },
   away: { opacity: 0 },
-  avatarLetter: { fontSize: 26, lineHeight: 34, ...font(500), color: t.primary[700] },
   idText: { flex: 1, minWidth: 0, gap: 2 },
   nameRow: { flexDirection: 'row', alignItems: 'center', gap: 10, minWidth: 0 },
   // Touches go through to the row's link under them (the QR icon keeps its own).

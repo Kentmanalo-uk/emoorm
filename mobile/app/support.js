@@ -17,6 +17,7 @@ import { CASE_STATUS_LABELS as STATUS_LABELS, CATEGORY_LABELS, errorText } from 
 import { resolveImg } from '../src/lib/media';
 import { toast } from '../src/lib/toast';
 import { font, t, themed } from '../src/theme';
+import { PullScrollView } from '../src/components/PullList';
 
 const THREAD_POLL_MS = 5000;
 const LIST_POLL_MS = 15000;
@@ -369,7 +370,7 @@ export default function ProfileSupport() {
   return (
     <View style={styles.screen}>
       <ScreenHeader title="Help & Support" backTo="/profile" />
-      <ScrollView showsVerticalScrollIndicator={false} showsHorizontalScrollIndicator={false} style={{ flex: 1 }} contentContainerStyle={styles.content}>
+      <PullScrollView onPull={refreshList} showsVerticalScrollIndicator={false} showsHorizontalScrollIndicator={false} style={{ flex: 1 }} contentContainerStyle={styles.content}>
         <View>
           <Text style={styles.subtitle}>Your support cases with the municipal team. Looking for an answer instead?</Text>
           <Pressable accessibilityRole="link" onPress={() => router.push('/help-center')} style={styles.helpLink}>
@@ -422,7 +423,7 @@ export default function ProfileSupport() {
             })
           )}
         </View>
-      </ScrollView>
+      </PullScrollView>
       {caseSheet}
     </View>
   );

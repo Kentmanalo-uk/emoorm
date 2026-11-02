@@ -225,7 +225,7 @@ export default function AvailableToday() {
   ) : (
     <>
       <div className="avt-grid">
-        {items.map((item) => <TodayCard key={item.id} item={item} result={isPhone} />)}
+        {items.map((item) => <TodayCard key={item.id} item={item} />)}
       </div>
       {state.items.length < state.total && (
         <button type="button" className="avt-more" onClick={() => load(state.page + 1)} disabled={state.loading}>

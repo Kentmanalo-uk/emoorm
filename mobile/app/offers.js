@@ -1,11 +1,12 @@
-import { useEffect } from 'react';
-import { ScrollView, StyleSheet, View } from 'react-native';
+import { useEffect, useState } from 'react';
+import { StyleSheet, View } from 'react-native';
 import { useRouter } from 'expo-router';
 import ScreenHeader from '../src/components/ScreenHeader';
 import { PageSubtitle } from '../src/components/profile/ProfileUI';
 import DealList from '../src/components/offers/DealList';
 import useAuthStore from '../src/store/authStore';
 import { t, themed } from '../src/theme';
+import { PullScrollView } from '../src/components/PullList';
 
 /**
  * /profile/offers, My Offers (web/src/pages/ProfileOffers.jsx): the buyer's
@@ -13,6 +14,7 @@ import { t, themed } from '../src/theme';
  * deal opens its chat.
  */
 export default function ProfileOffersScreen() {
+  const [pullKey, setPullKey] = useState(0);
   const router = useRouter();
   const isAuthenticated = useAuthStore((s) => s.isAuthenticated);
 
@@ -24,10 +26,10 @@ export default function ProfileOffersScreen() {
   return (
     <View style={styles.screen}>
       <ScreenHeader title="My Offers" backTo="/profile" />
-      <ScrollView showsVerticalScrollIndicator={false} showsHorizontalScrollIndicator={false} style={styles.scroll} contentContainerStyle={styles.content}>
+      <PullScrollView onPull={() => setPullKey((key) => key + 1)} showsVerticalScrollIndicator={false} showsHorizontalScrollIndicator={false} style={styles.scroll} contentContainerStyle={styles.content}>
         <PageSubtitle>Your offers on livestock. Talk them over in chat, meet the seller, and pay in person.</PageSubtitle>
-        {isAuthenticated ? <DealList side="buyer" /> : null}
-      </ScrollView>
+        {isAuthenticated ? <DealList side="buyer" refreshKey={pullKey} /> : null}
+      </PullScrollView>
     </View>
   );
 }

@@ -1,5 +1,5 @@
 import { useCallback, useEffect, useState } from 'react';
-import { Image, Pressable, ScrollView, StyleSheet, Text, TextInput, View } from 'react-native';
+import { Image, Pressable, StyleSheet, Text, TextInput, View } from 'react-native';
 import { useFocusEffect, useRouter } from 'expo-router';
 import {
   BellIcon, BellSlashIcon, MagnifyingGlassIcon, UserMinusIcon, XIcon,
@@ -15,6 +15,8 @@ import { invalidateCachedData } from '../src/lib/dataCache';
 import { font, t, themed } from '../src/theme';
 import { PageLoader } from '../src/components/BrandLoader';
 import { useStorePeek } from '../src/components/peek/StorePeek';
+import { PullScrollView } from '../src/components/PullList';
+import { ShopLogoArt } from '../src/components/shop/ShopArt';
 
 const SORTS = [
   { value: 'recent', label: 'Recently followed' },
@@ -97,7 +99,7 @@ export default function FollowedStores() {
   return (
     <View style={styles.screen}>
       <ScreenHeader title="Followed Stores" backTo="/profile" />
-      <ScrollView showsVerticalScrollIndicator={false} showsHorizontalScrollIndicator={false} style={{ flex: 1 }} contentContainerStyle={styles.content} keyboardShouldPersistTaps="handled">
+      <PullScrollView onPull={fetchList} showsVerticalScrollIndicator={false} showsHorizontalScrollIndicator={false} style={{ flex: 1 }} contentContainerStyle={styles.content} keyboardShouldPersistTaps="handled">
         <Text style={styles.subtitle}>Get updates when your favorite stores add new products.</Text>
 
         <View style={styles.toolbar}>
@@ -164,16 +166,13 @@ export default function FollowedStores() {
             ))}
           </View>
         )}
-      </ScrollView>
+      </PullScrollView>
     </View>
   );
 }
 
 function FollowedStoreCard({ item, busy, onOpen, onUnfollow, onToggleNotifs }) {
   const { store, notificationsEnabled } = item;
-  const initials = store.name
-    ? store.name.split(' ').slice(0, 2).map((w) => w[0]).join('').toUpperCase()
-    : '?';
 
   // Held: the shop's preview, with Unfollow instead of Follow.
   const peek = useStorePeek()(store, {
@@ -189,7 +188,7 @@ function FollowedStoreCard({ item, busy, onOpen, onUnfollow, onToggleNotifs }) {
           <View style={styles.avatar}>
             {store.logo
               ? <Image source={{ uri: resolveImg(store.logo) }} style={styles.avatarImg} accessibilityLabel={store.name} />
-              : <Text style={styles.initials}>{initials}</Text>}
+              : <ShopLogoArt name={store.name} />}
           </View>
           <View style={styles.title}>
             <Pressable accessibilityRole="link" onPress={onOpen} {...peek}>
@@ -281,7 +280,6 @@ const styles = themed(() => StyleSheet.create({
     alignItems: 'center', justifyContent: 'center', backgroundColor: t.primary[600],
   },
   avatarImg: { width: '100%', height: '100%' },
-  initials: { fontSize: 20, lineHeight: 26, color: t.onBrand, ...font(500) },
   title: { flex: 1, minWidth: 0, gap: 3 },
   name: { fontSize: 18, lineHeight: 23, color: t.neutral[900], ...font(600) },
   location: { fontSize: 13.5, lineHeight: 18, color: t.neutral[500], ...font(400) },

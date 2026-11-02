@@ -5,7 +5,7 @@
 .shop-page {
   --shop-primary: var(--t-primary-600, #059669);
   --shop-secondary: var(--t-warning-500, #f59e0b);
-  background: var(--t-neutral-50, #f8fafc);
+  background: var(--t-neutral-100, #f3f4f6);
   min-height: 100vh;
   padding-bottom: 60px;
 }
@@ -644,7 +644,7 @@
 }
 
 .shop-grid .product-card .product-name {
-  font-size: 16px;
+  font-size: 17px;
   font-weight: 400;
   color: var(--t-secondary-950, #212121);
   margin: 0;
@@ -1031,6 +1031,7 @@
   }
 
   .shop-grid .product-card .product-name {
+    font-size: 16px;
     overflow-wrap: anywhere;
   }
 
@@ -1147,6 +1148,12 @@
         color-mix(in srgb, var(--shop-primary) 52%, #000),
         color-mix(in srgb, var(--shop-primary) 63%, #000) 60%,
         color-mix(in srgb, var(--shop-primary) 40%, #000));
+  }
+
+  /* Over the backdrop, which is positioned and would otherwise paint across
+     whatever in the hero is not: the tabs and the sort row went under it. */
+  .shop-m-hero > :where(:not(.shop-m-backdrop)) {
+    position: relative;
   }
 
   .shop-m-backdrop img {

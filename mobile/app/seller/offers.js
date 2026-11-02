@@ -1,4 +1,5 @@
 import SellerPage from '../../src/components/seller/SellerPage';
+import { useState } from 'react';
 import DealList from '../../src/components/offers/DealList';
 
 /**
@@ -8,9 +9,10 @@ import DealList from '../../src/components/offers/DealList';
  * its chat. On phones the page's heading gives way to the bar's title.
  */
 export default function SellerOffersScreen() {
+  const [pullKey, setPullKey] = useState(0);
   return (
-    <SellerPage title="Offers" contentStyle={{ flexGrow: 1 }}>
-      <DealList side="seller" />
+    <SellerPage title="Offers" contentStyle={{ flexGrow: 1 }} onRefresh={() => setPullKey((key) => key + 1)}>
+      <DealList side="seller" refreshKey={pullKey} />
     </SellerPage>
   );
 }

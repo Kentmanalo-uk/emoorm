@@ -1,6 +1,6 @@
 import { useCallback, useEffect, useRef, useState } from 'react';
 import {
-  ActivityIndicator, FlatList, Pressable, StyleSheet, Text, View, useWindowDimensions,
+  ActivityIndicator, FlatList, Platform, Pressable, StyleSheet, Text, View, useWindowDimensions,
 } from 'react-native';
 import { useRouter } from 'expo-router';
 import apiClient from '../../src/api/client';
@@ -12,6 +12,8 @@ import ProductCard from '../../src/components/ProductCard';
 import HomeHeader, { HomeQuickSearch } from '../../src/components/HomeHeader';
 import { useTabBarScroll } from '../../src/components/Glass';
 import HomeTodayRail from '../../src/components/home/HomeTodayRail';
+import useBrandRefresh from '../../src/components/useBrandRefresh';
+import { fetchForYou } from '../../src/lib/forYou';
 import HomeStoresMap from '../../src/components/home/HomeStoresMap';
 import StartSellingBubble from '../../src/components/home/StartSellingBubble';
 import { MapTrifoldIcon } from '../../src/lib/icons';
@@ -39,7 +41,6 @@ import { font, t, themed } from '../../src/theme';
 
 // Phones: 5 rows of the 2-column grid per batch.
 const EXPLORE_BATCH = 5 * 2;
-const EXPLORE_QUERY = { sortBy: 'createdAt', sortOrder: 'desc' };
 // What Home showed last time: shown at once, then refreshed.
 const CACHE_KEY = 'home:page';
 const readCache = () => getCacheEntry(CACHE_KEY)?.data || {};
@@ -150,21 +151,19 @@ export default function Home() {
   }, []);
 
   // Each section loads on its own and shows as soon as its answer arrives.
-  useEffect(() => {
-    let cancelled = false;
+  const loadSections = useCallback((isLive = () => true) => {
     const load = (request, show) => request
-      .then((res) => { if (!cancelled) show(res); })
+      .then((res) => { if (isLive()) show(res); })
       .catch((err) => console.error('Failed to load home data:', err?.message || err));
 
-    load(
-      apiClient.get('/products', { params: { pageSize: SUGGESTED, sortBy: 'createdAt', sortOrder: 'desc' } }),
+    return Promise.all([load(
+      fetchForYou(user?.id, { pageSize: SUGGESTED }),
       (res) => {
         setFeatured(res.data || []);
         patchCache({ featured: res.data || [] });
       },
-    );
-    load(
-      apiClient.get('/products', { params: { ...EXPLORE_QUERY, page: 1, pageSize: EXPLORE_BATCH } }),
+    ), load(
+      fetchForYou(user?.id, { page: 1, pageSize: EXPLORE_BATCH, skip: SUGGESTED }),
       (res) => {
         const fresh = res.data || [];
         if (exploreSaved.current > 1) {
@@ -184,16 +183,27 @@ export default function Home() {
         setExploreHasMore(hasNext);
         patchCache({ explore: fresh, explorePage: 1, exploreHasMore: hasNext });
       },
-    );
-    load(
+    ), load(
       apiClient.get('/stores', { params: { pageSize: 6, municipalityId: townId } }),
       (res) => {
         setNearbyStores(res.data || []);
         patchCache({ nearbyStores: res.data || [] });
       },
-    );
+    )]);
+  }, [townId, user?.id]);
+
+  useEffect(() => {
+    let cancelled = false;
+    loadSections(() => !cancelled);
     return () => { cancelled = true; };
-  }, [townId]);
+  }, [loadSections]);
+
+  // Pulled down: the sections again, and Available Today with them.
+  const [todayKey, setTodayKey] = useState(0);
+  const pull = useBrandRefresh(() => {
+    setTodayKey((key) => key + 1);
+    return loadSections();
+  });
 
   // Every shop with a spot: its pin, or placed from its address
   // (pinned: false). Asked for only once the map is being scrolled
@@ -220,7 +230,7 @@ export default function Home() {
     setExploreFailed(false);
     try {
       const nextPage = explorePage + 1;
-      const res = await apiClient.get('/products', { params: { ...EXPLORE_QUERY, page: nextPage, pageSize: EXPLORE_BATCH } });
+      const res = await fetchForYou(user?.id, { page: nextPage, pageSize: EXPLORE_BATCH, skip: SUGGESTED });
       const seen = new Set(explore.map((p) => p.id));
       const next = [...explore, ...(res.data || []).filter((p) => !seen.has(p.id))];
       const hasNext = Boolean(res.pagination?.hasNext);
@@ -237,7 +247,7 @@ export default function Home() {
       exploreBusy.current = false;
       setExploreLoading(false);
     }
-  }, [explore, explorePage, exploreHasMore]);
+  }, [explore, explorePage, exploreHasMore, user?.id]);
 
   // Near the bottom (about a screen and a half to go): the next batch, so it
   // is usually there before the grid runs out. Not after a failure; that
@@ -255,6 +265,7 @@ export default function Home() {
     <View style={styles.screen}>
       <HomeHeader />
       <FlatList
+        {...pull.listProps}
         // The Explore grid is the list; everything above it is the
         // header. Only Explore grows -- it loads another page each time
         // you reach the bottom -- so it is the only part that has to be
@@ -274,10 +285,11 @@ export default function Home() {
         onEndReachedThreshold={1.5}
         // Only until the map has been asked for; then it is undefined and
         // nothing runs on scroll at all.
-        onScroll={mapNear ? undefined : (e) => {
-          if (e.nativeEvent.contentOffset.y > 300) setMapNear(true);
+        onScroll={mapNear && Platform.OS !== 'ios' ? undefined : (e) => {
+          pull.trackPull(e);
+          if (!mapNear && e.nativeEvent.contentOffset.y > 300) setMapNear(true);
         }}
-        scrollEventThrottle={250}
+        scrollEventThrottle={Platform.OS === 'ios' ? 32 : 250}
         // Rows off screen are detached on Android rather than kept in the
         // view tree, and only a screenful or so is built at a time.
         removeClippedSubviews
@@ -305,7 +317,7 @@ export default function Home() {
         </View>
 
         {/* Available Today: fresh items for a limited time (hidden when none). */}
-        <HomeTodayRail />
+        <HomeTodayRail refreshKey={todayKey} />
 
         {/* Suggested for You */}
         <View style={styles.listSection}>
@@ -398,6 +410,7 @@ export default function Home() {
       {/* Floating “Start selling” (buyers and guests; drag it, or × to hide it for a week). */}
       <StartSellingBubble />
 
+      {pull.indicator}
       {popup ? <PromotionPopup banner={popup} onClose={() => setPopup(null)} /> : null}
     </View>
   );

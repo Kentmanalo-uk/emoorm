@@ -29,6 +29,7 @@ import useNotificationPeek from '../components/peek/useNotificationPeek';
 import NotificationCategories from '../components/notifications/NotificationCategories';
 import { categoryLabel, minusOne } from '../lib/notificationCategories';
 import { timeAgo } from '../lib/format';
+import MoreProducts from '../components/product/MoreProducts';
 
 const TYPE_CONFIG = {
   ORDER_RECEIVED: { icon: ShoppingBag, color: 'var(--t-info-500, #3b82f6)', bg: 'var(--t-info-100, #dbeafe)', label: 'New Order' },
@@ -622,5 +623,6 @@ export default function Notifications({ bare = false, mode = 'BUYER', shell } = 
     </div>
   );
 
-  return bare ? inner : <Layout>{inner}</Layout>;
+  const withMore = mode === 'BUYER' ? <>{inner}<MoreProducts /></> : inner;
+  return bare ? withMore : <Layout>{withMore}</Layout>;
 }

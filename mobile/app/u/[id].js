@@ -1,6 +1,6 @@
 import { useCallback, useEffect, useState } from 'react';
 import {
-  Pressable, ScrollView, StyleSheet, Text, View, useWindowDimensions,
+  Pressable, StyleSheet, Text, View, useWindowDimensions,
 } from 'react-native';
 import { useLocalSearchParams, useRouter } from 'expo-router';
 import {
@@ -11,6 +11,7 @@ import PublicHeader from '../../src/components/public/PublicHeader';
 import UserAvatar from '../../src/components/UserAvatar';
 import toast from '../../src/lib/toast';
 import { font, t, text, themed } from '../../src/theme';
+import { PullScrollView } from '../../src/components/PullList';
 
 /*
  * web/src/pages/PublicProfile.jsx + PublicProfile.css at phone width.
@@ -50,7 +51,8 @@ export default function PublicProfile() {
   const [openingChat, setOpeningChat] = useState(false);
 
   const load = useCallback(async () => {
-    setStatus('loading');
+    // A pull keeps the page up while it is asked for again.
+    setStatus((was) => (was === 'ready' ? was : 'loading'));
     // As the website's query: no retry for a 404, two more tries otherwise.
     for (let attempt = 0; ; attempt += 1) {
       try {
@@ -82,10 +84,10 @@ export default function PublicProfile() {
   const shell = (title, children) => (
     <View style={styles.screen}>
       <PublicHeader title={title} />
-      <ScrollView showsVerticalScrollIndicator={false} showsHorizontalScrollIndicator={false} style={styles.scroll} contentContainerStyle={styles.scrollContent}>
+      <PullScrollView onPull={load} showsVerticalScrollIndicator={false} showsHorizontalScrollIndicator={false} style={styles.scroll} contentContainerStyle={styles.scrollContent}>
         {/* The website's grey .pp is at least the viewport less 200px tall. */}
         <View style={[styles.pp, { minHeight: Math.max(0, height - 200) }]}>{children}</View>
-      </ScrollView>
+      </PullScrollView>
     </View>
   );
 

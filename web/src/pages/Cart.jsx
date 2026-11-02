@@ -1,7 +1,7 @@
 import { useState, useEffect, useMemo } from 'react';
 import EmptyArt from '../components/ui/EmptyArt';
 import { Link, useNavigate, useSearchParams } from 'react-router-dom';
-import { ShoppingBag, Storefront, Trash as Trash2, Plus, Minus, ArrowLeft, ShoppingCart, Star, MagnifyingGlass as Search, WarningCircle, Heart, Check, CaretRight, CaretDown } from '../lib/icons';
+import { ShoppingBag, Storefront, Trash as Trash2, Plus, Minus, ArrowLeft, ShoppingCart, MagnifyingGlass as Search, WarningCircle, Heart, Check, CaretRight, CaretDown } from '../lib/icons';
 import toast from 'react-hot-toast';
 import Layout from '../components/layout/Layout';
 import useCartStore from '../store/cartStore';
@@ -16,43 +16,18 @@ import EmptyState from '../components/ui/EmptyState';
 import { usePhoneLayout } from '../hooks/useMobileNav';
 import { BusyLabel } from '../components/ui/Spinner';
 import './Cart.css';
+import ProductTile from '../components/product/ProductTile';
 import { confirmAction } from '../lib/confirm';
 import {
   lineUnit, lineNote, lineMinimum, lineStockless, fewLeftLabel,
 } from '../lib/orderLines';
+import { ShopLogoArt } from '../components/shop/ShopArt';
+import CartSwipeRow from '../components/cart/CartSwipeRow';
 
 // Out of stock blocks checkout; a paluto has no stock (it is cooked when ordered).
 const soldOut = (item) => !lineStockless(item) && item.stock === 0;
 
 const SUGGESTION_COUNT = 12;
-
-// Stars only from real review data; unreviewed products read "New".
-const renderSuggestionRating = (product) => {
-  const count = Number(product.reviewCount ?? 0);
-  if (count <= 0) {
-    return (
-      <div className="cart-suggestion-rating">
-        <span className="cart-suggestion-review-count">New</span>
-      </div>
-    );
-  }
-  const filled = Math.round(Number(product.averageRating || 0));
-  return (
-    <div className="cart-suggestion-rating">
-      <div className="cart-suggestion-stars">
-        {[0, 1, 2, 3, 4].map((i) => (
-          <Star
-            key={i}
-            size={11}
-            weight={i < filled ? 'fill' : 'regular'}
-            color={i < filled ? 'var(--t-warning-500, #f59e0b)' : 'var(--t-neutral-300, #d1d5db)'}
-          />
-        ))}
-      </div>
-      <span className="cart-suggestion-review-count">({count})</span>
-    </div>
-  );
-};
 
 /** Phones: round selection check (the reference's circles). */
 function RoundCheck({ checked, disabled, onChange, label }) {
@@ -61,6 +36,21 @@ function RoundCheck({ checked, disabled, onChange, label }) {
       <input type="checkbox" checked={checked} disabled={disabled} onChange={onChange} aria-label={label} />
       <span aria-hidden="true">{checked && <Check size={14} weight="bold" />}</span>
     </label>
+  );
+}
+
+/** Products like a cart line: its category, or what its name says. */
+const similarPath = (item) => (item.categoryId
+  ? `/products?category=${item.categoryId}`
+  : `/products?q=${encodeURIComponent(item.name || '')}`);
+
+/** A shop's picture in the phone cart: its logo, or its generated one. */
+function CartStoreLogo({ src, name }) {
+  const [failed, setFailed] = useState(false);
+  return (
+    <span className="cart-m-store-logo" aria-hidden="true">
+      {src && !failed ? <img src={resolveImg(src)} alt="" onError={() => setFailed(true)} /> : <ShopLogoArt name={name} />}
+    </span>
   );
 }
 
@@ -92,10 +82,9 @@ const Cart = () => {
       if (useCartStore.getState().items.length === 0) return;
       setRevalidating(true);
       try {
-        const { capped, unavailable, raised = [] } = await revalidate();
+        const { capped, raised = [] } = await revalidate();
         if (cancelled) return;
         const notes = [];
-        if (unavailable.length) notes.push(`${unavailable.length} ${unavailable.length === 1 ? 'item is' : 'items are'} no longer available`);
         if (capped.length) notes.push(`quantity reduced to available stock for ${capped.join(', ')}`);
         if (capped.length) toast(`Quantity reduced to available stock: ${capped.join(', ')}`);
         if (raised.length) toast(`Changed to the minimum order: ${raised.join(', ')}`);
@@ -429,22 +418,7 @@ const Cart = () => {
           ) : (
             <div className="cart-suggestions-grid">
               {suggestions.map((product) => (
-                <Link
-                  key={product.id}
-                  to={`/product/${product.slug}`}
-                  className="cart-suggestion-card"
-                >
-                  <div className="cart-suggestion-image">
-                    <ProductImage src={product.images?.[0]} alt={product.name} />
-                  </div>
-                  <div className="cart-suggestion-info">
-                    <h3 className="cart-suggestion-name">{product.name}</h3>
-                    <span className="cart-suggestion-price">
-                      ₱{Number(product.price).toFixed(2)}
-                    </span>
-                    {renderSuggestionRating(product)}
-                  </div>
-                </Link>
+                <ProductTile key={product.id} product={product} />
               ))}
             </div>
           )}
@@ -569,10 +543,10 @@ const Cart = () => {
 
           {isPhone && (
             <div className="cart-m-list">
-              {(revalidating || revalidationNotice) && (
-                <div className={`cart-revalidation-notice ${revalidationNotice ? 'is-warning' : ''}`} role="status">
+              {revalidationNotice && (
+                <div className="cart-revalidation-notice is-warning" role="status">
                   <WarningCircle size={16} />
-                  <span>{revalidating ? 'Checking current prices and stock…' : revalidationNotice}</span>
+                  <span>{revalidationNotice}</span>
                 </div>
               )}
               {cartSearch && visibleItems.length === 0 && (
@@ -597,11 +571,11 @@ const Cart = () => {
                       />
                       {slug ? (
                         <Link to={`/store/${slug}`} className="cart-m-store-name">
-                          <Storefront size={17} weight="fill" /> <span>{storeData.storeName}</span> <CaretRight size={14} weight="bold" />
+                          <CartStoreLogo src={storeData.storeLogo} name={storeData.storeName} /> <span>{storeData.storeName}</span> <CaretRight size={14} weight="bold" />
                         </Link>
                       ) : (
                         <span className="cart-m-store-name">
-                          <Storefront size={17} weight="fill" /> <span>{storeData.storeName}</span>
+                          <CartStoreLogo src={storeData.storeLogo} name={storeData.storeName} /> <span>{storeData.storeName}</span>
                         </span>
                       )}
                     </div>
@@ -616,7 +590,13 @@ const Cart = () => {
                       const unit = lineUnit(item);
                       const few = fewLeftLabel(item);
                       return (
-                        <div key={item.id} className={`cart-m-item${item.unavailable ? ' is-unavailable' : ''}`}>
+                        <CartSwipeRow
+                          key={item.id}
+                          label={item.name}
+                          onSimilar={() => navigate(similarPath(item))}
+                          onRemove={() => { removeItem(item.id); toast.success('Removed from cart'); }}
+                        >
+                        <div className={`cart-m-item${item.unavailable ? ' is-unavailable' : ''}`}>
                           <RoundCheck
                             checked={!item.unavailable && selectedSet.has(item.id)}
                             disabled={!!item.unavailable}
@@ -675,6 +655,7 @@ const Cart = () => {
                             )}
                           </div>
                         </div>
+                        </CartSwipeRow>
                       );
                     })}
                   </section>
@@ -686,10 +667,10 @@ const Cart = () => {
           <div className="cart-layout">
             {/* Cart Items */}
             <div className="cart-items-section">
-              {(revalidating || revalidationNotice) && (
-                <div className={`cart-revalidation-notice ${revalidationNotice ? 'is-warning' : ''}`} role="status">
+              {revalidationNotice && (
+                <div className="cart-revalidation-notice is-warning" role="status">
                   <WarningCircle size={16} />
-                  <span>{revalidating ? 'Checking current prices and stock…' : revalidationNotice}</span>
+                  <span>{revalidationNotice}</span>
                 </div>
               )}
               {cartSearch && visibleItems.length === 0 && (
@@ -725,7 +706,7 @@ const Cart = () => {
                             }}
                           />
                         ) : null}
-                        <Storefront className={storeData.storeLogo ? '' : 'is-visible'} size={16} />
+                        <ShopLogoArt name={storeData.storeName} className={storeData.storeLogo ? '' : 'is-visible'} />
                       </span>
                       <span>{storeData.storeName}</span>
                     </div>
@@ -788,6 +769,15 @@ const Cart = () => {
                               <div className="cart-item-actions">
                                 <button
                                   type="button"
+                                  onClick={() => navigate(similarPath(item))}
+                                  className="btn-similar-item"
+                                  title="Find similar"
+                                  aria-label={`Find products like ${item.name}`}
+                                >
+                                  <Search size={18} />
+                                </button>
+                                <button
+                                  type="button"
                                   onClick={() => removeItem(item.id)}
                                   className="btn-remove-item cart-item-remove-unavailable"
                                 >
@@ -820,6 +810,15 @@ const Cart = () => {
                                   ₱{(item.price * item.quantity).toFixed(2)}
                                 </div>
 
+                                <button
+                                  type="button"
+                                  onClick={() => navigate(similarPath(item))}
+                                  className="btn-similar-item"
+                                  title="Find similar"
+                                  aria-label={`Find products like ${item.name}`}
+                                >
+                                  <Search size={18} />
+                                </button>
                                 <button
                                   onClick={() => handleRemoveItem(item.id)}
                                   className="btn-remove-item"

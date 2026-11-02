@@ -1,6 +1,6 @@
 import { useCallback, useEffect, useRef, useState } from 'react';
 import {
-  KeyboardAvoidingView, Platform, Pressable, RefreshControl, ScrollView, StyleSheet, Text, View,
+  KeyboardAvoidingView, Platform, Pressable, StyleSheet, Text, View,
 } from 'react-native';
 import { useLocalSearchParams, useRouter } from 'expo-router';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
@@ -13,6 +13,7 @@ import QuestionCard from '../../src/components/seller/questions/QuestionCard';
 import { toast } from '../../src/lib/toast';
 import { font, t, themed } from '../../src/theme';
 import { PageLoader } from '../../src/components/BrandLoader';
+import { PullScrollView } from '../../src/components/PullList';
 
 /**
  * /seller/questions (web/src/pages/SellerQuestions.jsx, SellerQuestions.css):
@@ -91,12 +92,11 @@ export default function SellerQuestionsScreen() {
   return (
     <SellerPage scroll={false}>
       <KeyboardAvoidingView style={styles.flex} behavior={Platform.OS === 'ios' ? 'padding' : undefined}>
-        <ScrollView showsVerticalScrollIndicator={false} showsHorizontalScrollIndicator={false}
+        <PullScrollView onPull={refresh} showsVerticalScrollIndicator={false} showsHorizontalScrollIndicator={false}
           ref={scrollRef}
           style={styles.flex}
           contentContainerStyle={[sellerPageStyles.content, { flexGrow: 1, paddingBottom: 24 + insets.bottom }]}
           keyboardShouldPersistTaps="handled"
-          refreshControl={<RefreshControl refreshing={refreshing} onRefresh={refresh} colors={[t.primary[600]]} tintColor={t.primary[600]} />}
         >
           <View style={styles.tabs} accessibilityRole="tablist">
             {tabs.map(([key, label]) => {
@@ -137,7 +137,7 @@ export default function SellerQuestionsScreen() {
               ))}
             </View>
           )}
-        </ScrollView>
+        </PullScrollView>
       </KeyboardAvoidingView>
 
       <OrderConfirmDialog

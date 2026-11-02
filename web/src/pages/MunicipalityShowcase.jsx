@@ -1,13 +1,14 @@
 import { useEffect, useState } from 'react';
 import EmptyArt from '../components/ui/EmptyArt';
 import { Link, useParams } from 'react-router-dom';
-import { ArrowRight, MapPin, Star } from '../lib/icons';
+import { ArrowRight, MapPin } from '../lib/icons';
 import Layout from '../components/layout/Layout';
-import ProductImage from '../components/ProductImage';
 import axios from '../lib/axios';
 import { resolveImg } from '../lib/media';
 import './MunicipalityShowcase.css';
+import ProductTile from '../components/product/ProductTile';
 import { HighlightCardsSkeleton } from '../components/ui/PageSkeletons';
+import { ShopLogoArt } from '../components/shop/ShopArt';
 
 const readList = (response) => Array.isArray(response?.data) ? response.data : [];
 
@@ -90,17 +91,7 @@ export default function MunicipalityShowcase() {
                 {products.length > 0 ? (
                   <div className="municipality-product-grid">
                     {products.slice(0, 8).map((product) => (
-                      <Link key={product.id} to={`/product/${product.slug}`} className="municipality-product-card">
-                        <div className="municipality-product-image"><ProductImage src={product.images?.[0]} alt={product.name} /></div>
-                        <div className="municipality-product-info">
-                          <strong>{product.name}</strong>
-                          <span className="municipality-product-price">₱{Number(product.price || 0).toFixed(2)}</span>
-                          <div className="municipality-product-rating">
-                            <div>{[0, 1, 2, 3, 4].map((star) => <Star key={star} size={11} weight="fill" color="var(--t-warning-500, #f59e0b)" />)}</div>
-                            <span>({product.reviewCount ?? 0})</span>
-                          </div>
-                        </div>
-                      </Link>
+                      <ProductTile key={product.id} product={product} />
                     ))}
                   </div>
                 ) : <div className="municipality-empty"><EmptyArt name="products" size={80} /><span>No products are available yet.</span></div>}
@@ -112,7 +103,7 @@ export default function MunicipalityShowcase() {
                   <div className="municipality-store-grid">
                     {stores.slice(0, 6).map((store) => (
                       <Link key={store.id} to={`/store/${store.slug}`} className="municipality-store-card">
-                        <div className="municipality-store-logo">{store.logo ? <img src={resolveImg(store.logo)} alt={`${store.name} logo`} /> : <span>{store.name?.charAt(0)}</span>}</div>
+                        <div className="municipality-store-logo">{store.logo ? <img src={resolveImg(store.logo)} alt={`${store.name} logo`} /> : <ShopLogoArt name={store.name} />}</div>
                         <div><strong>{store.name}</strong><span>{store.pickupAddress || municipality?.name}</span></div><ArrowRight size={16} />
                       </Link>
                     ))}

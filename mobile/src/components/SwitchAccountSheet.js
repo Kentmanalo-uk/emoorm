@@ -6,6 +6,7 @@ import { usePathname, useRouter } from 'expo-router';
 import { create } from 'zustand';
 import { InfoIcon, PlusIcon, XIcon } from '../lib/icons';
 import useAuthStore from '../store/authStore';
+import useSideStore from '../store/sideStore';
 import { syncWishlist } from './profile/wishlistSync';
 import {
   forgetAccount, loadSavedAccounts, setCurrentAside, switchToAccount, useSavedAccounts,
@@ -82,6 +83,10 @@ export function SwitchAccountHost() {
   const pick = async (account) => {
     if (busy || account.id === user?.id) return;
     setBusy(account.id);
+    // From the Seller Center to the other account's (a seller's), else its
+    // Profile. Set first: whichever it is, it opens on that side.
+    const inSeller = pathname === '/seller' || pathname.startsWith('/seller/');
+    useSideStore.getState().setSide(account.id, inSeller && account.role === 'SELLER' ? 'shop' : 'personal');
     const res = await switchToAccount(account.id, { signIn });
     setBusy(null);
     if (!res.ok) {
@@ -91,8 +96,6 @@ export function SwitchAccountHost() {
     }
     syncWishlist();
     toast.success(`Switched to ${res.user.fullName || res.user.email}`);
-    // From the Seller Center to the other account's (a seller's), else its Profile.
-    const inSeller = pathname === '/seller' || pathname.startsWith('/seller/');
     after(() => router.replace(inSeller && res.user.role === 'SELLER' ? '/seller' : '/profile'));
   };
 

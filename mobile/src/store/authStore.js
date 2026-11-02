@@ -24,6 +24,8 @@ const useAuthStore = create((set) => ({
       user = null;
       token = null;
     }
+    // Before the app opens: which side it opens on depends on it.
+    await require('./sideStore').default.getState().load();
     set({
       user,
       isAuthenticated: Boolean(token),

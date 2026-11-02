@@ -1,6 +1,6 @@
 import { useCallback, useEffect, useState } from 'react';
 import {
-  ActivityIndicator, Image, Pressable, ScrollView, StyleSheet, Text, View,
+  ActivityIndicator, Image, Pressable, StyleSheet, Text, View,
 } from 'react-native';
 import { useRouter } from 'expo-router';
 import * as ImagePicker from 'expo-image-picker';
@@ -18,6 +18,7 @@ import { invalidateCachedData } from '../src/lib/dataCache';
 import { toast } from '../src/lib/toast';
 import { font, t, themed } from '../src/theme';
 import { PageLoader } from '../src/components/BrandLoader';
+import { PullScrollView } from '../src/components/PullList';
 
 const STATUS_META = themed(() => ({
   NOT_VERIFIED: {
@@ -224,7 +225,7 @@ export default function ProfileVerification() {
   return (
     <View style={styles.screen}>
       <ScreenHeader title="Identity Verification" backTo="/profile" />
-      <ScrollView showsVerticalScrollIndicator={false} showsHorizontalScrollIndicator={false} style={{ flex: 1 }} contentContainerStyle={styles.content} keyboardShouldPersistTaps="handled">
+      <PullScrollView onPull={load} showsVerticalScrollIndicator={false} showsHorizontalScrollIndicator={false} style={{ flex: 1 }} contentContainerStyle={styles.content} keyboardShouldPersistTaps="handled">
         <Text style={styles.subtitle}>
           {status?.requiredForCheckout === false
             ? 'Verification is optional right now, but a verified account is ready if it becomes required.'
@@ -380,7 +381,7 @@ export default function ProfileVerification() {
             {' '}will require you to verify again.
           </Text>
         ) : null}
-      </ScrollView>
+      </PullScrollView>
 
       {cameraSide ? (
         <IdCamera

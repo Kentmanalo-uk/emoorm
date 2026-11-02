@@ -63,7 +63,7 @@ export default function AvatarPicker({ current, seed, onPick, onClose }) {
 }
 
 const styles = themed(() => StyleSheet.create({
-  scrim: { ...StyleSheet.absoluteFillObject, backgroundColor: 'rgba(15, 23, 42, 0.35)' },
+  scrim: { ...StyleSheet.absoluteFill, backgroundColor: 'rgba(15, 23, 42, 0.35)' },
   sheet: {
     position: 'absolute', left: 0, right: 0, bottom: 0, maxHeight: '78%',
     paddingTop: 14, paddingHorizontal: 16, borderTopLeftRadius: 20, borderTopRightRadius: 20,

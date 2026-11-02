@@ -29,6 +29,7 @@ const DASHBOARD_GUIDE = 'dashboard';
 import './SellerDashboard.css';
 import './Profile.css';
 import { readCache, writeCache } from '../lib/pageCache';
+import { ShopLogoArt } from '../components/shop/ShopArt';
 
 const STATUS_META = {
   PENDING: { label: 'New', tint: 'sc-tint-amber', Icon: Clock },
@@ -1103,7 +1104,7 @@ function PhoneHome({
       <header className="sh-head">
         <Link to="/seller/menu" className="sh-shop" aria-label="Your shop">
           <span className="sh-avatar">
-            {store?.logo ? <img src={resolveImg(store.logo)} alt="" /> : name.trim().charAt(0).toUpperCase()}
+            {store?.logo ? <img src={resolveImg(store.logo)} alt="" /> : <ShopLogoArt name={name} />}
           </span>
           <span className="sh-shop-text">
             <small>{firstName ? `Hi, ${firstName}` : 'Seller Center'}</small>

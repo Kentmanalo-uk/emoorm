@@ -3,6 +3,7 @@ import { Image, StyleSheet, Text, View } from 'react-native';
 import { resolveImg } from '../../lib/media';
 import Avatar from '../avatars/Avatar';
 import { font, t, themed } from '../../theme';
+import { ShopLogoArt } from '../shop/ShopArt';
 
 /**
  * A round picture with the website's fallbacks (web/src/components/ui/
@@ -19,7 +20,7 @@ import { font, t, themed } from '../../theme';
  * .msgr-avatar on phones is success-100 / primary-600).
  */
 export default function ChatAvatar({
-  src, name, person = null, size = 40, bg = t.neutral[200], color = t.neutral[600],
+  src, name, person = null, shopName = null, size = 40, bg = t.neutral[200], color = t.neutral[600],
   fallbackIcon: Icon = null, iconSize = 18, fallback = null, style,
 }) {
   const [failed, setFailed] = useState(false);
@@ -30,7 +31,9 @@ export default function ChatAvatar({
     <View style={[styles.box, box, style]}>
       {uri && !failed ? (
         <Image source={{ uri }} style={styles.img} resizeMode="cover" onError={() => setFailed(true)} accessibilityLabel={name || ''} />
-      ) : fallback || (person ? (
+      ) : fallback || (shopName ? (
+        <ShopLogoArt name={shopName} />
+      ) : person ? (
         <Avatar seed={person.id} name={person.avatarKey} size={size} />
       ) : Icon ? (
         <Icon size={iconSize} weight="fill" color={color} />

@@ -1,6 +1,6 @@
 import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import {
-  Platform, Pressable, RefreshControl, ScrollView, StyleSheet, Text, TextInput, View, useWindowDimensions,
+  Platform, Pressable, ScrollView, StyleSheet, Text, TextInput, View, useWindowDimensions,
 } from 'react-native';
 import { Stack, useLocalSearchParams, useRouter } from 'expo-router';
 import {
@@ -18,6 +18,7 @@ import useAuthStore from '../src/store/authStore';
 import { GRID_BLEED, GRID_GAP, gridCellWidth } from '../src/lib/productGrid';
 import { font, t, themed } from '../src/theme';
 import { PageLoader } from '../src/components/BrandLoader';
+import useBrandRefresh from '../src/components/useBrandRefresh';
 
 const SORTS = [
   { key: 'ending', label: 'Ending soon' },
@@ -136,6 +137,7 @@ export default function AvailableToday() {
     await load(1);
     setRefreshing(false);
   };
+  const pull = useBrandRefresh(refresh);
 
   const items = state.items.filter((w) => isOpen(w));
   const filtered = Boolean(q || mode || category || (town && town !== 'near') || delivers);
@@ -164,7 +166,7 @@ export default function AvailableToday() {
   ) : (
     <>
       <View style={styles.grid}>
-        {items.map((item) => <TodayCard key={item.id} item={item} result style={cell} />)}
+        {items.map((item) => <TodayCard key={item.id} item={item} style={cell} />)}
       </View>
       {state.items.length < state.total ? (
         <Pressable
@@ -187,7 +189,7 @@ export default function AvailableToday() {
         style={styles.scroll}
         contentContainerStyle={isEmpty ? styles.grow : null}
         keyboardShouldPersistTaps="handled"
-        refreshControl={<RefreshControl refreshing={refreshing} onRefresh={refresh} colors={[t.primary[600]]} tintColor={t.primary[600]} />}
+        {...pull.listProps}
       >
         <View style={[styles.page, { minHeight: screenH * 0.6 }, isEmpty && styles.grow]}>
           <View style={styles.top}>
@@ -271,6 +273,7 @@ export default function AvailableToday() {
           </View>
         </View>
       </ScrollView>
+      {pull.indicator}
 
       <TodayChoiceSheet
         open={sheet === 'where'}

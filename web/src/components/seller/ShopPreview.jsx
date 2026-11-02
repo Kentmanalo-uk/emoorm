@@ -4,6 +4,7 @@ import {
   Storefront, Star, MapPin, SquaresFour, Package,
 } from '../../lib/icons';
 import { resolveImg } from '../../lib/media';
+import { ShopLogoArt } from '../shop/ShopArt';
 
 /** The phone width the preview is drawn at; it is then scaled to its box. */
 const PHONE_WIDTH = 375;
@@ -40,7 +41,6 @@ export default function ShopPreview({
   }, []);
 
   const name = store?.name || 'Your shop';
-  const initials = name.split(' ').slice(0, 2).map((w) => w[0]).join('').toUpperCase();
   const banner = store?.bannerImage || store?.coverImage;
   const town = store?.municipality?.name || 'Oriental Mindoro';
   const count = productCount ?? products.length;
@@ -82,7 +82,7 @@ export default function ShopPreview({
             </div>
             <div className="spv-main">
               <span className="spv-logo">
-                {store?.logo ? <img src={resolveImg(store.logo)} alt="" /> : initials}
+                {store?.logo ? <img src={resolveImg(store.logo)} alt="" /> : <ShopLogoArt name={store?.name} />}
               </span>
               <span className="spv-id">
                 <span className="spv-name"><strong>{name}</strong><CaretRight size={15} weight="bold" /></span>

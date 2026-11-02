@@ -2,6 +2,7 @@ import { useEffect, useRef, useState } from 'react';
 import { Image, Pressable, ScrollView, StyleSheet, Text, View } from 'react-native';
 import { useRouter } from 'expo-router';
 import { QuotesIcon, ShoppingCartIcon, StarIcon, StorefrontIcon } from '../../lib/icons';
+import ProductCard, { CardPhotoButton } from '../ProductCard';
 import ProductImage from '../ProductImage';
 import { SaleWas, peso } from '../SaleTag';
 import { resolveImg } from '../../lib/media';
@@ -74,9 +75,22 @@ function Section({ section: s, width, accent, onAddToCart }) {
     const products = s.products || [];
     if (!products.length) return null;
     const half = (width - 10) / 2;
-    const tile = (p, i, extra = {}) => (
+    const tile = (p, i, extra = {}) => (extra.big || extra.row ? (
       <ProductTile key={p.id} product={p} accent={accent} onAddToCart={onAddToCart} {...extra} />
-    );
+    ) : (
+      <ProductCard
+        key={p.id}
+        product={p}
+        variant="home"
+        priceColor={accent}
+        style={extra.style}
+        photoExtra={onAddToCart && Number(p.stock) !== 0 ? (
+          <CardPhotoButton label={`Add ${p.name} to cart`} color={accent} onPress={() => onAddToCart(p)}>
+            <ShoppingCartIcon size={16} color="#fff" />
+          </CardPhotoButton>
+        ) : null}
+      />
+    ));
     let list;
     if (s.style === 'carousel') {
       const w = width * 0.42;
@@ -188,6 +202,7 @@ function Slider({ images, width }) {
   );
 }
 
+/** A shop's own "list" and "hero" layouts, which the shared card has no shape for. */
 function ProductTile({ product: p, accent, big = false, row = false, onAddToCart, style }) {
   const router = useRouter();
   const images = Array.isArray(p.images) ? p.images : [];

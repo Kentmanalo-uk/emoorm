@@ -1,6 +1,6 @@
 import { useCallback, useState } from 'react';
 import {
-  Pressable, RefreshControl, ScrollView, StyleSheet, Text, View,
+  Pressable, StyleSheet, Text, View,
 } from 'react-native';
 import { useFocusEffect, useRouter } from 'expo-router';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
@@ -11,6 +11,7 @@ import { font, t, themed } from '../../src/theme';
 import { OrderCardsSkeleton, OrderTabs } from '../../src/components/orders/OrderBits';
 import OrdersEmpty from '../../src/components/orders/OrdersEmpty';
 import { RETURN_TABS, ReturnCard } from '../../src/components/returns/ReturnBits';
+import { PullScrollView } from '../../src/components/PullList';
 
 /*
  * Returns & Refunds (web/src/pages/Returns.jsx at phone size): "Start from an
@@ -62,10 +63,9 @@ export default function Returns() {
   return (
     <View style={styles.screen}>
       {header}
-      <ScrollView showsVerticalScrollIndicator={false} showsHorizontalScrollIndicator={false}
+      <PullScrollView onPull={() => { setRefreshing(true); load(); }} refreshing={refreshing} showsVerticalScrollIndicator={false} showsHorizontalScrollIndicator={false}
         style={styles.scroll}
         contentContainerStyle={[styles.content, { paddingBottom: 16 + insets.bottom }]}
-        refreshControl={<RefreshControl refreshing={refreshing} onRefresh={() => { setRefreshing(true); load(); }} colors={[t.primary[600]]} />}
       >
         <View style={styles.head}>
           <Pressable accessibilityRole="link" onPress={() => router.push('/orders')} style={styles.startLink}>
@@ -91,7 +91,7 @@ export default function Returns() {
             ))}
           </View>
         )}
-      </ScrollView>
+      </PullScrollView>
     </View>
   );
 }

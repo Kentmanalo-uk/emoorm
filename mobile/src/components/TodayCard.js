@@ -1,11 +1,14 @@
+import { useRef } from 'react';
 import { Pressable, StyleSheet, Text, View } from 'react-native';
-import { useRouter } from 'expo-router';
 import { ClockIcon, MapPinIcon, StarIcon } from '../lib/icons';
 import { isEndingSoon, shortLeft, windowState } from '../lib/availability';
 import { saleInfo } from '../lib/variantPricing';
 import { font, t, themed, veil } from '../theme';
 import { ProductStars } from './ProductStats';
 import ProductImage from './ProductImage';
+import useOpenProduct from './useOpenProduct';
+import { sizedImg } from '../lib/media';
+import { parseImages } from './product/productLib';
 import { peso, SaleWas } from './SaleTag';
 import TodayTag from './TodayTag';
 import { useProductPeek } from './peek/ProductPeek';
@@ -21,7 +24,8 @@ import { useProductPeek } from './peek/ProductPeek';
  * The card fills its parent's width (Home's row: 150 wide).
  */
 export default function TodayCard({ item, result = false, onPress, style }) {
-  const router = useRouter();
+  const openProduct = useOpenProduct();
+  const photoRef = useRef(null);
   const { product, store } = item;
   const remaining = item.remaining ?? product?.stock ?? null;
   const state = windowState(item, remaining);
@@ -31,7 +35,10 @@ export default function TodayCard({ item, result = false, onPress, style }) {
   const sold = Number(product.soldCount || 0);
   const town = store?.municipality?.name;
   const soon = isEndingSoon(item.ordersCloseAt);
-  const open = onPress || (() => router.push(`/product/${product.slug}`));
+  const photo = parseImages(product.images)[0];
+  const open = onPress || (() => openProduct({
+    slug: product.slug, photo, shown: photo ? sizedImg(photo) : null, seed: { ...product, store: product.store || store }, photoRef,
+  }));
   const peekProduct = useProductPeek();
   // Held: its preview, with what is left today as its stock.
   const peek = peekProduct({ ...product, store: product.store || store, stock: soldOut ? 0 : remaining ?? product.stock }, { onOpen: open });
@@ -60,7 +67,7 @@ export default function TodayCard({ item, result = false, onPress, style }) {
 
   return (
     <Pressable accessibilityRole="button" accessibilityLabel={product.name} onPress={open} {...peek} style={[styles.card, style]}>
-      <View style={styles.image}>
+      <View ref={photoRef} collapsable={false} style={styles.image}>
         <ProductImage src={product.images?.[0]} style={StyleSheet.absoluteFill} />
         {!soldOut && remaining != null && remaining <= 5 ? (
           <Text style={styles.leftBadge}>{remaining} left</Text>

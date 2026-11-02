@@ -1,12 +1,12 @@
 import { memo } from 'react';
 import { Pressable, StyleSheet, Text, View } from 'react-native';
-import { useRouter } from 'expo-router';
+import useOpenProduct from '../useOpenProduct';
+import { sizedImg } from '../../lib/media';
 import { useProductPeek } from '../peek/ProductPeek';
 import { PlusIcon, ShoppingCartIcon, StarIcon } from '../../lib/icons';
-import ProductImage from '../ProductImage';
+import ProductCard from '../ProductCard';
 import ShopTileImage from './ShopTileImage';
 import { SaleWas } from '../SaleTag';
-import { ProductTodayTag } from '../TodayTag';
 import { saleInfo } from '../../lib/variantPricing';
 import { notTakingOrders, opensLabel } from '../../lib/availability';
 import { isStockless, priceUnit, startsFrom } from '../orders/orderLines';
@@ -38,7 +38,7 @@ function KindPrice({ product, amount, size }) {
  * hairline under it, as the website's flat phone pages.
  */
 function ShopProductRowBase({ product, onAdd, onBuy, closed = false }) {
-  const router = useRouter();
+  const openProduct = useOpenProduct();
   const { price } = saleInfo(product);
   const images = Array.isArray(product.images) ? product.images : [];
   const rating = Number(product.averageRating || 0);
@@ -50,7 +50,12 @@ function ShopProductRowBase({ product, onAdd, onBuy, closed = false }) {
   // Paluto has no stock: it is cooked when ordered.
   const soldOut = !waiting && Number(product.stock) === 0 && !isStockless(product);
   const off = soldOut || closed;
-  const open = () => router.push(`/product/${product.slug}`);
+  const open = () => openProduct({
+    slug: product.slug,
+    photo: product.images?.[0],
+    shown: product.images?.[0] ? sizedImg(product.images[0], 112) : null,
+    seed: product,
+  });
   const peek = useProductPeek()(product);
   return (
     <View style={styles.row}>
@@ -110,50 +115,9 @@ function ShopProductRowBase({ product, onAdd, onBuy, closed = false }) {
   );
 }
 
-/**
- * The shop page's grid tile on phones (web StoreDetail ProductCard inside
- * .shop-grid, with index.css's phone rules): square corners, no add-to-cart
- * button (phones hide it; tapping opens the product), name, price in the
- * shop's colour, stars or "New".
- */
+/** The shop page's grid: the shared card, with the price in the shop's colour. */
 function ShopGridCardBase({ product, accent, style }) {
-  const router = useRouter();
-  const { price } = saleInfo(product);
-  const images = Array.isArray(product.images) ? product.images : [];
-  const reviews = Number(product.reviewCount ?? 0);
-  const stars = Math.round(Number(product.averageRating || 0));
-  const peek = useProductPeek()(product);
-  return (
-    <Pressable style={[styles.card, style]} onPress={() => router.push(`/product/${product.slug}`)} {...peek} accessibilityRole="link">
-      <View style={styles.cardImg}>
-        {/* The box is 112 wide (styles.img), so the server's w320 copy
-            is plenty -- not the 1600px original. */}
-        <ProductImage src={images[0] || null} width={112} />
-      </View>
-      <View style={styles.cardInfo}>
-        <Text style={styles.cardName} numberOfLines={2}>
-          <ProductTodayTag product={product} />
-          {product.name}
-        </Text>
-        <View style={styles.cardPriceRow}>
-          <Text style={[styles.cardPrice, { color: accent }]}><KindPrice product={product} amount={`₱${price.toFixed(2)}`} size={15} />{' '}</Text>
-          <SaleWas product={product} compact />
-        </View>
-        <View style={styles.ratingRow}>
-          {reviews > 0 ? (
-            <>
-              <View style={styles.cardStars}>
-                {[0, 1, 2, 3, 4].map((i) => (
-                  <StarIcon key={i} size={11} weight={i < stars ? 'fill' : 'regular'} color={i < stars ? t.warning[500] : t.neutral[300]} />
-                ))}
-              </View>
-              <Text style={styles.reviewCount}>({reviews})</Text>
-            </>
-          ) : <Text style={styles.reviewCount}>New</Text>}
-        </View>
-      </View>
-    </Pressable>
-  );
+  return <ProductCard product={product} variant="home" priceColor={accent} style={style} />;
 }
 
 const styles = themed(() => StyleSheet.create({
@@ -198,15 +162,6 @@ const styles = themed(() => StyleSheet.create({
   closedText: { fontSize: 13, lineHeight: 16, ...font(600), color: t.neutral[600] },
   opens: { marginTop: 4, fontSize: 12.5, lineHeight: 17, ...font(400), color: t.neutral[500], textAlign: 'right' },
 
-  card: { minWidth: 0, overflow: 'hidden', borderRadius: 0, backgroundColor: t.neutral[0] },
-  cardImg: { position: 'relative', width: '100%', aspectRatio: 1, overflow: 'hidden', backgroundColor: t.neutral[100] },
-  cardInfo: { flex: 1, gap: 4, paddingTop: 8, paddingHorizontal: 10, paddingBottom: 10 },
-  cardName: { fontSize: 16, lineHeight: 21.6, minHeight: 43.2, ...font(400), color: t.secondary[950] },
-  cardPriceRow: { flexDirection: 'row', alignItems: 'center', flexWrap: 'wrap', marginTop: 2 },
-  cardPrice: { fontSize: 15, lineHeight: 18, ...font(500) },
-  ratingRow: { flexDirection: 'row', alignItems: 'center', gap: 4, marginTop: 2 },
-  cardStars: { flexDirection: 'row', alignItems: 'center', gap: 1 },
-  reviewCount: { fontSize: 11, lineHeight: 11, ...font(400), color: t.neutral[500] },
 }));
 
 /*

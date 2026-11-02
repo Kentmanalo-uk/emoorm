@@ -1,17 +1,10 @@
 import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import { createPortal } from 'react-dom';
-import { Link, useNavigate } from 'react-router-dom';
+import { useNavigate } from 'react-router-dom';
 import toast from 'react-hot-toast';
 import {
-  Camera, CaretDown, CaretUp, MapPin, ShoppingCart, SlidersHorizontal, Star,
-} from '../../lib/icons';
-import ProductImage from '../ProductImage';
+  Camera, CaretDown, CaretUp, MapPin, SlidersHorizontal, } from '../../lib/icons';
 import EmptyState from '../ui/EmptyState';
-import { SaleWas } from '../ui/SaleTag';
-import KindPrice from '../product/kinds/KindPrice';
-import { ProductTodayTag } from '../today/TodayTag';
-import { notTakingOrders } from '../../lib/availability';
-import useProductPeek from '../peek/useProductPeek';
 import SearchFilterSheet from './SearchFilterSheet';
 import useCartStore from '../../store/cartStore';
 import { useCategories, useMunicipalities } from '../../hooks/useReferenceData';
@@ -19,6 +12,7 @@ import { saleInfo } from '../../lib/variantPricing';
 import { parseImages } from '../../lib/media';
 import { isStockless, productKind } from '../../lib/productKinds';
 import './ImageSearchResults.css';
+import ProductTile from '../product/ProductTile';
 
 /*
  * The matches of a search by image, sorted and filtered like the search
@@ -41,14 +35,12 @@ const SORTS = {
 const FULL_TOP = 60;
 const HALF = 0.44;
 
-const peso = (n, digits = 2) => `₱${Number(n || 0).toLocaleString('en-PH', { minimumFractionDigits: digits, maximumFractionDigits: digits })}`;
 
 export default function ImageSearchResults({
   results, photoUrl, onRetake, variant = 'panel',
 }) {
   const sheet = variant === 'sheet';
   const navigate = useNavigate();
-  const peekProduct = useProductPeek();
   const addItem = useCartStore((s) => s.addItem);
 
   const [sortBy, setSortBy] = useState('relevance');
@@ -269,34 +261,9 @@ export default function ImageSearchResults({
     />
   ) : (
     <div className="isr-grid">
-      {shown.map((product) => {
-        const place = product.municipality?.name || product.store?.municipality?.name;
-        const reviews = Number(product.reviewCount) || 0;
-        const sold = Number(product.soldCount) || 0;
-        return (
-          <Link key={product.id} to={`/product/${product.slug}`} className="product-card isr-card" {...peekProduct(product)}>
-            <div className="product-image">
-              <ProductImage src={parseImages(product.images)[0]} alt={product.name} />
-              {product.stock === 0 && !isStockless(product) && !notTakingOrders(product) && <div className="product-badge out-of-stock">Out of Stock</div>}
-              {!notTakingOrders(product) && (
-              <button type="button" className="product-cart-fab" onClick={(e) => addToCart(e, product)} aria-label="Add to cart">
-                <ShoppingCart size={16} />
-              </button>
-              )}
-            </div>
-            <div className="product-info isr-info">
-              <h3 className="product-name"><ProductTodayTag product={product} />{product.name}</h3>
-              <span className="isr-price"><KindPrice product={product}>{peso(saleInfo(product).price)}</KindPrice> <SaleWas product={product} compact /></span>
-              <span className="isr-meta">
-                {reviews > 0 && <span className="isr-rating"><Star size={13} weight="fill" /> {Number(product.averageRating || 0).toFixed(1)}</span>}
-                {sold > 0 && <span>{sold} sold</span>}
-                {!reviews && !sold && <span className="isr-new">New</span>}
-              </span>
-              {place && <span className="isr-place"><MapPin size={13} /> {place}</span>}
-            </div>
-          </Link>
-        );
-      })}
+      {shown.map((product) => (
+        <ProductTile key={product.id} product={product} onAddToCart={addToCart} className="isr-card" />
+      ))}
     </div>
   );
 

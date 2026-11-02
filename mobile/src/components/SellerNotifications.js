@@ -1,6 +1,6 @@
 import { useCallback, useEffect, useRef, useState } from 'react';
 import {
-  Pressable, RefreshControl, ScrollView, StyleSheet, Text, View,
+  Pressable, StyleSheet, Text, View,
 } from 'react-native';
 import { useFocusEffect, useRouter } from 'expo-router';
 import {
@@ -22,6 +22,7 @@ import { timeAgo } from './inbox/inboxFormat';
 import OrderConfirmDialog from './orders/OrderConfirmDialog';
 import { SellerPrivateLine, sellerPageStyles } from './seller/SellerPage';
 import { PageLoader } from './BrandLoader';
+import { PullScrollView } from './PullList';
 
 /*
  * The Seller Center's notifications on phones: web/src/pages/Notifications.jsx
@@ -247,11 +248,10 @@ export default function SellerNotifications({ onUnreadChange }) {
 
   return (
     <View style={styles.screen}>
-      <ScrollView showsVerticalScrollIndicator={false} showsHorizontalScrollIndicator={false}
+      <PullScrollView onPull={onRefresh} showsVerticalScrollIndicator={false} showsHorizontalScrollIndicator={false}
         ref={scrollRef}
         style={styles.screen}
         contentContainerStyle={[sellerPageStyles.content, styles.content]}
-        refreshControl={<RefreshControl refreshing={refreshing} onRefresh={onRefresh} colors={[t.primary[600]]} tintColor={t.primary[600]} />}
       >
         <SellerPrivateLine />
 
@@ -332,7 +332,7 @@ export default function SellerNotifications({ onUnreadChange }) {
             </Pressable>
           </View>
         ) : null}
-      </ScrollView>
+      </PullScrollView>
 
       <OrderConfirmDialog
         open={confirmClear}

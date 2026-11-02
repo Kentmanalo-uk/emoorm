@@ -1,5 +1,5 @@
 import { useEffect, useState } from 'react';
-import { Pressable, ScrollView, StyleSheet, Text, View } from 'react-native';
+import { Pressable, StyleSheet, Text, View } from 'react-native';
 import { useLocalSearchParams, usePathname, useRouter } from 'expo-router';
 import { ArrowLeftIcon, BellIcon, InfoIcon } from '../../src/lib/icons';
 import apiClient from '../../src/api/client';
@@ -10,6 +10,7 @@ import ScreenHeader from '../../src/components/ScreenHeader';
 import EmptyState from '../../src/components/EmptyState';
 import LoadingSkeleton from '../../src/components/LoadingSkeleton';
 import { PageLoader } from '../../src/components/BrandLoader';
+import { PullScrollView } from '../../src/components/PullList';
 
 /*
  * A single notification, in full (web/src/pages/NotificationDetail.jsx at
@@ -39,6 +40,7 @@ export default function NotificationDetail() {
 
   const [notification, setNotification] = useState(null);
   const [isLoading, setIsLoading] = useState(true);
+  const [pullKey, setPullKey] = useState(0);
   const [error, setError] = useState(null);
 
   // The website keeps this page behind sign-in.
@@ -50,7 +52,6 @@ export default function NotificationDetail() {
     if (!isAuthenticated || !id) return undefined;
     let cancelled = false;
     const load = async () => {
-      setIsLoading(true);
       setError(null);
       try {
         const res = await apiClient.get(`/notifications/${id}`);
@@ -70,7 +71,7 @@ export default function NotificationDetail() {
     };
     load();
     return () => { cancelled = true; };
-  }, [id, isAuthenticated]);
+  }, [id, isAuthenticated, pullKey]);
 
   // A notice that also points somewhere (a verification page, a store)
   // offers the jump rather than dead-ending here.
@@ -89,7 +90,7 @@ export default function NotificationDetail() {
   return (
     <View style={styles.screen}>
       <ScreenHeader title={barTitle} onBack={goBack} />
-      <ScrollView showsVerticalScrollIndicator={false} showsHorizontalScrollIndicator={false} style={styles.screen} contentContainerStyle={styles.content}>
+      <PullScrollView onPull={() => setPullKey((key) => key + 1)} showsVerticalScrollIndicator={false} showsHorizontalScrollIndicator={false} style={styles.screen} contentContainerStyle={styles.content}>
         <Pressable
           accessibilityRole="button"
           onPress={goBack}
@@ -133,7 +134,7 @@ export default function NotificationDetail() {
             ) : null}
           </View>
         ) : null}
-      </ScrollView>
+      </PullScrollView>
     </View>
   );
 }

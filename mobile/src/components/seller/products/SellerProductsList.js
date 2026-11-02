@@ -1,6 +1,6 @@
 import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import {
-  ActivityIndicator, FlatList, Pressable, RefreshControl, StyleSheet, Text, View,
+  ActivityIndicator, Pressable, StyleSheet, Text, View,
 } from 'react-native';
 import { useFocusEffect, useLocalSearchParams, useRouter } from 'expo-router';
 import { CaretRightIcon, PackageIcon, PlusIcon } from '../../../lib/icons';
@@ -21,6 +21,7 @@ import ProductsFilterBar from './ProductsFilterBar';
 import ProductsNotices from './ProductsNotices';
 import { ProductMoreSheet, ProductStockSheet, ProductsStatusSheet } from './ProductSheets';
 import { PageLoader } from '../../BrandLoader';
+import { PullFlatList } from '../../PullList';
 
 /*
  * My products, the phone list (web/src/pages/SellerProducts.jsx, isPhone
@@ -339,7 +340,7 @@ export default function SellerProductsList() {
 
   return (
     <>
-      <FlatList showsVerticalScrollIndicator={false} showsHorizontalScrollIndicator={false}
+      <PullFlatList onPull={onRefresh} refreshing={refreshing} showsVerticalScrollIndicator={false} showsHorizontalScrollIndicator={false}
         // Rows far off screen are detached rather than kept mounted;
         // React Native's default keeps about twenty-one screens of them.
         removeClippedSubviews
@@ -370,9 +371,6 @@ export default function SellerProductsList() {
         keyboardShouldPersistTaps="handled"
         keyboardDismissMode="on-drag"
         contentContainerStyle={[sellerPageStyles.content, styles.content]}
-        refreshControl={(
-          <RefreshControl refreshing={refreshing} onRefresh={onRefresh} colors={[t.primary[600]]} tintColor={t.primary[600]} />
-        )}
       />
 
       <ProductsStatusSheet

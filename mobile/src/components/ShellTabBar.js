@@ -10,13 +10,19 @@ import { colors, font, ink, t, text, themed, veil } from '../theme';
 // (.mobile-bottom-nav in Header.css), so 29 is the same icon at the same
 // size, and the label under it is the website's 9px.
 const ICON = 29;
+// Lines stay this thick on screen, however large a tab's drawing is.
+const STROKE = 1.5;
 
+// The five drawings do not fill their square alike: at one size the bell is
+// 14 units wide and sits 2 low, the person is 13, the rest are 16 to 18. These
+// draw those two larger (and the bell higher) so all five look one size. A
+// count rides on top of the icon and has no say in any of this.
 const TABS = {
   index: { label: 'Home', Icon: HouseIcon },
   cart: { label: 'Cart', Icon: ShoppingCartIcon },
   messages: { label: 'Messages', Icon: ChatCircleIcon },
-  notifications: { label: 'Notifications', Icon: BellIcon },
-  profile: { label: 'Profile', Icon: UserIcon },
+  notifications: { label: 'Notifications', Icon: BellIcon, size: 33, lift: -2 },
+  profile: { label: 'Profile', Icon: UserIcon, size: 33 },
 };
 
 /**
@@ -48,7 +54,7 @@ export default function ShellTabBar({ badges = {}, ...nav }) {
     >
       <GlassBackdrop radius={0} white={0.62} />
       {state.routes.filter((route) => TABS[route.name]).map((route) => {
-        const { label, Icon } = TABS[route.name];
+        const { label, Icon, size = ICON, lift = 0 } = TABS[route.name];
         const active = route.name === current;
         const color = active ? t.primary[600] : text.muted;
         const count = Number(badges[route.name] || 0);
@@ -69,7 +75,7 @@ export default function ShellTabBar({ badges = {}, ...nav }) {
             style={styles.tab}
           >
             <View style={styles.iconBox}>
-              <Icon size={ICON} color={color} weight={active ? 'fill' : 'light'} />
+              <Icon size={size} color={color} weight={active ? 'fill' : 'light'} strokeWidth={STROKE * (ICON / size)} style={lift ? { top: lift } : undefined} />
               {count > 0 ? (
                 <View style={styles.badge}>
                   <Text style={styles.badgeText}>{count > 99 ? '99+' : count}</Text>

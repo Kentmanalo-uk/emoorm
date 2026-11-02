@@ -1134,7 +1134,7 @@
 }
 
 .pdp-shelf-card {
-  background: var(--t-neutral-0, #fff);
+  background: var(--t-neutral-100, #f3f4f6);
   border: none;
   border-radius: 12px;
   padding: 16px 20px 20px;

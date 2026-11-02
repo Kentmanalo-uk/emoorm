@@ -12,6 +12,7 @@ import {
 import { AuthTitle, GoogleCompleteProfile, MfaSetup, MfaVerify } from '../../src/components/auth/AuthPanels';
 import useAuthGoogle from '../../src/components/auth/useAuthGoogle';
 import RoleSwitchOverlay from '../../src/components/RoleSwitchOverlay';
+import useSideStore from '../../src/store/sideStore';
 import { font, t, themed } from '../../src/theme';
 
 const PASSWORD_RULE = /(?=.*[a-z])(?=.*[A-Z])(?=.*\d)(?=.*[!@#$%^&*(),.?":{}|<>])/;
@@ -112,6 +113,9 @@ export default function Login({ seller = false }) {
   };
 
   const finishLogin = async (userData, token, refreshToken) => {
+    // The login chosen says the side: Seller Login the shop, Log in the buyer
+    // side, a seller's account too.
+    useSideStore.getState().setSide(userData?.id, seller && userData?.role === 'SELLER' ? 'shop' : 'personal');
     if (seller && userData?.role === 'SELLER') {
       // The white 'Switching to Seller Account' screen first (the website's
       // startAccountSwitch). Signing in comes after it: app/_layout.js closes

@@ -2,60 +2,27 @@ import { useState, useEffect, useRef } from 'react';
 import EmptyArt from '../components/ui/EmptyArt';
 import { Link, useNavigate, useParams, useSearchParams } from 'react-router-dom';
 import {
-  SlidersHorizontal, CaretDown as ChevronDown, GridFour as Grid, Rows as List, ShoppingCart, Star, WarningCircle,
+  SlidersHorizontal, CaretDown as ChevronDown, GridFour as Grid, Rows as List, WarningCircle,
   CaretLeft, MagnifyingGlass, CaretUp, MapPin,
 } from '../lib/icons';
 import Layout from '../components/layout/Layout';
-import ProductImage from '../components/ProductImage';
+import ProductTile from '../components/product/ProductTile';
 import useCartStore from '../store/cartStore';
 import toast from 'react-hot-toast';
 import axios from '../lib/axios';
 import { saleInfo } from '../lib/variantPricing';
-import { SaleWas } from '../components/ui/SaleTag';
-import KindPrice from '../components/product/kinds/KindPrice';
 import { isStockless, productKind } from '../lib/productKinds';
 import Skeleton from '../components/ui/Skeleton';
 import './Products.css';
 import { useCategories, useMunicipalities } from '../hooks/useReferenceData';
 import SearchFilterSheet from '../components/search/SearchFilterSheet';
-import { ProductTodayTag } from '../components/today/TodayTag';
-import { notTakingOrders } from '../lib/availability';
 import { usePhoneLayout } from '../hooks/useMobileNav';
 import { POPULAR_SUGGESTIONS, saveRecent } from '../lib/buyerSearch';
 import { readCache, writeCache } from '../lib/pageCache';
 import { parseImages } from '../lib/media';
 import Select from '../components/ui/Select';
-import useProductPeek from '../components/peek/useProductPeek';
 
 // The DB stores `images` as JSON; some rows come back stringified. Normalize.
-
-// Stars only from real review data; a product with no reviews shows "New".
-const renderRating = (product, size = 14) => {
-  const count = Number(product.reviewCount ?? 0);
-  if (count <= 0) {
-    return (
-      <div className="product-rating-row">
-        <span className="product-review-count">New</span>
-      </div>
-    );
-  }
-  const filled = Math.round(Number(product.averageRating || 0));
-  return (
-    <div className="product-rating-row">
-      <div className="product-stars">
-        {[0, 1, 2, 3, 4].map((i) => (
-          <Star
-            key={i}
-            size={size}
-            weight={i < filled ? 'fill' : 'regular'}
-            color={i < filled ? 'var(--t-warning-500, #f59e0b)' : 'var(--t-neutral-300, #d1d5db)'}
-          />
-        ))}
-      </div>
-      <span className="product-review-count">({count})</span>
-    </div>
-  );
-};
 
 // The API's sortBy and sortOrder for each sort choice.
 const SORTS = {
@@ -89,7 +56,6 @@ const listKey = (params) => `products:${JSON.stringify(params)}`;
 const Products = () => {
   const navigate = useNavigate();
   // Hold a result: its preview with quick actions.
-  const peekProduct = useProductPeek();
   const [searchParams, setSearchParams] = useSearchParams();
   const isPhone = usePhoneLayout();
   // The list as it showed last time for these filters: shown at once while
@@ -695,57 +661,9 @@ const Products = () => {
               ) : (
                 <div className={`products-grid ${viewMode === 'list' ? 'products-list' : ''}`}>
                   {products.map((product) => (
-                    <Link
-                      key={product.id}
-                      to={`/product/${product.slug}`}
-                      className="product-card"
-                      {...peekProduct(product)}
-                    >
-                      <div className="product-image">
-                        <ProductImage src={product.images?.[0]} alt={product.name} />
-                        {product.stock === 0 && !isStockless(product) && !notTakingOrders(product) && (
-                          <div className="product-badge out-of-stock">Out of Stock</div>
-                        )}
-                        {product.isFeatured && (
-                          <div className="product-badge featured">Featured</div>
-                        )}
-                        {!notTakingOrders(product) && (
-                        <button
-                          type="button"
-                          className="product-cart-fab"
-                          onClick={(e) => handleAddToCart(e, product)}
-                          aria-label="Add to cart"
-                        >
-                          <ShoppingCart size={16} />
-                        </button>
-                        )}
-                      </div>
-                      {isPhone ? (
-                        <div className="product-info srch-card">
-                          <h3 className="product-name"><ProductTodayTag product={product} />{product.name}</h3>
-                          <span className="srch-card-price"><KindPrice product={product}>₱{saleInfo(product).price.toLocaleString('en-PH', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}</KindPrice> <SaleWas product={product} compact /></span>
-                          <span className="srch-card-meta">
-                            {Number(product.reviewCount) > 0 && (
-                              <span className="srch-card-rating"><Star size={13} weight="fill" /> {Number(product.averageRating || 0).toFixed(1)}</span>
-                            )}
-                            {Number(product.soldCount) > 0 && <span>{product.soldCount} sold</span>}
-                            {!(Number(product.reviewCount) > 0) && !(Number(product.soldCount) > 0) && <span className="srch-card-new">New</span>}
-                          </span>
-                          {(product.municipality?.name || product.store?.municipality?.name) && (
-                            <span className="srch-card-place"><MapPin size={13} /> {product.municipality?.name || product.store?.municipality?.name}</span>
-                          )}
-                        </div>
-                      ) : (
-                        <div className="product-info">
-                          <h3 className="product-name"><ProductTodayTag product={product} />{product.name}</h3>
-                          <span className="product-price"><KindPrice product={product}>₱{saleInfo(product).price.toFixed(2)}</KindPrice> <SaleWas product={product} compact /></span>
-                          {renderRating(product)}
-                          {Number(product.soldCount) > 0 && (
-                            <span className="product-review-count">{product.soldCount} sold</span>
-                          )}
-                        </div>
-                      )}
-                    </Link>
+                    <ProductTile key={product.id} product={product} onAddToCart={handleAddToCart}>
+                      {product.isFeatured && <div className="product-badge featured">Featured</div>}
+                    </ProductTile>
                   ))}
                 </div>
               )}

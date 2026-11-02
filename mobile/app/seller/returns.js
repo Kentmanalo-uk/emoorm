@@ -1,6 +1,6 @@
 import { useCallback, useEffect, useRef, useState } from 'react';
 import {
-  KeyboardAvoidingView, Platform, RefreshControl, ScrollView, StyleSheet, View,
+  KeyboardAvoidingView, Platform, StyleSheet, View,
 } from 'react-native';
 import { useLocalSearchParams } from 'expo-router';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
@@ -15,6 +15,7 @@ import {
 } from '../../src/components/seller/returns/ReturnBits';
 import ReturnDetail from '../../src/components/seller/returns/ReturnDetail';
 import { PageLoader } from '../../src/components/BrandLoader';
+import { PullScrollView } from '../../src/components/PullList';
 
 /*
  * /seller/returns: Returns & refunds (web/src/pages/SellerReturns.jsx +
@@ -101,12 +102,11 @@ export default function SellerReturnsScreen() {
   return (
     <SellerPage scroll={false}>
       <KeyboardAvoidingView style={styles.flex} behavior={Platform.OS === 'ios' ? 'padding' : undefined}>
-        <ScrollView showsVerticalScrollIndicator={false} showsHorizontalScrollIndicator={false}
+        <PullScrollView onPull={refresh} showsVerticalScrollIndicator={false} showsHorizontalScrollIndicator={false}
           ref={scrollRef}
           style={styles.flex}
           contentContainerStyle={[sellerPageStyles.content, { paddingBottom: 24 + insets.bottom }, loaded && !visible.length && !selected && styles.grow]}
           keyboardShouldPersistTaps="handled"
-          refreshControl={<RefreshControl refreshing={refreshing} onRefresh={refresh} colors={[t.primary[600]]} tintColor={t.primary[600]} />}
         >
           <SellerChips
             chips={PHONE_QUICK_TABS.map((key) => ({
@@ -152,7 +152,7 @@ export default function SellerReturnsScreen() {
               </View>
             )}
           </View>
-        </ScrollView>
+        </PullScrollView>
       </KeyboardAvoidingView>
 
       <Sheet variant="seller" open={stagesOpen} title="Show returns" onClose={() => setStagesOpen(false)}>

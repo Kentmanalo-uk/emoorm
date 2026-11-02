@@ -2,7 +2,7 @@ import {
   useCallback, useEffect, useMemo, useRef, useState,
 } from 'react';
 import {
-  FlatList, Pressable, RefreshControl, ScrollView, StyleSheet, Text, TextInput, View,
+  Pressable, ScrollView, StyleSheet, Text, TextInput, View,
 } from 'react-native';
 import { useLocalSearchParams, useRouter } from 'expo-router';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
@@ -28,6 +28,7 @@ import {
 } from '../../src/components/seller/orders/sellerOrderLib';
 import { peso } from '../../src/components/orders/orderProgress';
 import { colors, font, t, themed } from '../../src/theme';
+import { PullFlatList } from '../../src/components/PullList';
 
 /*
  * /seller/orders (My orders), the phone view of web/src/pages/SellerOrders.jsx
@@ -529,7 +530,7 @@ export default function SellerOrdersScreen() {
 
   return (
     <SellerPage scroll={false}>
-      <FlatList showsVerticalScrollIndicator={false} showsHorizontalScrollIndicator={false}
+      <PullFlatList onPull={onRefresh} refreshing={refreshing} showsVerticalScrollIndicator={false} showsHorizontalScrollIndicator={false}
         // Rows far off screen are detached rather than kept mounted;
         // React Native's default keeps about twenty-one screens of them.
         removeClippedSubviews
@@ -560,7 +561,6 @@ export default function SellerOrdersScreen() {
         onScrollToIndexFailed={({ averageItemLength, index }) => {
           listRef.current?.scrollToOffset({ offset: averageItemLength * index, animated: true });
         }}
-        refreshControl={<RefreshControl refreshing={refreshing} onRefresh={onRefresh} colors={[t.primary[600]]} tintColor={t.primary[600]} />}
       />
 
       <OrderFilterSheet

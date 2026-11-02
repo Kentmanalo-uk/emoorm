@@ -1,8 +1,10 @@
-import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
+import {
+  memo, useCallback, useEffect, useMemo, useRef, useState,
+} from 'react';
 import {
   Animated, Image, Pressable, ScrollView, StyleSheet, Text, View, useWindowDimensions,
 } from 'react-native';
-import { Stack, useLocalSearchParams, useRouter } from 'expo-router';
+import { useLocalSearchParams, useNavigation, useRouter } from 'expo-router';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import Svg, { Defs, LinearGradient, Rect, Stop } from 'react-native-svg';
 import {
@@ -16,14 +18,15 @@ import ShellPageMenu from '../../../src/components/ShellPageMenu';
 import EmptyState from '../../../src/components/EmptyState';
 import Glass, { liquidGlass } from '../../../src/components/Glass';
 import TodayTag from '../../../src/components/TodayTag';
-import { heroImageReady } from '../../../src/components/HeroFlight';
+import { Image as PhotoImage } from 'expo-image';
+import { cardPhotoOf, heroImageReady, useHeroArriving } from '../../../src/components/HeroFlight';
 import { PageLoader } from '../../../src/components/BrandLoader';
 import useAuthStore from '../../../src/store/authStore';
 import useCartStore, { standaloneLine } from '../../../src/store/cartStore';
 import { startBuyNow } from '../../../src/lib/buyNow';
 import useWishlistStore from '../../../src/store/wishlistStore';
 import { getCachedData, setCachedData, invalidateCachedData } from '../../../src/lib/dataCache';
-import { resolveImg } from '../../../src/lib/media';
+import { galleryImg, resolveImg } from '../../../src/lib/media';
 import { optionImage } from '../../../src/lib/variationImage';
 import { toast } from '../../../src/lib/toast';
 import {
@@ -63,8 +66,13 @@ import {
 import KindRows, { hasKindRows } from '../../../src/components/product/KindRows';
 import PriceNotes from '../../../src/components/product/PriceNotes';
 import LivestockDeal from '../../../src/components/offers/LivestockDeal';
+import { PullScrollView } from '../../../src/components/PullList';
+import { ShopLogoArt } from '../../../src/components/shop/ShopArt';
 
 const PLACEHOLDER = require('../../../assets/pdp-placeholder-product.png');
+const SETTLE_MS = 450;
+const FADE_IN_MS = 160;
+const MEASURE_AFTER_MS = 250;
 
 // The section tabs (key, label), in reading order.
 const PHONE_SECTIONS = [
@@ -84,12 +92,13 @@ const TABS_H = 42;
  * its shelf, details, "You may also like", and the action bar.
  */
 export default function ProductDetails() {
-  const { slug: rawSlug } = useLocalSearchParams();
+  const { slug: rawSlug, via } = useLocalSearchParams();
   const slug = String(rawSlug || '');
-  return <ProductPage key={slug} slug={slug} />;
+  // How it was opened ('card': the photo flew here), for the page's own animation.
+  return <ProductPage key={slug} slug={slug} via={via} />;
 }
 
-function ProductPage({ slug }) {
+function ProductPage({ slug, via }) {
   const router = useRouter();
   const insets = useSafeAreaInsets();
   const { width: screenW } = useWindowDimensions();
@@ -103,7 +112,35 @@ function ProductPage({ slug }) {
   // A product seen before shows at once while it is asked for again.
   const [product, setProduct] = useState(() => getCachedData(`product:${slug}`) || null);
   const [isLoading, setIsLoading] = useState(() => !getCachedData(`product:${slug}`));
-  const [activeSlide, setActiveSlide] = useState(0);
+  // Moves the gallery to a picked option's photo: { i }.
+  const [jump, setJump] = useState(null);
+
+  // A screen's animation runs both ways, so the fade it opens with from a card
+  // would also be how it leaves. Once it is open it becomes an ordinary page,
+  // so the back button, Android's back key and the swipe all slide.
+  const navigation = useNavigation();
+  // True once the page has finished arriving. What is above the fold draws at
+  // once; the rest of the page, and everything it asks the server for, waits
+  // for this, so nothing competes with the animation on a slower phone. The
+  // timer is for when no transition runs (a deep link, the page opening first).
+  const [settled, setSettled] = useState(false);
+  // First the top of the page, drawn at once with the photo: the bar, the
+  // price, the name and the Buy buttons. The rows under the name a frame later.
+  const [painted, setPainted] = useState(false);
+  useEffect(() => {
+    const frame = requestAnimationFrame(() => setPainted(true));
+    return () => cancelAnimationFrame(frame);
+  }, []);
+  useEffect(() => {
+    const timer = setTimeout(() => setSettled(true), SETTLE_MS);
+    const off = navigation.addListener('transitionEnd', (e) => {
+      if (e.data?.closing) return;
+      setSettled(true);
+      if (via === 'card') navigation.setOptions({ animation: 'default', animationDuration: undefined });
+    });
+    return () => { clearTimeout(timer); off(); };
+  }, [navigation, via]);
+  const [pullKey, setPullKey] = useState(0);
   // One piece, or a paluto's minimum order.
   const [quantity, setQuantity] = useState(() => minOrder(getCachedData(`product:${slug}`)));
   const [selectedVariations, setSelectedVariations] = useState({});
@@ -139,7 +176,6 @@ function ProductPage({ slug }) {
   const [barH, setBarH] = useState(0);
 
   const scrollRef = useRef(null);
-  const galleryRef = useRef(null);
   const contentRef = useRef(null);
   const sectionY = useRef({});
   const sectionNodes = useRef({});
@@ -149,35 +185,17 @@ function ProductPage({ slug }) {
 
   /* ── loading ─────────────────────────────────────────────────────────── */
 
-  const fetchRelated = async (categoryId, productId) => {
+  const productsAround = async (params, productId) => {
     try {
-      const res = await apiClient.get('/products', { params: { categoryId, pageSize: 8 } });
-      setRelatedProducts((res.data || []).filter((p) => p.id !== productId).slice(0, 6));
-    } catch { /* the shelf stays empty */ }
-  };
-  const fetchSameShop = async (storeId, productId) => {
-    try {
-      const res = await apiClient.get('/products', { params: { storeId, pageSize: 8 } });
-      setSameShopProducts((res.data || []).filter((p) => p.id !== productId).slice(0, 6));
-    } catch { /* the shelf stays empty */ }
-  };
-  const fetchReviews = async (productId) => {
-    try {
-      const res = await apiClient.get(`/reviews/product/${productId}`);
-      setReviews(res.data || []);
-      setRatingStats(res.ratingStats || null);
-    } catch { /* no reviews shown */ }
+      const res = await apiClient.get('/products', { params: { ...params, pageSize: 8 } });
+      return (res.data || []).filter((p) => p.id !== productId).slice(0, 6);
+    } catch {
+      return []; // The shelf stays empty.
+    }
   };
 
   useEffect(() => {
     let live = true;
-    const kept = getCachedData(`product:${slug}`);
-    const loadAround = (item) => {
-      if (item?.categoryId) fetchRelated(item.categoryId, item.id);
-      if (item?.storeId) fetchSameShop(item.storeId, item.id);
-      if (item?.id) fetchReviews(item.id);
-    };
-    if (kept) loadAround(kept);
     (async () => {
       try {
         const res = await apiClient.get(`/products/slug/${slug}`);
@@ -185,7 +203,6 @@ function ProductPage({ slug }) {
         setProduct(res.data);
         setQuantity((q) => Math.max(q, minOrder(res.data)));
         setCachedData(`product:${slug}`, res.data);
-        if (!kept) loadAround(res.data);
       } catch (error) {
         if (!live) return;
         if (error.status === 404) {
@@ -199,12 +216,37 @@ function ProductPage({ slug }) {
     })();
     return () => { live = false; };
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [slug]);
+  }, [slug, pullKey]);
+
+  // What surrounds the product: asked for together and shown together, so it
+  // is one redraw of the page and not three.
+  const aroundId = product?.id;
+  const aroundCategory = product?.categoryId;
+  const aroundStore = product?.storeId;
+  useEffect(() => {
+    if (!settled || !aroundId) return undefined;
+    let live = true;
+    Promise.all([
+      aroundCategory ? productsAround({ categoryId: aroundCategory }, aroundId) : [],
+      aroundStore ? productsAround({ storeId: aroundStore }, aroundId) : [],
+      apiClient.get(`/reviews/product/${aroundId}`).catch(() => null),
+    ]).then(([related, sameShop, review]) => {
+      if (!live) return;
+      setRelatedProducts(related);
+      setSameShopProducts(sameShop);
+      if (review) {
+        setReviews(review.data || []);
+        setRatingStats(review.ratingStats || null);
+      }
+    });
+    return () => { live = false; };
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [settled, aroundId, aroundCategory, aroundStore, pullKey]);
 
   // Unread messages from this shop on Chat.
   const shopId = product?.store?.id;
   useEffect(() => {
-    if (!isAuthenticated || !shopId) return undefined;
+    if (!settled || !isAuthenticated || !shopId) return undefined;
     let cancelled = false;
     apiClient.get('/messages/conversations')
       .then((res) => {
@@ -214,11 +256,11 @@ function ProductPage({ slug }) {
       })
       .catch(() => {});
     return () => { cancelled = true; };
-  }, [isAuthenticated, shopId]);
+  }, [settled, isAuthenticated, shopId]);
 
   // The shop's live follow state (the product payload carries none).
   useEffect(() => {
-    if (!shopId) return undefined;
+    if (!settled || !shopId) return undefined;
     let cancelled = false;
     setStoreFollow({ following: false, count: null, busy: false });
     getFollowStatus(shopId)
@@ -233,16 +275,16 @@ function ProductPage({ slug }) {
       }));
     });
     return () => { cancelled = true; unsub(); };
-  }, [shopId, isAuthenticated]);
+  }, [settled, shopId, isAuthenticated]);
 
   // Recently viewed (Home), and a page view for the shop's analytics.
   const viewedId = product?.status === 'APPROVED' && product.slug === slug ? product.id : null;
   useEffect(() => {
-    if (!viewedId) return;
+    if (!settled || !viewedId) return;
     recordView(user?.id, product);
     apiClient.post(`/views/product/${viewedId}`).catch(() => {});
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [viewedId]);
+  }, [settled, viewedId]);
 
   /* ── actions ─────────────────────────────────────────────────────────── */
 
@@ -362,6 +404,9 @@ function ProductPage({ slug }) {
   const closeSheet = useCallback(() => setSheetMode(null), []);
 
   // The row under the shop: straight into the cart, or to the product first.
+  // One function for the life of the page, so the shelf has no reason to redraw.
+  const quickAddLatest = useRef(null);
+  const onQuickAdd = useCallback((p) => quickAddLatest.current(p), []);
   const quickAdd = (p) => {
     if (Array.isArray(p.variations) && p.variations.length) {
       router.push(`/product/${p.slug}`);
@@ -377,6 +422,7 @@ function ProductPage({ slug }) {
       toast.error(err.message || 'Could not add to cart');
     }
   };
+  quickAddLatest.current = quickAdd;
 
   const shareWhat = () => ({
     title: product.name,
@@ -437,24 +483,30 @@ function ProductPage({ slug }) {
     sectionRefs.current[key] = sectionRefs.current[key] || ((node) => { sectionNodes.current[key] = node; });
     return sectionRefs.current[key];
   };
+  // Once things have stopped moving: a page filling in changes size many times.
+  const measureTimer = useRef(null);
+  useEffect(() => () => clearTimeout(measureTimer.current), []);
   const measureSections = () => {
-    const content = contentRef.current;
-    if (!content) return;
-    Object.entries(sectionNodes.current).forEach(([key, node]) => {
-      if (!node?.measureLayout) return;
-      node.measureLayout(content, (x, y) => { sectionY.current[key] = y; }, () => {});
-    });
+    clearTimeout(measureTimer.current);
+    measureTimer.current = setTimeout(() => {
+      const content = contentRef.current;
+      if (!content) return;
+      Object.entries(sectionNodes.current).forEach(([key, node]) => {
+        if (!node?.measureLayout) return;
+        node.measureLayout(content, (x, y) => { sectionY.current[key] = y; }, () => {});
+      });
+    }, MEASURE_AFTER_MS);
   };
 
   // A picked option with its own photo shows it in the gallery (in front
   // when it is not one of the product's photos); other picks go back.
   const optionPhoto = product ? optionImage(product.variations, selectedVariations) : null;
+  const lastOption = useRef(optionPhoto);
   useEffect(() => {
-    if (!product) return;
+    if (!product || lastOption.current === optionPhoto) return;
+    lastOption.current = optionPhoto;
     const list = withPhoto(parseImages(product.images), optionPhoto);
-    const i = optionPhoto ? Math.max(0, list.indexOf(optionPhoto)) : 0;
-    galleryRef.current?.scrollTo({ x: i * screenW, animated: true });
-    setActiveSlide(i);
+    setJump({ i: optionPhoto ? Math.max(0, list.indexOf(optionPhoto)) : 0 });
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [optionPhoto]);
 
@@ -491,13 +543,12 @@ function ProductPage({ slug }) {
   }, [product, user?.municipalityId]);
 
   if (isLoading && !product) {
-    return <ProductSkeleton insets={insets} width={screenW} onBack={goBack} />;
+    return <ProductSkeleton insets={insets} width={screenW} slug={slug} onBack={goBack} />;
   }
 
   if (!product) {
     return (
       <View style={[styles.screen, styles.notFound, { paddingTop: insets.top }]}>
-        <Stack.Screen options={{ headerShown: false }} />
         <PackageIcon size={56} color={t.neutral[400]} />
         <Text style={styles.notFoundTitle}>Product not found</Text>
         <Pressable style={styles.notFoundBtn} onPress={() => router.replace('/products')}>
@@ -575,7 +626,7 @@ function ProductPage({ slug }) {
       <Pressable style={styles.action} onPress={() => router.push(product.store ? `/store/${product.store.slug}` : '/stores')} accessibilityRole="link">
         {shopLogo && failedLogo !== shopLogo
           ? <Image source={{ uri: shopLogo }} style={styles.shopLogo} onError={() => setFailedLogo(shopLogo)} />
-          : <StorefrontIcon size={29} color={t.neutral[700]} />}
+          : <View style={[styles.shopLogo, styles.shopLogoArt]}><ShopLogoArt name={product.store?.name} /></View>}
         <Text style={styles.actionText}>Shop</Text>
       </Pressable>
       <Pressable style={styles.action} onPress={() => router.push(chatTo)} accessibilityRole="link">
@@ -603,7 +654,6 @@ function ProductPage({ slug }) {
 
   return (
     <View style={styles.screen} ref={pageShot} collapsable={false}>
-      <Stack.Screen options={{ headerShown: false }} />
 
       {/* Top bar: back, the category as a search field, cart, ⋯ */}
       <View style={[styles.head, { paddingTop: insets.top }]}>
@@ -625,13 +675,13 @@ function ProductPage({ slug }) {
         </View>
       </View>
 
-      <ScrollView showsHorizontalScrollIndicator={false}
+      <PullScrollView onPull={() => setPullKey((key) => key + 1)} showsHorizontalScrollIndicator={false}
         ref={scrollRef}
         style={styles.scroll}
         contentContainerStyle={[styles.scrollContent, liquidGlass && { paddingBottom: 19 + barH }]}
         onContentSizeChange={measureSections}
         onScroll={onScroll}
-        scrollEventThrottle={32}
+        scrollEventThrottle={100}
         showsVerticalScrollIndicator={false}
         keyboardShouldPersistTaps="handled"
       >
@@ -639,31 +689,7 @@ function ProductPage({ slug }) {
         <View ref={contentRef} collapsable={false}>
         {/* Gallery: one photo per screen width, swipe to change */}
         <View style={styles.gallery} onLayout={(e) => { setGalleryH(e.nativeEvent.layout.height); sectionY.current.overview = 0; }}>
-          <ScrollView showsVerticalScrollIndicator={false}
-            ref={galleryRef}
-            horizontal
-            pagingEnabled
-            showsHorizontalScrollIndicator={false}
-            scrollEventThrottle={32}
-            onScroll={(e) => {
-              const i = Math.round(e.nativeEvent.contentOffset.x / screenW);
-              if (i !== activeSlide) setActiveSlide(i);
-            }}
-          >
-            {(slides.length ? slides : [null]).map((img, i) => (
-              <GallerySlide
-                key={`${img}-${i}`}
-                src={img}
-                width={screenW}
-                label={i === 0 ? product.name : `${product.name} ${i + 1}`}
-                onShown={i === 0 ? () => heroImageReady(slug) : undefined}
-                onPress={img ? () => setViewerAt(i) : undefined}
-              />
-            ))}
-          </ScrollView>
-          {slides.length > 1 ? (
-            <View style={styles.counter}><Text style={styles.counterText}>{activeSlide + 1}/{slides.length}</Text></View>
-          ) : null}
+          <GalleryPager slides={slides} width={screenW} name={product.name} slug={slug} jump={jump} onOpen={setViewerAt} />
           {product.status === 'PENDING' ? (
             <View style={styles.pending}><Text style={styles.pendingText}>PENDING REVIEW</Text></View>
           ) : null}
@@ -746,6 +772,7 @@ function ProductPage({ slug }) {
             ) : null}
           </View>
 
+          {painted ? (
           <View style={styles.rows}>
             {/* The kind's own rows: a paluto's serving, an animal's facts, a package's items. */}
             <KindRows product={product} Row={Row} />
@@ -847,8 +874,12 @@ function ProductPage({ slug }) {
               </Pressable>
             ) : null}
           </View>
+          ) : null}
         </View>
 
+        {/* Below the fold: after the page has arrived. */}
+        {settled ? (
+        <>
         {/* Reviews */}
         <ProductSection sectionRef={sectionRef('reviews')}>
           <SectionHead style={styles.reviewsHead}>
@@ -901,7 +932,7 @@ function ProductPage({ slug }) {
         {product.store ? (
           <View style={styles.storeCard}>
             <View style={styles.storeLeft}>
-              <StoreAvatar uri={shopLogo} />
+              <StoreAvatar uri={shopLogo} name={product.store.name} />
               <View style={styles.storeText}>
                 <Text style={styles.storeName} numberOfLines={1} ellipsizeMode="clip">{product.store.name}</Text>
                 {storeFollow.count !== null ? (
@@ -935,7 +966,7 @@ function ProductPage({ slug }) {
             </View>
           </View>
         ) : null}
-        <ShopShelf sameShop={sameShopProducts} related={relatedProducts} onQuickAdd={quickAdd} />
+        <ShopShelf sameShop={sameShopProducts} related={relatedProducts} onQuickAdd={onQuickAdd} />
 
         {/* Details: the specifications as chips, then the description */}
         <ProductSection sectionRef={sectionRef('details')}>
@@ -975,8 +1006,10 @@ function ProductPage({ slug }) {
         </View>
 
         <RelatedGrid products={relatedProducts} categoryId={product.categoryId} sectionRef={sectionRef('foryou')} />
+        </>
+        ) : null}
         </View>
-      </ScrollView>
+      </PullScrollView>
 
       {/* The section tabs, hanging under the top bar once the photos are
           scrolled past (they slide out from under it). A layer of the screen
@@ -1146,9 +1179,49 @@ function Spec({ label, value }) {
 // The gallery's photos, with an option's own photo in front when it is not one of them.
 const withPhoto = (images, photo) => (photo && !images.includes(photo) ? [photo, ...images] : images);
 
-function GallerySlide({ src, width, label, onShown, onPress }) {
-  const [failed, setFailed] = useState(false);
-  const uri = src ? resolveImg(src) : null;
+/**
+ * The picture the product was opened from, in the gallery from the first frame
+ * so the photo is never the one thing missing from the page. It is already in
+ * memory, so this costs nothing, and the sharp copy (children) fades in over
+ * it. Hidden while a card's photo is flying here (components/HeroFlight), so
+ * there are not two of it on screen; that photo then melts into this one.
+ */
+function ArrivingPhoto({
+  slug, done = false, onShown, children,
+}) {
+  const arriving = useHeroArriving(slug);
+  const uri = cardPhotoOf(slug);
+  return (
+    <View style={[StyleSheet.absoluteFill, arriving && styles.hiddenPhoto]}>
+      {uri && !done ? (
+        <PhotoImage
+          source={{ uri }}
+          style={StyleSheet.absoluteFill}
+          contentFit="cover"
+          cachePolicy="memory-disk"
+          transition={0}
+          onLoad={onShown}
+        />
+      ) : null}
+      {children}
+    </View>
+  );
+}
+
+/**
+ * One gallery photo: the server's sized copy, then the stored photo if that
+ * fails, then the placeholder. Drawn by expo-image, which decodes away from
+ * the main thread and keeps what it has decoded.
+ */
+function GallerySlide({
+  src, width, label, first, slug, onShown, onPress,
+}) {
+  const [step, setStep] = useState(0);
+  // The first photo stands on the opened picture until it has loaded.
+  const [sharp, setSharp] = useState(false);
+  const opened = first && cardPhotoOf(slug);
+  const sources = src ? [galleryImg(src, width), resolveImg(src)] : [];
+  const uri = sources[step];
   const Box = onPress ? Pressable : View;
   return (
     <Box
@@ -1157,25 +1230,85 @@ function GallerySlide({ src, width, label, onShown, onPress }) {
       accessibilityRole={onPress ? 'imagebutton' : 'image'}
       accessibilityLabel={onPress ? `${label} — see it full screen` : label}
     >
-      <Image
-        source={uri && !failed ? { uri } : PLACEHOLDER}
-        style={styles.slideImg}
-        resizeMode="cover"
-        onLoad={onShown}
-        onError={() => { setFailed(true); onShown?.(); }}
-      />
+      <ArrivingPhoto slug={first ? slug : null} done={sharp} onShown={onShown}>
+        <PhotoImage
+          source={uri ? { uri } : PLACEHOLDER}
+          style={styles.slideImg}
+          contentFit="cover"
+          cachePolicy="memory-disk"
+          recyclingKey={uri}
+          priority={first ? 'high' : 'normal'}
+          transition={opened ? FADE_IN_MS : 0}
+          onLoad={() => {
+            onShown?.();
+            // Let the fade finish before the picture under it goes.
+            if (opened) setTimeout(() => setSharp(true), FADE_IN_MS + 80);
+          }}
+          onError={() => {
+            setStep((at) => at + 1);
+            if (step + 1 >= sources.length) onShown?.();
+          }}
+        />
+      </ArrivingPhoto>
     </Box>
   );
 }
 
+/**
+ * The photos, swiped one per screen, and the count over them. On its own, so
+ * a swipe redraws this and not the whole page; and only the photo in view and
+ * the ones beside it exist at a time, however many a product has.
+ */
+const GalleryPager = memo(({
+  slides, width, name, slug, jump, onOpen,
+}) => {
+  const [active, setActive] = useState(0);
+  const pager = useRef(null);
+  useEffect(() => {
+    if (!jump) return;
+    pager.current?.scrollTo({ x: jump.i * width, animated: true });
+    setActive(jump.i);
+  }, [jump, width]);
+  const list = slides.length ? slides : [null];
+  return (
+    <>
+      <ScrollView
+        ref={pager}
+        horizontal
+        pagingEnabled
+        showsVerticalScrollIndicator={false}
+        showsHorizontalScrollIndicator={false}
+        onMomentumScrollEnd={(e) => setActive(Math.round(e.nativeEvent.contentOffset.x / width))}
+      >
+        {list.map((img, i) => (Math.abs(i - active) > 1 ? (
+          <View key={`${img}-${i}`} style={[styles.slide, { width, height: Math.round((width * 6) / 5) }]} />
+        ) : (
+          <GallerySlide
+            key={`${img}-${i}`}
+            src={img}
+            width={width}
+            first={i === 0}
+            slug={slug}
+            label={i === 0 ? name : `${name} ${i + 1}`}
+            onShown={i === 0 ? () => heroImageReady(slug) : undefined}
+            onPress={img ? () => onOpen(i) : undefined}
+          />
+        )))}
+      </ScrollView>
+      {list.length > 1 ? (
+        <View style={styles.counter}><Text style={styles.counterText}>{active + 1}/{list.length}</Text></View>
+      ) : null}
+    </>
+  );
+}, (a, b) => a.width === b.width && a.jump === b.jump && a.name === b.name && a.slides.join() === b.slides.join());
 
-function StoreAvatar({ uri }) {
+function StoreAvatar({ uri, name }) {
   const [failed, setFailed] = useState(false);
   return (
     <View style={styles.storeAvatar}>
       {uri && !failed
         ? <Image source={{ uri }} style={styles.storeAvatarImg} onError={() => setFailed(true)} />
-        : <StorefrontIcon size={22} color={t.primary[700]} />}
+        : <ShopLogoArt name={name} />}
     </View>
   );
 }
@@ -1250,10 +1383,11 @@ function TimeLeft({ until, prefix }) {
   return <Text style={styles.todayLeft} accessibilityRole="timer">{prefix} {leftLabel(until, now)}</Text>;
 }
 
-function ProductSkeleton({ insets, width, onBack }) {
+function ProductSkeleton({
+  insets, width, slug, onBack,
+}) {
   return (
     <View style={styles.screen}>
-      <Stack.Screen options={{ headerShown: false }} />
       <View style={[styles.head, { paddingTop: insets.top }]}>
         <View style={styles.topbar}>
           <ShellBarButton label="Back" onPress={onBack}>
@@ -1264,7 +1398,9 @@ function ProductSkeleton({ insets, width, onBack }) {
       </View>
       {/* Where the photo will be (a card's photo lands here: components/HeroFlight),
           then the loader in the space under it. */}
-      <View style={[styles.slide, { width, height: Math.round((width * 6) / 5) }]} />
+      <View style={[styles.slide, { width, height: Math.round((width * 6) / 5) }]}>
+        <ArrivingPhoto slug={slug} onShown={() => heroImageReady(slug)} />
+      </View>
       <PageLoader style={styles.flex1} label="Loading product" />
     </View>
   );
@@ -1307,6 +1443,7 @@ const styles = themed(() => StyleSheet.create({
   gallery: { backgroundColor: t.neutral[0] },
   slide: { backgroundColor: t.neutral[100] },
   slideImg: { width: '100%', height: '100%' },
+  hiddenPhoto: { opacity: 0 },
   counter: { position: 'absolute', right: 12, bottom: 12, paddingVertical: 3, paddingHorizontal: 11, borderRadius: 999, backgroundColor: 'rgba(15, 23, 42, 0.72)' },
   counterText: { fontSize: 12, lineHeight: 19.2, ...font(500), color: t.onBrand, letterSpacing: 0.24 },
   pending: { position: 'absolute', left: 12, bottom: 12, paddingVertical: 3, paddingHorizontal: 8, borderRadius: 3, backgroundColor: t.warning[100] },
@@ -1450,6 +1587,7 @@ const styles = themed(() => StyleSheet.create({
   // The shop's own logo stands in for the Storefront icon, so it is the
   // same size as it.
   shopLogo: { width: 29, height: 29, borderRadius: 15, borderWidth: 1, borderColor: t.neutral[200] },
+  shopLogoArt: { overflow: 'hidden', borderWidth: 0 },
   actionBadge: {
     position: 'absolute', top: -7, left: 13, minWidth: 18, height: 18, paddingHorizontal: 5, borderRadius: 999,
     borderWidth: 1.5, borderColor: t.onBrand, backgroundColor: t.accent[500], alignItems: 'center', justifyContent: 'center',

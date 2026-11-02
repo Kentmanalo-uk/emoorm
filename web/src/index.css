@@ -702,7 +702,7 @@ html body #root .title-medium {
     border-radius: 0 !important;
   }
 
-  .layout-main :is(.products-grid, .shop-grid, .pdp-shelf-row, .sbi-grid):has(> .product-card) {
+  .layout-main :is(.products-grid, .shop-grid, .pdp-shelf-row, .pdp-shelf-grid, .sbi-grid, .isr-grid, .wishlist-grid, .cart-suggestions-grid, .municipality-product-grid):has(> .product-card) {
     gap: 4px !important;
   }
 

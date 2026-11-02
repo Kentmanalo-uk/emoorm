@@ -12,6 +12,7 @@ import StoreListCard from '../src/components/shop/StoreListCard';
 import { getCachedData, setCachedData } from '../src/lib/dataCache';
 import { fetchMunicipalities } from '../src/lib/referenceData';
 import { font, t, themed } from '../src/theme';
+import { PullScrollView } from '../src/components/PullList';
 
 /*
  * The shops directory on phones (web/src/pages/Stores.jsx, is-phone layout,
@@ -52,6 +53,7 @@ export default function Stores() {
     return () => { on = false; };
   }, []);
 
+  const [pullKey, setPullKey] = useState(0);
   useEffect(() => {
     const request = ++latestRequest.current;
     const key = listKey(page, searchQuery, municipalityId);
@@ -77,7 +79,7 @@ export default function Stores() {
       })
       .catch((err) => { console.error('Failed to fetch stores:', err); })
       .finally(() => { if (request === latestRequest.current) setIsLoading(false); });
-  }, [searchQuery, page, municipalityId]);
+  }, [searchQuery, page, municipalityId, pullKey]);
 
   // Changes q / municipalityId, keeping the other, from page 1.
   const updateParams = (changes) => {
@@ -147,7 +149,7 @@ export default function Stores() {
         <ShellPageMenu />
       </View>
 
-      <ScrollView showsVerticalScrollIndicator={false} showsHorizontalScrollIndicator={false}
+      <PullScrollView onPull={() => setPullKey((key) => key + 1)} showsVerticalScrollIndicator={false} showsHorizontalScrollIndicator={false}
         ref={scrollRef}
         style={styles.scroll}
         contentContainerStyle={[styles.body, { paddingBottom: 24 + insets.bottom }]}
@@ -233,7 +235,7 @@ export default function Stores() {
             </Pressable>
           </View>
         ) : null}
-      </ScrollView>
+      </PullScrollView>
     </View>
   );
 }

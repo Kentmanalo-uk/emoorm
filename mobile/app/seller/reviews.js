@@ -1,6 +1,6 @@
 import { useCallback, useEffect, useState } from 'react';
 import {
-  KeyboardAvoidingView, Platform, Pressable, RefreshControl, ScrollView, StyleSheet, Text, View,
+  KeyboardAvoidingView, Platform, Pressable, StyleSheet, Text, View,
 } from 'react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { useLocalSearchParams, useRouter } from 'expo-router';
@@ -14,6 +14,7 @@ import { SelectSheet } from '../../src/components/Select';
 import EmptyState from '../../src/components/EmptyState';
 import { ListSkeleton } from '../../src/components/SkeletonLayouts';
 import ReviewItem, { Stars } from '../../src/components/seller/reviews/ReviewItem';
+import { PullScrollView } from '../../src/components/PullList';
 
 /*
  * /seller/reviews: Reviews (web/src/pages/SellerReviews.jsx; SellerDashboard.css
@@ -127,11 +128,10 @@ export default function SellerReviewsScreen() {
     <SellerPage scroll={false}>
       {/* Its own scroller, so a reply being typed stays above the keyboard. */}
       <KeyboardAvoidingView style={styles.flex} behavior={Platform.OS === 'ios' ? 'padding' : undefined}>
-        <ScrollView showsVerticalScrollIndicator={false} showsHorizontalScrollIndicator={false}
+        <PullScrollView onPull={refresh} showsVerticalScrollIndicator={false} showsHorizontalScrollIndicator={false}
           style={styles.flex}
           contentContainerStyle={[sellerPageStyles.content, { flexGrow: 1, paddingBottom: 24 + insets.bottom }]}
           keyboardShouldPersistTaps="handled"
-          refreshControl={<RefreshControl refreshing={refreshing} onRefresh={refresh} colors={[t.primary[600]]} tintColor={t.primary[600]} />}
         >
           {/* The header's summary (SellerPageHead actions): the title itself is in the bar. */}
           {ratingStats.totalReviews > 0 ? (
@@ -229,7 +229,7 @@ export default function SellerReviewsScreen() {
               ) : null}
             </>
           )}
-        </ScrollView>
+        </PullScrollView>
       </KeyboardAvoidingView>
     </SellerPage>
   );

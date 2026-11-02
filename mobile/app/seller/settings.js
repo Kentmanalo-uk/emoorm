@@ -248,7 +248,7 @@ export default function SellerSettingsScreen() {
   const identityHint = identity?.done ? 'Verified' : identity?.status === 'FAILED' ? 'Try again' : 'Not yet';
 
   return (
-    <SellerPage>
+    <SellerPage onRefresh={loadStore}>
       <View style={styles.body}>
         {pendingDeletion ? (
           <Pressable

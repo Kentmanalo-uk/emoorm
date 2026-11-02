@@ -1,17 +1,15 @@
 import EmptyArt from '../components/ui/EmptyArt';
 import { Link, useNavigate } from 'react-router-dom';
 import { productKind } from '../lib/productKinds';
-import { ShoppingCart, Trash as Trash2, Package } from '../lib/icons';
+import { Trash as Trash2 } from '../lib/icons';
 import toast from 'react-hot-toast';
 import Layout from '../components/layout/Layout';
-import { resolveImg } from '../lib/media';
-import { saleInfo } from '../lib/variantPricing';
 import useWishlistStore from '../store/wishlistStore';
 import useCartStore from '../store/cartStore';
 import useAuthStore from '../store/authStore';
 import './Wishlist.css';
+import ProductTile from '../components/product/ProductTile';
 import { confirmAction } from '../lib/confirm';
-import useProductPeek from '../components/peek/useProductPeek';
 
 export default function Wishlist() {
   return (
@@ -124,53 +122,16 @@ export function WishlistContent({ hideBreadcrumbs = false } = {}) {
 }
 
 function WishlistCard({ product, onAddToCart, onRemove }) {
-  const peekProduct = useProductPeek();
-  const sale = saleInfo(product);
-  const price = sale.price;
-  const compareAt = sale.regular ?? (product.compareAtPrice ? Number(product.compareAtPrice) : null);
-  const discount = compareAt && compareAt > price
-    ? Math.round(((compareAt - price) / compareAt) * 100)
-    : null;
-  const images = Array.isArray(product.images) ? product.images : [];
-
+  const remove = (e) => {
+    e.preventDefault();
+    e.stopPropagation();
+    onRemove(product);
+  };
   return (
-    <div className="wishlist-card" {...peekProduct(product)}>
-      <Link to={`/product/${product.slug}`} className="wishlist-card-img-wrap">
-        {images[0]
-          ? <img src={resolveImg(images[0]) || images[0]} alt={product.name} />
-          : <div className="wishlist-card-no-img"><Package size={28} /></div>}
-        {discount && <span className="wishlist-card-discount">-{discount}%</span>}
-      </Link>
-
-      <button className="wishlist-card-remove" onClick={() => onRemove(product)} title="Remove">
+    <ProductTile product={product} onAddToCart={product.stock === 0 ? undefined : (e, p) => onAddToCart(p)}>
+      <button type="button" className="product-card-corner" onClick={remove} aria-label={`Remove ${product.name}`} title="Remove">
         <Trash2 size={14} />
       </button>
-
-      <div className="wishlist-card-body">
-        <Link to={`/product/${product.slug}`} className="wishlist-card-name">
-          {product.name}
-        </Link>
-
-        {product.store?.name && (
-          <Link to={`/store/${product.store.slug}`} className="wishlist-card-store">
-            {product.store.name}
-          </Link>
-        )}
-
-        <div className="wishlist-card-price-row">
-          <span className="wishlist-card-price">₱{price.toFixed(2)}</span>
-          {compareAt && <span className="wishlist-card-compare">₱{compareAt.toFixed(2)}</span>}
-        </div>
-
-        <button
-          className="wishlist-card-cart-btn"
-          onClick={() => onAddToCart(product)}
-          disabled={product.stock === 0}
-        >
-          <ShoppingCart size={14} />
-          {product.stock === 0 ? 'Out of stock' : 'Add to cart'}
-        </button>
-      </div>
-    </div>
+    </ProductTile>
   );
 }

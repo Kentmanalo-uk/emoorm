@@ -35,6 +35,7 @@ export default function ConversationRow({
       <ChatAvatar
         src={isSellerView ? item.buyer?.profilePhoto : item.store?.logo}
         person={isSellerView ? item.buyer : null}
+        shopName={isSellerView ? null : title}
         name={title}
         size={44}
         bg={t.success[100]}

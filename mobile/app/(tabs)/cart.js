@@ -22,6 +22,7 @@ import CartLoginGate from '../../src/components/cart/CartLoginGate';
 import { cartPeso, storeDeliveryFee, useCartSettings } from '../../src/components/cart/cartSettings';
 import { toast } from '../../src/lib/toast';
 import { font, t, themed } from '../../src/theme';
+import { PullScrollView } from '../../src/components/PullList';
 
 /*
  * The cart (web/src/pages/Cart.jsx, phone layout): a title bar with the ⋯
@@ -46,7 +47,7 @@ export default function Cart() {
   const clearCart = useCartStore((s) => s.clearCart);
   const revalidate = useCartStore((s) => s.revalidate);
 
-  const [storeSlugs, setStoreSlugs] = useState({});
+  const [storeInfo, setStoreInfo] = useState({}); // id: { slug, logo }
   const [cartSearchText, setCartSearchText] = useState(() => String(params.cartSearch || ''));
   const [confirm, setConfirm] = useState(null); // { title, confirmLabel, onConfirm }
   // iOS 26: the system's glass tab bar floats over the screen (the safe
@@ -60,16 +61,16 @@ export default function Cart() {
   // catalogue on each visit (and again after login), flagging what can't be bought.
   const [revalidating, setRevalidating] = useState(false);
   const [revalidationNotice, setRevalidationNotice] = useState('');
+  const [pullKey, setPullKey] = useState(0);
   useFocusEffect(useCallback(() => {
     let cancelled = false;
     (async () => {
       if (useCartStore.getState().items.length === 0) return;
       setRevalidating(true);
       try {
-        const { capped, unavailable } = await revalidate();
+        const { capped } = await revalidate();
         if (cancelled) return;
         const notes = [];
-        if (unavailable.length) notes.push(`${unavailable.length} ${unavailable.length === 1 ? 'item is' : 'items are'} no longer available`);
         if (capped.length) notes.push(`quantity reduced to available stock for ${capped.join(', ')}`);
         if (capped.length) toast.info(`Quantity reduced to available stock: ${capped.join(', ')}`);
         setRevalidationNotice(notes.length ? `${notes.join('; ')}.` : '');
@@ -80,7 +81,7 @@ export default function Cart() {
       }
     })();
     return () => { cancelled = true; };
-  }, [isAuthenticated])); // eslint-disable-line react-hooks/exhaustive-deps
+  }, [isAuthenticated, pullKey])); // eslint-disable-line react-hooks/exhaustive-deps
 
   // "You may also like": products from the cart's categories, then the newest.
   const [suggestions, setSuggestions] = useState([]);
@@ -315,17 +316,18 @@ export default function Cart() {
     });
   };
 
-  // Each shop name links to its page; look the slugs up once.
+  // Each shop name links to its page, beside its logo; look them up once.
   const cartStoreIds = [...new Set(items.map((item) => item.storeId).filter(Boolean))].sort().join(',');
   useEffect(() => {
     if (!cartStoreIds) return undefined;
     let cancelled = false;
-    const missing = cartStoreIds.split(',').filter((id) => !storeSlugs[id]);
+    const missing = cartStoreIds.split(',').filter((id) => !storeInfo[id]);
     if (missing.length === 0) return undefined;
-    Promise.all(missing.map((id) => apiClient.get(`/stores/${id}`).then((res) => [id, res.data?.slug]).catch(() => [id, null])))
+    Promise.all(missing.map((id) => apiClient.get(`/stores/${id}`).then((res) => [id, res.data]).catch(() => [id, null])))
       .then((pairs) => {
         if (cancelled) return;
-        setStoreSlugs((cur) => ({ ...cur, ...Object.fromEntries(pairs.filter(([, slug]) => slug)) }));
+        const found = pairs.filter(([, store]) => store?.slug).map(([id, { slug, logo }]) => [id, { slug, logo }]);
+        setStoreInfo((cur) => ({ ...cur, ...Object.fromEntries(found) }));
       });
     return () => { cancelled = true; };
   }, [cartStoreIds]); // eslint-disable-line react-hooks/exhaustive-deps
@@ -414,7 +416,7 @@ export default function Cart() {
       <HeaderGlow height={insets.top + 10 + 49} />
       <View style={styles.topGap} />
       {head}
-      <ScrollView showsVerticalScrollIndicator={false} showsHorizontalScrollIndicator={false}
+      <PullScrollView onPull={() => setPullKey((key) => key + 1)} showsVerticalScrollIndicator={false} showsHorizontalScrollIndicator={false}
         contentContainerStyle={styles.content}
         keyboardShouldPersistTaps="handled"
         {...glassScroll}
@@ -433,12 +435,10 @@ export default function Cart() {
         </View>
 
         <View style={styles.list}>
-          {revalidating || revalidationNotice ? (
-            <View style={[styles.notice, revalidationNotice && styles.noticeWarn]} accessibilityRole="alert">
-              <WarningCircleIcon size={16} color={revalidationNotice ? t.warning[700] : t.neutral[600]} />
-              <Text style={[styles.noticeText, revalidationNotice && styles.noticeTextWarn]}>
-                {revalidating ? 'Checking current prices and stock…' : revalidationNotice}
-              </Text>
+          {revalidationNotice ? (
+            <View style={[styles.notice, styles.noticeWarn]} accessibilityRole="alert">
+              <WarningCircleIcon size={16} color={t.warning[700]} />
+              <Text style={[styles.noticeText, styles.noticeTextWarn]}>{revalidationNotice}</Text>
             </View>
           ) : null}
           {cartSearch && visibleItems.length === 0 ? (
@@ -448,7 +448,8 @@ export default function Cart() {
             <CartStoreGroup
               key={group.storeId}
               group={group}
-              slug={storeSlugs[group.storeId]}
+              slug={storeInfo[group.storeId]?.slug}
+              logo={storeInfo[group.storeId]?.logo || group.items[0]?.storeLogo}
               selectedSet={selectedSet}
               onToggleStore={toggleStoreSelected}
               onToggleItem={toggleItemSelected}
@@ -472,7 +473,7 @@ export default function Cart() {
           />
           <CartSuggestions suggestions={suggestions} loading={suggestionsLoading} style={styles.suggestions} />
         </View>
-      </ScrollView>
+      </PullScrollView>
 
       <CartBar
         note={barNote}
