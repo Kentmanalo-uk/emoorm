@@ -1,5 +1,5 @@
 import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
-import { Pressable, ScrollView, StyleSheet, Text, TextInput, View } from 'react-native';
+import { FlatList, Pressable, StyleSheet, Text, TextInput, View } from 'react-native';
 import { useFocusEffect, useLocalSearchParams, useRouter } from 'expo-router';
 import {
   ArrowsClockwiseIcon, ChatTextIcon, EnvelopeOpenIcon, FunnelIcon, MagnifyingGlassIcon, StorefrontIcon, XIcon,
@@ -146,18 +146,37 @@ function MessagesList() {
       <InboxPageHead title="Messages">
         <ShellBarButton label={searchOpen ? 'Close search' : 'Search chats'} onPress={toggleSearch} accessibilityState={{ expanded: searchOpen }}>
           {searchOpen
-            ? <XIcon size={19} weight="bold" color={t.primary[700]} />
-            : <MagnifyingGlassIcon size={19} color={t.neutral[700]} />}
+            ? <XIcon size={28} weight="bold" color={t.primary[700]} />
+            : <MagnifyingGlassIcon size={28} color={t.neutral[700]} />}
         </ShellBarButton>
         <ShellPageMenu label="Chat options" items={menuItems} />
       </InboxPageHead>
-    <ScrollView showsVerticalScrollIndicator={false} showsHorizontalScrollIndicator={false}
+    <FlatList
+      // Conversations come down in one response with no paging, so the
+      // list is as long as the person is chatty; only what is on screen
+      // is built. The search box and the filters ride above as a header.
+      data={loadingList || empty ? [] : filtered}
+      keyExtractor={(c) => c.id}
+      renderItem={({ item: c }) => (
+        <ConversationRow
+          item={c}
+          currentUserId={currentUser?.id}
+          onPress={() => openChat(c.id)}
+          peek={peekChat(c, { currentUserId: currentUser?.id, onOpen: () => openChat(c.id), onMarkRead: () => markRead(c.id) })}
+        />
+      )}
+      showsVerticalScrollIndicator={false}
+      showsHorizontalScrollIndicator={false}
       style={styles.screen}
-      contentContainerStyle={styles.content}
+      contentContainerStyle={[styles.content, empty && styles.listGrow]}
       keyboardShouldPersistTaps="handled"
+      removeClippedSubviews
+      initialNumToRender={10}
+      maxToRenderPerBatch={10}
+      windowSize={7}
       {...tabScroll}
-    >
-      <View style={[styles.list, empty && styles.listGrow]}>
+      ListHeaderComponent={(
+        <View style={[styles.list, empty && styles.listGrow]}>
         {searchOpen || searchQuery ? (
           <View style={styles.search}>
             <MagnifyingGlassIcon size={16} color={t.neutral[500]} />
@@ -213,19 +232,10 @@ function MessagesList() {
                 ? [{ label: 'Show all chats', onPress: () => setUnreadOnly(false), variant: 'outline' }]
                 : [{ label: 'Browse stores', onPress: () => router.push('/stores'), icon: StorefrontIcon }]}
           />
-        ) : (
-          filtered.map((c) => (
-            <ConversationRow
-              key={c.id}
-              item={c}
-              currentUserId={currentUser?.id}
-              onPress={() => openChat(c.id)}
-              peek={peekChat(c, { currentUserId: currentUser?.id, onOpen: () => openChat(c.id), onMarkRead: () => markRead(c.id) })}
-            />
-          ))
-        )}
-      </View>
-    </ScrollView>
+        ) : null}
+        </View>
+      )}
+    />
     </View>
   );
 }

@@ -278,7 +278,10 @@ const styles = themed(() => StyleSheet.create({
     backgroundColor: t.neutral[0],
   },
   back: { width: 38, height: 38, borderRadius: 19, alignItems: 'center', justifyContent: 'center' },
-  titleRow: { flexDirection: 'row', alignItems: 'center', gap: 8 },
+  // Takes the space between the back arrow and the menu, so the menu
+  // is pushed to the right edge of the bar instead of sitting against
+  // the title.
+  titleRow: { flex: 1, minWidth: 0, flexDirection: 'row', alignItems: 'center', gap: 8 },
   title: { fontSize: 19, lineHeight: 21.85, ...font(500), color: t.neutral[900] },
   count: { minWidth: 20, paddingVertical: 1, paddingHorizontal: 8, borderRadius: 999, backgroundColor: t.primary[50] },
   countText: { fontSize: 11, lineHeight: 12.65, ...font(500), color: t.primary[700], textAlign: 'center' },

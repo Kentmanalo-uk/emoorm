@@ -109,7 +109,7 @@ function Pop({ children, style, delay = 0, duration = 320 }) {
   );
 }
 
-/** Three dots, pink and green in turn (mmy-typing). */
+/** Three dots, grey and green in turn (mmy-typing). */
 function TypingDots({ label }) {
   const dots = [useRef(new Animated.Value(0)).current, useRef(new Animated.Value(0)).current, useRef(new Animated.Value(0)).current];
   useEffect(() => {
@@ -292,7 +292,7 @@ export default function MoormyThread({ userId, pendingAsk, onAsked, onBack }) {
         accessibilityLabel="Chat with Ate Moormy"
       >
         <View style={styles.hero}>
-          <MoormyAvatar size={64} glow />
+          <MoormyAvatar size={64} />
           <Text style={styles.heroName}>Ate Moormy</Text>
           <Text style={styles.heroNote}>{copy.note}</Text>
         </View>
@@ -424,7 +424,8 @@ const styles = themed(() => StyleSheet.create({
   messageSelf: { alignItems: 'flex-end' },
   bubble: {
     maxWidth: '100%', gap: 2, paddingVertical: 8, paddingHorizontal: 12, borderRadius: 12,
-    backgroundColor: MMY.pinkSoft, boxShadow: '0px 1px 1px rgba(15, 23, 42, 0.04)',
+    // The same grey as every other incoming message (inbox/ChatBubble.js).
+    backgroundColor: t.neutral[100], boxShadow: '0px 1px 1px rgba(15, 23, 42, 0.04)',
   },
   bubbleTop: { maxWidth: '82%' },
   bubbleSelf: { backgroundColor: t.primary[600] },
@@ -448,15 +449,15 @@ const styles = themed(() => StyleSheet.create({
   suggest: { gap: 6, marginLeft: 34 },
   suggestLabel: { fontSize: 12, lineHeight: 19.2, color: t.neutral[500], ...font(400) },
   chips: { flexDirection: 'row', flexWrap: 'wrap', gap: 6 },
-  chip: { paddingVertical: 6, paddingHorizontal: 12, borderWidth: 1, borderColor: MMY.pinkLine, borderRadius: 999, backgroundColor: t.neutral[0] },
-  chipPressed: { backgroundColor: MMY.pinkSoft },
+  chip: { paddingVertical: 6, paddingHorizontal: 12, borderWidth: 1, borderColor: t.neutral[200], borderRadius: 999, backgroundColor: t.neutral[0] },
+  chipPressed: { backgroundColor: t.neutral[100] },
   chipOff: { opacity: 0.5 },
-  chipText: { fontSize: 13, lineHeight: 20.8, color: MMY.pinkInk, ...font(400) },
+  chipText: { fontSize: 13, lineHeight: 20.8, color: t.neutral[700], ...font(400) },
   links: { flexDirection: 'row', flexWrap: 'wrap', gap: 6 },
   link: { flexDirection: 'row', alignItems: 'center', gap: 4, paddingVertical: 5, paddingHorizontal: 10, borderRadius: 999, backgroundColor: t.primary[50] },
   linkText: { fontSize: 12.5, lineHeight: 20, color: t.primary[700], ...font(500) },
   typing: { flexDirection: 'row', alignItems: 'center', gap: 4, paddingVertical: 12, paddingHorizontal: 14 },
-  dot: { width: 6, height: 6, borderRadius: 3, backgroundColor: MMY.pink },
+  dot: { width: 6, height: 6, borderRadius: 3, backgroundColor: t.neutral[400] },
   dotGreen: { backgroundColor: MMY.green },
   composer: {
     flexDirection: 'row', alignItems: 'center', gap: 6, paddingTop: 8, paddingHorizontal: 8,

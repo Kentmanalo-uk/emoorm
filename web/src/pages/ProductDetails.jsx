@@ -43,6 +43,7 @@ import ReviewItem from '../components/reviews/ReviewItem';
 import { useReviewViewer } from '../components/reviews/ReviewViewer';
 import useReviewSocial from '../components/reviews/useReviewSocial';
 import ProductOptionSheet from '../components/ProductOptionSheet';
+import PhotoViewer from '../components/product/PhotoViewer';
 import { useShare } from '../components/ShareSheet';
 import {
   getFollowStatus, followStore as apiFollowStore, unfollowStore as apiUnfollowStore, subscribeToFollowChanges,
@@ -273,6 +274,8 @@ const ProductDetails = () => {
   const [storeFollow, setStoreFollow] = useState({ following: false, count: null, busy: false });
   const closeSheet = useCallback(() => setSheetMode(null), []);
   const [zoom, setZoom] = useState({ active: false, x: 50, y: 50 });
+  // The photo the full-screen viewer is open on; null when it is shut.
+  const [viewerAt, setViewerAt] = useState(null);
   // The 3D view, open over the page.
   const [open3d, setOpen3d] = useState(false);
   const { settings: appSettings } = useAppSettings();
@@ -1014,6 +1017,7 @@ const ProductDetails = () => {
                         sizes="100vw"
                         alt={i === 0 ? product.name : `${product.name} ${i + 1}`}
                         loading={i === 0 ? 'eager' : 'lazy'}
+                        onClick={() => setViewerAt(i)}
                         onError={photoFallback}
                       />
                     </div>
@@ -1083,6 +1087,11 @@ const ProductDetails = () => {
                   src={resolveImg(gallery[selectedImage]) || gallery[selectedImage]}
                   alt={product.name}
                   className="pdp-gallery-image"
+                  role="button"
+                  tabIndex={0}
+                  aria-label="See this photo full screen"
+                  onClick={() => { handleZoomLeave(); setViewerAt(selectedImage); }}
+                  onKeyDown={(e) => { if (e.key === 'Enter' || e.key === ' ') { e.preventDefault(); setViewerAt(selectedImage); } }}
                   onError={(e) => { e.currentTarget.src = '/placeholder-product.png'; }}
                 />
                 {gallery.length > 1 && (
@@ -1827,6 +1836,19 @@ const ProductDetails = () => {
           soldOutText={soldOutLabel(product)}
           priceFrom={startsFrom(product)}
           priceUnit={priceUnit(product)}
+        />
+      )}
+
+      {viewerAt !== null && (
+        <PhotoViewer
+          photos={gallery}
+          index={viewerAt}
+          product={product}
+          price={`${fromPrice ? 'from ' : ''}₱${priceLabel(false)}`}
+          onIndexChange={setViewerAt}
+          onClose={() => setViewerAt(null)}
+          onBuy={cannotBuy ? undefined : () => (isPhone ? setSheetMode('buy') : handleBuyNow())}
+          buyLabel={buyLabel(product)}
         />
       )}
 

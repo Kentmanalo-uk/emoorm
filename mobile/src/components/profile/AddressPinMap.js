@@ -159,7 +159,7 @@ const styles = themed(() => StyleSheet.create({
   tile: { position: 'absolute', width: TILE, height: TILE },
   marker: { position: 'absolute', width: 28, height: 36, alignItems: 'center', justifyContent: 'center' },
   markerDrop: {
-    width: 26, height: 26, borderWidth: 3, bordercolor: t.onBrand, backgroundColor: t.primary[600],
+    width: 26, height: 26, borderWidth: 3, borderColor: t.onBrand, backgroundColor: t.primary[600],
     borderTopLeftRadius: 13, borderTopRightRadius: 13, borderBottomRightRadius: 13, borderBottomLeftRadius: 0,
     transform: [{ rotate: '-45deg' }], boxShadow: '0px 3px 9px rgba(15, 23, 42, 0.3)',
   },

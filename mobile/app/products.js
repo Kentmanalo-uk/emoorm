@@ -17,6 +17,7 @@ import {
 import { readImageSearch } from '../src/components/search/imageSearchStore';
 import { saveRecent } from '../src/lib/shellSearch';
 import { fetchCategories, fetchMunicipalities } from '../src/lib/referenceData';
+import { GRID_EDGE, GRID_GAP, gridCellWidth } from '../src/lib/productGrid';
 import { font, t, themed } from '../src/theme';
 
 // The API's sortBy and sortOrder for each sort choice (web Products.jsx SORTS).
@@ -64,8 +65,7 @@ export default function Products() {
   const router = useRouter();
   const insets = useSafeAreaInsets();
   const { width: screenW } = useWindowDimensions();
-  // Two columns 4 apart inside the 12px sides (.products-grid), a lone card too.
-  const cellW = (screenW - 24 - 4) / 2;
+  const cellW = gridCellWidth(screenW);
   const params = useLocalSearchParams();
 
   const searchQuery = str(params.q);
@@ -380,6 +380,14 @@ export default function Products() {
             <ProductCard product={item} variant="result" />
           </View>
         )}
+        // Was on React Native's defaults: windowSize 21 keeps about
+        // twenty-one screens of cards mounted, which on the main grid is
+        // hundreds of product cards and their photos held in memory at
+        // once. Seven screens is still well ahead of a fast flick.
+        removeClippedSubviews
+        initialNumToRender={6}
+        maxToRenderPerBatch={6}
+        windowSize={7}
         onEndReached={loadMore}
         onEndReachedThreshold={0.6}
         ListFooterComponent={isLoadingMore ? <ActivityIndicator color={t.primary[600]} style={styles.more} /> : null}
@@ -465,7 +473,7 @@ const styles = themed(() => StyleSheet.create({
   imageThumb: { width: 28, height: 28, borderRadius: 6 },
 
   gutter: { paddingHorizontal: 12 },
-  row: { gap: 4, paddingHorizontal: 12, marginBottom: 4 },
+  row: { gap: GRID_GAP, paddingHorizontal: GRID_EDGE, marginBottom: GRID_GAP },
   cell: { minWidth: 0 },
   more: { marginVertical: 16 },
 }));

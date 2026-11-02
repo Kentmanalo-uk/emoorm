@@ -5,12 +5,14 @@ import {
 import { useRouter } from 'expo-router';
 import * as ImagePicker from 'expo-image-picker';
 import {
-  CameraIcon, ChatCircleTextIcon, DownloadSimpleIcon, SealCheckIcon, TrashIcon, WarningCircleIcon,
+  CameraIcon, ChatCircleTextIcon, DownloadSimpleIcon, SealCheckIcon, SmileyIcon, TrashIcon, WarningCircleIcon,
 } from '../../lib/icons';
 import apiClient from '../../api/client';
 import ScreenHeader from '../ScreenHeader';
 import LoadingSkeleton from '../LoadingSkeleton';
 import { resolveImg } from '../../lib/media';
+import Avatar from '../avatars/Avatar';
+import AvatarPicker from '../avatars/AvatarPicker';
 import { uploadImage } from '../../lib/upload';
 import { toast } from '../../lib/toast';
 import { fetchMunicipalities } from '../../lib/referenceData';
@@ -116,9 +118,15 @@ const useProfileSave = () => {
 
 export function ProfilePart() {
   const { user, saving, save } = useProfileSave();
-  const original = { fullName: user?.fullName || '', username: user?.username || '', profilePhoto: user?.profilePhoto || '' };
+  const original = {
+    fullName: user?.fullName || '',
+    username: user?.username || '',
+    profilePhoto: user?.profilePhoto || '',
+    avatarKey: user?.avatarKey || '',
+  };
   const [form, setForm] = useState(original);
   const [uploading, setUploading] = useState(false);
+  const [picking, setPicking] = useState(false);
   const [verified, setVerified] = useState(false);
 
   // A new name undoes the ID check: say so before it is saved.
@@ -129,7 +137,10 @@ export function ProfilePart() {
   }, []);
 
   const nameChanged = form.fullName.trim() !== original.fullName.trim();
-  const dirty = nameChanged || form.username !== original.username || form.profilePhoto !== original.profilePhoto;
+  const dirty = nameChanged
+    || form.username !== original.username
+    || form.profilePhoto !== original.profilePhoto
+    || form.avatarKey !== original.avatarKey;
 
   const pickPhoto = async () => {
     const result = await ImagePicker.launchImageLibraryAsync({ mediaTypes: ['images'], quality: 0.9, allowsEditing: true, aspect: [1, 1] });
@@ -138,7 +149,7 @@ export function ProfilePart() {
     setUploading(true);
     try {
       const uploaded = await uploadImage(asset);
-      setForm((f) => ({ ...f, profilePhoto: uploaded.url }));
+      setForm((f) => ({ ...f, profilePhoto: uploaded.url, avatarKey: '' }));
     } catch (err) {
       toast.error(err?.message || 'Upload failed');
     } finally {
@@ -149,19 +160,24 @@ export function ProfilePart() {
   const onSave = (done) => {
     const problem = fullNameProblem(form.fullName) || usernameProblem(form.username);
     if (problem) { toast.error(problem); return; }
-    const payload = { fullName: form.fullName.trim(), profilePhoto: form.profilePhoto || null };
+    const payload = {
+      fullName: form.fullName.trim(),
+      profilePhoto: form.profilePhoto || null,
+      avatarKey: form.avatarKey || null,
+    };
     if (form.username !== original.username) payload.username = form.username.trim();
     save(payload, done, 'Profile updated');
   };
 
   const photo = resolveImg(form.profilePhoto);
-  const initial = (form.fullName || user?.email || '?').trim().charAt(0).toUpperCase();
 
   return (
     <PartPage title={PARTS.profile} onSave={onSave} saving={saving} canSave={dirty && !uploading}>
       <View style={styles.photoRow}>
         <View style={styles.photo}>
-          {photo ? <Image source={{ uri: photo }} style={styles.photoImg} /> : <View style={styles.photoFallback}><Text style={styles.photoInitial}>{initial}</Text></View>}
+          {photo
+            ? <Image source={{ uri: photo }} style={styles.photoImg} />
+            : <Avatar seed={user?.id} name={form.avatarKey} size={60} />}
           {uploading ? <View style={styles.photoBusy}><ActivityIndicator color={t.neutral[700]} /></View> : null}
         </View>
         <View style={styles.photoActions}>
@@ -169,9 +185,13 @@ export function ProfilePart() {
             <PsButton label={form.profilePhoto ? 'Change photo' : 'Upload photo'} Icon={CameraIcon} onPress={pickPhoto} disabled={uploading} style={{ flex: 1 }} />
             {form.profilePhoto ? (
               <PsButton label="Remove" variant="ghost" onPress={() => setForm((f) => ({ ...f, profilePhoto: '' }))} disabled={uploading} style={{ flex: 1 }} />
-            ) : null}
+            ) : (
+              <PsButton label="Pick an avatar" Icon={SmileyIcon} variant="ghost" onPress={() => setPicking(true)} disabled={uploading} style={{ flex: 1 }} />
+            )}
           </View>
-          <Text style={styles.photoHint}>Any photo from your phone.</Text>
+          <Text style={styles.photoHint}>
+            {form.profilePhoto ? 'Any photo from your phone.' : 'Remove nothing — pick an avatar or upload a photo.'}
+          </Text>
         </View>
       </View>
 
@@ -197,6 +217,15 @@ export function ProfilePart() {
           />
         </PsField>
       </View>
+
+      {picking ? (
+        <AvatarPicker
+          current={form.avatarKey || null}
+          seed={user?.id}
+          onPick={(key) => { setForm((f) => ({ ...f, avatarKey: key, profilePhoto: '' })); setPicking(false); }}
+          onClose={() => setPicking(false)}
+        />
+      ) : null}
     </PartPage>
   );
 }
@@ -549,7 +578,7 @@ const styles = themed(() => StyleSheet.create({
 
   photoRow: { flexDirection: 'row', alignItems: 'center', gap: 14 },
   photo: {
-    width: 64, height: 64, borderRadius: 32, overflow: 'hidden', borderWidth: 2, bordercolor: t.onBrand,
+    width: 64, height: 64, borderRadius: 32, overflow: 'hidden', borderWidth: 2, borderColor: t.neutral[0],
     backgroundColor: t.neutral[100], boxShadow: `0px 0px 0px 1px ${t.neutral[200]}`,
   },
   photoImg: { width: '100%', height: '100%' },

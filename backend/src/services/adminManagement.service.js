@@ -42,6 +42,7 @@ const listJuniorAdmins = async (options = {}) => {
         municipality: { select: { id: true, name: true, code: true, adminId: true } },
         adminAccessExpiresAt: true,
         profilePhoto: true,
+        avatarKey: true,
         isActive: true,
         mfaEnabled: true,
         lastActiveAt: true,

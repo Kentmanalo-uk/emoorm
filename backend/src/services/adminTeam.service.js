@@ -30,6 +30,7 @@ const MEMBER_SELECT = {
   fullName: true,
   email: true,
   profilePhoto: true,
+  avatarKey: true,
   isActive: true,
   mfaEnabled: true,
   lastActiveAt: true,
@@ -137,7 +138,7 @@ const refusal = (user, town) => {
 const findByEmail = (email) => prisma.user.findFirst({
   where: { email: String(email || '').trim().toLowerCase(), deletedAt: null },
   select: {
-    id: true, fullName: true, email: true, profilePhoto: true, role: true, municipalityId: true, isVerified: true, isActive: true,
+    id: true, fullName: true, email: true, profilePhoto: true, avatarKey: true, role: true, municipalityId: true, isVerified: true, isActive: true,
   },
 });
 

@@ -1,6 +1,7 @@
 import { useCallback, useRef, useState } from 'react';
-import { Share, StyleSheet, View } from 'react-native';
+import { StyleSheet, View } from 'react-native';
 import { themed } from '../../../src/theme';
+import useShare from '../../../src/components/ShareSheet';
 import { useFocusEffect } from 'expo-router';
 import apiClient from '../../../src/api/client';
 import { getCacheEntry, setCachedData } from '../../../src/lib/dataCache';
@@ -100,10 +101,11 @@ export default function SellerHomeScreen() {
   const live = liveProducts(stats);
   const recentSales = salesByDay.reduce((sum, day) => sum + Number(day.total || 0), 0);
   const name = store?.name || 'My shop';
+  const { share, shareSheet } = useShare();
   const shareShop = () => {
     if (!store?.slug) return;
     const url = `${SITE}/store/${store.slug}`;
-    Share.share({ title: name, message: `Shop at ${name} on Emoorm\n${url}`, url }).catch(() => {});
+    share({ title: name, text: `Shop at ${name} on Emoorm`, url });
   };
   const numbers = [
     // The same counts as the Orders tabs they open.
@@ -116,6 +118,7 @@ export default function SellerHomeScreen() {
 
   return (
     <SellerPage header={<SellerHomeHeader />} refreshing={refreshing} onRefresh={onRefresh} contentStyle={styles.content}>
+      {shareSheet}
       <View style={styles.body}>
         {notice ? <HomeNotice notice={notice} /> : null}
         {loadError ? <HomeLoadNote /> : null}

@@ -41,6 +41,8 @@ const createReview = async (data) => recount(await prisma.review.create({
           id: true,
           fullName: true,
           profilePhoto: true,
+          avatarKey: true,
+          username: true,
         },
       },
       product: {
@@ -67,6 +69,8 @@ const findById = async (id) => {
           id: true,
           fullName: true,
           profilePhoto: true,
+          avatarKey: true,
+          username: true,
         },
       },
       product: {
@@ -132,6 +136,8 @@ const findAll = async (options = {}) => {
             id: true,
             fullName: true,
             profilePhoto: true,
+            avatarKey: true,
+            username: true,
           },
         },
         product: {
@@ -183,6 +189,8 @@ const updateReview = async (id, data) => recount(await prisma.review.update({
           id: true,
           fullName: true,
           profilePhoto: true,
+          avatarKey: true,
+          username: true,
         },
       },
       product: {
@@ -272,6 +280,8 @@ const findAllForStore = async (storeId, options = {}) => {
             id: true,
             fullName: true,
             profilePhoto: true,
+            avatarKey: true,
+            username: true,
           },
         },
         product: {
@@ -358,6 +368,8 @@ const replyToReview = async (id, replyText) => {
           id: true,
           fullName: true,
           profilePhoto: true,
+          avatarKey: true,
+          username: true,
         },
       },
       product: {

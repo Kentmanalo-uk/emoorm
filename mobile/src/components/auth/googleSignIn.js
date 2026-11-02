@@ -66,13 +66,25 @@ async function signInNatively() {
     deliverGoogleAnswer({ data: body?.data });
     return null;
   } catch (err) {
-    // A build signed with a key the Android client does not list.
-    if (err?.code === 'DEVELOPER_ERROR') return GOOGLE_MESSAGES.unavailable;
-    if (String(err?.code) === '12501' || /cancel/i.test(err?.message || '')) {
+    const code = String(err?.code ?? '');
+    const { statusCodes = {} } = mod;
+
+    if (code === String(statusCodes.SIGN_IN_CANCELLED ?? '12501') || /cancel/i.test(err?.message || '')) {
       deliverGoogleAnswer({ cancelled: true });
       return null;
     }
-    return err?.message || GOOGLE_MESSAGES.unavailable;
+    // Another sign-in is already up; a second message on top helps nobody.
+    if (code === String(statusCodes.IN_PROGRESS ?? '')) return null;
+
+    // Nothing from the library is shown as it comes. Its messages are
+    // written for whoever builds the app -- DEVELOPER_ERROR's is a link to
+    // its troubleshooting docs -- and a shopper was being handed that URL
+    // to read. The detail goes to the log for us; the person gets a
+    // sentence they can act on.
+    console.warn(`[google] sign-in failed (${code || 'no code'}): ${err?.message || err}`);
+    if (isMisconfigured(code, err?.message)) return GOOGLE_MESSAGES.misconfigured;
+    if (code === String(statusCodes.PLAY_SERVICES_NOT_AVAILABLE ?? '')) return GOOGLE_MESSAGES.noPlay;
+    return GOOGLE_MESSAGES.unavailable;
   }
 }
 
@@ -83,7 +95,31 @@ export const GOOGLE_CANCELLED = ['cancelled', 'access_denied'];
 export const GOOGLE_MESSAGES = {
   expired: 'That Google sign-in took too long. Please try again.',
   unavailable: 'Google sign-in is not available right now. Please sign in with your email.',
+  // Google refused the app itself, not the person: this build's signing
+  // key is not on the Android OAuth client. Nothing the shopper does will
+  // change it, so it says so plainly and points at the way in that works.
+  misconfigured: 'Google sign-in is not set up for this version of the app. Please sign in with your email address instead.',
+  noPlay: 'This phone has no Google Play services, so Google sign-in cannot run. Please sign in with your email address.',
 };
+
+/**
+ * Google refusing the app rather than the person.
+ *
+ * DEVELOPER_ERROR means the certificate this build was signed with is not
+ * listed on the Android OAuth client for shop.emoorm.app -- the usual
+ * cause being a build from Play, which Play re-signs with its own key, so
+ * that key's SHA-1 has to be on the client as well as the upload key's.
+ *
+ * It is matched by number as well as by name because the library does not
+ * export a constant for it: android/RNGoogleSigninModule.java rejects with
+ * String.valueOf(CommonStatusCodes.DEVELOPER_ERROR), which is "10", and the
+ * app used to compare that against the text 'DEVELOPER_ERROR'. It never
+ * matched, so the library's own message -- a link to its troubleshooting
+ * page -- went on screen to shoppers.
+ */
+const isMisconfigured = (code, message) => code === '10'
+  || code === 'DEVELOPER_ERROR'
+  || /DEVELOPER_ERROR/i.test(message || '');
 
 // ── SHA-256 (no crypto module in the app) ──
 const K = [

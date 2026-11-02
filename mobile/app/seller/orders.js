@@ -9,6 +9,7 @@ import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { MagnifyingGlassIcon, SlidersHorizontalIcon, XIcon } from '../../src/lib/icons';
 import apiClient from '../../src/api/client';
 import { toast } from '../../src/lib/toast';
+import { resolveImg } from '../../src/lib/media';
 import { getCacheEntry, setCachedData } from '../../src/lib/dataCache';
 import SellerPage, { sellerPageStyles } from '../../src/components/seller/SellerPage';
 import { SellerChip } from '../../src/components/seller/SellerChips';
@@ -316,9 +317,41 @@ export default function SellerOrdersScreen() {
     handleStatusChange(orderId, newStatus);
   };
 
+  const requestProofChange = (order) => {
+    setProofRequest({
+      orderId: order.id,
+      kind: order.fulfillmentMethod === 'PICKUP' ? 'PICKUP' : 'DELIVERY',
+      orderNumber: order.orderNumber,
+      replacing: true,
+      currentSrc: order.fulfillmentProofUrl ? resolveImg(order.fulfillmentProofUrl) : null,
+    });
+  };
+
+  // Change the photo on an order handed over and still waiting for the buyer.
+  const replaceProof = async (orderId, proofUrl) => {
+    setUpdatingId(orderId);
+    try {
+      const res = await apiClient.patch(`/orders/${orderId}/fulfillment-proof`, { proofUrl });
+      applyOrderUpdate(orderId, {
+        fulfillmentProofUrl: res.data?.fulfillmentProofUrl,
+        fulfillmentProofAt: res.data?.fulfillmentProofAt,
+      });
+      toast.success('Photo updated');
+      return true;
+    } catch (err) {
+      toast.error(err.message || 'Failed to update the photo');
+      if (err.status === 409) loadOrders();
+      return false;
+    } finally {
+      setUpdatingId(null);
+    }
+  };
+
   const confirmProof = async (proofUrl) => {
     if (!proofRequest) return false;
-    const ok = await handleStatusChange(proofRequest.orderId, proofRequest.status, proofUrl);
+    const ok = proofRequest.replacing
+      ? await replaceProof(proofRequest.orderId, proofUrl)
+      : await handleStatusChange(proofRequest.orderId, proofRequest.status, proofUrl);
     if (ok) setProofRequest(null);
     return ok;
   };
@@ -497,6 +530,12 @@ export default function SellerOrdersScreen() {
   return (
     <SellerPage scroll={false}>
       <FlatList showsVerticalScrollIndicator={false} showsHorizontalScrollIndicator={false}
+        // Rows far off screen are detached rather than kept mounted;
+        // React Native's default keeps about twenty-one screens of them.
+        removeClippedSubviews
+        initialNumToRender={8}
+        maxToRenderPerBatch={8}
+        windowSize={7}
         ref={listRef}
         data={isLoading ? [] : orders}
         keyExtractor={(o) => o.id}
@@ -542,6 +581,7 @@ export default function SellerOrdersScreen() {
         updatingId={updatingId}
         verifyingId={verifyingId}
         onStep={requestStatusChange}
+        onChangeProof={requestProofChange}
         onPayment={handlePaymentDecision}
         onReject={(orderId) => setRejectConfirm({ orderId })}
         onRefund={(orderId) => setRefundConfirm({ orderId })}
@@ -570,6 +610,8 @@ export default function SellerOrdersScreen() {
         open={Boolean(proofRequest)}
         kind={proofRequest?.kind}
         orderNumber={proofRequest?.orderNumber}
+        replacing={Boolean(proofRequest?.replacing)}
+        currentSrc={proofRequest?.currentSrc}
         onCancel={() => setProofRequest(null)}
         onConfirm={confirmProof}
       />

@@ -1,22 +1,11 @@
 import { useEffect, useState } from 'react';
-import { Image, StyleSheet, View } from 'react-native';
-import apiClient from '../../api/client';
-import { resolveImg } from '../../lib/media';
+import { StyleSheet, View } from 'react-native';
+import { Image } from 'expo-image';
+import { sizedImg } from '../../lib/media';
+import useProductPlaceholder from '../../lib/productPlaceholder';
 import { t, themed } from '../../theme';
 
 const BRAND_ICON = require('../../../assets/brand-icon.png');
-
-let placeholder = null;
-let asked = null;
-const loadPlaceholder = () => {
-  asked = asked || apiClient.get('/app-settings')
-    .then((res) => {
-      const value = res?.data?.productPlaceholder;
-      placeholder = value && value !== '/brand-icon.png' ? resolveImg(value) : null;
-    })
-    .catch(() => {});
-  return asked;
-};
 
 /**
  * A product picture in a chat: the product card in a message, the
@@ -25,24 +14,33 @@ const loadPlaceholder = () => {
  * stretch every <img> to 100% with object-fit: cover, so the no-photo
  * placeholder's faint logo fills the whole tile instead of the usual 70%,
  * also when a photo fails to load.
+ *
+ * Same engine as ProductImage: expo-image for the disk cache and off-thread
+ * decoding, and the server's small copy rather than the stored original.
+ * A chat scrolls fast and these are small, so w320 is the right size.
  */
-export default function ChatProductThumb({ src, style }) {
-  const uri = src ? resolveImg(src) : null;
+export default function ChatProductThumb({ src, style, width = 64 }) {
+  const uri = src ? sizedImg(src, width) : null;
   const [failed, setFailed] = useState(false);
-  const [custom, setCustom] = useState(placeholder);
+  const custom = useProductPlaceholder(!uri || failed);
   useEffect(() => { setFailed(false); }, [uri]);
-  useEffect(() => {
-    if (uri && !failed) return undefined;
-    let live = true;
-    loadPlaceholder().then(() => { if (live) setCustom(placeholder); });
-    return () => { live = false; };
-  }, [uri, failed]);
+
   if (uri && !failed) {
-    return <Image source={{ uri }} style={[styles.image, style]} resizeMode="cover" onError={() => setFailed(true)} />;
+    return (
+      <Image
+        source={{ uri }}
+        style={[styles.image, style]}
+        contentFit="cover"
+        cachePolicy="memory-disk"
+        recyclingKey={uri}
+        transition={120}
+        onError={() => setFailed(true)}
+      />
+    );
   }
   return (
     <View style={[styles.fallback, style]} accessibilityRole="image" accessibilityLabel="Product image unavailable">
-      <Image source={custom ? { uri: custom } : BRAND_ICON} style={styles.mark} resizeMode="cover" />
+      <Image source={custom ? { uri: custom } : BRAND_ICON} style={styles.mark} contentFit="cover" />
     </View>
   );
 }

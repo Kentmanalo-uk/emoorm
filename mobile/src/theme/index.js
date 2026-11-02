@@ -30,6 +30,7 @@
  * changes, and src/store/themeStore.js remembers the choice.
  */
 import { useSyncExternalStore } from 'react';
+import { Platform } from 'react-native';
 import { PALETTES } from './palettes';
 
 /* ── Which palette is live ─────────────────────────────────────────────── */
@@ -172,9 +173,85 @@ export const ink = (alpha) => `rgba(${palette().inkRgb}, ${alpha})`;
  * component needs whole, write a function that returns a fresh object
  * instead, and call it where it is used.
  */
+/*
+ * Shadows on Android, in one place.
+ *
+ * React Native draws `boxShadow` itself: it blurs a real layer, and the
+ * cost grows with the blur radius, every time the view is drawn. Android
+ * has its own shadow in `elevation`, drawn by the platform's RenderNode,
+ * cached and hardware-accelerated -- the same depth for a fraction of the
+ * work. The app had 119 hand-written boxShadows, so rather than edit them
+ * all, every style built through themed() is swapped on the way out.
+ *
+ * The depth cue is kept on purpose: a white card on a white page is told
+ * apart by its shadow, and dropping it flat would cost real contrast.
+ * Set ANDROID_SHADOWS to 'off' below for no shadow at all.
+ *
+ * Two kinds are left alone, because elevation cannot express them:
+ * inset shadows, and zero-blur ones, which are hairlines drawn as a
+ * shadow and cost nothing to blur anyway.
+ */
+const ANDROID_SHADOWS = 'elevation'; // 'elevation' | 'off' | 'keep'
+
+/** How see-through a colour is; 1 when it does not say. */
+const alphaOf = (color) => {
+  if (typeof color !== 'string') return 1;
+  const rgba = /rgba?\([^,]+,[^,]+,[^,]+,\s*([\d.]+)\s*\)/.exec(color);
+  if (rgba) return Number(rgba[1]);
+  const hex8 = /^#[0-9a-f]{6}([0-9a-f]{2})$/i.exec(color.trim());
+  if (hex8) return parseInt(hex8[1], 16) / 255;
+  const hex4 = /^#[0-9a-f]{3}([0-9a-f])$/i.exec(color.trim());
+  if (hex4) return parseInt(hex4[1] + hex4[1], 16) / 255;
+  return 1;
+};
+
+/**
+ * The elevation that reads like this shadow did.
+ *
+ * Blur alone is not enough: most of these are 6-12% black, which is a
+ * hint of depth, and matching their blur with elevation alone would come
+ * out heavier than the shadow it replaced. So the blur sets the size and
+ * the alpha scales it, against 18% as "a normal shadow". Capped at 6
+ * because elevation also decides what draws on top of what on Android,
+ * and a card has no business rising above the bars.
+ */
+const elevationFor = (blur, color) => {
+  const weight = Math.min(1.6, alphaOf(color) / 0.18);
+  return Math.max(1, Math.min(6, Math.round((blur / 3) * weight)));
+};
+
+const androidShadow = (style) => {
+  const list = style?.boxShadow;
+  if (!Array.isArray(list) || list.length === 0) return style;
+  if (list.some((s) => s?.inset)) return style;
+  const widest = list.reduce((a, b) => ((Number(b?.blurRadius) || 0) > (Number(a?.blurRadius) || 0) ? b : a));
+  const blur = Number(widest?.blurRadius) || 0;
+  if (blur === 0) return style;
+
+  const { boxShadow, ...rest } = style;
+  if (ANDROID_SHADOWS === 'off') return rest;
+  return {
+    ...rest,
+    elevation: elevationFor(blur, widest?.color),
+    // Tints the elevation shadow on Android 9 and newer; older versions
+    // draw it in their own grey, which is what they did before anyway.
+    shadowColor: widest?.color ?? '#000',
+  };
+};
+
+const forPlatform = (sheet) => {
+  if (Platform.OS !== 'android' || ANDROID_SHADOWS === 'keep') return sheet;
+  const out = {};
+  for (const key of Object.keys(sheet)) {
+    const style = sheet[key];
+    out[key] = style && typeof style === 'object' && !Array.isArray(style) ? androidShadow(style) : style;
+  }
+  return out;
+};
+
 export const themed = (build) => {
   const copies = {};
-  const copy = () => (copies[active] || (copies[active] = build()));
+  const copy = () => (copies[active] || (copies[active] = forPlatform(build())));
   return new Proxy({}, {
     get: (_, key) => copy()[key],
     has: (_, key) => key in copy(),

@@ -823,7 +823,42 @@ const cancelOrder = async (id, actorId = null, options = {}) => {
   return result;
 };
 
+/**
+ * Swap the hand-over photo on an order still waiting for the buyer. The
+ * status is the condition of the write and returns are checked in the same
+ * transaction, so an order that completed or gained a return a moment ago
+ * keeps the photo it had.
+ * @returns {Promise<Object>} The order's proof fields
+ */
+const replaceFulfillmentProof = async (id, { expectedStatus, proofUrl, proofAt, actorId, note }) => (
+  prisma.$transaction(async (tx) => {
+    const returns = await tx.returnRequest.count({ where: { orderId: id, status: { not: 'CANCELLED' } } });
+    if (returns > 0) {
+      const error = new Error('This order has a return');
+      error.code = 'ORDER_HAS_RETURN';
+      throw error;
+    }
+    const changed = await tx.order.updateMany({
+      where: { id, status: expectedStatus },
+      data: { fulfillmentProofUrl: proofUrl, fulfillmentProofAt: proofAt },
+    });
+    if (changed.count === 0) {
+      const error = new Error('Order status changed before this action completed');
+      error.code = 'STALE_ORDER_STATUS';
+      throw error;
+    }
+    await tx.orderStatusHistory.create({
+      data: { orderId: id, fromStatus: expectedStatus, toStatus: expectedStatus, actorId, note },
+    });
+    return tx.order.findUnique({
+      where: { id },
+      select: { id: true, status: true, fulfillmentProofUrl: true, fulfillmentProofAt: true },
+    });
+  })
+);
+
 module.exports = {
+  replaceFulfillmentProof,
   countStoreStages,
   createOrder,
   createOrderWithItems,

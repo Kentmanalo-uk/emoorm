@@ -54,7 +54,7 @@
         "foregroundImage": "./assets/android-icon-foreground.png",
         "monochromeImage": "./assets/android-icon-monochrome.png"
       },
-      "versionCode": 17,
+      "versionCode": 18,
       "intentFilters": [
         {
           "action": "VIEW",

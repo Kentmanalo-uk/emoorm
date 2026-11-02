@@ -1,0 +1,262 @@
+/* A product's photos, full screen (PhotoViewer.jsx). Black throughout:
+   the picture is the subject, and anything else competing with it is in
+   the way. */
+.pv {
+  position: fixed;
+  inset: 0;
+  z-index: 1200;
+  display: grid;
+  grid-template-rows: auto 1fr auto;
+  /* One column that cannot grow past the screen. Without it the column is
+     sized `auto`, which takes its floor from the track's min-content --
+     five slides side by side -- and every row ends up wider than the
+     viewport, pushing the share button and the buy button off the edge. */
+  grid-template-columns: minmax(0, 1fr);
+  background: #000;
+  color: #fff;
+  overscroll-behavior: contain;
+}
+
+/* Close, the count, share. */
+.pv-top {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 8px;
+  padding: max(8px, env(safe-area-inset-top)) 8px 8px;
+}
+
+.pv-icon {
+  display: grid;
+  place-items: center;
+  width: 40px;
+  height: 40px;
+  border: 0;
+  border-radius: 50%;
+  background: transparent;
+  color: #fff;
+  cursor: pointer;
+  transition: background 0.15s ease;
+}
+
+.pv-icon:hover,
+.pv-icon:focus-visible {
+  background: rgba(255, 255, 255, 0.14);
+}
+
+.pv-count {
+  font-size: 15px;
+  font-weight: 600;
+  font-variant-numeric: tabular-nums;
+}
+
+/* The photos. */
+.pv-stage {
+  position: relative;
+  min-width: 0;
+  min-height: 0;
+  overflow: hidden;
+}
+
+.pv-track {
+  display: flex;
+  height: 100%;
+  overflow-x: auto;
+  overflow-y: hidden;
+  scroll-snap-type: x mandatory;
+  scrollbar-width: none;
+}
+
+.pv-track::-webkit-scrollbar {
+  display: none;
+}
+
+/* While a photo is zoomed the drag belongs to it, not to the track. */
+.pv-track.is-locked {
+  overflow-x: hidden;
+  scroll-snap-type: none;
+}
+
+.pv-slide {
+  flex: 0 0 100%;
+  width: 100%;
+  height: 100%;
+  scroll-snap-align: start;
+}
+
+/* Flex, not grid: an `auto` grid row takes its height from the image, so
+   the image's own `max-height: 100%` would be measured against itself and
+   a tall photo would run off the bottom of the screen. A flex line has a
+   definite height to measure against. */
+.pv-shot {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  width: 100%;
+  height: 100%;
+  overflow: hidden;
+  touch-action: pan-x;
+  cursor: zoom-in;
+}
+
+.pv-shot.is-zoomed {
+  /* The browser must not pan or pinch it: both are handled here, and the
+     two together fight each other. */
+  touch-action: none;
+  cursor: grab;
+}
+
+.pv-shot img {
+  display: block;
+  max-width: 100%;
+  max-height: 100%;
+  object-fit: contain;
+  user-select: none;
+  -webkit-user-drag: none;
+}
+
+/* Only a pinch is animated away; a drag must track the finger exactly. */
+.pv-shot:not(.is-zoomed) img {
+  transition: transform 0.2s ease-out;
+}
+
+/* Desktop arrows. Phones swipe, so they are hidden there. */
+.pv-nav {
+  position: absolute;
+  top: 50%;
+  display: grid;
+  place-items: center;
+  width: 44px;
+  height: 44px;
+  border: 0;
+  border-radius: 50%;
+  background: rgba(255, 255, 255, 0.14);
+  color: #fff;
+  cursor: pointer;
+  translate: 0 -50%;
+  transition: background 0.15s ease, opacity 0.15s ease;
+}
+
+.pv-nav:hover {
+  background: rgba(255, 255, 255, 0.26);
+}
+
+.pv-nav:disabled {
+  opacity: 0.3;
+  cursor: default;
+}
+
+.pv-nav.is-prev { left: 16px; }
+.pv-nav.is-next { right: 16px; }
+
+/* Phones swipe. At that width an arrow would sit on the photo and be
+   half the reason the viewer exists. */
+@media (hover: none), (max-width: 640px) {
+  .pv-nav { display: none; }
+}
+
+/* The rail, and what the photo is of. */
+.pv-foot {
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+  padding: 10px 12px max(12px, env(safe-area-inset-bottom));
+}
+
+.pv-rail {
+  display: flex;
+  gap: 8px;
+  overflow-x: auto;
+  scrollbar-width: none;
+}
+
+.pv-rail::-webkit-scrollbar {
+  display: none;
+}
+
+.pv-thumb {
+  flex: 0 0 auto;
+  width: 56px;
+  height: 56px;
+  padding: 0;
+  overflow: hidden;
+  border: 2px solid transparent;
+  border-radius: 8px;
+  background: #111;
+  cursor: pointer;
+  opacity: 0.55;
+  transition: opacity 0.15s ease, border-color 0.15s ease;
+}
+
+.pv-thumb:hover {
+  opacity: 0.85;
+}
+
+/* The one you are on, in the brand's green rather than a borrowed red. */
+.pv-thumb.is-on {
+  border-color: var(--t-primary-400, #34d399);
+  opacity: 1;
+}
+
+.pv-thumb img {
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+}
+
+.pv-buy {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+}
+
+.pv-what {
+  flex: 1;
+  min-width: 0;
+}
+
+.pv-name {
+  margin: 0;
+  overflow: hidden;
+  font-size: 14px;
+  font-weight: 500;
+  line-height: 19px;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.pv-price {
+  margin: 2px 0 0;
+  font-size: 19px;
+  font-weight: 700;
+  line-height: 24px;
+  color: var(--t-accent-300, #f9a8d4);
+}
+
+.pv-cta {
+  flex: 0 0 auto;
+  height: 40px;
+  padding: 0 22px;
+  border: 0;
+  border-radius: 20px;
+  background: var(--t-primary-600, #047857);
+  color: #fff;
+  font-size: 14.5px;
+  font-weight: 600;
+  cursor: pointer;
+  transition: filter 0.15s ease;
+}
+
+.pv-cta:hover {
+  filter: brightness(1.1);
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .pv-shot img,
+  .pv-icon,
+  .pv-nav,
+  .pv-thumb,
+  .pv-cta {
+    transition: none;
+  }
+}

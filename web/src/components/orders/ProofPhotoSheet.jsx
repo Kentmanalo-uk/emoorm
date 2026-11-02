@@ -22,8 +22,13 @@ import './ProofPhotoSheet.css';
  * upload says why and offers Try again; Retake / Change photo swap it. When
  * the status change itself fails (onConfirm answers false), the sheet stays
  * open with the photo already up, so a retry doesn't send it again.
+ *
+ * With `replacing` it changes the photo on an order already handed over:
+ * `currentSrc` shows the photo there now until a new one is picked.
  */
-export default function ProofPhotoSheet({ open, kind = 'DELIVERY', orderNumber, onCancel, onConfirm }) {
+export default function ProofPhotoSheet({
+  open, kind = 'DELIVERY', orderNumber, onCancel, onConfirm, replacing = false, currentSrc = null,
+}) {
   const { mounted, closing } = useSheetPresence(open);
   // photo: { file, preview, status: 'uploading' | 'ready' | 'failed', url, error }
   const [photo, setPhoto] = useState(null);
@@ -56,7 +61,10 @@ export default function ProofPhotoSheet({ open, kind = 'DELIVERY', orderNumber, 
   const hint = pickup
     ? 'Take a photo of the order being handed to the buyer at your pickup point.'
     : 'Take a photo of the order at the delivery address, ideally with the buyer or at their door.';
-  const action = pickup ? 'Mark picked up' : 'Mark delivered';
+  const action = replacing ? 'Save photo' : (pickup ? 'Mark picked up' : 'Mark delivered');
+  const note = replacing
+    ? 'The new photo replaces this one. The buyer is told, and can see it on their order.'
+    : `${hint} The buyer can see this photo on their order.`;
 
   const send = async (file) => {
     attempt.current += 1;
@@ -108,23 +116,24 @@ export default function ProofPhotoSheet({ open, kind = 'DELIVERY', orderNumber, 
             {orderNumber && <p className="proof-order">Order {orderNumber}</p>}
           </div>
         </div>
-        <p className="proof-hint">{hint} The buyer can see this photo on their order.</p>
+        <p className="proof-hint">{note}</p>
 
-        {photo ? (
+        {photo || currentSrc ? (
           <>
-            <div className={`proof-preview is-${photo.status}`}>
-              <img src={photo.preview} alt={`${title} preview`} />
-              {photo.status === 'uploading' && (
+            <div className={`proof-preview is-${photo?.status || 'current'}`}>
+              <img src={photo?.preview || currentSrc} alt={`${title} preview`} />
+              {!photo && <div className="proof-state is-uploading">Current photo</div>}
+              {photo?.status === 'uploading' && (
                 <div className="proof-state is-uploading" role="status">
                   <CircleNotch size={18} className="animate-spin" /> Uploading photo…
                 </div>
               )}
-              {photo.status === 'ready' && (
+              {photo?.status === 'ready' && (
                 <div className="proof-state is-ready" role="status">
                   <CheckCircle size={18} weight="fill" /> Photo added
                 </div>
               )}
-              {photo.status === 'failed' && (
+              {photo?.status === 'failed' && (
                 <div className="proof-state is-failed" role="alert">
                   <span className="proof-error"><WarningCircle size={18} weight="fill" /> {photo.error}</span>
                   <button type="button" className="proof-try-again" onClick={() => send(photo.file)}>

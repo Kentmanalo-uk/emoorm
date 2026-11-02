@@ -1,4 +1,5 @@
-import { Share, StyleSheet, Text, View, useWindowDimensions } from 'react-native';
+import { StyleSheet, Text, View, useWindowDimensions } from 'react-native';
+import { openShare } from '../ShareSheet';
 import { useRouter } from 'expo-router';
 import {
   ArrowSquareOutIcon, HandCoinsIcon, HeartIcon, MapPinIcon, ShareNetworkIcon, ShoppingCartIcon, SlidersHorizontalIcon,
@@ -74,9 +75,9 @@ export function useProductPeek() {
       try {
         const url = `https://emoorm.shop/product/${p.slug}`;
         const { price } = saleInfo(p);
-        await Share.share({
+        openShare({
           title: p.name,
-          message: `${p.name} — ${startsFrom(p) ? 'from ' : ''}${priceText(price)}${priceUnit(p)} on E-MOORM ${url}`,
+          text: `${p.name} — ${startsFrom(p) ? 'from ' : ''}${priceText(price)}${priceUnit(p)} on E-MOORM`,
           url,
         });
       } catch {

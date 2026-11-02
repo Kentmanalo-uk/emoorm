@@ -5,16 +5,18 @@ import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import Svg, { Defs, LinearGradient, Rect, Stop } from 'react-native-svg';
 import {
   ArrowCounterClockwiseIcon, BellIcon, CaretRightIcon, ChatTextIcon, EnvelopeSimpleIcon, EyeIcon, GearIcon, InfoIcon, ScanIcon,
-  HandshakeIcon, HeartIcon, LifebuoyIcon, FlagIcon, MapPinIcon, PackageIcon, PencilSimpleIcon, QuestionIcon, ShoppingBagIcon,
+  HandshakeIcon, HeartIcon, LifebuoyIcon, FlagIcon, MapPinIcon, PackageIcon, QuestionIcon, ShoppingBagIcon,
   StarIcon, StorefrontIcon, UsersThreeIcon,
 } from '../../src/lib/icons';
 import apiClient from '../../src/api/client';
 import { resolveImg } from '../../src/lib/media';
+import Avatar from '../../src/components/avatars/Avatar';
 import { toast } from '../../src/lib/toast';
 import { getCacheEntry, refreshCachedData } from '../../src/lib/dataCache';
 import useAuthStore from '../../src/store/authStore';
 import useWishlistStore from '../../src/store/wishlistStore';
 import ShellBarButton from '../../src/components/ShellBarButton';
+import { GoogleMark } from '../../src/components/auth/AuthForm';
 import { useTabBarScroll } from '../../src/components/Glass';
 import ShellPageMenu from '../../src/components/ShellPageMenu';
 import LoadingSkeleton from '../../src/components/LoadingSkeleton';
@@ -131,18 +133,50 @@ function SignedIn() {
 
   const name = profile?.fullName || user?.fullName || 'Your account';
   const email = profile?.email || user?.email;
-  const photo = resolveImg(profile?.profilePhoto || user?.profilePhoto);
+  // From the store, not the snapshot: a picture picked a moment ago is
+  // already here, and clearing a photo is not undone by a stale one.
+  const photo = resolveImg(user?.profilePhoto ?? profile?.profilePhoto);
+  const avatarKey = user?.avatarKey ?? profile?.avatarKey;
+  /*
+   * Signed up (or in) with Continue with Google: the picture wears a small
+   * Google mark, so it is obvious which way back in to use. It stands for
+   * the address being confirmed as well, and needs nothing else to say so:
+   * signing in through Google sets isVerified itself (auth.service.js), so
+   * every account with a googleId is already a confirmed one.
+   *
+   * This did briefly also require isVerified, which only ever subtracted:
+   * one missing or late flag and the mark vanished from an account that
+   * plainly had Google behind it.
+   *
+   * googleId is the third fallback because signing in through Google hands
+   * back the account with that id on it but no hasGoogle -- the flag is
+   * made by getProfile, which has not run yet. Without this the mark was
+   * missing for the first seconds after a Google sign-in, which is exactly
+   * when someone would look for it.
+   */
+  /*
+   * On for everyone, for now, by request.
+   *
+   * The real test is the line under it and is still computed, so putting
+   * this back is a one-word change: set ALWAYS to false. While it stands,
+   * every account wears the mark, including ones made with an email and a
+   * password, which cannot sign in through Google at all -- so the badge
+   * is decoration here rather than a fact about the account.
+   */
+  const ALWAYS = true;
+  const linkedToGoogle = Boolean(profile?.hasGoogle ?? user?.hasGoogle ?? user?.googleId);
+  const usesGoogle = ALWAYS || linkedToGoogle;
 
   const header = (
     <ProfileHeader>
       {/* Log in on a computer: scan the website's "Log in with QR" code (qr-scan). */}
       {user?.id ? (
         <ShellBarButton label="Scan to log in on a computer" onPress={() => router.push('/qr-scan')}>
-          <ScanIcon size={20} color={t.neutral[700]} />
+          <ScanIcon size={28} color={t.neutral[700]} />
         </ShellBarButton>
       ) : null}
       <ShellBarButton label="Settings" onPress={() => router.push('/settings')}>
-        <GearIcon size={19} color={t.neutral[700]} />
+        <GearIcon size={28} color={t.neutral[700]} />
       </ShellBarButton>
       <ShellPageMenu
         extra={user?.id ? [{ key: 'public', Icon: EyeIcon, label: 'View public profile', to: `/u/${user.id}` }] : []}
@@ -169,8 +203,20 @@ function SignedIn() {
             onPress={() => router.push('/edit-profile')}
             style={({ pressed }) => [styles.id, pressed && styles.pressed]}
           >
-            <View style={styles.avatar}>
-              {photo ? <Image source={{ uri: photo }} style={styles.avatarImg} /> : <AvatarTint><GradientUserIcon size={64} /></AvatarTint>}
+            <View style={styles.avatarWrap}>
+              <View style={styles.avatar}>
+                {photo
+                  ? <Image source={{ uri: photo }} style={styles.avatarImg} />
+                  : <Avatar seed={user?.id} name={avatarKey} size={64} />}
+              </View>
+              {usesGoogle ? (
+                <View
+                  style={styles.googleMark}
+                  accessibilityLabel={linkedToGoogle ? 'Signed in with Google, email confirmed' : 'Google'}
+                >
+                  <GoogleMark size={16} />
+                </View>
+              ) : null}
             </View>
             <View style={styles.idText}>
               <Text style={styles.name} numberOfLines={1}>{name}</Text>
@@ -180,16 +226,12 @@ function SignedIn() {
                   {emailUnverified ? <Text style={styles.unverified}>Unverified</Text> : null}
                 </View>
               ) : null}
-              <View style={styles.editLink}>
-                <PencilSimpleIcon size={12} weight="bold" color={t.primary[700]} />
-                <Text style={styles.editText}>Edit profile</Text>
-              </View>
             </View>
             <CaretRightIcon size={18} color={t.neutral[300]} />
           </Pressable>
           {emailUnverified ? (
             <View style={styles.confirm} accessibilityRole="summary">
-              <EnvelopeSimpleIcon size={20} weight="fill" color={t.warning[600]} />
+              <EnvelopeSimpleIcon size={29} weight="fill" color={t.warning[600]} />
               <View style={styles.confirmText}>
                 <Text style={styles.confirmTitle}>Confirm your email</Text>
                 <Text style={styles.confirmBody}>Open the link we sent to your inbox.</Text>
@@ -258,7 +300,7 @@ function Guest() {
         header={(
           <ProfileHeader>
             <ShellBarButton label="Help and support" onPress={() => router.push('/help-center')}>
-              <QuestionIcon size={19} color={t.neutral[700]} />
+              <QuestionIcon size={28} color={t.neutral[700]} />
             </ShellBarButton>
             <ShellPageMenu />
           </ProfileHeader>
@@ -375,7 +417,7 @@ function Purchase({ counts, onOpen }) {
           return (
             <Pressable key={label} accessibilityRole="link" accessibilityLabel={label} onPress={() => onOpen(`/orders?status=${status}`)} style={styles.purchaseItem}>
               <View style={styles.purchaseIcon}>
-                <GreenToolIcon name={icon} size={27} />
+                <GreenToolIcon name={icon} size={29} />
                 {count > 0 ? (
                   <View style={styles.badge}><Text style={styles.badgeText}>{count > 99 ? '99+' : count}</Text></View>
                 ) : null}
@@ -457,18 +499,47 @@ const styles = themed(() => StyleSheet.create({
   card: { borderBottomWidth: 8, borderBottomColor: t.neutral[100] },
   id: { flexDirection: 'row', alignItems: 'center', gap: 14, padding: 16 },
   pressed: { backgroundColor: t.neutral[50] },
-  avatar: { width: 64, height: 64, borderRadius: 32, overflow: 'hidden', backgroundColor: t.primary[50] },
+  // The avatar clips what is inside it, so the mark sits in a wrapper
+  // around it rather than in the circle.
+  avatarWrap: { width: 64, height: 64 },
+  avatar: {
+    width: 64, height: 64, borderRadius: 32, overflow: 'hidden', backgroundColor: t.primary[50],
+    boxShadow: `0px 0px 0px 1px ${t.neutral[200]}`,
+  },
+  /*
+   * The G sits on the picture's edge at the lower right, white disc
+   * first so it reads against a dark photo as well as a pale avatar.
+   * -3 puts its centre on the circle itself rather than beside it, which
+   * is what makes it look attached rather than dropped next to.
+   */
+  googleMark: {
+    position: 'absolute',
+    right: -3,
+    bottom: -3,
+    width: 26,
+    height: 26,
+    borderRadius: 13,
+    alignItems: 'center',
+    justifyContent: 'center',
+    // No ring and no shadow: the white disc is enough to lift it off the
+    // picture, and an outline round a four-colour mark only muddies it.
+    backgroundColor: t.neutral[0],
+  },
   avatarImg: { width: 64, height: 64 },
-  idText: { flex: 1, minWidth: 0, gap: 2 },
-  name: { fontSize: 19, lineHeight: 30.4, color: t.neutral[900], ...font(500) },
+  idText: { flex: 1, minWidth: 0, gap: 1 },
+  /*
+   * Both lines carried body leading -- 1.6 times their own size -- and
+   * half of that sits above the text and half below, so the name and the
+   * email were held about 12pt apart by nothing but air. At heading
+   * leading they read as the pair they are.
+   */
+  name: { fontSize: 19, lineHeight: 24, color: t.neutral[900], ...font(500) },
   emailLine: { flexDirection: 'row', alignItems: 'center', minWidth: 0 },
-  email: { flexShrink: 1, fontSize: 14, lineHeight: 22.4, color: t.neutral[500], ...font(400) },
+  email: { flexShrink: 1, fontSize: 14, lineHeight: 18, color: t.neutral[500], ...font(400) },
   unverified: {
     flexShrink: 0, marginLeft: 6, paddingHorizontal: 8, borderRadius: 999, overflow: 'hidden',
     backgroundColor: t.warning[50], color: t.warning[700], fontSize: 11, lineHeight: 18, ...font(500),
   },
-  editLink: { flexDirection: 'row', alignItems: 'center', gap: 4, marginTop: 4 },
-  editText: { fontSize: 13.5, lineHeight: 21.6, color: t.primary[700], ...font(500) },
   guestText: { fontSize: 14, lineHeight: 20.3, color: t.neutral[500], ...font(400) },
   guestActions: { flexDirection: 'row', gap: 10, paddingHorizontal: 16, paddingBottom: 16 },
   guestBtn: {

@@ -1095,7 +1095,7 @@ const styles = themed(() => StyleSheet.create({
   modeTick: {
     width: 22, height: 22, borderRadius: 11, borderWidth: 2, borderColor: t.neutral[300], alignItems: 'center', justifyContent: 'center',
   },
-  modeTickOn: { bordercolor: t.onBrand, backgroundColor: t.neutral[0] },
+  modeTickOn: { borderColor: t.onBrand, backgroundColor: t.neutral[0] },
   modeLabel: { fontSize: 16.5, lineHeight: 21, color: t.primary[700], ...font(500) },
   modeLabel3: { fontSize: 15, lineHeight: 19 },
   modeLabelOn: { color: t.onBrand },

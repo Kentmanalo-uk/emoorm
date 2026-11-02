@@ -153,7 +153,7 @@ function IntroCard({ firstName, onAsk }) {
       <View style={styles.introInner}>
         <GradientFill colors={['rgba(236, 72, 153, 0.06)', 'rgba(16, 185, 129, 0.06)']} radius={16.5} />
         <View style={styles.introHead}>
-          <MoormyAvatar size={44} glow />
+          <MoormyAvatar size={44} />
           <View style={styles.introText}>
             <View style={styles.introName}>
               <Text style={styles.introNameText}>Ate Moormy</Text>

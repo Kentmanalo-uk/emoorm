@@ -184,6 +184,51 @@ volume if you containerise, or every deploy deletes everyone's photos.
 
 ---
 
+## 5a. Google sign-in in the Android app
+
+The app signs in through Play Services rather than a browser: Google hands
+it an ID token made out to the **Web** client, and the server checks that
+audience (`GOOGLE_CLIENT_ID`). The Android client is never named in the
+app — Google finds it from the package name and the certificate the build
+was signed with.
+
+That is the whole of the configuration, and the whole of what goes wrong.
+
+In **Google Cloud → APIs & Services → Credentials**, the OAuth client of
+type **Android** must have:
+
+- package name `shop.emoorm.app`
+- the SHA-1 of **every** certificate a build in people's hands may carry
+
+There is usually more than one, and this is the part that catches people:
+
+| How it was installed | Certificate | Where its SHA-1 comes from |
+|---|---|---|
+| APK from emoorm.shop/app, or side-loaded | the upload key | `node apk/build.cjs` prints it, or keytool on `apk/keystore` |
+| From Play, with Play App Signing | **Google's own key, not yours** | Play Console → Test and release → Setup → App signing |
+
+With Play App Signing, Google re-signs the uploaded `.aab` with a key you
+never hold. A build from Play therefore reports a different SHA-1 from the
+one you uploaded with, and if only the upload key is listed, sign-in fails
+on Play installs while working perfectly on a side-loaded APK. List both.
+
+The same two fingerprints belong in `web/public/.well-known/assetlinks.json`
+for App Links, except that file takes the **SHA-256** of each, and
+`sha256_cert_fingerprints` is an array for exactly this reason.
+
+**When it is wrong** the app shows "Google sign-in is not set up for this
+version of the app", and `adb logcat` carries the detail:
+
+```
+[google] sign-in failed (10): DEVELOPER_ERROR: Follow troubleshooting instructions at …
+```
+
+Code 10 is `CommonStatusCodes.DEVELOPER_ERROR`: Google refusing the app,
+not the person. Nothing in the app can fix it — the certificate has to be
+added to the OAuth client. Changes there take a few minutes to take effect.
+
+---
+
 ## 6. Security checklist
 
 - [ ] `NODE_ENV=production` — otherwise API errors include stack traces

@@ -200,6 +200,12 @@
   margin: 0 -20px;
 }
 
+.order-proof-edit {
+  width: fit-content;
+  margin-top: 8px;
+  padding: 0 14px;
+}
+
 /* Shown on an order: the hand-over photo with its time. */
 .order-proof {
   display: flex;

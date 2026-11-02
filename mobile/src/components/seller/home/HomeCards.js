@@ -6,11 +6,11 @@ import { resolveImg } from '../../../lib/media';
 import { variationImage } from '../../../lib/variationImage';
 import EmptyState from '../../EmptyState';
 import LoadingSkeleton from '../../LoadingSkeleton';
-import { GradientIcon, TOOL_GRADIENTS } from '../../inbox/InboxGradient';
 import { sellerHref } from '../sellerRoutes';
 import {
-  HOME_TOOLS, STATUS_COLORS, STATUS_META, formatNumber, orderDay,
+  STATUS_COLORS, STATUS_META, formatNumber, orderDay,
 } from './homeLib';
+import { HOME_TOOLS } from './sellerTools';
 import { PageLoader } from '../../BrandLoader';
 
 /*
@@ -108,19 +108,24 @@ export function HomeNumbers({ numbers }) {
   );
 }
 
-/** Shop tools (.sh-tools): a filled icon in the tool's own gradient, nothing behind it. */
+/**
+ * Shop tools (.sh-tools): the tool's own flat mark, nothing behind it.
+ *
+ * Eight here, the ones a seller opens most days; the arrow opens the
+ * rest, grouped (app/seller/tools.js).
+ */
 export function HomeTools() {
   const router = useRouter();
   return (
     <HomeSection>
-      <HomeHead title="Shop tools" />
+      <HomeHead title="Shop tools" link="All tools" onLink={() => router.push('/seller/tools')} />
       <View style={styles.tools}>
-        {HOME_TOOLS.map(({ to, label, Icon, tone }) => (
+        {HOME_TOOLS.map(({ to, label, Art, tone }) => (
           <Pressable key={to} accessibilityRole="link" accessibilityLabel={label} onPress={() => router.push(to)} style={styles.tool}>
             {({ pressed }) => (
               <>
                 <View style={[styles.toolIcon, pressed && styles.toolIconPressed]}>
-                  <GradientIcon Icon={Icon} size={30} colors={TOOL_GRADIENTS[tone]} />
+                  <Art size={36} tone={tone} />
                 </View>
                 <Text style={styles.toolLabel}>{label}</Text>
               </>
@@ -235,7 +240,7 @@ function OrderRow({ order, first, onPress }) {
       <View style={styles.orderImg}>
         {photo
           ? <Image source={{ uri: resolveImg(photo) }} style={styles.orderPhoto} resizeMode="cover" />
-          : <PackageIcon size={22} weight="fill" color={t.neutral[300]} />}
+          : <PackageIcon size={29} weight="fill" color={t.neutral[300]} />}
       </View>
       <View style={styles.orderBody}>
         <Text style={styles.orderName} numberOfLines={1}>
@@ -271,7 +276,7 @@ export function HomeRunningLow({ items, last }) {
           onPress={() => router.push('/seller/products')}
           style={({ pressed }) => [styles.lowRow, i > 0 && styles.lowLine, pressed && styles.pressed]}
         >
-          <View style={styles.lowIcon}><WarningCircleIcon size={19} weight="fill" color={t.warning[500]} /></View>
+          <View style={styles.lowIcon}><WarningCircleIcon size={29} weight="fill" color={t.warning[500]} /></View>
           <Text style={styles.lowLabel} numberOfLines={1}>{prod.name}</Text>
           <Text style={styles.lowHint}>{prod.stock} left</Text>
           <CaretRightIcon size={16} color={t.neutral[300]} />
@@ -331,7 +336,7 @@ const styles = themed(() => StyleSheet.create({
   // Four columns, 18px between rows and 4px between columns.
   tools: { flexDirection: 'row', flexWrap: 'wrap', rowGap: 18, marginHorizontal: -2, paddingBottom: 2 },
   tool: { width: '25%', minWidth: 0, alignItems: 'center', gap: 6, paddingHorizontal: 2 },
-  toolIcon: { height: 34, alignItems: 'center', justifyContent: 'center' },
+  toolIcon: { height: 36, alignItems: 'center', justifyContent: 'center' },
   toolIconPressed: { opacity: 0.7 },
   toolLabel: { fontSize: 12.5, lineHeight: 15.6, color: t.neutral[700], textAlign: 'center', ...font(400) },
 

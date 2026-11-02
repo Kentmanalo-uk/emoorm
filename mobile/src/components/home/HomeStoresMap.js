@@ -330,7 +330,7 @@ const styles = themed(() => StyleSheet.create({
   pinOnTop: { zIndex: 2 },
   // The phone's spot: a blue dot in a soft halo.
   me: { position: 'absolute', width: 28, height: 28, borderRadius: 14, alignItems: 'center', justifyContent: 'center', backgroundColor: 'rgba(37, 99, 235, 0.18)' },
-  meDot: { width: 14, height: 14, borderRadius: 7, borderWidth: 2.5, bordercolor: t.onBrand, backgroundColor: '#2563eb' },
+  meDot: { width: 14, height: 14, borderRadius: 7, borderWidth: 2.5, borderColor: t.onBrand, backgroundColor: '#2563eb' },
   // Leaflet's zoom control (touch size).
   zoom: {
     position: 'absolute', borderWidth: 2, borderColor: 'rgba(0, 0, 0, 0.2)', borderRadius: 4,

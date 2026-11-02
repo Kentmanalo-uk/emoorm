@@ -1220,43 +1220,6 @@
     background: var(--t-neutral-0, #fff);
   }
 
-  .shop-m-band {
-    display: flex;
-    align-items: center;
-    justify-content: space-between;
-    gap: 10px;
-    width: 100%;
-    padding: 9px 14px;
-    border: none;
-    background: linear-gradient(90deg, color-mix(in srgb, var(--shop-primary) 8%, #fff), var(--t-accent-50, #fdf2f8));
-    cursor: pointer;
-  }
-
-  .shop-m-band-brand {
-    display: inline-flex;
-    align-items: center;
-    gap: 5px;
-    color: color-mix(in srgb, var(--shop-primary) 63%, #000);
-    font-size: 13px;
-    font-weight: 800;
-  }
-
-  .shop-m-band-seal {
-    color: var(--shop-primary);
-  }
-
-  .shop-m-band-perks {
-    display: inline-flex;
-    align-items: center;
-    gap: 3px;
-    min-width: 0;
-    overflow: hidden;
-    color: var(--t-accent-700, #be185d);
-    font-size: 12.5px;
-    font-weight: 600;
-    white-space: nowrap;
-  }
-
   .shop-m-main {
     display: flex;
     align-items: center;
@@ -1403,7 +1366,6 @@
     gap: 10px;
     margin: 0 14px 14px;
     padding: 10px 10px 10px 12px;
-    border: 1px solid color-mix(in srgb, var(--shop-primary) 18%, #fff);
     border-radius: 12px;
     background: color-mix(in srgb, var(--shop-primary) 8%, #fff);
   }

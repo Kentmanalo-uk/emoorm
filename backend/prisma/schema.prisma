@@ -331,6 +331,10 @@ model User {
   username      String?   @unique @map("username") @db.VarChar(20)
   contactNumber String?   @map("contact_number")
   profilePhoto  String?   @map("profile_photo")
+  // The avatar a person picked (mobile/src/components/avatars). Null is the
+  // ordinary case: with no photo and no choice, the avatar is worked out
+  // from the account's own id, so nobody is ever shown a blank.
+  avatarKey     String?   @map("avatar_key") @db.VarChar(16)
 
   // Google OAuth linkage (nullable — populated when the user signs in via Google).
   googleId      String?   @unique @map("google_id")
@@ -1550,6 +1554,13 @@ model WishlistItem {
   @@map("wishlist_items")
 }
 
+/// How a reviewer chose to be named on their own review.
+enum ReviewIdentity {
+  NAME
+  USERNAME
+  ANONYMOUS
+}
+
 model Review {
   id        String   @id @default(uuid())
 
@@ -1561,6 +1572,12 @@ model Review {
 
   rating    Int      // 1-5
   comment   String?  @db.Text
+
+  /// Whose name goes on it. ANONYMOUS is enforced in review.service.js,
+  /// which strips the name, the username, the photo and the user id from
+  /// the payload -- a rule the client applies is one anybody can read
+  /// straight out of the response.
+  displayAs ReviewIdentity @default(NAME) @map("display_as")
 
   images    Json?    // Array of image URLs
   videoUrl  String?  @map("video_url")

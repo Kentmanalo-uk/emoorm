@@ -8,6 +8,7 @@ import Layout from '../components/layout/Layout';
 import PhoneFrame from '../components/ui/PhoneFrame';
 import useSeo from '../lib/seo';
 import useAuthStore from '../store/authStore';
+import useAppSettings, { fillSettingTokens } from '../hooks/useAppSettings';
 import {
   LESSONS, STAGES, lessonNumber, readDone, totalMinutes, writeDone,
 } from '../lib/sellerAcademy';
@@ -172,6 +173,11 @@ function LessonCard({ lesson, done }) {
 /* ── One lesson ───────────────────────────────────────────────── */
 
 function LessonPage({ lesson, done, onDone, isSeller }) {
+  // The teaching text cannot name the confirm window: a super admin can
+  // change it, and a lesson saying 48 hours while the orders page counts
+  // down three days teaches the wrong thing. {{confirmWindow}} is filled
+  // from the live setting, as the assistants do server-side.
+  const { settings } = useAppSettings();
   useSeo({ title: `${lesson.title} · Seller Academy`, description: lesson.summary, path: `/sell/academy/${lesson.slug}` });
   const index = LESSONS.indexOf(lesson);
   const prev = LESSONS[index - 1];
@@ -271,7 +277,7 @@ function LessonPage({ lesson, done, onDone, isSeller }) {
                       <span className="sa-step-num">{i + 1}</span>
                       <div>
                         <strong>{s.title}</strong>
-                        <p>{s.text}</p>
+                        <p>{fillSettingTokens(s.text, settings)}</p>
                       </div>
                       {s.screen && (
                         <span className="sa-step-see" aria-hidden="true">

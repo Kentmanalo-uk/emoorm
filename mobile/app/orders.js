@@ -1,6 +1,6 @@
 import { useCallback, useEffect, useRef, useState } from 'react';
 import {
-  Pressable, RefreshControl, ScrollView, StyleSheet, Text, View,
+  FlatList, Pressable, RefreshControl, StyleSheet, Text, View,
 } from 'react-native';
 import { useFocusEffect, useLocalSearchParams, useRouter } from 'expo-router';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
@@ -109,11 +109,8 @@ export default function Orders() {
   const [cancelTarget, setCancelTarget] = useState(null);
   const [cancelling, setCancelling] = useState(false);
   const scrollRef = useRef(null);
-  const cardY = useRef({});
-  const listY = useRef(0);
 
   const tabCounts = countBuyerTabs(orders);
-  const filteredOrders = activeTab === 'all' ? orders : orders.filter((o) => buyerBucket(o) === activeTab);
 
   // A link can name a tab (/orders?status=to_pay).
   useEffect(() => { if (params.status) setActiveTab(buyerTabFrom(params.status)); }, [params.status]);
@@ -129,6 +126,15 @@ export default function Orders() {
     }
   }, []);
   const unreviewedItems = (order) => (order.items || []).filter((it) => pendingReviews[it.productId]);
+  // Finished, and still waiting to be rated.
+  const awaitingReview = (order) => buyerBucket(order) === 'completed' && unreviewedItems(order).length > 0;
+
+  const filteredOrders = activeTab === 'all'
+    ? orders
+    : activeTab === 'to_review'
+      ? orders.filter(awaitingReview)
+      : orders.filter((o) => buyerBucket(o) === activeTab);
+  tabCounts.to_review = orders.filter(awaitingReview).length;
 
   const fetchOrders = useCallback(async () => {
     if (!cachedOrders) setIsLoading(true);
@@ -273,9 +279,12 @@ export default function Orders() {
     if (needsPayment(match)) {
       setActiveTab('to_pay');
       setProofOrderId(match.id);
+      // The list is virtualised, so the card may not be mounted yet:
+      // scrollToIndex builds it on the way rather than needing a Y that
+      // only exists once it has been laid out.
       setTimeout(() => {
-        const y = cardY.current[match.id];
-        if (y != null) scrollRef.current?.scrollTo({ y: Math.max(0, listY.current + y - 120), animated: true });
+        const at = orders.filter((o) => buyerBucket(o) === 'to_pay').findIndex((o) => o.id === match.id);
+        if (at >= 0) scrollRef.current?.scrollToIndex({ index: at, viewOffset: 120, animated: true });
       }, 400);
       return;
     }
@@ -368,75 +377,93 @@ export default function Orders() {
   return (
     <View style={styles.screen}>
       {header}
-      <ScrollView showsVerticalScrollIndicator={false} showsHorizontalScrollIndicator={false}
+      <FlatList
         ref={scrollRef}
+        data={filteredOrders}
+        keyExtractor={(order) => order.id}
+        renderItem={({ item: order }) => (
+          <OrderCard
+            order={order}
+            badge={stageBadge(order)}
+            unreviewed={order.status === 'COMPLETED' ? unreviewedItems(order) : []}
+            buttons={cardButtons(order)}
+            onStore={() => order.store?.slug && router.push(`/store/${order.store.slug}`)}
+            onStar={(item, n) => reviewOrder(order, item, { initialRating: n })}
+            onRateItems={() => router.push('/reviews?tab=pending')}
+            payForm={proofOrderId === order.id ? (
+              <OrderPayForm
+                key={`pay-${order.id}`}
+                order={order}
+                apiClient={apiClient}
+                onCancel={() => setProofOrderId(null)}
+                onDone={() => { setProofOrderId(null); fetchOrders(); }}
+              />
+            ) : null}
+          />
+        )}
+        showsVerticalScrollIndicator={false}
+        showsHorizontalScrollIndicator={false}
         style={styles.scroll}
         contentContainerStyle={[styles.content, { paddingBottom: 16 + insets.bottom }, filteredOrders.length === 0 && styles.grow]}
         refreshControl={<RefreshControl refreshing={refreshing} onRefresh={() => { setRefreshing(true); fetchOrders(); loadPendingReviews(); }} colors={[t.primary[600]]} />}
         keyboardShouldPersistTaps="handled"
-      >
-        <OrderTabs
-          tabs={BUYER_TABS}
-          active={activeTab}
-          onChange={setActiveTab}
-          // Counts on the tabs that need something from the buyer (as on Shopee).
-          counts={{
-            to_pay: tabCounts.to_pay, to_ship: tabCounts.to_ship, to_receive: tabCounts.to_receive, to_pickup: tabCounts.to_pickup,
-          }}
-        />
+        // An order card is tall and expensive: a couple of screenfuls is
+        // plenty to keep built, and the rest are detached on Android.
+        removeClippedSubviews
+        initialNumToRender={4}
+        maxToRenderPerBatch={4}
+        windowSize={5}
+        // A deep link may ask for a card far down the list before it has
+        // been measured; this is how far to guess while getting there.
+        onScrollToIndexFailed={({ index, averageItemLength }) => {
+          scrollRef.current?.scrollToOffset({ offset: index * (averageItemLength || 320), animated: true });
+        }}
+        ListHeaderComponent={(
+          <>
+            <OrderTabs
+              tabs={BUYER_TABS}
+              active={activeTab}
+              onChange={setActiveTab}
+              // Counts on the tabs that need something from the buyer.
+              counts={{
+                to_pay: tabCounts.to_pay,
+                to_ship: tabCounts.to_ship,
+                to_receive: tabCounts.to_receive,
+                to_pickup: tabCounts.to_pickup,
+                to_review: tabCounts.to_review,
+              }}
+            />
 
-        {loadFailed && orders.length === 0 ? (
-          <OrdersEmpty
-            page
-            art="orders"
-            title={'Your orders couldn’t be loaded'}
-            hint="Check your connection and try again."
-            button="Try again"
-            onPress={fetchOrders}
-          />
-        ) : filteredOrders.length === 0 ? (
-          <OrdersEmpty
-            page
-            art="orders"
-            title="No orders found"
-            hint="You haven't placed any orders in this category yet."
-            button="Browse Products"
-            onPress={() => router.push('/products')}
-          />
-        ) : (
-          <View style={styles.list} onLayout={(e) => { listY.current = e.nativeEvent.layout.y; }}>
-            {filteredOrders.map((order) => (
-              <View key={order.id} onLayout={(e) => { cardY.current[order.id] = e.nativeEvent.layout.y; }}>
-                <OrderCard
-                  order={order}
-                  badge={stageBadge(order)}
-                  unreviewed={order.status === 'COMPLETED' ? unreviewedItems(order) : []}
-                  buttons={cardButtons(order)}
-                  onStore={() => order.store?.slug && router.push(`/store/${order.store.slug}`)}
-                  onStar={(item, n) => reviewOrder(order, item, { initialRating: n })}
-                  onRateItems={() => router.push('/reviews?tab=pending')}
-                  payForm={proofOrderId === order.id ? (
-                    <OrderPayForm
-                      key={`pay-${order.id}`}
-                      order={order}
-                      apiClient={apiClient}
-                      onCancel={() => setProofOrderId(null)}
-                      onDone={() => { setProofOrderId(null); fetchOrders(); }}
-                    />
-                  ) : null}
-                />
-              </View>
-            ))}
-          </View>
+            {loadFailed && orders.length === 0 ? (
+              <OrdersEmpty
+                page
+                art="orders"
+                title={'Your orders couldn’t be loaded'}
+                hint="Check your connection and try again."
+                button="Try again"
+                onPress={fetchOrders}
+              />
+            ) : filteredOrders.length === 0 ? (
+              <OrdersEmpty
+                page
+                art="orders"
+                title="No orders found"
+                hint="You haven't placed any orders in this category yet."
+                button="Browse Products"
+                onPress={() => router.push('/products')}
+              />
+            ) : null}
+          </>
         )}
-
-        {/* Older orders, 50 at a time. */}
-        {hasMore && !loadFailed ? (
-          <Pressable accessibilityRole="button" onPress={loadMoreOrders} disabled={loadingMore} style={[styles.more, loadingMore && { opacity: 0.6 }]}>
-            <Text style={styles.moreText}>{loadingMore ? 'Loading…' : 'Show more orders'}</Text>
-          </Pressable>
-        ) : null}
-      </ScrollView>
+        ListFooterComponent={(
+          /* Older orders, 50 at a time. */
+          hasMore && !loadFailed ? (
+            <Pressable accessibilityRole="button" onPress={loadMoreOrders} disabled={loadingMore} style={[styles.more, loadingMore && { opacity: 0.6 }]}>
+              <Text style={styles.moreText}>{loadingMore ? 'Loading…' : 'Show more orders'}</Text>
+            </Pressable>
+          ) : null
+        )}
+      />
 
       <OrderDetailsSheet
         open={showOrderDetails && Boolean(selectedOrder)}
@@ -595,7 +622,10 @@ function InfoRow({ label, value, total = false }) {
 const styles = themed(() => StyleSheet.create({
   screen: { flex: 1, backgroundColor: t.neutral[0] },
   scroll: { flex: 1 },
-  content: { paddingTop: 24, paddingHorizontal: 12, gap: 12 },
+  // No top padding: this is the list's content box and the tabs are the
+  // first thing in it, so any padding here is a gap under the header
+  // rather than space above the cards. The tabs bring their own.
+  content: { paddingTop: 0, paddingHorizontal: 12, gap: 12 },
   grow: { flexGrow: 1 },
   list: { gap: 12 },
 

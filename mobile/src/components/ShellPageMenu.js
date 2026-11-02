@@ -151,7 +151,7 @@ export default function ShellPageMenu({ extra = [], items: override, label = 'Pa
         accessibilityState={{ expanded }}
       >
         <Animated.View style={{ transform: [{ rotate }] }}>
-          <DotsThreeIcon size={22} weight="bold" color={expanded ? t.primary[700] : t.neutral[700]} />
+          <DotsThreeIcon size={28} weight="bold" color={expanded ? t.primary[700] : t.neutral[700]} />
         </Animated.View>
       </ShellBarButton>
       <Modal visible={open} transparent animationType="none" statusBarTranslucent onRequestClose={() => hide()}>
@@ -183,7 +183,7 @@ function MenuRow({ item: it, index, onPress }) {
   return (
     <Animated.View style={menuRowStyle(enter)}>
       <Pressable accessibilityRole="menuitem" onPress={onPress} style={({ pressed }) => [styles.row, pressed && styles.rowPressed]}>
-        {Icon ? <Icon size={24} weight="light" color={color} /> : null}
+        {Icon ? <Icon size={28} weight="light" color={color} /> : null}
         <Text style={[styles.rowText, { color }]} numberOfLines={1}>{it.label}</Text>
       </Pressable>
     </Animated.View>
@@ -204,7 +204,10 @@ const styles = themed(() => StyleSheet.create({
   },
   // iOS 26: the glass is the panel; the website's white and shadow go.
   popGlass: { backgroundColor: 'transparent', boxShadow: undefined, overflow: 'hidden' },
-  row: { flexDirection: 'row', alignItems: 'center', gap: 10, paddingVertical: 11, paddingHorizontal: 12, borderRadius: 10 },
+  // The icon is the header's size now, so the row does not also need
+  // generous height: 8 keeps the list compact instead of spreading a
+  // short menu down the screen.
+  row: { flexDirection: 'row', alignItems: 'center', gap: 10, paddingVertical: 8, paddingHorizontal: 12, borderRadius: 10 },
   rowPressed: { backgroundColor: t.neutral[100] },
   rowText: { fontSize: 14, lineHeight: 22.4, ...font(400) },
 }));

@@ -49,7 +49,7 @@ export default function InboxLoginGate({ page }) {
       <InboxTopGap gap={12} />
       <InboxPageHead title={gate.heading} padLeft={16} padRight={8} toolGap={2}>
         <ShellBarButton label={`Search ${gate.heading.toLowerCase()}: log in first`} onPress={toLogin}>
-          <MagnifyingGlassIcon size={19} color={t.neutral[700]} />
+          <MagnifyingGlassIcon size={28} color={t.neutral[700]} />
         </ShellBarButton>
         <ShellPageMenu label={`${gate.heading} options`} items={gate.menu.map((m) => ({ ...m, onPress: toLogin }))} />
       </InboxPageHead>

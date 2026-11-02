@@ -1,5 +1,5 @@
 import { useEffect, useState } from 'react';
-import { Image, Pressable, ScrollView, StyleSheet, Text, View, useWindowDimensions } from 'react-native';
+import { FlatList, Image, Pressable, StyleSheet, Text, View, useWindowDimensions } from 'react-native';
 import { useRouter } from 'expo-router';
 import { PackageIcon, ShoppingCartIcon, TrashIcon } from '../src/lib/icons';
 import ScreenHeader from '../src/components/ScreenHeader';
@@ -14,6 +14,7 @@ import { saleInfo } from '../src/lib/variantPricing';
 import { isLivestock } from '../src/components/orders/orderLines';
 import { toast } from '../src/lib/toast';
 import { useProductPeek } from '../src/components/peek/ProductPeek';
+import { GRID_BLEED, GRID_GAP, gridCellWidth } from '../src/lib/productGrid';
 import { font, t, themed, veil } from '../src/theme';
 
 /**
@@ -30,7 +31,7 @@ export default function Wishlist() {
   const addItem = useCartStore((s) => s.addItem);
   const [confirmOpen, setConfirmOpen] = useState(false);
   const { width } = useWindowDimensions();
-  const cardWidth = Math.floor(((width - 24 - 10) / 2) * 100) / 100;
+  const cardWidth = gridCellWidth(width);
 
   // The account's saved list (the website's store loads it on sign-in).
   useEffect(() => { if (isAuthenticated) syncWishlist(); }, [isAuthenticated]);
@@ -63,8 +64,35 @@ export default function Wishlist() {
   return (
     <View style={styles.screen}>
       <ScreenHeader title="My Wishlist" backTo="/profile" />
-      <ScrollView showsVerticalScrollIndicator={false} showsHorizontalScrollIndicator={false} style={{ flex: 1 }} contentContainerStyle={styles.content}>
-        {items.length > 0 ? (
+      <FlatList
+        // Saved items arrive in one response with no paging, so this is
+        // as long as the person has been saving; only what is on screen
+        // gets built.
+        data={items}
+        keyExtractor={(product) => product.id}
+        numColumns={2}
+        columnWrapperStyle={styles.gridRow}
+        renderItem={({ item: product }) => (
+          <WishlistCard
+            width={cardWidth}
+            product={product}
+            onOpen={() => router.push(`/product/${product.slug}`)}
+            onStore={() => product.store?.slug && router.push(`/store/${product.store.slug}`)}
+            onAddToCart={handleAddToCart}
+            onRemove={handleRemove}
+          />
+        )}
+        showsVerticalScrollIndicator={false}
+        showsHorizontalScrollIndicator={false}
+        style={{ flex: 1 }}
+        contentContainerStyle={styles.content}
+        removeClippedSubviews
+        initialNumToRender={6}
+        maxToRenderPerBatch={6}
+        windowSize={7}
+        ListHeaderComponent={(
+          <>
+            {items.length > 0 ? (
           <View style={styles.header}>
             <Pressable
               accessibilityRole="button"
@@ -81,31 +109,19 @@ export default function Wishlist() {
           </View>
         ) : null}
 
-        {items.length === 0 ? (
-          <ProfileEmpty
-            page
-            art="wishlist"
-            title="Your wishlist is empty"
-            hint="Save products you love and come back to them anytime."
-            action="Browse Products"
-            onAction={() => router.push('/products')}
-          />
-        ) : (
-          <View style={styles.grid}>
-            {items.map((product) => (
-              <WishlistCard
-                key={product.id}
-                width={cardWidth}
-                product={product}
-                onOpen={() => router.push(`/product/${product.slug}`)}
-                onStore={() => product.store?.slug && router.push(`/store/${product.store.slug}`)}
-                onAddToCart={handleAddToCart}
-                onRemove={handleRemove}
+            {items.length === 0 ? (
+              <ProfileEmpty
+                page
+                art="wishlist"
+                title="Your wishlist is empty"
+                hint="Save products you love and come back to them anytime."
+                action="Browse Products"
+                onAction={() => router.push('/products')}
               />
-            ))}
-          </View>
+            ) : null}
+          </>
         )}
-      </ScrollView>
+      />
 
       <CartConfirmDialog
         open={confirmOpen}
@@ -186,7 +202,7 @@ const styles = themed(() => StyleSheet.create({
   clearPressed: { backgroundColor: t.danger[50] },
   clearText: { fontSize: 13, lineHeight: 15.6, color: t.neutral[500], ...font(400) },
 
-  grid: { flexDirection: 'row', flexWrap: 'wrap', columnGap: 10, rowGap: 10 },
+  gridRow: { gap: GRID_GAP, marginBottom: GRID_GAP, marginHorizontal: GRID_BLEED },
   card: { borderRadius: 12, overflow: 'hidden', backgroundColor: t.neutral[0] },
   imgWrap: { width: '100%', aspectRatio: 1, overflow: 'hidden', backgroundColor: t.neutral[50] },
   img: { width: '100%', height: '100%' },

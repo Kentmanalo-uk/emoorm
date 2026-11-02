@@ -554,11 +554,6 @@ export default function StoreDetail() {
   });
 
   const goBack = () => (window.history.length > 1 ? navigate(-1) : navigate('/stores'));
-  const perkLabels = [
-    offersDelivery && 'Delivery',
-    offersPickup && 'Pickup',
-    store.acceptsCod && 'COD',
-  ].filter(Boolean);
   const activeCategoryName = categories.find((c) => c.id === activeCategory)?.name;
   const priceSort = sortKey === 'price_asc' || sortKey === 'price_desc';
   const openSearch = () => {
@@ -612,17 +607,6 @@ export default function StoreDetail() {
               </div>
 
               <div className="shop-m-card">
-                <button type="button" className="shop-m-band" onClick={() => setMobileTab('about')}>
-                  <span className="shop-m-band-brand">
-                    <Storefront size={15} weight="fill" /> Local shop
-                    {store.owner?.identityVerified && <SealCheck size={14} weight="fill" className="shop-m-band-seal" />}
-                  </span>
-                  <span className="shop-m-band-perks">
-                    {perkLabels.length ? perkLabels.join(' · ') : (store.municipality?.name || 'Oriental Mindoro')}
-                    <ChevronRight size={13} weight="bold" />
-                  </span>
-                </button>
-
                 <div className="shop-m-main">
                   <div className="shop-m-logo">
                     {store.logo ? <img src={resolveImg(store.logo)} alt="" /> : <span>{initials}</span>}

@@ -38,11 +38,18 @@ export default function TabsLayout() {
       setNotificationCount(0);
       return undefined;
     }
-    const interval = setInterval(refreshBadges, 30000);
+    // Only while the app is in front. A timer keeps firing with the
+    // app in the background -- a request every 30 seconds, waking the
+    // radio, for counts nobody is looking at. Nothing is lost by
+    // stopping: the listener below refreshes the moment it comes back.
+    let interval = null;
+    const start = () => { interval = interval || setInterval(refreshBadges, 30000); };
+    const stop = () => { if (interval) { clearInterval(interval); interval = null; } };
+    if (AppState.currentState === 'active') start();
     const subscription = AppState.addEventListener('change', (state) => {
-      if (state === 'active') refreshBadges();
+      if (state === 'active') { refreshBadges(); start(); } else stop();
     });
-    return () => { clearInterval(interval); subscription.remove(); };
+    return () => { stop(); subscription.remove(); };
   }, [isAuthenticated, refreshBadges]);
 
   // Opening a tab (reading chats there, say) refreshes the counts.

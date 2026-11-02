@@ -8,6 +8,7 @@ const {
   paymentProofValidation,
   verifyPaymentValidation,
   statusUpdateValidation,
+  fulfillmentProofValidation,
   rejectInvalid,
 } = require('../validators/order.validator');
 
@@ -89,6 +90,16 @@ router.put(
   statusUpdateValidation,
   rejectInvalid,
   orderController.updateOrderStatus
+);
+
+// The hand-over photo, while the order waits for the buyer.
+router.patch(
+  '/:id/fulfillment-proof',
+  authenticate,
+  authorize('SELLER'),
+  fulfillmentProofValidation,
+  rejectInvalid,
+  orderController.replaceFulfillmentProof
 );
 
 // Sellers decide their own orders' payments; admins no longer do.

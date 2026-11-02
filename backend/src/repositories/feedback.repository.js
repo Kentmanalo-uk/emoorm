@@ -20,6 +20,7 @@ const AUTHOR_SELECT = {
     username: true,
     email: true,
     profilePhoto: true,
+    avatarKey: true,
     role: true,
     municipality: { select: { id: true, name: true } },
   },

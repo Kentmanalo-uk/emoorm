@@ -195,7 +195,7 @@ const exportData = async (userId) => {
     where: { id: userId },
     select: {
       id: true, email: true, username: true, fullName: true, contactNumber: true, role: true,
-      address: true, barangay: true, province: true, profilePhoto: true, isVerified: true,
+      address: true, barangay: true, province: true, profilePhoto: true, avatarKey: true, isVerified: true,
       mfaEnabled: true, googleId: true, createdAt: true, updatedAt: true,
       municipality: { select: { name: true } },
       phoneVerifiedAt: true, phoneVerifiedNumber: true,

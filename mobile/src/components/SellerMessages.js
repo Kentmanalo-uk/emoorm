@@ -180,6 +180,12 @@ export default function SellerMessages() {
 
   return (
     <FlatList showsVerticalScrollIndicator={false} showsHorizontalScrollIndicator={false}
+      // Rows far off screen are detached rather than kept mounted;
+      // React Native's default keeps about twenty-one screens of them.
+      removeClippedSubviews
+      initialNumToRender={8}
+      maxToRenderPerBatch={8}
+      windowSize={7}
       {...tabScroll}
       style={styles.screen}
       contentContainerStyle={styles.content}

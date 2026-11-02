@@ -1,11 +1,11 @@
 import { Stack, usePathname, useRouter } from 'expo-router';
-import { Observe, ObserveRoot, useObserve } from 'expo-observe';
+import { Observe, ObserveRoot, useObserve } from '../src/lib/observe';
 import * as SplashScreen from 'expo-splash-screen';
 import * as Font from 'expo-font';
 import { loadFontsByFetch } from '../src/lib/devFonts';
 import { SafeAreaProvider } from 'react-native-safe-area-context';
 import { StatusBar } from 'expo-status-bar';
-import { Fragment, useEffect, useState } from 'react';
+import { Fragment, useEffect, useState, useRef } from 'react';
 import { View, StyleSheet, Text, TextInput } from 'react-native';
 import Toast from 'react-native-toast-message';
 import {
@@ -20,10 +20,12 @@ import useAuthStore from '../src/store/authStore';
 import { activeScheme, colors, fontFamily, themed } from '../src/theme';
 import ThemeGate from '../src/theme/ThemeGate';
 import { useResolvedScheme } from '../src/store/themeStore';
+
 import { toastConfig } from '../src/lib/toast';
 import { AccountSwitchHost } from '../src/components/RoleSwitchOverlay';
 import { liquidGlass } from '../src/components/Glass';
 import { AccountSheetHost } from '../src/components/AccountSheet';
+import { ShareSheetHost } from '../src/components/ShareSheet';
 import { HeroFlightHost } from '../src/components/HeroFlight';
 import BrandSplash from '../src/components/BrandSplash';
 import { LoaderOverlayHost } from '../src/components/BrandLoader';
@@ -163,13 +165,25 @@ function AppRoot() {
   }, [hydrate]);
 
 
+  // Opening the app never puts the Log in page in front of someone. A
+  // dev build reopening its last screen, or a notification tapped while
+  // signed out, could land a visitor on a page that needs an account, and
+  // the first thing they saw was a sign-in form with nothing behind it.
+  // The app now opens at Home and asks for an account only once they
+  // reach for something that needs one -- as the website does.
+  const opened = useRef(false);
   useEffect(() => {
-    if (isHydrated && fontsLoaded && requiresLogin) {
-      // The Seller Center and the seller application sign in on the seller
-      // login, as the website's /seller/login.
-      const seller = pathname === '/seller' || pathname.startsWith('/seller/') || pathname.startsWith('/seller-');
-      router.replace({ pathname: seller ? '/seller-login' : '/login', params: { redirect: pathname } });
+    if (!isHydrated || !fontsLoaded) return;
+    if (!requiresLogin) { opened.current = true; return; }
+    if (!opened.current) {
+      opened.current = true;
+      router.replace('/');
+      return;
     }
+    // The Seller Center and the seller application sign in on the seller
+    // login, as the website's /seller/login.
+    const seller = pathname === '/seller' || pathname.startsWith('/seller/') || pathname.startsWith('/seller-');
+    router.replace({ pathname: seller ? '/seller-login' : '/login', params: { redirect: pathname } });
   }, [fontsLoaded, isHydrated, pathname, requiresLogin, router]);
 
   // The app is "interactive" when the opening splash lifts and the first
@@ -230,6 +244,7 @@ function AppRoot() {
       {/* The account switch's fade-out runs over whichever page it lands on. */}
       <AccountSwitchHost />
       <AccountSheetHost />
+      <ShareSheetHost />
       {/* Settings → Switch account: the accounts saved on this phone. */}
       <SwitchAccountHost />
       {/* The loader in the middle of the screen while a page loads (PageLoader). */}

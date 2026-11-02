@@ -79,6 +79,12 @@ export default function SelectProduct() {
         <ListSkeleton rows={6} imageSize={52} />
       ) : (
         <FlatList showsVerticalScrollIndicator={false} showsHorizontalScrollIndicator={false}
+          // Rows far off screen are detached rather than kept mounted;
+          // React Native's default keeps about twenty-one screens of them.
+          removeClippedSubviews
+          initialNumToRender={8}
+          maxToRenderPerBatch={8}
+          windowSize={7}
           data={filteredProducts}
           keyExtractor={(item) => item.id}
           contentContainerStyle={filteredProducts.length ? styles.list : styles.emptyList}

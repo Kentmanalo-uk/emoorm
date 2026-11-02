@@ -7,6 +7,7 @@ import {
   ImageIcon, StarIcon, TrashIcon, VideoIcon,
 } from '../../lib/icons';
 import apiClient from '../../api/client';
+import useAuthStore from '../../store/authStore';
 import { resolveImg } from '../../lib/media';
 import { toast } from '../../lib/toast';
 import { uploadReview } from '../../lib/upload';
@@ -39,6 +40,8 @@ export default function OrderReviewSheet({ target, onClose, onSuccess }) {
 function ReviewForm({ target, onClose, onSuccess }) {
   const { product = {}, orderId, initialRating = 0, intro, existing } = target;
   const editing = Boolean(existing?.id);
+  const me = useAuthStore((st) => st.user);
+  const [displayAs, setDisplayAs] = useState(existing?.displayAs || 'NAME');
   const [rating, setRating] = useState(existing?.rating || initialRating || 0);
   const [comment, setComment] = useState(existing?.comment || '');
   const [images, setImages] = useState([]);
@@ -81,7 +84,7 @@ function ReviewForm({ target, onClose, onSuccess }) {
         toast.success('Review updated');
       } else {
         await uploadReview({
-          productId: product.id, orderId, rating, comment: comment.trim(), images, video,
+          productId: product.id, orderId, rating, comment: comment.trim(), images, video, displayAs,
         });
         toast.success('Thanks for your review!');
       }
@@ -135,6 +138,34 @@ function ReviewForm({ target, onClose, onSuccess }) {
             textAlignVertical="top"
           />
           <Text style={styles.count}>{comment.length}/1000</Text>
+
+          <View style={styles.who}>
+            <Text style={styles.label}>Show my name as</Text>
+            <View style={styles.choices}>
+              {[
+                { key: 'NAME', label: me?.fullName || 'My name' },
+                { key: 'USERNAME', label: me?.username ? `@${me.username}` : 'My username', off: !me?.username },
+                { key: 'ANONYMOUS', label: 'Anonymous' },
+              ].map((choice) => {
+                const on = displayAs === choice.key;
+                return (
+                  <Pressable
+                    key={choice.key}
+                    accessibilityRole="radio"
+                    accessibilityState={{ selected: on, disabled: Boolean(choice.off) }}
+                    disabled={choice.off}
+                    onPress={() => setDisplayAs(choice.key)}
+                    style={[styles.choice, on && styles.choiceOn, choice.off && styles.choiceOff]}
+                  >
+                    <Text style={[styles.choiceText, on && styles.choiceTextOn]} numberOfLines={1}>{choice.label}</Text>
+                  </Pressable>
+                );
+              })}
+            </View>
+            {displayAs === 'ANONYMOUS' ? (
+              <Text style={styles.whoNote}>Your photo is hidden too — the review shows a drawn avatar instead.</Text>
+            ) : null}
+          </View>
 
           {!editing ? (
             <View style={styles.media}>
@@ -224,6 +255,17 @@ const styles = themed(() => StyleSheet.create({
   productImg: { width: 48, height: 48, borderRadius: 8, borderWidth: 1, borderColor: t.neutral[200] },
   productName: { flex: 1, minWidth: 0, fontSize: 14, lineHeight: 19.6, ...font(500), color: t.neutral[700] },
   label: { marginBottom: 8, fontSize: 13, lineHeight: 20.8, ...font(500), color: t.neutral[700] },
+  who: { marginTop: 14, paddingTop: 14, borderTopWidth: 1, borderTopColor: t.neutral[100] },
+  choices: { flexDirection: 'row', flexWrap: 'wrap', gap: 8 },
+  choice: {
+    flexShrink: 1, minWidth: 0, maxWidth: '100%', paddingVertical: 7, paddingHorizontal: 13, borderRadius: 999,
+    borderWidth: 1, borderColor: t.neutral[200], backgroundColor: t.neutral[0],
+  },
+  choiceOn: { borderColor: t.primary[600], backgroundColor: t.primary[50] },
+  choiceOff: { opacity: 0.45 },
+  choiceText: { fontSize: 13, lineHeight: 18, ...font(400), color: t.neutral[700] },
+  choiceTextOn: { color: t.primary[700], ...font(500) },
+  whoNote: { marginTop: 8, fontSize: 12, lineHeight: 17, ...font(400), color: t.neutral[500] },
   stars: { flexDirection: 'row', gap: 2, marginBottom: 4 },
   star: { minWidth: 44, minHeight: 44, alignItems: 'center', justifyContent: 'center' },
   starOn: { transform: [{ scale: 1.1 }] },

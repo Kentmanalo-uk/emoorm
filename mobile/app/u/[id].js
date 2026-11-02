@@ -1,6 +1,6 @@
 import { useCallback, useEffect, useState } from 'react';
 import {
-  Image, Pressable, ScrollView, StyleSheet, Text, View, useWindowDimensions,
+  Pressable, ScrollView, StyleSheet, Text, View, useWindowDimensions,
 } from 'react-native';
 import { Redirect, useLocalSearchParams, useRouter } from 'expo-router';
 import {
@@ -8,7 +8,7 @@ import {
 } from '../../src/lib/icons';
 import apiClient from '../../src/api/client';
 import PublicHeader from '../../src/components/public/PublicHeader';
-import { resolveImg } from '../../src/lib/media';
+import UserAvatar from '../../src/components/UserAvatar';
 import toast from '../../src/lib/toast';
 import { font, t, text, themed } from '../../src/theme';
 
@@ -25,18 +25,6 @@ const monthYear = (value) => {
   const date = new Date(value);
   return Number.isNaN(date.getTime()) ? '' : `${MONTHS[date.getMonth()]} ${date.getFullYear()}`;
 };
-
-function Avatar({ src, name }) {
-  const [failed, setFailed] = useState(false);
-  const uri = src ? resolveImg(src) : null;
-  return (
-    <View style={styles.avatar}>
-      {uri && !failed
-        ? <Image source={{ uri }} style={styles.avatarImg} onError={() => setFailed(true)} accessibilityLabel={name} />
-        : <Text style={styles.avatarText}>{(name || '?').trim().charAt(0).toUpperCase()}</Text>}
-    </View>
-  );
-}
 
 function PpButton({ label, Icon, onPress, disabled, style }) {
   return (
@@ -136,7 +124,7 @@ export default function PublicProfile() {
       ) : null}
 
       <View style={[styles.card, styles.head]}>
-        <Avatar src={profile.profilePhoto} name={profile.fullName} />
+        <UserAvatar user={profile} size={76} style={styles.avatar} />
 
         <View style={styles.nameRow}>
           <Text style={styles.name} accessibilityRole="header">{profile.fullName}</Text>

@@ -1,4 +1,5 @@
 import { createIkion } from './ikionNative';
+import { text } from '../theme';
 
 /*
  * The app's icons: Ikions (ikions.cloud, @ikions/react, as on the website),
@@ -197,18 +198,43 @@ import ZapOffIk from '@ikions/react/icons/zap-off';
 // One module per logo (importing the package root would bundle all of Phosphor).
 export { FacebookLogoIcon } from 'phosphor-react-native/src/icons/FacebookLogo';
 export { InstagramLogoIcon } from 'phosphor-react-native/src/icons/InstagramLogo';
+export { MessengerLogoIcon } from 'phosphor-react-native/src/icons/MessengerLogo';
+export { WhatsappLogoIcon } from 'phosphor-react-native/src/icons/WhatsappLogo';
+export { TelegramLogoIcon } from 'phosphor-react-native/src/icons/TelegramLogo';
+export { XLogoIcon } from 'phosphor-react-native/src/icons/XLogo';
 
+// What each weight would draw at, kept for the one line below.
 const STROKE = { thin: 1.25, light: 1.5, regular: 1.75, bold: 2.25 };
+// ...and what every outline icon actually draws at, whatever weight it
+// asked for. The bottom bars use light (1.5) and everything else was
+// defaulting to regular (1.75), so icons sitting side by side were drawn
+// at different weights. One number, as the website does it with
+// --icon-stroke in index.css. Delete this and the map above takes over
+// again, per weight.
+const ICON_STROKE = 1.5;
 const MIRROR = { transform: [{ scaleX: -1 }] };
 
+/*
+ * No colour given falls back to the page's body ink, not to black.
+ *
+ * Pure black is not a colour this app paints anything in, so an icon that
+ * comes out black is an icon whose colour did not arrive -- and because
+ * the fallback was `'#000'`, that showed as a hard black glyph among
+ * grey ones rather than as anything a reader could report. The bottom
+ * bar's cart is where it was noticed: filled and black for a moment.
+ *
+ * Read inside the component, never at module level: a token captured at
+ * import time is frozen to whichever scheme happened to be on.
+ */
 function named(Ikion) {
-  function Icon({ size = 24, color = '#000', weight = 'regular', mirrored = false, style, ...rest }) {
+  function Icon({ size = 24, color, weight = 'regular', mirrored = false, style, ...rest }) {
+    const paint = color || text.body;
     return (
       <Ikion
         size={size}
-        color={color}
+        color={paint}
         variant={weight === 'fill' ? 'filled' : 'outline'}
-        strokeWidth={STROKE[weight] ?? STROKE.regular}
+        strokeWidth={ICON_STROKE ?? STROKE[weight] ?? STROKE.regular}
         style={mirrored ? [style, MIRROR] : style}
         {...rest}
       />

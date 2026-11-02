@@ -1,6 +1,7 @@
 import { useEffect, useMemo, useRef, useState } from 'react';
+import { openShare, ShareSheetHost } from '../ShareSheet';
 import {
-  FlatList, Image, Modal, Pressable, Share, StyleSheet, Text, View, useWindowDimensions,
+  FlatList, Image, Modal, Pressable, StyleSheet, Text, View, useWindowDimensions,
 } from 'react-native';
 import { useRouter } from 'expo-router';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
@@ -72,11 +73,13 @@ export default function ReviewViewer({ items, index, product, social, onClose })
 
   const onShare = () => {
     if (!product) return;
-    Share.share({
-      message: review?.comment
+    openShare({
+      title: product.name,
+      text: review?.comment
         ? `"${review.comment.slice(0, 120)}" — a review of ${product.name}`
         : `A review of ${product.name}`,
-    }).catch(() => {});
+      url: `https://emoorm.shop/product/${product.slug}/reviews`,
+    });
   };
 
   const openProduct = () => {
@@ -238,6 +241,10 @@ export default function ReviewViewer({ items, index, product, social, onClose })
             onCountChange={(n) => social.setCommentCount(social.commentsFor.id, n)}
           />
         ) : null}
+
+        {/* Inside this Modal, so Share comes up over it rather than
+            behind it (components/ShareSheet.js). */}
+        <ShareSheetHost />
       </View>
     </Modal>
   );

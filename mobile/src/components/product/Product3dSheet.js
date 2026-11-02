@@ -9,7 +9,19 @@ import { resolveImg } from '../../lib/media';
 import { toast } from '../../lib/toast';
 import { font, ink, t, themed, veil } from '../../theme';
 import { SheetFrame } from '../Sheet';
-import Model3dView from './Model3dView';
+/*
+ * Required when the sheet is actually opened, not when the product page
+ * loads. Model3dView pulls in react-native-webview, whose module body
+ * registers a native component as soon as it is imported -- and the
+ * import chain runs for every product page, whether or not anyone taps
+ * 3D. Metro still bundles it (there is no code splitting on a phone);
+ * what is saved is running it.
+ */
+let Model3dView = null;
+const loadModel3dView = () => {
+  Model3dView = Model3dView || require('./Model3dView').default;
+  return Model3dView;
+};
 import { STAGE_BG } from './model3dHtml';
 
 /*
@@ -86,6 +98,9 @@ export default function Product3dSheet({ model, name, onClose }) {
   const closed = useRef(false);
 
   const glb = resolveImg(model.glbUrl);
+  // The sheet is only rendered once it has been opened, so this is the
+  // first moment the viewer (and the web view under it) is needed.
+  const Viewer = glb ? loadModel3dView() : null;
   const usdz = model.usdzUrl ? resolveImg(model.usdzUrl) : null;
   const poster = model.posterUrl ? resolveImg(model.posterUrl) : null;
   const ar = Platform.OS === 'android' ? !!glb : Platform.OS === 'ios' ? !!usdz : false;
@@ -133,7 +148,7 @@ export default function Product3dSheet({ model, name, onClose }) {
 
       <View style={[styles.stage, { height: stageH }]}>
         {glb ? (
-          <Model3dView
+          <Viewer
             src={glb}
             poster={poster}
             alt={`3D view of ${name}`}

@@ -11,7 +11,7 @@ import { SaveFormat, manipulateAsync } from 'expo-image-manipulator';
 // Library photos on iPhones are ph:// assets, which React Native's Image no
 // longer draws; expo-image does (and is quick for a strip of thumbnails).
 import { Image as LibraryImage } from 'expo-image';
-import Svg, { Defs, LinearGradient, RadialGradient, Rect, Stop } from 'react-native-svg';
+import Svg, { Defs, LinearGradient, Rect, Stop } from 'react-native-svg';
 import {
   ArrowsClockwiseIcon, CameraIcon, CaretDownIcon, CaretUpIcon, ImagesIcon, LightningIcon, LightningSlashIcon,
   MapPinIcon, SlidersHorizontalIcon, XIcon,
@@ -24,6 +24,7 @@ import { pickSearchImage } from '../src/components/search/ImageSearchSheet';
 import { saveImageSearch, takePendingImage } from '../src/components/search/imageSearchStore';
 import { authedFetch } from '../src/api/client';
 import { fetchCategories, fetchMunicipalities } from '../src/lib/referenceData';
+import { GRID_EDGE, GRID_GAP, gridCellWidth } from '../src/lib/productGrid';
 import { font, t, themed } from '../src/theme';
 
 /*
@@ -32,8 +33,8 @@ import { font, t, themed } from '../src/theme';
  *   camera   the viewfinder opens at once; the gallery on the left of the
  *            shutter, front/back on the right, the phone's recent photos in
  *            a strip below (tap one to search it)
- *   scanning the photo fills the screen while a soft green-to-pink light
- *            sweeps across it (POST /products/search-by-image runs meanwhile)
+ *   scanning the photo fills the screen while a line sweeps the frame
+ *            (POST /products/search-by-image runs meanwhile)
  *   results  a sheet rises over the photo with the matches, sorted and
  *            filtered like the search results page (Best match / Newest /
  *            Top Sales / Price, then Filter · Municipality · Category ·
@@ -56,7 +57,8 @@ const IN_EXPO_GO = Constants.executionEnvironment === ExecutionEnvironment.Store
 const LIBRARY = Platform.OS === 'ios' || (Platform.OS === 'android' && !IN_EXPO_GO);
 // Loaded only where it works, so Expo Go on Android never warns about it.
 const mediaLibrary = () => (LIBRARY ? require('expo-media-library/legacy') : null);
-const SCAN_MIN_MS = 2400;
+// The scan plays at least this long, so it is seen rather than flashed.
+const SCAN_MIN_MS = 1200;
 const wait = (ms) => new Promise((r) => { setTimeout(r, ms); });
 
 // A photo ready to send: a JPEG about 1080px wide.
@@ -128,7 +130,7 @@ export default function SearchByImage() {
   }, []);
   useEffect(() => { loadRecent(false); }, [loadRecent]);
 
-  // Search a photo: scan it (at least a moment, so the sweep reads), then the results.
+  // Search a photo: scan it (at least a moment, so the scan reads), then the results.
   const run = useCallback(async (raw) => {
     setPhoto(raw);
     setPhase('scanning');
@@ -350,139 +352,52 @@ function Frame({ W, H }) {
 }
 
 /**
- * The scan, over the whole photo, plainly visible on any picture:
- *   - a brand tint and a fine grid inside the frame,
- *   - green and pink glows drifting across the photo,
- *   - a beam sweeping down the full picture again and again: a solid bright
- *     line (a plain view, so it shows on every phone) with a green-to-pink
- *     trail behind it,
- *   - "detection points" pinging one after another inside the frame,
- *   - the frame's corners breathing.
+ * The scan: the frame, and a line travelling down it.
+ *
+ * One thing moving, which is what a scan looks like. Everything else the
+ * overlay needs -- the photo staying visible, the chip staying readable --
+ * is a still layer, so there is a single animation driving a single
+ * transform on the UI thread.
  */
-// Where the detection points ping, as fractions of the frame.
-const POINTS = [
-  [0.22, 0.28], [0.68, 0.2], [0.46, 0.46], [0.8, 0.58], [0.3, 0.7],
-  [0.6, 0.78], [0.14, 0.52], [0.52, 0.14], [0.86, 0.34],
-];
-
-const loop = (value, duration, easing, from, to, back, on) => {
-  const run = () => {
-    if (!on.current) return;
-    value.setValue(from);
-    const steps = [Animated.timing(value, { toValue: to, duration, easing, useNativeDriver: true })];
-    if (back) steps.push(Animated.timing(value, { toValue: from, duration, easing, useNativeDriver: true }));
-    Animated.sequence(steps).start(({ finished }) => { if (finished) run(); });
-  };
-  run();
-};
-
 function Scanner({ W, H }) {
   const box = frameBox(W, H);
-  const beam = useRef(new Animated.Value(0)).current;
-  const drift = useRef(new Animated.Value(0)).current;
-  const breathe = useRef(new Animated.Value(0)).current;
-  const ping = useRef(new Animated.Value(0)).current;
+  const sweep = useRef(new Animated.Value(0)).current;
   const on = useRef(true);
 
   useEffect(() => {
     on.current = true;
-    loop(beam, 1600, Easing.inOut(Easing.cubic), 0, 1, false, on);
-    loop(drift, 2600, Easing.inOut(Easing.sin), 0, 1, true, on);
-    loop(breathe, 800, Easing.inOut(Easing.sin), 0, 1, true, on);
-    loop(ping, 2200, Easing.linear, 0, 1, false, on);
-    return () => {
-      on.current = false;
-      [beam, drift, breathe, ping].forEach((v) => v.stopAnimation());
+    const run = () => {
+      if (!on.current) return;
+      sweep.setValue(0);
+      Animated.timing(sweep, {
+        toValue: 1,
+        duration: 1800,
+        easing: Easing.inOut(Easing.quad),
+        useNativeDriver: true,
+      }).start(({ finished }) => { if (finished) run(); });
     };
-  }, [beam, drift, breathe, ping]);
+    run();
+    return () => { on.current = false; sweep.stopAnimation(); };
+  }, [sweep]);
 
-  const TRAIL = Math.round(H * 0.3);
-  // The beam's line travels from just above the screen to just below it.
-  const beamY = beam.interpolate({ inputRange: [0, 1], outputRange: [-TRAIL, H + 10] });
-  const glow = W * 1.2;
-  const glowA = {
-    transform: [
-      { translateX: drift.interpolate({ inputRange: [0, 1], outputRange: [-W * 0.45, W * 0.15] }) },
-      { translateY: drift.interpolate({ inputRange: [0, 1], outputRange: [-H * 0.05, H * 0.2] }) },
-    ],
-  };
-  const glowB = {
-    transform: [
-      { translateX: drift.interpolate({ inputRange: [0, 1], outputRange: [W * 0.25, -W * 0.3] }) },
-      { translateY: drift.interpolate({ inputRange: [0, 1], outputRange: [H * 0.45, H * 0.25] }) },
-    ],
-  };
-  const cornerScale = breathe.interpolate({ inputRange: [0, 1], outputRange: [1, 1.04] });
-  const gridLines = Math.floor(box.size / 28);
+  // It travels the frame, not the screen: the frame is what is being read.
+  // It stays inside the frame's own edges, so nothing has to clip it --
+  // and on Android the line's glow is an elevation shadow, which a clip
+  // would cut off.
+  const travel = sweep.interpolate({ inputRange: [0, 1], outputRange: [0, box.size - 2] });
+  // Faded at both ends, so it arrives and leaves instead of snapping.
+  const fade = sweep.interpolate({ inputRange: [0, 0.1, 0.9, 1], outputRange: [0, 1, 1, 0] });
 
   return (
     <View pointerEvents="none" style={StyleSheet.absoluteFill}>
-      {/* The brand tint. */}
-      <View style={[StyleSheet.absoluteFill, { backgroundColor: 'rgba(3, 26, 15, 0.38)' }]} />
+      {/* A plain scrim, so the chip and the buttons stay readable. */}
+      <View style={[StyleSheet.absoluteFill, { backgroundColor: 'rgba(3, 26, 15, 0.34)' }]} />
 
-      {/* Drifting green and pink glows. */}
-      {[[glowA, t.primary[400], 'glowG'], [glowB, t.accent[400], 'glowP']].map(([motion, color, id]) => (
-        <Animated.View key={id} style={[{ position: 'absolute', left: 0, top: 0, width: glow, height: glow }, motion]}>
-          <Svg width={glow} height={glow}>
-            <Defs>
-              <RadialGradient id={id} cx="50%" cy="50%" r="50%">
-                <Stop offset="0" stopColor={color} stopOpacity="0.62" />
-                <Stop offset="0.6" stopColor={color} stopOpacity="0.2" />
-                <Stop offset="1" stopColor={color} stopOpacity="0" />
-              </RadialGradient>
-            </Defs>
-            <Rect width={glow} height={glow} fill={`url(#${id})`} />
-          </Svg>
-        </Animated.View>
-      ))}
-
-      {/* A fine grid inside the frame. */}
-      <View style={{ position: 'absolute', left: box.left, top: box.top, width: box.size, height: box.size, borderRadius: 18, overflow: 'hidden', backgroundColor: 'rgba(255,255,255,0.06)' }}>
-        {Array.from({ length: gridLines }, (_, i) => (
-          <View key={`h${i}`} style={[styles.gridLine, { top: (i + 1) * 28, left: 0, right: 0, height: StyleSheet.hairlineWidth }]} />
-        ))}
-        {Array.from({ length: gridLines }, (_, i) => (
-          <View key={`v${i}`} style={[styles.gridLine, { left: (i + 1) * 28, top: 0, bottom: 0, width: StyleSheet.hairlineWidth }]} />
-        ))}
+      <View style={{ position: 'absolute', left: box.left, top: box.top, width: box.size, height: box.size }}>
+        <Animated.View style={[styles.scanLine, { opacity: fade, transform: [{ translateY: travel }] }]} />
       </View>
 
-      {/* The beam: a green-to-pink trail, then the bright line. */}
-      <Animated.View style={{ position: 'absolute', left: 0, right: 0, top: 0, height: TRAIL + 6, transform: [{ translateY: beamY }] }}>
-        <Svg width={W} height={TRAIL}>
-          <Defs>
-            <LinearGradient id="scanTrail" x1="0" y1="0" x2="0" y2="1">
-              <Stop offset="0" stopColor={t.primary[300]} stopOpacity="0" />
-              <Stop offset="0.5" stopColor={t.primary[300]} stopOpacity="0.28" />
-              <Stop offset="0.85" stopColor={t.accent[300]} stopOpacity="0.5" />
-              <Stop offset="1" stopColor="#ffffff" stopOpacity="0.75" />
-            </LinearGradient>
-          </Defs>
-          <Rect width={W} height={TRAIL} fill="url(#scanTrail)" />
-        </Svg>
-        <View style={styles.beamLine} />
-      </Animated.View>
-
-      {/* Detection points, one after another inside the frame. */}
-      {POINTS.map(([fx, fy], i) => {
-        const start = (i / POINTS.length) * 0.8;
-        const end = start + 0.3;
-        const k = ping.interpolate({ inputRange: [0, start, end, 1], outputRange: [0, 0, 1, 1], extrapolate: 'clamp' });
-        const dotOpacity = ping.interpolate({ inputRange: [0, start, start + 0.04, end - 0.06, end, 1], outputRange: [0, 0, 1, 1, 0, 0], extrapolate: 'clamp' });
-        const ringScale = k.interpolate({ inputRange: [0, 1], outputRange: [0.5, 2.4] });
-        const ringOpacity = ping.interpolate({ inputRange: [0, start, start + 0.05, end, 1], outputRange: [0, 0, 0.9, 0, 0], extrapolate: 'clamp' });
-        const x = box.left + fx * box.size;
-        const y = box.top + fy * box.size;
-        return (
-          <View key={i} style={{ position: 'absolute', left: x - 16, top: y - 16, width: 32, height: 32, alignItems: 'center', justifyContent: 'center' }}>
-            <Animated.View style={[styles.pingRing, { opacity: ringOpacity, transform: [{ scale: ringScale }] }]} />
-            <Animated.View style={[styles.pingDot, { opacity: dotOpacity }]} />
-          </View>
-        );
-      })}
-
-      <Animated.View style={{ position: 'absolute', left: 0, top: 0, right: 0, bottom: 0, transform: [{ scale: cornerScale }] }}>
-        <Corners box={box} />
-      </Animated.View>
+      <Corners box={box} />
     </View>
   );
 }
@@ -542,7 +457,7 @@ function ResultsSheet({ results, photo, W, H, insets, onRetake }) {
   const priceOn = sortBy === 'price-low' || sortBy === 'price-high';
   const town = municipalities.find((m) => m.id === filters.municipalityId)?.name;
   const cat = categories.find((c) => c.id === filters.category)?.name;
-  const cellW = (W - 24 - 4) / 2;
+  const cellW = gridCellWidth(W);
 
   return (
     <>
@@ -563,6 +478,12 @@ function ResultsSheet({ results, photo, W, H, insets, onRetake }) {
         </View>
 
         <FlatList
+            // Rows far off screen are detached rather than kept mounted;
+            // React Native's default keeps about twenty-one screens of them.
+            removeClippedSubviews
+            initialNumToRender={8}
+            maxToRenderPerBatch={8}
+            windowSize={7}
             data={shown}
             keyExtractor={(p) => String(p.id)}
             numColumns={2}
@@ -667,13 +588,10 @@ const styles = themed(() => StyleSheet.create({
   },
   showPhotosText: { fontSize: 13.5, lineHeight: 17, color: '#fff', ...font(500) },
 
-  pingDot: { width: 12, height: 12, borderRadius: 6, backgroundColor: '#fff', borderWidth: 3, borderColor: t.primary[400] },
-  pingRing: { position: 'absolute', width: 26, height: 26, borderRadius: 13, borderWidth: 2, borderColor: '#fff' },
-  gridLine: { position: 'absolute', backgroundColor: 'rgba(255,255,255,0.22)' },
-  // The beam's line: solid white with a green-and-pink glow.
-  beamLine: {
-    height: 3, marginHorizontal: 0, borderRadius: 2, backgroundColor: '#fff',
-    boxShadow: [{ offsetX: 0, offsetY: 0, blurRadius: 14, spreadDistance: 2, color: 'rgba(52, 211, 153, 0.9)' }, { offsetX: 0, offsetY: 0, blurRadius: 24, color: 'rgba(244, 114, 182, 0.7)' }],
+  // The sweeping line: white, with one soft green glow under it.
+  scanLine: {
+    position: 'absolute', left: 0, right: 0, top: 0, height: 2, backgroundColor: '#fff',
+    boxShadow: [{ offsetX: 0, offsetY: 0, blurRadius: 12, color: 'rgba(52, 211, 153, 0.85)' }],
   },
   scanChip: {
     position: 'absolute', alignSelf: 'center', flexDirection: 'row', alignItems: 'center', gap: 8,
@@ -714,5 +632,5 @@ const styles = themed(() => StyleSheet.create({
   sortTextOn: { ...font(500), color: t.primary[700] },
   sortDir: { flexDirection: 'column' },
   filters: { gap: 8, paddingTop: 2, paddingHorizontal: 16, paddingBottom: 12 },
-  row: { gap: 4, paddingHorizontal: 12, marginBottom: 4 },
+  row: { gap: GRID_GAP, paddingHorizontal: GRID_EDGE, marginBottom: GRID_GAP },
 }));

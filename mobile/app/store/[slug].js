@@ -1,6 +1,6 @@
 import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import {
-  Animated, Image, Platform, Pressable, ScrollView, Share, StyleSheet, Text, TextInput, View, useWindowDimensions,
+  Animated, Image, Platform, Pressable, ScrollView, StyleSheet, Text, TextInput, View, useWindowDimensions,
 } from 'react-native';
 import { Stack, useLocalSearchParams, useRouter } from 'expo-router';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
@@ -12,6 +12,8 @@ import {
 import apiClient from '../../src/api/client';
 import EmptyState from '../../src/components/EmptyState';
 import ShopHome from '../../src/components/shop/ShopHome';
+import useShare from '../../src/components/ShareSheet';
+import useScreenshot from '../../src/lib/useScreenshot';
 import ShopMoreMenu from '../../src/components/shop/ShopMoreMenu';
 import { ShopGridCard, ShopProductRow } from '../../src/components/shop/ShopProductRow';
 import ShopReportSheet from '../../src/components/shop/ShopReportSheet';
@@ -27,6 +29,7 @@ import { isLivestock } from '../../src/components/orders/orderLines';
 import useAuthStore from '../../src/store/authStore';
 import useCartStore, { standaloneLine } from '../../src/store/cartStore';
 import { startBuyNow } from '../../src/lib/buyNow';
+import { GRID_BLEED, GRID_GAP, gridCellWidth } from '../../src/lib/productGrid';
 import { font, t, themed } from '../../src/theme';
 
 /*
@@ -90,6 +93,14 @@ export default function StoreDetail() {
   const [followBusy, setFollowBusy] = useState(false);
   const [showReport, setShowReport] = useState(false);
   const [barSolid, setBarSolid] = useState(false);
+  const { share, shareSheet } = useShare();
+  // A screenshot of a shop travels without its link, so whoever receives
+  // it has to go and find the shop by name. The sheet is offered the
+  // moment one is taken, with a picture of the page and the link ready.
+  const pageShot = useScreenshot(
+    ({ preview }) => share(shareWhat(), { heading: 'Share screenshot to', preview }),
+    Boolean(store),
+  );
   const barAnim = useRef(new Animated.Value(0)).current;
   const scrollRef = useRef(null);
   const storeRequest = useRef(0);
@@ -234,7 +245,6 @@ export default function StoreDetail() {
   const categories = Array.isArray(store.categories) ? store.categories : [];
   const offersDelivery = store.fulfillmentMode === 'DELIVERY' || store.fulfillmentMode === 'BOTH';
   const offersPickup = store.fulfillmentMode === 'PICKUP' || store.fulfillmentMode === 'BOTH';
-  const perkLabels = [offersDelivery && 'Delivery', offersPickup && 'Pickup', store.acceptsCod && 'COD'].filter(Boolean);
   const activeCategoryName = categories.find((c) => c.id === activeCategory)?.name;
   const priceSort = sortKey === 'price_asc' || sortKey === 'price_desc';
   const deep = mix(primary, 0.63, '#000');
@@ -337,12 +347,12 @@ export default function StoreDetail() {
     router.push({ pathname: '/messages', params: { store: store.id } });
   };
 
-  const shareStore = async () => {
-    const url = `${SITE}/store/${store.slug}`;
-    try {
-      await Share.share({ title: store.name, message: `Shop local at ${store.name} on E-MOORM\n${url}`, url });
-    } catch { /* closed */ }
-  };
+  const shareWhat = () => ({
+    title: store.name,
+    text: `Shop local at ${store.name} on E-MOORM`,
+    url: `${SITE}/store/${store.slug}`,
+  });
+  const shareStore = () => share(shareWhat());
 
   const copyCode = (code) => {
     const clip = Platform.OS === 'web' && typeof navigator !== 'undefined' ? navigator.clipboard : null;
@@ -403,7 +413,7 @@ export default function StoreDetail() {
         </View>
       );
     } else {
-      const w = (contentW - 4) / 2;
+      const w = gridCellWidth(screenW);
       productsBody = (
         <View style={styles.grid}>
           {products.map((product) => (
@@ -422,8 +432,9 @@ export default function StoreDetail() {
   ];
 
   return (
-    <View style={styles.screen}>
+    <View style={styles.screen} ref={pageShot} collapsable={false}>
       <Stack.Screen options={{ headerShown: false }} />
+      {shareSheet}
       <ScrollView showsVerticalScrollIndicator={false} showsHorizontalScrollIndicator={false}
         ref={scrollRef}
         style={styles.scroll}
@@ -445,21 +456,6 @@ export default function StoreDetail() {
           </View>
 
           <View style={styles.card}>
-            <Pressable style={styles.band} onPress={() => setMobileTab('about')} accessibilityRole="button">
-              <ShopGradient angle={90} stops={[[mix(primary, 0.08, '#fff'), 0], [t.accent[50], 1]]} />
-              <View style={styles.bandBrand}>
-                <StorefrontIcon size={15} weight="fill" color={deep} />
-                <Text style={[styles.bandBrandText, { color: deep }]}>Local shop</Text>
-                {store.owner?.identityVerified ? <SealCheckIcon size={14} weight="fill" color={primary} /> : null}
-              </View>
-              <View style={styles.bandPerks}>
-                <Text style={styles.bandPerksText} numberOfLines={1}>
-                  {perkLabels.length ? perkLabels.join(' · ') : (store.municipality?.name || 'Oriental Mindoro')}
-                </Text>
-                <CaretRightIcon size={13} weight="bold" color={t.accent[700]} />
-              </View>
-            </Pressable>
-
             <View style={styles.main}>
               <View style={[styles.logo, !store.logo && styles.logoEmpty]}>
                 {store.logo ? (
@@ -510,7 +506,7 @@ export default function StoreDetail() {
             </View>
 
             {store.description || store.municipality?.name ? (
-              <View style={[styles.note, { backgroundColor: mix(primary, 0.08, '#fff'), borderColor: mix(primary, 0.18, '#fff') }]}>
+              <View style={[styles.note, { backgroundColor: mix(primary, 0.08, '#fff') }]}>
                 <View style={styles.noteText}>
                   <View style={styles.noteTown}>
                     <MapPinIcon size={13} weight="fill" color={deep} />
@@ -855,11 +851,6 @@ const styles = themed(() => StyleSheet.create({
   backdropImg: { width: '100%', height: '100%', opacity: 0.35, mixBlendMode: 'luminosity' },
 
   card: { position: 'relative', zIndex: 2, marginTop: 4, marginHorizontal: 12, overflow: 'hidden', borderRadius: 18, backgroundColor: t.neutral[0] },
-  band: { flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between', gap: 10, paddingVertical: 9, paddingHorizontal: 14, overflow: 'hidden' },
-  bandBrand: { flexDirection: 'row', alignItems: 'center', gap: 5 },
-  bandBrandText: { fontSize: 13, lineHeight: 15.6, ...font(500) },
-  bandPerks: { flexDirection: 'row', alignItems: 'center', gap: 3, minWidth: 0, flexShrink: 1 },
-  bandPerksText: { fontSize: 12.5, lineHeight: 15, ...font(500), color: t.accent[700], flexShrink: 1 },
 
   main: { flexDirection: 'row', alignItems: 'center', gap: 10, paddingTop: 14, paddingHorizontal: 14, paddingBottom: 12 },
   logo: {
@@ -889,7 +880,7 @@ const styles = themed(() => StyleSheet.create({
 
   note: {
     flexDirection: 'row', alignItems: 'center', gap: 10, marginHorizontal: 14, marginBottom: 14,
-    paddingVertical: 10, paddingRight: 10, paddingLeft: 12, borderWidth: 1, borderRadius: 12,
+    paddingVertical: 10, paddingRight: 10, paddingLeft: 12, borderRadius: 12,
   },
   noteText: { flex: 1, minWidth: 0, gap: 2 },
   noteTown: { flexDirection: 'row', alignItems: 'center', gap: 4 },
@@ -980,7 +971,7 @@ const styles = themed(() => StyleSheet.create({
 
   productsSection: { paddingTop: 12, paddingHorizontal: 12 },
   list: { gap: 8 },
-  grid: { flexDirection: 'row', flexWrap: 'wrap', gap: 4 },
+  grid: { flexDirection: 'row', flexWrap: 'wrap', gap: GRID_GAP, marginHorizontal: GRID_BLEED },
   // The empty list's white card on the shop's grey page.
   empty: { borderRadius: 16, backgroundColor: t.neutral[0] },
   pagination: { flexDirection: 'row', alignItems: 'center', justifyContent: 'center', gap: 10, marginTop: 16 },

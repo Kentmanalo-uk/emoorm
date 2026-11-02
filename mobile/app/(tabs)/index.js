@@ -1,6 +1,6 @@
 import { useCallback, useEffect, useRef, useState } from 'react';
 import {
-  ActivityIndicator, Pressable, ScrollView, StyleSheet, Text, View, useWindowDimensions,
+  ActivityIndicator, FlatList, Pressable, StyleSheet, Text, View, useWindowDimensions,
 } from 'react-native';
 import { useRouter } from 'expo-router';
 import apiClient from '../../src/api/client';
@@ -16,16 +16,21 @@ import HomeStoresMap from '../../src/components/home/HomeStoresMap';
 import StartSellingBubble from '../../src/components/home/StartSellingBubble';
 import { MapTrifoldIcon } from '../../src/lib/icons';
 import {
-  BannerCarousel, FALLBACK_BANNERS, PromotionPopup, SideBanners,
+  BannerCarousel, FALLBACK_BANNERS, PromotionPopup,
 } from '../../src/components/home/HomeBanners';
+import HomeShortcuts from '../../src/components/home/HomeShortcuts';
 import {
   CategoryStrip, HomeEmpty, HomeStoreRow, MunicipalityRail, SectionHeader,
 } from '../../src/components/home/HomeSections';
+import {
+  GRID_BLEED, GRID_EDGE, GRID_GAP, SECTION_EDGE, gridCellWidth,
+} from '../../src/lib/productGrid';
 import { font, t, themed } from '../../src/theme';
 
 /*
  * Home (web/src/pages/Home.jsx, phone view): quick search words, the banner
- * carousel and the two side banners, Shop by Category, Available Today,
+ * carousel, the quick entries (HomeShortcuts, where the website keeps its
+ * two side banners), Shop by Category, Available Today,
  * Suggested for You, Stores Near You, Explore Municipals, Discover Stores
  * (the map) and Explore Products, which loads its next batch on its own as
  * the page nears the bottom (one request at a time, small batches). The
@@ -69,8 +74,6 @@ export default function Home() {
   const [cache] = useState(readCache);
 
   const [banners, setBanners] = useState(() => cache.banners || FALLBACK_BANNERS);
-  const [sideBanners, setSideBanners] = useState(() => cache.sideBanners || { top: null, bottom: null });
-  const [sideReady, setSideReady] = useState(() => Boolean(cache.sideBanners));
   const [popup, setPopup] = useState(null);
 
   const [categories, setCategories] = useState(() => cache.categories || []);
@@ -79,6 +82,11 @@ export default function Home() {
   const [featured, setFeatured] = useState(() => cache.featured || []);
   const [nearbyStores, setNearbyStores] = useState(() => cache.nearbyStores || []);
   const [mappedStores, setMappedStores] = useState(() => cache.mappedStores || []);
+  // The map is a long way down. It loads once the page has been scrolled
+  // towards it, and this latches on: after the first time, the scroll
+  // handler below is taken off altogether, so there is no per-frame work
+  // left behind to pay for it.
+  const [mapNear, setMapNear] = useState(false);
   const [explore, setExplore] = useState(() => cache.explore || []);
   const [explorePage, setExplorePage] = useState(() => cache.explorePage || 1);
   const [exploreHasMore, setExploreHasMore] = useState(() => Boolean(cache.exploreHasMore));
@@ -88,7 +96,8 @@ export default function Home() {
   const exploreBusy = useRef(false);
   const exploreSaved = useRef(cache.explorePage || 1);
 
-  // Banners: the carousel, the two side ones and the popup.
+  // Banners: the carousel and the popup. The two sidebar placements are
+  // the website's; the phone shows HomeShortcuts in that space.
   useEffect(() => {
     let cancelled = false;
     (async () => {
@@ -97,13 +106,9 @@ export default function Home() {
         const list = Array.isArray(res.data) ? res.data : [];
         if (cancelled || list.length === 0) return;
         const carousel = list.filter((b) => (b.placement || 'HOME_CAROUSEL') === 'HOME_CAROUSEL').map(mapBanner);
-        const top = list.find((b) => b.placement === 'HOME_SIDEBAR_TOP');
-        const bottom = list.find((b) => b.placement === 'HOME_SIDEBAR_BOTTOM');
         const promo = list.find((b) => b.placement === 'HOME_POPUP');
-        const side = { top: top ? mapBanner(top) : null, bottom: bottom ? mapBanner(bottom) : null };
         if (carousel.length > 0) setBanners(carousel);
-        setSideBanners(side);
-        patchCache({ banners: carousel.length > 0 ? carousel : null, sideBanners: side });
+        patchCache({ banners: carousel.length > 0 ? carousel : null });
         if (promo) {
           const mapped = mapBanner(promo);
           const key = `${mapped.id}.${mapped.updatedAt || ''}`;
@@ -114,8 +119,6 @@ export default function Home() {
         }
       } catch {
         // keep the fallback banners
-      } finally {
-        if (!cancelled) setSideReady(true);
       }
     })();
     return () => { cancelled = true; };
@@ -186,17 +189,26 @@ export default function Home() {
         patchCache({ nearbyStores: res.data || [] });
       },
     );
-    // Every shop with a spot: its pin, or placed from its address (pinned: false).
-    load(
-      apiClient.get('/stores/map'),
-      (res) => {
+    return () => { cancelled = true; };
+  }, [townId]);
+
+  // Every shop with a spot: its pin, or placed from its address
+  // (pinned: false). Asked for only once the map is being scrolled
+  // towards -- it is the largest response the home page fetches and the
+  // one furthest from what is on screen when it opens.
+  useEffect(() => {
+    if (!mapNear) return undefined;
+    let cancelled = false;
+    apiClient.get('/stores/map')
+      .then((res) => {
+        if (cancelled) return;
         const mapped = res.data || [];
         setMappedStores(mapped);
         patchCache({ mappedStores: mapped });
-      },
-    );
+      })
+      .catch((err) => console.error('Failed to load home data:', err?.message || err));
     return () => { cancelled = true; };
-  }, [townId]);
+  }, [mapNear, townId]);
 
   const loadMoreExplore = useCallback(async () => {
     if (exploreBusy.current || !exploreHasMore) return;
@@ -227,14 +239,7 @@ export default function Home() {
   // Near the bottom (about a screen and a half to go): the next batch, so it
   // is usually there before the grid runs out. Not after a failure; that
   // waits for "Try again".
-  const onScroll = useCallback(({ nativeEvent }) => {
-    const { layoutMeasurement, contentOffset, contentSize } = nativeEvent;
-    const left = contentSize.height - (contentOffset.y + layoutMeasurement.height);
-    if (left < layoutMeasurement.height * 1.5 && !exploreFailed) loadMoreExplore();
-  }, [loadMoreExplore, exploreFailed]);
-
-  // The website's phone grid: 2 columns 4px apart, 12px from the edges.
-  const tileWidth = (width - 24 - 4) / 2;
+  const tileWidth = gridCellWidth(width);
   const grid = (products) => (
     <View style={styles.grid}>
       {products.map((product) => (
@@ -246,21 +251,49 @@ export default function Home() {
   return (
     <View style={styles.screen}>
       <HomeHeader />
-      <ScrollView showsVerticalScrollIndicator={false} showsHorizontalScrollIndicator={false}
+      <FlatList
+        // The Explore grid is the list; everything above it is the
+        // header. Only Explore grows -- it loads another page each time
+        // you reach the bottom -- so it is the only part that has to be
+        // virtualised, and the sections above are a fixed handful.
+        data={explore}
+        keyExtractor={(item) => item.id}
+        numColumns={2}
+        columnWrapperStyle={styles.gridRow}
+        renderItem={({ item }) => (
+          <ProductCard product={item} variant="home" style={{ width: tileWidth }} />
+        )}
+        showsVerticalScrollIndicator={false}
+        showsHorizontalScrollIndicator={false}
         style={styles.scroll}
         contentContainerStyle={styles.content}
-        onScroll={onScroll}
-        scrollEventThrottle={120}
+        onEndReached={() => { if (!exploreFailed) loadMoreExplore(); }}
+        onEndReachedThreshold={1.5}
+        // Only until the map has been asked for; then it is undefined and
+        // nothing runs on scroll at all.
+        onScroll={mapNear ? undefined : (e) => {
+          if (e.nativeEvent.contentOffset.y > 300) setMapNear(true);
+        }}
+        scrollEventThrottle={250}
+        // Rows off screen are detached on Android rather than kept in the
+        // view tree, and only a screenful or so is built at a time.
+        removeClippedSubviews
+        initialNumToRender={6}
+        maxToRenderPerBatch={6}
+        windowSize={7}
         // iOS 26: the glass tab bar floats over the page; the last row scrolls clear of it.
         {...tabScroll}
-      >
-        <HomeQuickSearch />
+        ListHeaderComponent={(
+          <>
+            <HomeQuickSearch />
 
         {/* Banners */}
         <View style={styles.bannerSection}>
           <BannerCarousel banners={banners} />
-          <SideBanners ready={sideReady} top={sideBanners.top} bottom={sideBanners.bottom} />
         </View>
+
+        {/* The way in to the rest of the app: two pages of ten, swiped. */}
+        <HomeShortcuts />
 
         {/* Shop by Category: pictures, or gradient icons (Settings › Branding) */}
         <View style={[styles.whiteSection, styles.railSection]}>
@@ -317,11 +350,17 @@ export default function Home() {
           <SectionHeader title="Discover Stores" arrowLabel="Open the stores map" onArrow={() => router.push('/store-map')} />
           {/* A tapped pin, or the button, opens the full map (app/store-map.js). */}
           <View>
-            <HomeStoresMap
-              stores={mappedStores}
-              height={340}
-              onSelect={(store) => router.push({ pathname: '/store-map', params: { focus: store.id } })}
-            />
+            {mapNear ? (
+              <HomeStoresMap
+                stores={mappedStores}
+                height={340}
+                onSelect={(store) => router.push({ pathname: '/store-map', params: { focus: store.id } })}
+              />
+            ) : (
+              // The same height, so the page does not jump when the map
+              // arrives and the scroll position stays where it was.
+              <View style={styles.mapWaiting} />
+            )}
             <Pressable
               accessibilityRole="button"
               onPress={() => router.push('/store-map')}
@@ -333,10 +372,14 @@ export default function Home() {
           </View>
         </View>
 
-        {/* Explore Products */}
-        <View style={[styles.listSection, styles.exploreSection]}>
-          <SectionHeader title="Explore Products" arrowLabel="View all products" onArrow={() => router.push('/products')} />
-          {explore.length > 0 ? grid(explore) : null}
+            {/* Explore Products: the heading here, the grid below as
+                the list's own rows. */}
+            <View style={[styles.listSection, styles.exploreSection, styles.exploreHead]}>
+              <SectionHeader title="Explore Products" arrowLabel="View all products" onArrow={() => router.push('/products')} />
+            </View>
+          </>
+        )}
+        ListFooterComponent={(
           <View style={styles.exploreEnd}>
             {exploreLoading ? <ActivityIndicator color={t.primary[600]} accessibilityLabel="Loading more products" /> : null}
             {!exploreLoading && exploreFailed ? (
@@ -346,8 +389,8 @@ export default function Home() {
             ) : null}
             {!exploreHasMore && explore.length > 0 ? <Text style={styles.exploreDone}>You’ve seen everything for now</Text> : null}
           </View>
-        </View>
-      </ScrollView>
+        )}
+      />
 
       {/* Floating “Start selling” (buyers and guests; drag it, or × to hide it for a week). */}
       <StartSellingBubble />
@@ -369,6 +412,7 @@ const styles = themed(() => StyleSheet.create({
   railSection: { paddingLeft: 12 },
   railHeader: { paddingRight: 12 },
   categoriesTitle: { paddingRight: 12, marginBottom: 12, fontSize: 18, lineHeight: 22.5, ...font(500), color: t.neutral[900] },
+  mapWaiting: { height: 340, backgroundColor: t.neutral[100] },
   mapSection: { paddingHorizontal: 12 },
   mapOpen: {
     position: 'absolute', right: 10, bottom: 22, flexDirection: 'row', alignItems: 'center', gap: 6,
@@ -379,9 +423,18 @@ const styles = themed(() => StyleSheet.create({
   mapOpenText: { fontSize: 13.5, lineHeight: 17, color: t.onBrand, ...font(600) },
 
   // Sections on the page background (Suggested, Stores, Explore).
-  listSection: { paddingTop: 16, paddingBottom: 4, paddingHorizontal: 12 },
+  listSection: { paddingTop: 16, paddingBottom: 4, paddingHorizontal: SECTION_EDGE },
   exploreSection: { paddingBottom: 8 },
-  grid: { flexDirection: 'row', flexWrap: 'wrap', gap: 4 },
+  // Pulled back out of listSection's margin, so the cards reach the same
+  // GRID_EDGE as the Explore rows below while the heading above them does not.
+  grid: {
+    flexDirection: 'row', flexWrap: 'wrap', gap: GRID_GAP,
+    marginHorizontal: GRID_BLEED,
+  },
+  // The list's own rows: the same gap and sides the wrapped grid above
+  // gets from listSection.
+  gridRow: { gap: GRID_GAP, paddingHorizontal: GRID_EDGE, marginBottom: GRID_GAP },
+  exploreHead: { paddingBottom: 0 },
 
   // Under the grid: a spinner while the next batch loads, "Try again", or the end.
   exploreEnd: { minHeight: 56, alignItems: 'center', justifyContent: 'center', paddingTop: 12, paddingBottom: 20 },

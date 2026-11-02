@@ -6,6 +6,11 @@ import { openAccountSheet } from './AccountSheet';
 import { longPressTab, pressTab } from './tabBarEvents';
 import { colors, font, ink, t, text, themed, veil } from '../theme';
 
+// The website draws these at 21 with --icon-zoom 1.4 in its phone view
+// (.mobile-bottom-nav in Header.css), so 29 is the same icon at the same
+// size, and the label under it is the website's 9px.
+const ICON = 29;
+
 const TABS = {
   index: { label: 'Home', Icon: HouseIcon },
   cart: { label: 'Cart', Icon: ShoppingCartIcon },
@@ -63,8 +68,8 @@ export default function ShellTabBar({ badges = {}, ...nav }) {
             delayLongPress={350}
             style={styles.tab}
           >
-            <View>
-              <Icon size={28} color={color} weight={active ? 'fill' : 'light'} />
+            <View style={styles.iconBox}>
+              <Icon size={ICON} color={color} weight={active ? 'fill' : 'light'} />
               {count > 0 ? (
                 <View style={styles.badge}>
                   <Text style={styles.badgeText}>{count > 99 ? '99+' : count}</Text>
@@ -89,11 +94,21 @@ const styles = themed(() => StyleSheet.create({
     minHeight: 74,
     paddingTop: 7,
     paddingHorizontal: 6,
-    backgroundColor: veil(0.98),
+    // Solid, not 98%: at 0.98 a page scrolling underneath showed
+    // faintly through the bar, which read as a rendering fault rather
+    // than as depth. The iOS 26 glass bar above is a separate style and
+    // still shows through on purpose.
+    backgroundColor: veil(1),
     boxShadow: [{ offsetX: 0, offsetY: -4, blurRadius: 16, color: ink(0.08) }],
   },
   tab: { flex: 1, minWidth: 0, alignItems: 'center', justifyContent: 'center', gap: 3 },
-  label: { fontSize: 11, lineHeight: 12.1, ...font(500) },
+  // The icon keeps this box whether or not it is wearing a count. The
+  // badge is laid over its top-right corner from outside the flow, so a
+  // tab with a number on it is exactly as wide as one without and the
+  // icon never gives up room to make space for it.
+  iconBox: { width: ICON, height: ICON, alignItems: 'center', justifyContent: 'center' },
+  // 9, as the website's .mobile-bottom-nav (Header.css).
+  label: { fontSize: 9, lineHeight: 11, ...font(500) },
   badge: {
     position: 'absolute',
     top: -7,

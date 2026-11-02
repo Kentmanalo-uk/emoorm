@@ -6,7 +6,7 @@ import {
 import { useRouter } from 'expo-router';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import {
-  CheckCircleIcon, FileTextIcon, FlagIcon, MoneyIcon, MotorcycleIcon, PackageIcon, TruckIcon, XCircleIcon,
+  CameraIcon, CheckCircleIcon, FileTextIcon, FlagIcon, MoneyIcon, MotorcycleIcon, PackageIcon, TruckIcon, XCircleIcon,
 } from '../../../lib/icons';
 import apiClient from '../../../api/client';
 import { resolveImg } from '../../../lib/media';
@@ -99,10 +99,16 @@ const TONES = {
   grey: { line: 'rgba(107, 114, 128, 0.22)', soft: '#f9fafb', ink: '#374151' },
 };
 
+// The photo can change once the order is handed over, until it completes. A
+// MoorMove delivery's photo is the rider's. The server also refuses once a
+// return exists.
+const canChangeProof = (order) => ['DELIVERED', 'PICKED_UP'].includes(order.status)
+  && order.deliveryPartner !== 'MOORMOVE';
+
 /** The hand-over photo (ProofPhotoSheet.jsx OrderProof), opening on the whole screen. */
-function HandOverProof({ order, onView }) {
+function HandOverProof({ order, onView, onChangeProof }) {
   const pickup = order.fulfillmentMethod === 'PICKUP';
-  const src = resolveImg(order.fulfillmentProofUrl);
+  const src = order.fulfillmentProofUrl ? resolveImg(order.fulfillmentProofUrl) : null;
   const label = pickup ? 'Proof of pickup' : 'Proof of delivery';
   return (
     <View style={styles.proof}>
@@ -110,9 +116,21 @@ function HandOverProof({ order, onView }) {
         <Text style={styles.proofLabel}>{label}</Text>
         {order.fulfillmentProofAt ? <Text style={styles.proofTime}>{mediumStamp(order.fulfillmentProofAt)}</Text> : null}
       </View>
-      <Pressable accessibilityRole="imagebutton" accessibilityLabel="Open full photo" onPress={() => onView?.(src, label)} style={styles.proofPhoto}>
-        <Image source={{ uri: src }} style={styles.proofImg} resizeMode="cover" accessibilityLabel={label} />
-      </Pressable>
+      {src ? (
+        <Pressable accessibilityRole="imagebutton" accessibilityLabel="Open full photo" onPress={() => onView?.(src, label)} style={styles.proofPhoto}>
+          <Image source={{ uri: src }} style={styles.proofImg} resizeMode="cover" accessibilityLabel={label} />
+        </Pressable>
+      ) : null}
+      {onChangeProof && canChangeProof(order) ? (
+        <Pressable
+          accessibilityRole="button"
+          onPress={() => onChangeProof(order)}
+          style={({ pressed }) => [styles.proofChange, pressed && styles.proofChangePressed]}
+        >
+          <CameraIcon size={17} color={t.neutral[700]} />
+          <Text style={styles.proofChangeText}>{src ? 'Change photo' : 'Add photo'}</Text>
+        </Pressable>
+      ) : null}
     </View>
   );
 }
@@ -222,7 +240,7 @@ function RiderButtons({
 }
 
 function DetailBody({
-  order, updatingId, verifyingId, onStep, onPayment, onReject, onRefund, onReport, onView, onLeave, onParcelBack, onWaive,
+  order, updatingId, verifyingId, onStep, onPayment, onReject, onRefund, onReport, onView, onChangeProof, onLeave, onParcelBack, onWaive,
   ridersOn, onRider,
 }) {
   const router = useRouter();
@@ -411,8 +429,8 @@ function DetailBody({
         </ColRow>
       ) : null}
 
-      {order.fulfillmentProofUrl ? (
-        <ColRow><HandOverProof order={order} onView={onView} /></ColRow>
+      {order.fulfillmentProofUrl || (onChangeProof && canChangeProof(order)) ? (
+        <ColRow><HandOverProof order={order} onView={onView} onChangeProof={onChangeProof} /></ColRow>
       ) : null}
 
       {order.trackingNumber ? (
@@ -538,7 +556,7 @@ function DetailBody({
 /**
  * <OrderDetailSheet order={selected} onClose updatingId verifyingId
  *   onStep(orderId, status) onPayment(orderId, 'PAID') onReject(orderId)
- *   onRefund(orderId) onReport(buyer) onView(uri, title) onParcelBack(order) onWaive(order)
+ *   onRefund(orderId) onReport(buyer) onView(uri, title) onChangeProof(order) onParcelBack(order) onWaive(order)
  *   ridersOn onRider(order, 'book' | 'self' | 'cancel' | 'cash') />
  * Open while `order` is set; it keeps the last order on screen while it slides away.
  */
@@ -691,6 +709,12 @@ const styles = themed(() => StyleSheet.create({
   proofTime: { fontSize: 12, lineHeight: 19.2, ...font(400), color: t.neutral[500] },
   proofPhoto: { width: '100%', maxWidth: 320, borderRadius: 12, overflow: 'hidden', backgroundColor: t.neutral[100] },
   proofImg: { width: '100%', aspectRatio: 4 / 3, maxHeight: 240 },
+  proofChange: {
+    alignSelf: 'flex-start', height: 40, flexDirection: 'row', alignItems: 'center', gap: 6, paddingHorizontal: 14,
+    borderWidth: 1, borderColor: t.neutral[300], borderRadius: 10, backgroundColor: t.neutral[0],
+  },
+  proofChangePressed: { opacity: 0.7 },
+  proofChangeText: { fontSize: 13.5, lineHeight: 19, ...font(500), color: t.neutral[700] },
 
   address: { fontSize: 13, lineHeight: 19.5, ...font(400), color: t.neutral[700] },
   mapLink: { marginTop: 4, fontSize: 13, lineHeight: 20.8, ...font(500), color: t.primary[700], textDecorationLine: 'underline' },

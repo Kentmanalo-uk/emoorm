@@ -13,8 +13,8 @@ import axios from '../../lib/axios';
  *                  still shows them)
  */
 
-/** The scan plays at least this long, so one full sweep shows. */
-export const SCAN_MIN_MS = 2400;
+/** The scan plays at least this long, so it is seen rather than flashed. */
+export const SCAN_MIN_MS = 1200;
 const MAX_SIDE = 1080;
 const STORE_KEY = 'emoorm.image-search';
 

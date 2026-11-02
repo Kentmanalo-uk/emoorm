@@ -98,7 +98,7 @@ const styles = themed(() => StyleSheet.create({
     justifyContent: 'center',
     overflow: 'hidden',
     borderWidth: 3,
-    bordercolor: t.onBrand,
+    borderColor: t.onBrand,
     borderRadius: 29,
     backgroundColor: t.primary[50],
   },
@@ -107,5 +107,5 @@ const styles = themed(() => StyleSheet.create({
   swatches: { flexDirection: 'row', justifyContent: 'center' },
   swatchRing: { width: 66, height: 66, borderWidth: 1, borderColor: t.neutral[200], borderRadius: 33 },
   swatchNext: { marginLeft: -18 },
-  swatch: { flex: 1, borderWidth: 4, bordercolor: t.onBrand, borderRadius: 32 },
+  swatch: { flex: 1, borderWidth: 4, borderColor: t.onBrand, borderRadius: 32 },
 }));

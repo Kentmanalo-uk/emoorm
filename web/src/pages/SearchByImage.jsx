@@ -23,7 +23,7 @@ import './SearchByImage.css';
  *            torch at the top where the phone has one). Desktop: drop,
  *            browse or take a photo (ImageSearchPicker).
  *   scanning the photo fills the frame while the scan plays over it
- *            (at least SCAN_MIN_MS, so a full sweep shows)
+ *            (at least SCAN_MIN_MS, so the scan is seen)
  *   results  phones: a sheet rises over the photo (drag it up for more);
  *            desktop: a panel beside the photo. Retake for another.
  *   error    Couldn't search this photo: Retake / Try again

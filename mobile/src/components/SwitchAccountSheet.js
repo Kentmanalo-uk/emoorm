@@ -11,6 +11,7 @@ import {
   forgetAccount, loadSavedAccounts, setCurrentAside, switchToAccount, useSavedAccounts,
 } from '../store/savedAccounts';
 import { resolveImg } from '../lib/media';
+import Avatar from './avatars/Avatar';
 import { toast } from '../lib/toast';
 import { font, t, themed } from '../theme';
 import Sheet from './Sheet';
@@ -119,7 +120,6 @@ export function SwitchAccountHost() {
           const current = a.id === user?.id;
           const needsLogin = !current && !ready.has(a.id);
           const photo = resolveImg(a.profilePhoto);
-          const initial = (a.fullName || a.email || '?').trim().charAt(0).toUpperCase();
           return (
             <Pressable
               key={a.id}
@@ -141,7 +141,9 @@ export function SwitchAccountHost() {
                 </Pressable>
               ) : null}
               <View style={styles.avatar}>
-                {photo ? <Image source={{ uri: photo }} style={styles.avatarImg} /> : <Text style={styles.avatarText}>{initial}</Text>}
+                {photo
+                  ? <Image source={{ uri: photo }} style={styles.avatarImg} />
+                  : <Avatar seed={a.id} name={a.avatarKey} size={46} />}
               </View>
               <View style={styles.accountText}>
                 <Text style={styles.accountName} numberOfLines={1}>{a.fullName || a.email}</Text>

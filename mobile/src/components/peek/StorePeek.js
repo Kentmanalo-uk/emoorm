@@ -1,4 +1,5 @@
-import { Share, StyleSheet, Text, View } from 'react-native';
+import { StyleSheet, Text, View } from 'react-native';
+import { openShare } from '../ShareSheet';
 import { useRouter } from 'expo-router';
 import {
   ArrowSquareOutIcon, ChatCircleTextIcon, MapPinIcon, PackageIcon, ShareNetworkIcon, UserPlusIcon,
@@ -51,7 +52,7 @@ export function useStorePeek() {
     const share = async () => {
       try {
         const url = `${SITE}/store/${store.slug}`;
-        await Share.share({ title: store.name, message: `${store.name} on E-MOORM ${url}`, url });
+        openShare({ title: store.name, text: `${store.name} on E-MOORM`, url });
       } catch {
         // Closing the share menu needs no message.
       }

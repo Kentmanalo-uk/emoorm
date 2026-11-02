@@ -15,6 +15,7 @@ const BLOCKED_SELECT = {
   id: true,
   fullName: true,
   profilePhoto: true,
+  avatarKey: true,
   role: true,
 };
 

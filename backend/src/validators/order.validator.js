@@ -141,6 +141,18 @@ const statusUpdateValidation = [
     .withMessage('The photo must be an uploaded JPG, PNG or WEBP image'),
 ];
 
+const fulfillmentProofValidation = [
+  body('proofUrl')
+    .isString()
+    .withMessage('Add a photo')
+    .notEmpty()
+    .withMessage('Add a photo')
+    .isLength({ max: 255 })
+    .withMessage('Photo path is too long')
+    .custom(isUploadedPhoto)
+    .withMessage('The photo must be an uploaded JPG, PNG or WEBP image'),
+];
+
 const verifyPaymentValidation = [
   body('paymentStatus')
     .customSanitizer((value) => String(value ?? '').trim().toUpperCase())
@@ -164,6 +176,7 @@ module.exports = {
   paymentProofValidation,
   verifyPaymentValidation,
   statusUpdateValidation,
+  fulfillmentProofValidation,
   rejectInvalid,
   PH_MOBILE,
   PAYMENT_REFERENCE,

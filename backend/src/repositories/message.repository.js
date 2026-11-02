@@ -3,7 +3,7 @@ const prisma = require('../config/database');
 
 const conversationInclude = {
   buyer: {
-    select: { id: true, fullName: true, profilePhoto: true },
+    select: { id: true, fullName: true, profilePhoto: true, avatarKey: true },
   },
   store: {
     select: {
@@ -21,7 +21,7 @@ const conversationInclude = {
 
 const messageInclude = {
   sender: {
-    select: { id: true, fullName: true, profilePhoto: true, role: true },
+    select: { id: true, fullName: true, profilePhoto: true, avatarKey: true, role: true },
   },
   order: {
     select: {

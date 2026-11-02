@@ -321,7 +321,7 @@ const styles = themed(() => StyleSheet.create({
   facts: { flexDirection: 'row', alignSelf: 'stretch', gap: 8, marginTop: 20 },
   fact: {
     flex: 1, alignItems: 'center', paddingVertical: 10, borderRadius: 14,
-    backgroundColor: veil(0.7), borderWidth: 1, bordercolor: t.onBrand,
+    backgroundColor: veil(0.7), borderWidth: 1, borderColor: t.onBrand,
   },
   factValue: { fontSize: 17, lineHeight: 21, color: t.primary[700], ...font(700) },
   factLabel: { marginTop: 2, fontSize: 12, lineHeight: 15, color: t.neutral[500], ...font(400) },

@@ -1,12 +1,12 @@
 import { useEffect, useState } from 'react';
 import {
-  ActivityIndicator, FlatList, Image, KeyboardAvoidingView, Modal, Platform,
+  ActivityIndicator, FlatList, KeyboardAvoidingView, Modal, Platform,
   Pressable, StyleSheet, Text, TextInput, View,
 } from 'react-native';
 import { useRouter } from 'expo-router';
 import { PaperPlaneTiltIcon, TrashIcon, XIcon } from '../../lib/icons';
 import useAuthStore from '../../store/authStore';
-import { resolveImg } from '../../lib/media';
+import UserAvatar from '../UserAvatar';
 import { addReviewComment, deleteReviewComment, listReviewComments } from '../../lib/reviewSocial';
 import { font, t, themed } from '../../theme';
 
@@ -20,18 +20,6 @@ const when = (value) => {
   if (mins < 1440) return `${Math.round(mins / 60)}h`;
   return at.toLocaleDateString('en-PH', { day: 'numeric', month: 'short' });
 };
-
-function Avatar({ src, name }) {
-  const [failed, setFailed] = useState(false);
-  const uri = src ? resolveImg(src) : null;
-  return (
-    <View style={styles.avatar}>
-      {uri && !failed
-        ? <Image source={{ uri }} style={styles.avatarImg} onError={() => setFailed(true)} />
-        : <Text style={styles.avatarText}>{(name || 'U').trim().charAt(0).toUpperCase()}</Text>}
-    </View>
-  );
-}
 
 /**
  * What other shoppers said under one review, and the box to add to it
@@ -136,7 +124,7 @@ export default function ReviewComments({ review, onClose, onCountChange }) {
               )}
               renderItem={({ item }) => (
                 <View style={styles.item}>
-                  <Avatar src={item.user?.profilePhoto} name={item.user?.fullName} />
+                  <UserAvatar user={item.user} size={28} />
                   <View style={styles.body}>
                     <View style={styles.whoRow}>
                       <Text style={styles.who} numberOfLines={1}>{item.user?.fullName || 'Anonymous'}</Text>

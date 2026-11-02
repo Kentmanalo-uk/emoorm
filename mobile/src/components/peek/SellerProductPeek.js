@@ -1,4 +1,5 @@
-import { Share, StyleSheet, Text, View } from 'react-native';
+import { StyleSheet, Text, View } from 'react-native';
+import { openShare } from '../ShareSheet';
 import {
   ArrowSquareOutIcon, EyeIcon, EyeSlashIcon, PencilSimpleIcon, PlusIcon, ShareNetworkIcon, TrashIcon,
 } from '../../lib/icons';
@@ -28,7 +29,7 @@ export function useSellerProductPeek() {
     const share = async () => {
       try {
         const url = `https://emoorm.shop/product/${product.slug}`;
-        await Share.share({ title: product.name, message: `${product.name} on E-MOORM ${url}`, url });
+        openShare({ title: product.name, text: `${product.name} on E-MOORM`, url });
       } catch {
         // Closing the share menu needs no message.
       }

@@ -6,6 +6,7 @@ import {
 } from '../lib/icons';
 import useAuthStore from '../store/authStore';
 import { resolveImg } from '../lib/media';
+import Avatar from './avatars/Avatar';
 import { font, t, themed } from '../theme';
 import Sheet, { SheetButton } from './Sheet';
 import { startAccountSwitch } from './RoleSwitchOverlay';
@@ -46,7 +47,6 @@ export function AccountSheetHost() {
   const inSeller = pathname === '/seller' || pathname.startsWith('/seller/');
   const isSeller = user.role === 'SELLER';
   const photo = resolveImg(user.profilePhoto);
-  const initial = (user.fullName || user.email || '?').trim().charAt(0).toUpperCase();
 
   // Close first, then act, so the next screen never opens under the sheet.
   const after = (fn) => { hide(); setTimeout(fn, 320); };
@@ -82,7 +82,9 @@ export function AccountSheetHost() {
     <Sheet open={open} onClose={hide} variant="seller" title="Account">
       <View style={styles.who}>
         <View style={styles.avatar}>
-          {photo ? <Image source={{ uri: photo }} style={styles.avatarImg} /> : <Text style={styles.avatarText}>{initial}</Text>}
+          {photo
+            ? <Image source={{ uri: photo }} style={styles.avatarImg} />
+            : <Avatar seed={user.id} name={user.avatarKey} size={44} />}
         </View>
         <View style={styles.whoText}>
           <Text style={styles.name} numberOfLines={1}>{user.fullName || 'Your account'}</Text>

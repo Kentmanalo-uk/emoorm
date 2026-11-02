@@ -26,9 +26,12 @@ import { font, t, themed } from '../../../theme';
  * upload says why and offers Try again; Retake / Change photo swap it. When
  * the status change itself fails (onConfirm answers false), the sheet stays
  * open with the photo already up, so a retry doesn't send it again.
+ *
+ * With `replacing` it changes the photo on an order already handed over:
+ * `currentSrc` shows the photo there now until a new one is picked.
  */
 export default function ProofPhotoSheet({
-  open, kind = 'DELIVERY', orderNumber, onCancel, onConfirm,
+  open, kind = 'DELIVERY', orderNumber, onCancel, onConfirm, replacing = false, currentSrc = null,
 }) {
   const insets = useSafeAreaInsets();
   // photo: { asset, status: 'uploading' | 'ready' | 'failed', url, error }
@@ -49,7 +52,10 @@ export default function ProofPhotoSheet({
   const hint = pickup
     ? 'Take a photo of the order being handed to the buyer at your pickup point.'
     : 'Take a photo of the order at the delivery address, ideally with the buyer or at their door.';
-  const action = pickup ? 'Mark picked up' : 'Mark delivered';
+  const action = replacing ? 'Save photo' : (pickup ? 'Mark picked up' : 'Mark delivered');
+  const note = replacing
+    ? 'The new photo replaces this one. The buyer is told, and can see it on their order.'
+    : `${hint} The buyer can see this photo on their order.`;
   const Icon = pickup ? StorefrontIcon : TruckIcon;
   const uploading = photo?.status === 'uploading';
   const busy = saving || uploading;
@@ -153,17 +159,22 @@ export default function ProofPhotoSheet({
             {orderNumber ? <Text style={proofStyles.order}>Order {orderNumber}</Text> : null}
           </View>
         </View>
-        <Text style={proofStyles.hint}>{hint} The buyer can see this photo on their order.</Text>
+        <Text style={proofStyles.hint}>{note}</Text>
 
-        {photo ? (
+        {photo || currentSrc ? (
           <>
             <View style={styles.preview}>
               <Image
-                source={{ uri: asset.uri }}
+                source={{ uri: asset?.uri || currentSrc }}
                 style={[styles.previewImg, { aspectRatio: ratio }, uploading && styles.previewDim]}
                 resizeMode="contain"
                 accessibilityLabel={`${title} preview`}
               />
+              {!photo ? (
+                <View style={[styles.state, styles.stateBusy]}>
+                  <Text style={styles.stateText}>Current photo</Text>
+                </View>
+              ) : null}
               {uploading ? (
                 <View style={[styles.state, styles.stateBusy]} accessibilityLiveRegion="polite">
                   <ActivityIndicator size={16} color="#fff" />
@@ -176,7 +187,7 @@ export default function ProofPhotoSheet({
                   <Text style={styles.stateText}>Photo added</Text>
                 </View>
               ) : null}
-              {photo.status === 'failed' ? (
+              {photo?.status === 'failed' ? (
                 <View style={[styles.state, styles.stateFailed]} accessibilityLiveRegion="assertive">
                   <View style={styles.errorRow}>
                     <WarningCircleIcon size={18} weight="fill" color="#fff" />

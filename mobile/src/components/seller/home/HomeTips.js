@@ -85,10 +85,24 @@ export default function HomeTips({ onShare }) {
 
   return (
     <View style={styles.banners} accessibilityLabel="Tips">
-      <View style={styles.trackWrap} onLayout={(e) => setWidth(e.nativeEvent.layout.width)}>
+      {/*
+        * Measures the track, and clips nothing.
+        *
+        * It used to round and clip the cards. On iOS that mask is cut once
+        * and not recut when the width settles, so the cards came out
+        * trimmed to a stale, narrower box -- the right-hand strip of each
+        * one, art included, simply was not drawn, which is what reads as
+        * the card being cut out. The same thing was found on the ScrollView
+        * before this and moved here, which only moved it.
+        *
+        * Nothing is lost: every card carries the same radius and its own
+        * overflow: hidden, so the corners stay rounded and the clip is the
+        * card's own box, which cannot go stale. The ScrollView still keeps
+        * its content inside the track.
+        */}
+      <View onLayout={(e) => setWidth(e.nativeEvent.layout.width)}>
         {width ? (
-          // Rounded by its wrapper only: a corner radius on the scroll view itself
-          // clips the cards to a stale, smaller box on iOS.
+          // No radius here either: see the wrapper above.
           <ScrollView showsVerticalScrollIndicator={false}
             key={width}
             ref={scrollRef}
@@ -237,7 +251,6 @@ function Banner({ slide, width, active, still, onPress }) {
 
 const styles = themed(() => StyleSheet.create({
   banners: { gap: 8 },
-  trackWrap: { borderRadius: 16, overflow: 'hidden' },
   placeholder: { minHeight: 132 },
   banner: {
     flexDirection: 'row',

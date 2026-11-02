@@ -809,7 +809,7 @@ const styles = themed(() => StyleSheet.create({
   },
   qrKindOn: { borderColor: t.primary[600], boxShadow: '0px 0px 0px 3px rgba(5, 150, 105, 0.12)' },
   qrKindCheck: {
-    position: 'absolute', top: -8, right: -8, width: 22, height: 22, borderRadius: 11, borderWidth: 2, bordercolor: t.onBrand,
+    position: 'absolute', top: -8, right: -8, width: 22, height: 22, borderRadius: 11, borderWidth: 2, borderColor: t.onBrand,
     alignItems: 'center', justifyContent: 'center', backgroundColor: t.primary[600],
   },
   qrDrop: {

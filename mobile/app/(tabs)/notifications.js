@@ -268,8 +268,8 @@ function NotificationList() {
           accessibilityState={{ expanded: searchOpen }}
         >
           {searchOpen
-            ? <XIcon size={19} weight="bold" color={t.primary[700]} />
-            : <MagnifyingGlassIcon size={19} color={t.neutral[700]} />}
+            ? <XIcon size={28} weight="bold" color={t.primary[700]} />
+            : <MagnifyingGlassIcon size={28} color={t.neutral[700]} />}
         </ShellBarButton>
         <ShellPageMenu label="Notification options" items={menuItems} />
       </InboxPageHead>

@@ -36,7 +36,14 @@ export function createIkion(iconName, displayName, nodes) {
       : { fill: 'none', stroke: color, strokeWidth, strokeLinecap: 'round', strokeLinejoin: 'round' };
     return (
       <Svg width={size} height={size} viewBox="0 0 24 24" color={color} accessibilityLabel={title} {...rest}>
-        <G {...paint}>{draw(nodes[filled ? 'filled' : 'outline'])}</G>
+        {/* The colour is handed to draw() so any node written as
+            fill="currentColor" -- the cart's wheels, an arrow's head --
+            is painted in it. Without this the literal string survives
+            into react-native-svg, which does not resolve it the way a
+            browser resolves CSS currentColor, and those parts came out
+            in their own colour: the cart looked filled in next to the
+            outline icons beside it. */}
+        <G {...paint}>{draw(nodes[filled ? 'filled' : 'outline'], color)}</G>
         {children}
       </Svg>
     );

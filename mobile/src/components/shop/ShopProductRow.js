@@ -1,3 +1,4 @@
+import { memo } from 'react';
 import { Pressable, StyleSheet, Text, View } from 'react-native';
 import { useRouter } from 'expo-router';
 import { useProductPeek } from '../peek/ProductPeek';
@@ -36,7 +37,7 @@ function KindPrice({ product, amount, size }) {
  * the shop is `closed`, i.e. not taking orders). Edge to edge with a
  * hairline under it, as the website's flat phone pages.
  */
-export function ShopProductRow({ product, onAdd, onBuy, closed = false }) {
+function ShopProductRowBase({ product, onAdd, onBuy, closed = false }) {
   const router = useRouter();
   const { price } = saleInfo(product);
   const images = Array.isArray(product.images) ? product.images : [];
@@ -115,7 +116,7 @@ export function ShopProductRow({ product, onAdd, onBuy, closed = false }) {
  * button (phones hide it; tapping opens the product), name, price in the
  * shop's colour, stars or "New".
  */
-export function ShopGridCard({ product, accent, style }) {
+function ShopGridCardBase({ product, accent, style }) {
   const router = useRouter();
   const { price } = saleInfo(product);
   const images = Array.isArray(product.images) ? product.images : [];
@@ -125,7 +126,9 @@ export function ShopGridCard({ product, accent, style }) {
   return (
     <Pressable style={[styles.card, style]} onPress={() => router.push(`/product/${product.slug}`)} {...peek} accessibilityRole="link">
       <View style={styles.cardImg}>
-        <ProductImage src={images[0] || null} />
+        {/* The box is 112 wide (styles.img), so the server's w320 copy
+            is plenty -- not the 1600px original. */}
+        <ProductImage src={images[0] || null} width={112} />
       </View>
       <View style={styles.cardInfo}>
         <Text style={styles.cardName} numberOfLines={2}>
@@ -205,3 +208,12 @@ const styles = themed(() => StyleSheet.create({
   cardStars: { flexDirection: 'row', alignItems: 'center', gap: 1 },
   reviewCount: { fontSize: 11, lineHeight: 11, ...font(400), color: t.neutral[500] },
 }));
+
+/*
+ * Memoised: a shop page renders one of these per product, and without it
+ * they all render again whenever the page does -- opening the cart,
+ * changing a filter. Each render reads the product's price, stock and
+ * badges, so the cost is per card, not per page.
+ */
+export const ShopProductRow = memo(ShopProductRowBase);
+export const ShopGridCard = memo(ShopGridCardBase);

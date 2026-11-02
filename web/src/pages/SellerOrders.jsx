@@ -2,7 +2,7 @@ import { useState, useEffect } from 'react';
 import { Link, useNavigate, useOutletContext, useSearchParams } from 'react-router-dom';
 import {
   Eye, CheckCircle, XCircle, Clock, Package, Truck, FileText, Storefront as StoreIcon, MagnifyingGlass, X, Flag, SlidersHorizontal,
-  Printer, Phone, ChatCircleDots, QrCode, CaretRight, MapPin, User,
+  Printer, Phone, ChatCircleDots, QrCode, CaretRight, MapPin, User, Camera,
 } from '../lib/icons';
 import { usePhoneLayout } from '../hooks/useMobileNav';
 import useFocusTrap from '../hooks/useFocusTrap';
@@ -785,9 +785,45 @@ export default function SellerOrders() {
     handleStatusChange(orderId, newStatus);
   };
 
+  // Change the photo on an order handed over and still waiting for the buyer.
+  // The server has the last word: it also refuses once a return exists.
+  const canChangeProof = (order) => ['DELIVERED', 'PICKED_UP'].includes(order?.status)
+    && order?.deliveryPartner !== 'MOORMOVE';
+
+  const requestProofChange = (order) => {
+    setProofRequest({
+      orderId: order.id,
+      kind: order.fulfillmentMethod === 'PICKUP' ? 'PICKUP' : 'DELIVERY',
+      orderNumber: order.orderNumber,
+      replacing: true,
+      currentSrc: order.fulfillmentProofUrl ? resolveImg(order.fulfillmentProofUrl) : null,
+    });
+  };
+
+  const replaceProof = async (orderId, proofUrl) => {
+    setUpdatingId(orderId);
+    try {
+      const res = await axios.patch(`/orders/${orderId}/fulfillment-proof`, { proofUrl });
+      applyOrderUpdate(orderId, {
+        fulfillmentProofUrl: res.data?.fulfillmentProofUrl,
+        fulfillmentProofAt: res.data?.fulfillmentProofAt,
+      });
+      toast.success('Photo updated');
+      return true;
+    } catch (err) {
+      toast.error(err.message || 'Failed to update the photo');
+      if (err.status === 409) loadOrders();
+      return false;
+    } finally {
+      setUpdatingId(null);
+    }
+  };
+
   const confirmProof = async (proofUrl) => {
     if (!proofRequest) return;
-    const ok = await handleStatusChange(proofRequest.orderId, proofRequest.status, proofUrl);
+    const ok = proofRequest.replacing
+      ? await replaceProof(proofRequest.orderId, proofUrl)
+      : await handleStatusChange(proofRequest.orderId, proofRequest.status, proofUrl);
     if (ok) setProofRequest(null);
     return ok;
   };
@@ -1470,9 +1506,19 @@ export default function SellerOrders() {
                     onTracking={riderTracking}
                   />
 
-                  {selectedOrder.fulfillmentProofUrl && (
+                  {(selectedOrder.fulfillmentProofUrl || canChangeProof(selectedOrder)) && (
                     <div className="detail-row detail-row--col">
                       <OrderProof order={selectedOrder} resolve={resolveImg} />
+                      {canChangeProof(selectedOrder) && (
+                        <button
+                          type="button"
+                          className="proof-swap-btn order-proof-edit"
+                          onClick={() => requestProofChange(selectedOrder)}
+                          disabled={updatingId === selectedOrder.id}
+                        >
+                          <Camera size={17} /> {selectedOrder.fulfillmentProofUrl ? 'Change photo' : 'Add photo'}
+                        </button>
+                      )}
                     </div>
                   )}
 
@@ -1643,6 +1689,8 @@ export default function SellerOrders() {
         open={!!proofRequest}
         kind={proofRequest?.kind}
         orderNumber={proofRequest?.orderNumber}
+        replacing={Boolean(proofRequest?.replacing)}
+        currentSrc={proofRequest?.currentSrc}
         onCancel={() => setProofRequest(null)}
         onConfirm={confirmProof}
       />

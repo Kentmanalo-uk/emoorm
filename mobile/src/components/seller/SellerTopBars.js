@@ -38,7 +38,7 @@ export function SellerPageMenu({ extra = [] }) {
 }
 
 /**
- * A round 40px header icon (.scm-icon, .sh-icon): plain, grey-filled while
+ * A round 44px header icon (.scm-icon, .sh-icon): plain, grey-filled while
  * pressed, with a pink count on its corner (9+ past nine).
  * <SellerHeaderButton label="Notifications" to="/seller/notifications" badge={3}><BellIcon …/></SellerHeaderButton>
  */
@@ -67,7 +67,7 @@ export function SellerBellButton() {
   const { unreadCount } = useSellerShell();
   return (
     <SellerHeaderButton label="Notifications" to="/seller/notifications" badge={unreadCount}>
-      <BellIcon size={20} color={t.neutral[700]} />
+      <BellIcon size={28} color={t.neutral[700]} />
     </SellerHeaderButton>
   );
 }
@@ -104,7 +104,7 @@ export function SellerProductsHeader() {
     <SellerTabHeader
       actions={(
         <SellerHeaderButton label="Add product" to="/seller/products/new?fromList=1">
-          <PlusIcon size={21} weight="bold" color={t.neutral[700]} />
+          <PlusIcon size={28} weight="bold" color={t.neutral[700]} />
         </SellerHeaderButton>
       )}
     />
@@ -118,7 +118,7 @@ export function SellerChatHeader() {
       chat
       actions={(
         <SellerHeaderButton label="Ask Ate Moormy, your AI assistant" to="/seller/assistant">
-          <SparkleIcon size={21} weight="fill" color={t.violet[500]} />
+          <SparkleIcon size={28} weight="fill" color={t.violet[500]} />
         </SellerHeaderButton>
       )}
     />
@@ -225,7 +225,7 @@ export function SellerHomeHeader() {
       </Pressable>
       <View style={styles.actions}>
         <SellerHeaderButton label="Notifications" to="/seller/notifications" badge={unreadCount}>
-          <BellIcon size={20} color={t.neutral[700]} />
+          <BellIcon size={28} color={t.neutral[700]} />
         </SellerHeaderButton>
         <SellerHeaderButton label="Switch to my buyer account" onPress={switchToPersonal}>
           <Avatar uri={user?.profilePhoto} name={user?.fullName || 'U'} size={30} fontSize={13} />
@@ -249,11 +249,11 @@ export function SellerMeHeader({ onShare }) {
       <View style={styles.actions}>
         {onShare ? (
           <SellerHeaderButton label="Share shop" onPress={onShare}>
-            <ShareNetworkIcon size={19} color={t.neutral[700]} />
+            <ShareNetworkIcon size={28} color={t.neutral[700]} />
           </SellerHeaderButton>
         ) : null}
         <SellerHeaderButton label="Shop settings" to="/seller/settings">
-          <GearIcon size={19} color={t.neutral[700]} />
+          <GearIcon size={28} color={t.neutral[700]} />
         </SellerHeaderButton>
         <SellerPageMenu />
       </View>

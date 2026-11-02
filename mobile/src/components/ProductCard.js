@@ -1,4 +1,4 @@
-import { useRef } from 'react';
+import { memo, useRef } from 'react';
 import { Pressable, StyleSheet, Text, View, useWindowDimensions } from 'react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { useRouter } from 'expo-router';
@@ -31,7 +31,7 @@ import { isStockless, priceUnit, startsFrom } from './orders/orderLines';
  * Older callers still pass name / price / imageUrl / rating / reviewCount
  * with variant "grid" (48% wide) or "list" (a row).
  */
-export default function ProductCard({
+function ProductCard({
   product,
   variant,
   onPress,
@@ -51,6 +51,13 @@ export default function ProductCard({
   const photoAspect = useRef(0);
   const insets = useSafeAreaInsets();
   const { width: screenW } = useWindowDimensions();
+  // How wide this card's photo is actually drawn, so the server's
+  // matching copy is fetched instead of the 1600px original. A list row
+  // shows a small square; the grid and home tiles are about half the
+  // screen; a result card fills its column. Rounded up by sizedImg to
+  // one of the sizes the server keeps, so a wrong guess here only costs
+  // the next size up.
+  const photoWidth = list ? 96 : Math.round(screenW * (result ? 0.5 : 0.48));
   // Opening the product: the photo flies from the card to the page's gallery.
   const openProduct = () => {
     const uri = p.images?.[0] ? resolveImg(p.images[0]) : null;
@@ -84,6 +91,7 @@ export default function ProductCard({
         <ProductImage
           src={p.images?.[0]}
           style={StyleSheet.absoluteFill}
+          width={photoWidth}
           onLoad={(e) => {
             const { width: w, height: h } = e?.nativeEvent?.source || {};
             if (w && h) photoAspect.current = w / h;
@@ -211,3 +219,13 @@ const styles = themed(() => StyleSheet.create({
   badgeOut: { backgroundColor: t.danger[500] },
   badgeFeatured: { backgroundColor: t.warning[500] },
 }));
+
+/*
+ * Memoised, because this is the component a grid has fifty of. Without
+ * it every card re-renders whenever the screen holding them does -- a
+ * search box typed into, a cart count changing -- and each one of those
+ * renders walks its own price, badge and rating logic. The props are
+ * plain values and one product object, so the default shallow compare is
+ * the right one.
+ */
+export default memo(ProductCard);

@@ -455,7 +455,7 @@ const styles = themed(() => StyleSheet.create({
   },
   thumbTick: {
     position: 'absolute', top: -7, right: -7, width: 18, height: 18, borderRadius: 9, alignItems: 'center', justifyContent: 'center',
-    backgroundColor: t.primary[600], borderWidth: 2, bordercolor: t.onBrand,
+    backgroundColor: t.primary[600], borderWidth: 2, borderColor: t.onBrand,
   },
   thumbName: { fontSize: 12, lineHeight: 15, ...font(400), color: t.neutral[600] },
   thumbNameOn: { ...font(500), color: t.neutral[900] },

@@ -29,7 +29,22 @@ const FALLBACK = {
   get backgroundColor() { return veil(0.96); },
   borderWidth: 1,
   get borderColor() { return ink(0.06); },
-  get boxShadow() { return [{ offsetX: 0, offsetY: 4, blurRadius: 16, color: ink(0.08) }]; },
+  // This object is written by hand rather than through themed(), so the
+  // Android shadow swap there does not reach it: it is done here instead.
+  // Android gets the platform's own elevation, iOS the blurred shadow.
+  // The 1px border above already separates the panel either way.
+  //
+  // Written as getters rather than a spread of them. Spreading an object
+  // of getters calls them there and then, which would read the colour at
+  // import time and leave this panel wearing the light palette's shadow
+  // in dark mode -- the very thing the note above guards against.
+  ...(Platform.OS === 'android' ? { elevation: 2 } : null),
+  get shadowColor() { return ink(0.08); },
+  get boxShadow() {
+    return Platform.OS === 'android'
+      ? undefined
+      : [{ offsetX: 0, offsetY: 4, blurRadius: 16, color: ink(0.08) }];
+  },
 };
 
 export default function Glass({

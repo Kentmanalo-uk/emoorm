@@ -65,7 +65,7 @@ const money = (value, label) => {
 };
 const cents = (n) => Math.round(n * 100) / 100;
 
-const PERSON = { select: { id: true, fullName: true, profilePhoto: true, contactNumber: true, phoneVerifiedNumber: true } };
+const PERSON = { select: { id: true, fullName: true, profilePhoto: true, avatarKey: true, contactNumber: true, phoneVerifiedNumber: true } };
 const OFFER_INCLUDE = {
   product: {
     select: {

@@ -28,6 +28,8 @@ const ShellBarButton = forwardRef(function ShellBarButton({ label, onPress, disa
 export default ShellBarButton;
 
 const styles = themed(() => StyleSheet.create({
-  button: { width: 40, height: 40, borderRadius: 20, alignItems: 'center', justifyContent: 'center', flexShrink: 0 },
+  // 44: the icons inside are the bottom navigation's size now, and 44
+  // is the smallest tap target iOS asks for.
+  button: { width: 44, height: 44, borderRadius: 22, alignItems: 'center', justifyContent: 'center', flexShrink: 0 },
   pressed: { backgroundColor: t.neutral[100] },
 }));

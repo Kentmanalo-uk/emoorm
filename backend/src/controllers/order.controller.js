@@ -290,6 +290,16 @@ const shipOrder = asyncHandler(async (req, res) => {
   successResponse(res, order, 'Order shipped');
 });
 
+/**
+ * Change the hand-over photo on an order waiting for the buyer
+ * @route PATCH /api/orders/:id/fulfillment-proof
+ * @access Private (Seller only)
+ */
+const replaceFulfillmentProof = asyncHandler(async (req, res) => {
+  const order = await orderService.replaceFulfillmentProof(req.params.id, req.user.id, req.body.proofUrl);
+  successResponse(res, order, 'Photo updated');
+});
+
 /** GET /orders/store/stages: the seller's tab counts. */
 const getStoreStageCounts = asyncHandler(async (req, res) => {
   successResponse(res, await orderService.getStoreStageCounts(req.user.id), 'Order counts');
@@ -307,6 +317,7 @@ module.exports = {
   buyerRecord,
   getStoreStageCounts,
   shipOrder,
+  replaceFulfillmentProof,
   revealOrderDetails,
   createOrder,
   getMyOrders,

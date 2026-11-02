@@ -4,6 +4,7 @@ const productRepository = require('../repositories/product.repository');
 const orderRepository = require('../repositories/order.repository');
 const storeRepository = require('../repositories/store.repository');
 const { cleanText } = require('../utils/sanitize');
+const { maskReview, maskReviews } = require('../utils/reviewIdentity');
 const { ApiError } = require('../middleware/errorHandler');
 
 /**
@@ -36,6 +37,9 @@ const getPendingReviews = async (userId) => reviewRepository.findPendingForBuyer
  */
 const createReview = async (userId, data) => {
   const { productId, rating, comment, images, videoUrl } = data;
+  // Anything else -- an older app, a typo, nothing at all -- is their own
+  // name, which is what every review did before this existed.
+  const displayAs = ['NAME', 'USERNAME', 'ANONYMOUS'].includes(data.displayAs) ? data.displayAs : 'NAME';
 
   // Validate product exists
   const product = await productRepository.findById(productId);
@@ -76,6 +80,7 @@ const createReview = async (userId, data) => {
         userId,
         productId,
         rating: numericRating,
+        displayAs,
         comment: cleanText(comment, { maxLength: 2000 }) || null,
         images: Array.isArray(images) && images.length ? images : undefined,
         videoUrl: videoUrl || undefined,
@@ -86,7 +91,7 @@ const createReview = async (userId, data) => {
   });
   await require('../repositories/productStats.repository').refreshStats([productId]);
 
-  return reviewRepository.findById(createdId);
+  return maskReview(await reviewRepository.findById(createdId), { keepOwner: true });
 };
 
 /**
@@ -101,7 +106,7 @@ const getReviewById = async (id) => {
     throw new ApiError('Review not found', 404);
   }
 
-  return review;
+  return maskReview(review);
 };
 
 /**
@@ -110,7 +115,7 @@ const getReviewById = async (id) => {
  * @returns {Promise<Object>} Reviews and pagination
  */
 const getReviews = async (options) => {
-  return reviewRepository.findAll(options);
+  return maskReviews(await reviewRepository.findAll(options));
 };
 
 /**
@@ -132,7 +137,7 @@ const getProductReviews = async (productId, options) => {
   ]);
 
   return {
-    ...reviewsData,
+    ...maskReviews(reviewsData),
     ratingStats,
   };
 };
@@ -144,6 +149,7 @@ const getProductReviews = async (productId, options) => {
  * @returns {Promise<Object>} Reviews and pagination
  */
 const getMyReviews = async (userId, options) => {
+  // Their own: left whole, so they can see and edit what they wrote.
   return reviewRepository.findAll({ ...options, buyerId: userId });
 };
 
@@ -228,7 +234,7 @@ const getSellerReviews = async (sellerId, options) => {
   ]);
 
   return {
-    ...reviewsData,
+    ...maskReviews(reviewsData),
     ratingStats,
   };
 };

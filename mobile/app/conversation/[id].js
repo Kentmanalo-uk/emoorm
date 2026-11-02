@@ -356,8 +356,17 @@ function StoreChat({ id, onBack }) {
     );
   }
 
+  // iOS has to be told to make room; Android already does it itself
+  // (softwareKeyboardLayoutMode defaults to resize), and asking for
+  // padding there as well moved the composer twice -- once by the system
+  // and once by this -- which is the jump as the keyboard opens. Leaving
+  // it undefined on Android lets the system's own animation carry it,
+  // which is the smooth one.
   return (
-    <KeyboardAvoidingView style={styles.screen} behavior={Platform.OS === 'web' ? undefined : 'padding'}>
+    <KeyboardAvoidingView
+      style={styles.screen}
+      behavior={Platform.OS === 'ios' ? 'padding' : undefined}
+    >
       <View style={[styles.head, { paddingTop: 8 + insets.top }]}>
         <Pressable accessibilityRole="button" accessibilityLabel="Back to conversations" onPress={onBack} style={({ pressed }) => [styles.back, pressed && styles.pressed]}>
           <CaretLeftIcon size={22} color={t.neutral[900]} />

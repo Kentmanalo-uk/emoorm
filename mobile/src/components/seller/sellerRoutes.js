@@ -52,6 +52,7 @@ export const PHONE_TITLES = {
   '/seller/settings': 'Settings',
   '/seller/verification': 'Verify identity',
   '/seller/shop-qr': 'Shop QR',
+  '/seller/tools': 'Shop tools',
 };
 
 // The breadcrumb labels the website falls back on for a path with no phone title.

@@ -369,7 +369,11 @@ const getProfile = async (userId) => {
     throw new ApiError('User not found', 404);
   }
 
-  return user;
+  // The apps mark a Google account on the profile picture. They are told
+  // that it is one, not which one: the Google subject id is an identifier
+  // for this person at Google and there is no reason for it to travel.
+  const { googleId, ...rest } = user;
+  return { ...rest, hasGoogle: Boolean(googleId) };
 };
 
 /**
@@ -387,6 +391,7 @@ const updateProfile = async (userId, updateData) => {
     'barangay',
     'address',
     'profilePhoto',
+    'avatarKey',
   ];
 
   const filteredData = {};
@@ -394,6 +399,20 @@ const updateProfile = async (userId, updateData) => {
     if (updateData[field] !== undefined) {
       filteredData[field] = updateData[field];
     }
+  }
+
+  /*
+   * The avatar is a short slug naming one of the drawings the apps carry.
+   * Its shape is checked here and nothing more: the list of names lives
+   * with the drawings, and a copy of it on this side would be one more
+   * place to update every time one is added. A name this server has never
+   * heard of is stored and the client falls back to the avatar the
+   * account's id works out to, so the worst a bad value can do is show
+   * the picture the person would have had anyway.
+   */
+  if (filteredData.avatarKey !== undefined) {
+    const key = String(filteredData.avatarKey || '').trim().toLowerCase();
+    filteredData.avatarKey = /^[a-z]{2,16}$/.test(key) ? key : null;
   }
 
   // The address, as the address picker gives it: one province, a barangay

@@ -15,6 +15,7 @@ import TodayChoiceSheet from '../src/components/today/TodayChoiceSheet';
 import { isOpen, MODES } from '../src/lib/availability';
 import { fetchCategories, fetchMunicipalities } from '../src/lib/referenceData';
 import useAuthStore from '../src/store/authStore';
+import { GRID_BLEED, GRID_GAP, gridCellWidth } from '../src/lib/productGrid';
 import { font, t, themed } from '../src/theme';
 import { PageLoader } from '../src/components/BrandLoader';
 
@@ -41,7 +42,7 @@ export default function AvailableToday() {
   const params = useLocalSearchParams();
   const { width: screenW, height: screenH } = useWindowDimensions();
   // Two columns 8px apart inside the body's 12px sides.
-  const cell = { width: Math.floor(((screenW - 24 - 8) / 2) * 100) / 100 };
+  const cell = { width: gridCellWidth(screenW) };
   const user = useAuthStore((s) => s.user);
   const myTown = user?.municipalityId || '';
   const myBarangay = user?.barangay || '';
@@ -328,7 +329,7 @@ const styles = themed(() => StyleSheet.create({
   clear: { marginLeft: 'auto' },
   clearText: { fontSize: 13.5, lineHeight: 21.6, ...font(500), color: t.primary[700] },
 
-  grid: { flexDirection: 'row', flexWrap: 'wrap', gap: 8 },
+  grid: { flexDirection: 'row', flexWrap: 'wrap', gap: GRID_GAP, marginHorizontal: GRID_BLEED },
 
   empty: { marginHorizontal: -12 },
 

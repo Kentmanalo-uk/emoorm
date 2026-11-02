@@ -16,7 +16,7 @@ const TEAM = 'team';
 const PAGE = 50;
 const MAX_BODY = 2000;
 
-const SENDER = { select: { id: true, fullName: true, profilePhoto: true } };
+const SENDER = { select: { id: true, fullName: true, profilePhoto: true, avatarKey: true } };
 
 /** The actor's town and its current admins; refuses anyone not on the team. */
 const teamOf = async (actor) => {

@@ -1,5 +1,5 @@
 import { useCallback, useRef, useState } from 'react';
-import { Image, Pressable, Share, StyleSheet, Text, View } from 'react-native';
+import { Image, Pressable, StyleSheet, Text, View } from 'react-native';
 import { useFocusEffect, useRouter } from 'expo-router';
 import {
   ArrowsLeftRightIcon, BellIcon, CaretRightIcon, ChatTextIcon, GearIcon, HandshakeIcon, HeadsetIcon, HeartbeatIcon,
@@ -7,6 +7,7 @@ import {
   StorefrontIcon, TruckIcon, UserIcon, WalletIcon,
 } from '../../../src/lib/icons';
 import apiClient from '../../../src/api/client';
+import useShare from '../../../src/components/ShareSheet';
 import useAuthStore from '../../../src/store/authStore';
 import { BACKEND_URL, resolveImg } from '../../../src/lib/media';
 import { getCacheEntry, setCachedData } from '../../../src/lib/dataCache';
@@ -96,10 +97,11 @@ export default function SellerMeScreen() {
   const tone = TONES[healthMeta?.tone || 'none'];
   const count = (path) => waiting?.[path]?.count || 0;
   const canShare = Boolean(store?.slug && store?.isApproved !== false);
+  const { share, shareSheet } = useShare();
   const shareShop = () => {
     if (!canShare) return;
     const url = `${BACKEND_URL}/store/${store.slug}`;
-    Share.share({ title: name, message: `Shop at ${name} on Emoorm\n${url}`, url }).catch(() => {});
+    share({ title: name, text: `Shop at ${name} on Emoorm`, url });
   };
   const stat = (value) => (health ? value : '–');
 
@@ -127,6 +129,7 @@ export default function SellerMeScreen() {
 
   return (
     <SellerPage header={<SellerMeHeader onShare={canShare ? shareShop : undefined} />} refreshing={refreshing} onRefresh={refresh} contentStyle={styles.content}>
+      {shareSheet}
       <View style={styles.body}>
         {/* The shop: tap to edit its profile; the QR icon by the name shows the shop's code to scan.
             The row's link lies under it, so the icon is a button of its own. */}
@@ -183,7 +186,7 @@ export default function SellerMeScreen() {
             style={({ pressed }) => [meStyles.card, styles.health, pressed && meStyles.pressed]}
           >
             <View style={[styles.healthIcon, { backgroundColor: tone.bg }]}>
-              <HeartbeatIcon size={22} weight="fill" color={tone.icon} />
+              <HeartbeatIcon size={29} weight="fill" color={tone.icon} />
             </View>
             <View style={styles.healthText}>
               <Text style={styles.healthTitle}>
@@ -203,12 +206,12 @@ export default function SellerMeScreen() {
         <MeCard style={styles.links}>
           {store?.slug ? (
             <Pressable accessibilityRole="link" onPress={go(`/store/${store.slug}`)} style={({ pressed }) => [styles.link, pressed && meStyles.pressed]}>
-              <StorefrontIcon size={20} weight="fill" color={t.neutral[900]} />
+              <StorefrontIcon size={29} weight="fill" color={t.neutral[900]} />
               <Text style={styles.linkText}>View shop</Text>
             </Pressable>
           ) : <View style={styles.link} />}
           <Pressable accessibilityRole="link" onPress={go('/seller/decorate')} style={({ pressed }) => [styles.link, styles.linkLine, pressed && meStyles.pressed]}>
-            <PaintBrushIcon size={20} weight="fill" color={t.neutral[900]} />
+            <PaintBrushIcon size={29} weight="fill" color={t.neutral[900]} />
             <Text style={styles.linkText}>Decorate my shop</Text>
           </Pressable>
         </MeCard>
@@ -275,7 +278,7 @@ export default function SellerMeScreen() {
           onPress={requestLogout}
           style={({ pressed }) => [styles.logout, pressed && styles.logoutPressed]}
         >
-          <SignOutIcon size={18} weight="bold" color={t.danger[600]} />
+          <SignOutIcon size={29} weight="bold" color={t.danger[600]} />
           <Text style={styles.logoutText}>Log out</Text>
         </Pressable>
       </View>

@@ -1,10 +1,11 @@
 import { useCallback, useState } from 'react';
-import { Image, Pressable, Share, StyleSheet, Text, View } from 'react-native';
+import { Image, Pressable, StyleSheet, Text, View } from 'react-native';
 import { useFocusEffect, useRouter } from 'expo-router';
 import {
   LockSimpleIcon, MegaphoneIcon, PackageIcon, PaintBrushIcon, ShareNetworkIcon, TagIcon, UsersIcon,
 } from '../../../src/lib/icons';
 import apiClient from '../../../src/api/client';
+import useShare from '../../../src/components/ShareSheet';
 import { toast } from '../../../src/lib/toast';
 import { BACKEND_URL, resolveImg } from '../../../src/lib/media';
 import { getCacheEntry, setCachedData } from '../../../src/lib/dataCache';
@@ -107,10 +108,11 @@ export default function SellerMarketingScreen() {
     setComposer(mode);
   };
 
+  const { share, shareSheet } = useShare();
   const shareShop = () => {
     if (!store?.slug) return;
     const url = `${BACKEND_URL}/store/${store.slug}`;
-    Share.share({ title: store.name, message: `Shop at ${store.name} on Emoorm\n${url}`, url }).catch(() => {});
+    share({ title: store.name, text: `Shop at ${store.name} on Emoorm`, url });
   };
 
   const send = async () => {
@@ -141,10 +143,11 @@ export default function SellerMarketingScreen() {
 
   return (
     <SellerPage refreshing={refreshing} onRefresh={refresh}>
+      {shareSheet}
       <View style={styles.body}>
         {/* Followers: who hears about what's new. */}
         <View style={[meStyles.card, styles.hero]}>
-          <View style={styles.heroIcon}><UsersIcon size={22} weight="fill" color="#fff" /></View>
+          <View style={styles.heroIcon}><UsersIcon size={29} weight="fill" color="#fff" /></View>
           <View style={styles.heroText}>
             {followers === null ? (
               <LoadingSkeleton width={110} height={22} borderRadius={6} />
@@ -160,7 +163,7 @@ export default function SellerMarketingScreen() {
 
         {!canSend ? (
           <View style={[meStyles.card, styles.note]}>
-            <LockSimpleIcon size={18} weight="fill" color={t.warning[600]} />
+            <LockSimpleIcon size={29} weight="fill" color={t.warning[600]} />
             <Text style={styles.noteText}>{blockedReason}</Text>
             {finishTo ? (
               <Pressable accessibilityRole="link" onPress={() => router.push(sellerHref(finishTo))} style={styles.cta}>
@@ -208,8 +211,8 @@ export default function SellerMarketingScreen() {
                   <View key={a.id} style={[styles.item, i === 0 ? styles.itemFirst : styles.itemLine, last && styles.itemLast]}>
                     <View style={[styles.itemArt, !a.product && styles.itemArtNote]}>
                       {a.product
-                        ? (img ? <Image source={{ uri: resolveImg(img) }} style={styles.itemImg} /> : <PackageIcon size={20} color={t.neutral[500]} />)
-                        : <MegaphoneIcon size={20} weight="fill" color="#fff" />}
+                        ? (img ? <Image source={{ uri: resolveImg(img) }} style={styles.itemImg} /> : <PackageIcon size={29} color={t.neutral[500]} />)
+                        : <MegaphoneIcon size={29} weight="fill" color="#fff" />}
                     </View>
                     <View style={styles.itemText}>
                       {a.product ? <Text style={styles.itemName}>{a.product.name}</Text> : null}

@@ -98,7 +98,7 @@ const attachPictures = async (notifications) => {
       else if (isFeedback(n)) ids.feedback.add(n.relatedId);
     }
 
-    const personFields = { fullName: true, profilePhoto: true };
+    const personFields = { fullName: true, profilePhoto: true, avatarKey: true };
 
     const [orderItems, returnItems, products, stores, conversations, people, reports, support, feedback] = await Promise.all([
       ids.orders.size
@@ -122,7 +122,7 @@ const attachPictures = async (notifications) => {
       ids.conversations.size
         ? prisma.conversation.findMany({
           where: { id: { in: [...ids.conversations] } },
-          select: { id: true, buyer: { select: { fullName: true, profilePhoto: true } }, store: { select: { name: true, logo: true } } },
+          select: { id: true, buyer: { select: { fullName: true, profilePhoto: true, avatarKey: true } }, store: { select: { name: true, logo: true } } },
         })
         : [],
       ids.people.size

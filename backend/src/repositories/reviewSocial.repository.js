@@ -11,7 +11,7 @@ const prisma = require('../config/database');
  */
 
 /** Who wrote it, as little as the viewer needs to see. */
-const AUTHOR = { select: { id: true, fullName: true, profilePhoto: true } };
+const AUTHOR = { select: { id: true, fullName: true, profilePhoto: true, avatarKey: true } };
 
 /** The counts every list of reviews carries, so the viewer can show them. */
 const SOCIAL_COUNT = {

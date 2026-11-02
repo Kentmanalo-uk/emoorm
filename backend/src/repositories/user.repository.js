@@ -22,6 +22,7 @@ const createUser = async (userData) => {
       username: true,
       contactNumber: true,
       profilePhoto: true,
+      avatarKey: true,
       municipalityId: true,
       municipality: {
         select: {
@@ -70,6 +71,7 @@ const findByEmail = async (email, includePassword = false) => {
     username: true,
     contactNumber: true,
     profilePhoto: true,
+    avatarKey: true,
     municipalityId: true,
     municipality: {
       select: {
@@ -120,7 +122,12 @@ const findById = async (id) => {
       username: true,
       contactNumber: true,
       profilePhoto: true,
+      avatarKey: true,
       municipalityId: true,
+      // Whether this account was made with Continue with Google. The id
+      // itself never leaves the server: getProfile turns it into the
+      // hasGoogle flag the apps read.
+      googleId: true,
       municipality: {
         select: {
           id: true,
@@ -180,6 +187,7 @@ const updateUser = async (id, updateData) => {
       username: true,
       contactNumber: true,
       profilePhoto: true,
+      avatarKey: true,
       municipalityId: true,
       municipality: {
         select: {
@@ -257,6 +265,7 @@ const LIST_SELECT = {
   fullName: true,
   contactNumber: true,
   profilePhoto: true,
+  avatarKey: true,
   municipalityId: true,
   municipality: {
     select: {
@@ -737,6 +746,7 @@ module.exports = {
         fullName: true,
         contactNumber: true,
         profilePhoto: true,
+        avatarKey: true,
         googleId: true,
         municipalityId: true,
         municipality: { select: { id: true, name: true, code: true } },

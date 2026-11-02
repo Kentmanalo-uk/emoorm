@@ -34,7 +34,7 @@ const recentFollowers = (storeId, limit = 10) =>
     take: limit,
     include: {
       buyer: {
-        select: { id: true, fullName: true, profilePhoto: true },
+        select: { id: true, fullName: true, profilePhoto: true, avatarKey: true },
       },
     },
   });

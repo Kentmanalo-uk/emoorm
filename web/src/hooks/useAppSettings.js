@@ -47,6 +47,33 @@ export const storeDeliveryFee = (store, settings, fulfillmentMethod = 'DELIVERY'
   return Number(settings?.deliveryFee ?? DEFAULT_APP_SETTINGS.deliveryFee);
 };
 
+/**
+ * A window of hours in the words a person uses: "2 days", "36 hours".
+ * The same rule as the server's windowLabel (utils/orderWindow), so a
+ * number set once by a super admin reads the same everywhere.
+ */
+export const confirmWindowLabel = (hours) => {
+  const n = Number(hours);
+  if (Number.isInteger(n) && n >= 24 && n % 24 === 0) {
+    const days = n / 24;
+    return `${days} day${days === 1 ? '' : 's'}`;
+  }
+  return `${n} hour${n === 1 ? '' : 's'}`;
+};
+
+/**
+ * Fills {{confirmWindow}} in copy written before the number was known.
+ * The teaching text cannot name a number a super admin may change, and
+ * the assistants already do this server-side (assistantCore's fill), so
+ * the two never end up saying different things.
+ */
+export const fillSettingTokens = (text, settings) => String(text ?? '').replace(
+  /\{\{(\w+)\}\}/g,
+  (whole, key) => (key === 'confirmWindow'
+    ? confirmWindowLabel(settings?.orderConfirmHours ?? DEFAULT_APP_SETTINGS.orderConfirmHours)
+    : whole),
+);
+
 export const resolveAppSettingImage = (value) => (
   value === '/brand-icon.png' ? value : resolveImg(value) || '/brand-icon.png'
 );

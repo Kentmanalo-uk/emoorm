@@ -1,6 +1,5 @@
 import {
-  ArrowCounterClockwiseIcon, ChartBarIcon, CookingPotIcon, IdentificationCardIcon, LockSimpleIcon, PackageIcon,
-  PlusCircleIcon, ReceiptIcon, StarIcon, WalletIcon, WarningCircleIcon,
+  IdentificationCardIcon, LockSimpleIcon, WarningCircleIcon,
 } from '../../../lib/icons';
 import { t, themed } from '../../../theme';
 import { sellBlockers, setupNextTo } from '../sellerSetup';
@@ -33,18 +32,6 @@ export const STATUS_COLORS = themed(() => ({
   green: t.primary[700],
   red: t.danger[700],
 }));
-
-/** Home's shop tools, each a filled icon in its own colour (a ToolGradients tone). */
-export const HOME_TOOLS = [
-  { to: '/seller/products', label: 'My products', Icon: PackageIcon, tone: 'orange' },
-  { to: '/seller/orders', label: 'My orders', Icon: ReceiptIcon, tone: 'blue' },
-  { to: '/seller/analytics', label: 'Performance', Icon: ChartBarIcon, tone: 'violet' },
-  { to: '/seller/finance', label: 'Finance', Icon: WalletIcon, tone: 'green' },
-  { to: '/seller/reviews', label: 'Reviews', Icon: StarIcon, tone: 'amber' },
-  { to: '/seller/returns', label: 'Returns', Icon: ArrowCounterClockwiseIcon, tone: 'rose' },
-  { to: '/seller/today', label: "Today's menu", Icon: CookingPotIcon, tone: 'pink' },
-  { to: '/seller/products/new', label: 'Add product', Icon: PlusCircleIcon, tone: 'teal' },
-];
 
 /** Products buyers can see (ready to sell or not: that only decides ordering). */
 export const liveProducts = (stats) => stats.activeProducts;

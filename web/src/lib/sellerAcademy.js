@@ -286,7 +286,7 @@ export const LESSONS = [
     },
     steps: [
       { screen: { src: '/tutorial/seller-notifications.webp', caption: 'The notice for a new order' }, title: 'A new order comes in', text: 'You get a notification. Open My orders and look at the New tab.' },
-      { screen: { src: '/tutorial/seller-orders.webp', caption: 'The Confirm order button' }, title: 'Confirm it', text: 'Check you have the items, then tap Confirm order. Confirm within 48 hours or it is cancelled.' },
+      { screen: { src: '/tutorial/seller-orders.webp', caption: 'The Confirm order button' }, title: 'Confirm it', text: 'Check you have the items, then tap Confirm order. Confirm within {{confirmWindow}} or it is cancelled.' },
       { title: 'Pack it', text: 'Tap Start packing so the buyer knows you are working on it. Pack it well.' },
       { title: 'Hand it over', text: 'Tap Ready for pickup, or deliver it yourself, call a rider, or tap Ship with courier.' },
       { title: 'Finish', text: 'Tap Mark delivered or Mark picked up. The order is done, and the buyer can leave a review.' },

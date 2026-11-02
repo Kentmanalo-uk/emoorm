@@ -108,10 +108,25 @@ export function SellerShellProvider({ children }) {
   useEffect(() => { refreshCounts(); }, [pathname, refreshCounts]);
   useEffect(() => {
     if (!isSeller) return undefined;
-    const attention = setInterval(loadAttention, ATTENTION_MS);
-    const unread = setInterval(loadUnread, UNREAD_MS);
-    const sub = AppState.addEventListener('change', (state) => { if (state === 'active') refreshCounts(); });
-    return () => { clearInterval(attention); clearInterval(unread); sub.remove(); };
+    // Only while the app is in front. Two timers kept firing with the
+    // app in the background, asking the server for counts nobody was
+    // looking at and waking the radio to do it. Nothing is lost by
+    // stopping them: coming back to the front refreshes straight away.
+    let attention = null;
+    let unread = null;
+    const start = () => {
+      attention = attention || setInterval(loadAttention, ATTENTION_MS);
+      unread = unread || setInterval(loadUnread, UNREAD_MS);
+    };
+    const stop = () => {
+      if (attention) { clearInterval(attention); attention = null; }
+      if (unread) { clearInterval(unread); unread = null; }
+    };
+    if (AppState.currentState === 'active') start();
+    const sub = AppState.addEventListener('change', (state) => {
+      if (state === 'active') { refreshCounts(); start(); } else stop();
+    });
+    return () => { stop(); sub.remove(); };
   }, [isSeller, loadAttention, loadUnread, refreshCounts]);
 
   // The new-shop checklist: re-read on every page change until it is

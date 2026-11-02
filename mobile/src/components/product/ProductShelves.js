@@ -8,6 +8,7 @@ import { SaleWas } from '../SaleTag';
 import { ProductTodayTag } from '../TodayTag';
 import { saleInfo } from '../../lib/variantPricing';
 import { resolveImg } from '../../lib/media';
+import { GRID_EDGE, GRID_GAP } from '../../lib/productGrid';
 import { font, t, themed } from '../../theme';
 import { parseImages, peso } from './productLib';
 import KindPrice from './KindPrice';
@@ -79,7 +80,7 @@ export function RelatedGrid({ products, categoryId, sectionRef }) {
   const peekProduct = useProductPeek();
   const [w, setW] = useState(0);
   if (!products.length) return null;
-  const card = w ? (w - 8) / 2 : 0;
+  const card = w ? Math.floor(((w - GRID_GAP) / 2) * 100) / 100 : 0;
   return (
     <View ref={sectionRef} collapsable={false} style={styles.related}>
       <View style={styles.relatedHead}>
@@ -135,12 +136,12 @@ const styles = themed(() => StyleSheet.create({
   },
   addPressed: { backgroundColor: t.primary[50] },
 
-  related: { marginTop: 8, paddingTop: 14, paddingHorizontal: 10, paddingBottom: 8 },
-  relatedHead: { flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between', gap: 12, height: 32, marginBottom: 10, paddingHorizontal: 4 },
+  related: { marginTop: 8, paddingTop: 14, paddingHorizontal: GRID_EDGE, paddingBottom: 8 },
+  relatedHead: { flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between', gap: 12, height: 32, marginBottom: 10, paddingHorizontal: 10 },
   relatedTitle: { fontSize: 16, lineHeight: 18.4, ...font(500), color: t.neutral[900] },
   more: { flexDirection: 'row', alignItems: 'center', gap: 3, height: 32 },
   moreText: { fontSize: 13, lineHeight: 20.8, ...font(400), color: t.primary[700] },
-  grid: { flexDirection: 'row', flexWrap: 'wrap', gap: 8 },
+  grid: { flexDirection: 'row', flexWrap: 'wrap', gap: GRID_GAP },
   gCard: { overflow: 'hidden', backgroundColor: t.neutral[0] },
   gImage: { width: '100%', backgroundColor: t.neutral[0], overflow: 'hidden' },
   gInfo: { paddingTop: 8, paddingHorizontal: 10, paddingBottom: 10, gap: 3 },

@@ -16,6 +16,7 @@ const CONVERSATION_INCLUDE = {
       username: true,
       email: true,
       profilePhoto: true,
+      avatarKey: true,
       municipality: { select: { id: true, name: true } },
     },
   },
@@ -28,7 +29,7 @@ const LAST_MESSAGE = {
 };
 
 const MESSAGE_INCLUDE = {
-  sender: { select: { id: true, fullName: true, username: true, role: true, profilePhoto: true } },
+  sender: { select: { id: true, fullName: true, username: true, role: true, profilePhoto: true, avatarKey: true } },
 };
 
 const findById = (id) => prisma.adminConversation.findUnique({

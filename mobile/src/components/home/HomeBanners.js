@@ -145,43 +145,6 @@ export function BannerCarousel({ banners }) {
   );
 }
 
-/** One of the two banners under the carousel (grey until its image is in). */
-function SideBanner({ banner }) {
-  const openLink = useOpenBannerLink();
-  const [loaded, setLoaded] = useState(false);
-  return (
-    <Pressable
-      disabled={!banner.linkUrl}
-      accessibilityRole={banner.linkUrl ? 'link' : 'image'}
-      accessibilityLabel={banner.title || 'Homepage banner'}
-      onPress={() => openLink(banner.linkUrl)}
-      style={[styles.sideCard, !loaded && styles.sideLoading]}
-    >
-      <Image
-        source={source(banner)}
-        style={[styles.sideImage, !loaded && styles.hidden]}
-        resizeMode="cover"
-        onLoad={() => setLoaded(true)}
-        onError={() => setLoaded(true)}
-      />
-    </Pressable>
-  );
-}
-
-/** The 2-up row under the carousel: skeletons while loading, then the set ones. */
-export function SideBanners({ ready, top, bottom }) {
-  return (
-    <View style={styles.sidebar}>
-      <View style={styles.sideCell}>
-        {!ready ? <View style={[styles.sideCard, styles.sideLoading]} /> : top ? <SideBanner banner={top} /> : null}
-      </View>
-      <View style={styles.sideCell}>
-        {!ready ? <View style={[styles.sideCard, styles.sideLoading]} /> : bottom ? <SideBanner banner={bottom} /> : null}
-      </View>
-    </View>
-  );
-}
-
 const PROMO_IN_MS = 340;
 const PROMO_OUT_MS = 240;
 
@@ -290,13 +253,7 @@ const styles = themed(() => StyleSheet.create({
 
   // Phones: two banners side by side, 4px apart, square corners.
   // 7px under the carousel (the grid's 0.5rem gap at the phone's 14px root).
-  sidebar: { flexDirection: 'row', gap: 4, paddingVertical: 6, paddingHorizontal: 12, marginTop: 7 },
-  sideCell: { flex: 1, minWidth: 0 },
-  sideCard: { width: '100%', aspectRatio: 16 / 10, overflow: 'hidden', backgroundColor: t.neutral[100] },
-  sideLoading: { backgroundColor: t.neutral[150] },
   // Zoomed a touch, so a thin frame drawn into the uploaded image is cropped away.
-  sideImage: { width: '100%', height: '100%', transform: [{ scale: 1.03 }] },
-  hidden: { opacity: 0 },
 
   // Over the whole screen, under the top bar (zIndex 10).
   promoBackdrop: { ...StyleSheet.absoluteFill, zIndex: 5, backgroundColor: 'rgba(15, 23, 42, 0.58)' },

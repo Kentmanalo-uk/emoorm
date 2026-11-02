@@ -3,6 +3,7 @@ import { useRouter } from 'expo-router';
 import { StarIcon } from '../../lib/icons';
 import CartProductImage from './CartProductImage';
 import { useProductPeek } from '../peek/ProductPeek';
+import { GRID_BLEED, GRID_GAP, gridCellWidth } from '../../lib/productGrid';
 import { font, t, themed } from '../../theme';
 
 /*
@@ -39,8 +40,7 @@ export default function CartSuggestions({ suggestions, loading, style }) {
   const router = useRouter();
   const peekProduct = useProductPeek();
   const { width } = useWindowDimensions();
-  // Two columns 8px apart inside the page's 12px gutters.
-  const cardW = Math.floor((Math.min(width, 768) - 24 - 8) / 2);
+  const cardW = gridCellWidth(Math.min(width, 768));
   if (!loading && suggestions.length === 0) return null;
   return (
     <View style={[styles.section, style]}>
@@ -83,7 +83,7 @@ const styles = themed(() => StyleSheet.create({
   title: { flexShrink: 1, fontSize: 18, lineHeight: 20.7, ...font(500), color: t.neutral[900] },
   more: { minHeight: 32, justifyContent: 'center' },
   moreText: { fontSize: 13, lineHeight: 20.8, ...font(500), color: t.primary[600] },
-  grid: { flexDirection: 'row', flexWrap: 'wrap', gap: 8 },
+  grid: { flexDirection: 'row', flexWrap: 'wrap', gap: GRID_GAP, marginHorizontal: GRID_BLEED },
   card: { borderRadius: 12, overflow: 'hidden', backgroundColor: t.neutral[0] },
   image: { width: '100%', aspectRatio: 1, backgroundColor: t.neutral[100], overflow: 'hidden' },
   imageFill: { width: '100%', height: '100%' },

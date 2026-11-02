@@ -2,6 +2,7 @@
 //
 //   node tools/release-android.cjs 2.1.0 12          bump + build + sign + publish
 //   node tools/release-android.cjs 2.1.0 12 --no-build   sign + publish an existing build
+//   node tools/release-android.cjs 2.2.1 17 --aab    bump + build an .aab for Play
 //
 // 1. Sets the version in app.json and android/app/build.gradle.
 // 2. gradlew assembleRelease against https://emoorm.shop/api (arm only, so
@@ -11,6 +12,18 @@
 // 4. Copies it to ../apk-react-native/ and web/public/downloads/, removes the
 //    old download, and rewrites web/src/data/androidApp.json (size, hashes,
 //    date). The What's New notes are kept as they are; edit them by hand.
+//
+// --aab builds the Play upload instead, on this machine rather than on
+// Expo's servers, and stops after step 3. It differs in three ways:
+//
+//  - gradlew bundleRelease, not assembleRelease.
+//  - Gradle signs it itself, through signingConfigs.release in
+//    app/build.gradle, with the same key. zipalign and apksigner are not
+//    used and could not be: both are APK tools, and an .aab is a signed
+//    jar. keytool reads the certificate back out of it instead.
+//  - Nothing is published. An .aab cannot be installed from a web page;
+//    Play opens it and builds each phone its own APK. The site's download
+//    and androidApp.json stay on the APK, so they are left alone.
 const fs = require('fs');
 const path = require('path');
 const crypto = require('crypto');
@@ -24,6 +37,7 @@ if (!/^\d+\.\d+\.\d+$/.test(version || '') || !Number.isInteger(versionCode)) {
   console.error('usage: node tools/release-android.cjs <x.y.z> <versionCode> [--no-build]');
   process.exit(1);
 }
+const AAB = flags.includes('--aab');
 const SDK = path.join(process.env.LOCALAPPDATA, 'Android', 'Sdk');
 const JAVA_HOME = process.env.JAVA_HOME_17 || 'C:/Users/Kaye/.gradle/jdks/eclipse_adoptium-17-amd64-windows.2';
 const BUILD_TOOLS = path.join(SDK, 'build-tools', '36.0.0');
@@ -46,7 +60,9 @@ editFile(path.join(MOBILE, 'android', 'app', 'build.gradle'), (s) => s
 console.log(`version ${version} (${versionCode})`);
 
 // 2. Build.
-const unsigned = path.join(MOBILE, 'android', 'app', 'build', 'outputs', 'apk', 'release', 'app-release.apk');
+const unsigned = AAB
+  ? path.join(MOBILE, 'android', 'app', 'build', 'outputs', 'bundle', 'release', 'app-release.aab')
+  : path.join(MOBILE, 'android', 'app', 'build', 'outputs', 'apk', 'release', 'app-release.apk');
 if (!flags.includes('--no-build')) {
   const env = {
     ...process.env,
@@ -58,11 +74,43 @@ if (!flags.includes('--no-build')) {
   env.PATH = `${path.join(JAVA_HOME, 'bin')};${env.PATH}`;
   console.log('building… (several minutes)');
   execFileSync(path.join(MOBILE, 'android', 'gradlew.bat'), [
-    '-p', path.join(MOBILE, 'android'), 'assembleRelease',
+    '-p', path.join(MOBILE, 'android'), AAB ? 'bundleRelease' : 'assembleRelease',
+    // The same two architectures as the APK. Play splits an .aab per
+    // device, so adding x86_64 would cost a phone nothing to download --
+    // it would only cover Chromebooks and emulators, at the price of
+    // compiling the native code twice more.
     '-PreactNativeArchitectures=armeabi-v7a,arm64-v8a',
   ], { cwd: path.join(MOBILE, 'android'), env, stdio: 'inherit', shell: true });
 }
 if (!fs.existsSync(unsigned)) throw new Error(`no build at ${unsigned}`);
+
+// 3. An .aab is already signed, by Gradle, with the same key: all that
+// is left is to put it where the APKs go and read the certificate back
+// out of it to prove which key that was.
+if (AAB) {
+  const outDir = path.join(ROOT, 'apk-react-native');
+  fs.mkdirSync(outDir, { recursive: true });
+  // Named with the versionCode as well, because Play refuses a second
+  // upload of the same one and that is the number to check.
+  const bundle = path.join(outDir, `E-MOORM-${version}-${versionCode}.aab`);
+  fs.copyFileSync(unsigned, bundle);
+
+  const keytool = path.join(JAVA_HOME, 'bin', 'keytool.exe');
+  const printed = execFileSync(keytool, ['-printcert', '-jarfile', bundle], { encoding: 'utf8' });
+  const sha256 = (printed.match(/SHA256:\s*([0-9A-F:]+)/i) || [])[1];
+  if (!sha256) throw new Error('the bundle is not signed: check apk/keystore/keystore.properties');
+
+  const published = JSON.parse(fs.readFileSync(path.join(ROOT, 'web', 'src', 'data', 'androidApp.json'), 'utf8'));
+  if (published.certificateSha256 && published.certificateSha256 !== sha256) {
+    throw new Error(`signed with a different key than the published app:\n  bundle    ${sha256}\n  published ${published.certificateSha256}`);
+  }
+
+  const size = fs.statSync(bundle).size;
+  console.log(`\n${path.relative(ROOT, bundle)} (${(size / 1048576).toFixed(1)} MB)`);
+  console.log(`  signed with ${sha256.slice(0, 11)}… — the same key as the published app`);
+  console.log('  upload it to Play Console; nothing on the site changed (an .aab cannot be side-loaded)');
+  process.exit(0);
+}
 
 // 3. Sign + verify (apksigner needs Java too).
 const javaEnv = { ...process.env, JAVA_HOME, PATH: `${path.join(JAVA_HOME, 'bin')};${process.env.PATH}` };

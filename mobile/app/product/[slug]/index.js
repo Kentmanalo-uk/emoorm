@@ -1,6 +1,6 @@
 import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import {
-  Animated, Image, Pressable, ScrollView, Share, StyleSheet, Text, View, useWindowDimensions,
+  Animated, Image, Pressable, ScrollView, StyleSheet, Text, View, useWindowDimensions,
 } from 'react-native';
 import { Stack, useLocalSearchParams, useRouter } from 'expo-router';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
@@ -38,10 +38,13 @@ import ProductOptionSheet from '../../../src/components/product/ProductOptionShe
 import ProductQuestions from '../../../src/components/product/ProductQuestions';
 import ReviewItem, { Stars } from '../../../src/components/product/ReviewItem';
 import useReviewSocial from '../../../src/components/reviews/useReviewSocial';
+import useShare from '../../../src/components/ShareSheet';
+import useScreenshot from '../../../src/lib/useScreenshot';
 import useReviewViewer from '../../../src/components/reviews/useReviewViewer';
 import ShippingEstimate from '../../../src/components/product/ShippingEstimate';
 import ReportSheet from '../../../src/components/product/ReportSheet';
 import Product3dSheet, { Product3dChip } from '../../../src/components/product/Product3dSheet';
+import PhotoViewer from '../../../src/components/product/PhotoViewer';
 import { useCartSettings } from '../../../src/components/cart/cartSettings';
 import IdentityDialog from '../../../src/components/product/IdentityDialog';
 import ProductSection, { SectionBody, SectionHead, SectionTitle } from '../../../src/components/product/ProductSection';
@@ -112,6 +115,7 @@ function ProductPage({ slug }) {
   // Helpful marks, the comment sheet, and the full-screen viewer a review
   // photo opens. The viewer pages across every photo on this product, so
   // it is given the whole list rather than one review.
+  const { share, shareSheet } = useShare();
   const reviewSocial = useReviewSocial(reviews);
   const { openMedia: openReviewMedia, viewer: reviewViewer } = useReviewViewer(reviews, product, reviewSocial);
   const [shopUnread, setShopUnread] = useState({ shopId: null, count: 0 });
@@ -121,6 +125,8 @@ function ProductPage({ slug }) {
   const [showReport, setShowReport] = useState(false);
   // The 3D view, open over the page (while the super admin has 3D views on).
   const [open3d, setOpen3d] = useState(false);
+  // The photo the full-screen viewer is open on; null when it is shut.
+  const [viewerAt, setViewerAt] = useState(null);
   const appSettings = useCartSettings();
   const [sheetMode, setSheetMode] = useState(null);
   const [identityOpen, setIdentityOpen] = useState(false);
@@ -372,14 +378,21 @@ function ProductPage({ slug }) {
     }
   };
 
-  const handleShare = async () => {
-    try {
-      const url = `https://emoorm.shop/product/${product.slug}`;
-      await Share.share({ title: product.name, message: `${product.name} — ${startsFrom(product) ? 'from ' : ''}${peso(product.price)}${priceUnit(product)} on E-MOORM ${url}`, url });
-    } catch {
-      // Closing the share menu needs no message.
-    }
-  };
+  const shareWhat = () => ({
+    title: product.name,
+    text: `${product.name} — ${startsFrom(product) ? 'from ' : ''}${peso(product.price)}${priceUnit(product)} on E-MOORM`,
+    url: `https://emoorm.shop/product/${product.slug}`,
+  });
+  const handleShare = () => share(shareWhat());
+
+  // A screenshot of a product page travels without its link, so whoever
+  // receives it has to go and find the thing by name. The same sheet is
+  // offered the moment one is taken, with the link ready to send after
+  // it.
+  const pageShot = useScreenshot(
+    ({ preview }) => share(shareWhat(), { heading: 'Share screenshot to', preview }),
+    Boolean(product),
+  );
 
   const openReport = () => {
     if (!isAuthenticated) { loginRedirect(); return; }
@@ -562,12 +575,12 @@ function ProductPage({ slug }) {
       <Pressable style={styles.action} onPress={() => router.push(product.store ? `/store/${product.store.slug}` : '/stores')} accessibilityRole="link">
         {shopLogo && failedLogo !== shopLogo
           ? <Image source={{ uri: shopLogo }} style={styles.shopLogo} onError={() => setFailedLogo(shopLogo)} />
-          : <StorefrontIcon size={21} color={t.neutral[700]} />}
+          : <StorefrontIcon size={29} color={t.neutral[700]} />}
         <Text style={styles.actionText}>Shop</Text>
       </Pressable>
       <Pressable style={styles.action} onPress={() => router.push(chatTo)} accessibilityRole="link">
         <View>
-          <ChatCircleIcon size={21} color={t.neutral[700]} />
+          <ChatCircleIcon size={29} color={t.neutral[700]} />
           {chatUnread > 0 ? (
             <View style={styles.actionBadge}><Text style={styles.badgeText}>{chatUnread > 99 ? '99+' : chatUnread}</Text></View>
           ) : null}
@@ -589,7 +602,7 @@ function ProductPage({ slug }) {
   ].filter(Boolean);
 
   return (
-    <View style={styles.screen}>
+    <View style={styles.screen} ref={pageShot} collapsable={false}>
       <Stack.Screen options={{ headerShown: false }} />
 
       {/* Top bar: back, the category as a search field, cart, ⋯ */}
@@ -603,7 +616,7 @@ function ProductPage({ slug }) {
             <Text style={styles.searchText} numberOfLines={1}>{product.category?.name || 'Search products'}</Text>
           </Pressable>
           <ShellBarButton label={`Cart, ${cartCount} items`} onPress={() => router.push('/cart')}>
-            <ShoppingCartIcon size={22} color={t.neutral[900]} />
+            <ShoppingCartIcon size={28} color={t.neutral[900]} />
             {cartCount > 0 ? (
               <View style={styles.cartBadge}><Text style={styles.badgeText}>{cartCount > 99 ? '99+' : cartCount}</Text></View>
             ) : null}
@@ -644,6 +657,7 @@ function ProductPage({ slug }) {
                 width={screenW}
                 label={i === 0 ? product.name : `${product.name} ${i + 1}`}
                 onShown={i === 0 ? () => heroImageReady(slug) : undefined}
+                onPress={img ? () => setViewerAt(i) : undefined}
               />
             ))}
           </ScrollView>
@@ -875,6 +889,7 @@ function ProductPage({ slug }) {
           </SectionBody>
         </ProductSection>
         {reviewViewer}
+        {shareSheet}
 
         {/* Questions and the shop's answers */}
         {product.status === 'APPROVED' ? (
@@ -1068,6 +1083,18 @@ function ProductPage({ slug }) {
         />
       ) : null}
 
+      {viewerAt !== null ? (
+        <PhotoViewer
+          photos={slides}
+          index={viewerAt}
+          product={product}
+          price={`${fromPrice ? 'from ' : ''}₱${priceLabel}`}
+          onClose={() => setViewerAt(null)}
+          onBuy={cannotBuy ? undefined : () => setSheetMode('buy')}
+          buyLabel={buyLabel(product)}
+        />
+      ) : null}
+
       {open3d && view3d ? (
         <Product3dSheet model={view3d} name={product.name} onClose={() => setOpen3d(false)} />
       ) : null}
@@ -1118,11 +1145,17 @@ function Spec({ label, value }) {
 // The gallery's photos, with an option's own photo in front when it is not one of them.
 const withPhoto = (images, photo) => (photo && !images.includes(photo) ? [photo, ...images] : images);
 
-function GallerySlide({ src, width, label, onShown }) {
+function GallerySlide({ src, width, label, onShown, onPress }) {
   const [failed, setFailed] = useState(false);
   const uri = src ? resolveImg(src) : null;
+  const Box = onPress ? Pressable : View;
   return (
-    <View style={[styles.slide, { width, height: Math.round((width * 6) / 5) }]} accessibilityRole="image" accessibilityLabel={label}>
+    <Box
+      style={[styles.slide, { width, height: Math.round((width * 6) / 5) }]}
+      onPress={onPress}
+      accessibilityRole={onPress ? 'imagebutton' : 'image'}
+      accessibilityLabel={onPress ? `${label} — see it full screen` : label}
+    >
       <Image
         source={uri && !failed ? { uri } : PLACEHOLDER}
         style={styles.slideImg}
@@ -1130,7 +1163,7 @@ function GallerySlide({ src, width, label, onShown }) {
         onLoad={onShown}
         onError={() => { setFailed(true); onShown?.(); }}
       />
-    </View>
+    </Box>
   );
 }
 
@@ -1255,7 +1288,7 @@ const styles = themed(() => StyleSheet.create({
   searchText: { flexShrink: 1, fontSize: 14, lineHeight: 22.4, ...font(400), color: t.neutral[500] },
   cartBadge: {
     position: 'absolute', top: -3 + 0, right: -5 + 0, minWidth: 18, height: 18, paddingHorizontal: 5, borderRadius: 999,
-    borderWidth: 1.5, bordercolor: t.onBrand, backgroundColor: t.accent[500], alignItems: 'center', justifyContent: 'center',
+    borderWidth: 1.5, borderColor: t.onBrand, backgroundColor: t.accent[500], alignItems: 'center', justifyContent: 'center',
   },
   badgeText: { fontSize: 10.5, lineHeight: 13, ...font(500), color: t.onBrand, textAlign: 'center' },
   // Room under the tabs for their shadow; it clips them while they slide in.
@@ -1408,12 +1441,17 @@ const styles = themed(() => StyleSheet.create({
   },
   // iOS 26: over the page's foot, so the glass shows it through.
   actionbarFloat: { position: 'absolute', left: 0, right: 0, bottom: 0 },
-  action: { width: 46, flexShrink: 0, alignItems: 'center', gap: 2 },
-  actionText: { fontSize: 11, lineHeight: 17.6, ...font(500), color: t.neutral[700] },
-  shopLogo: { width: 24, height: 24, borderRadius: 12, borderWidth: 1, borderColor: t.neutral[200] },
+  // Shop and Chat are an icon above a label, exactly like a bottom
+  // navigation tab, so they are drawn at the same 29 and their label at
+  // the same 9 (components/ShellTabBar).
+  action: { width: 50, flexShrink: 0, alignItems: 'center', gap: 3 },
+  actionText: { fontSize: 9, lineHeight: 11, ...font(500), color: t.neutral[700] },
+  // The shop's own logo stands in for the Storefront icon, so it is the
+  // same size as it.
+  shopLogo: { width: 29, height: 29, borderRadius: 15, borderWidth: 1, borderColor: t.neutral[200] },
   actionBadge: {
     position: 'absolute', top: -7, left: 13, minWidth: 18, height: 18, paddingHorizontal: 5, borderRadius: 999,
-    borderWidth: 1.5, bordercolor: t.onBrand, backgroundColor: t.accent[500], alignItems: 'center', justifyContent: 'center',
+    borderWidth: 1.5, borderColor: t.onBrand, backgroundColor: t.accent[500], alignItems: 'center', justifyContent: 'center',
   },
   addcart: { width: 64, height: 48, flexShrink: 0, borderRadius: 999, backgroundColor: t.primary[50], alignItems: 'center', justifyContent: 'center' },
   addcartPlus: { position: 'absolute', top: 17.5, right: 25.5 },

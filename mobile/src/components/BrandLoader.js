@@ -3,10 +3,9 @@ import { AccessibilityInfo, Animated, Easing, StyleSheet, View } from 'react-nat
 import { themed } from '../theme';
 import { useIsFocused } from 'expo-router';
 import { create } from 'zustand';
-import Svg, {
-  ClipPath, Defs, LinearGradient, Path, RadialGradient, Stop,
-} from 'react-native-svg';
+import Svg, { ClipPath, Defs, Path } from 'react-native-svg';
 import LOGO from './brand/logoParts';
+import { Grad, VIEW, VIEWBOX } from './brand/BrandMark';
 
 /*
  * The app's loading animation: the green Emoorm logo building itself, piece
@@ -29,11 +28,6 @@ import LOGO from './brand/logoParts';
  */
 
 const ROUND_MS = 2200;
-// Where in a round the logo is whole (after the "e" lands and the nod).
-export const BUILT = 0.7;
-// The logo's square on its 2048 grid (the art spans about x 255–1755, y 160–1915).
-const VIEW = { x: 105, y: 137, size: 1800 };
-const VIEWBOX = `${VIEW.x} ${VIEW.y} ${VIEW.size} ${VIEW.size}`;
 // A point on the grid as a transform origin ("x% y%" of the square).
 const origin = (x, y) => `${(((x - VIEW.x) / VIEW.size) * 100).toFixed(1)}% ${(((y - VIEW.y) / VIEW.size) * 100).toFixed(1)}%`;
 
@@ -79,27 +73,6 @@ function track(t, keys, unit = '') {
 let reduceMotion = false;
 AccessibilityInfo.isReduceMotionEnabled?.().then((v) => { reduceMotion = Boolean(v); }).catch(() => {});
 
-function Grad({ id, def, radial }) {
-  const { attrs, stops } = def;
-  const children = stops.map(([offset, color]) => <Stop key={offset} offset={String(offset)} stopColor={color} />);
-  return radial ? (
-    <RadialGradient
-      id={id}
-      gradientUnits="userSpaceOnUse"
-      cx={attrs.cx}
-      cy={attrs.cy}
-      r={attrs.r}
-      gradientTransform={attrs.gradientTransform}
-    >
-      {children}
-    </RadialGradient>
-  ) : (
-    <LinearGradient id={id} gradientUnits="userSpaceOnUse" x1={attrs.x1} y1={attrs.y1} x2={attrs.x2} y2={attrs.y2}>
-      {children}
-    </LinearGradient>
-  );
-}
-
 /** One part of the logo on its own layer (the same square as the others). */
 function Layer({ size, style, children }) {
   return (
@@ -111,36 +84,18 @@ function Layer({ size, style, children }) {
 
 /**
  * size: the square's side. duration: one round (ms).
- * startAt: where in a round it starts (0–1; BUILT = the logo whole).
- * once: build once and stay (the splash): from `startAt` to the end of the
- * round, then one build, then onBuilt(). Otherwise it loops.
+ * startAt: where in a round it starts (0–1), so two loaders on screen
+ * together are not in step.
  */
 export default function BrandLoader({
-  size = 56, style, label = 'Loading', duration = ROUND_MS, once = false, startAt = 0, onBuilt,
+  size = 56, style, label = 'Loading', duration = ROUND_MS, startAt = 0,
 }) {
   const uid = useId().replace(/[^a-zA-Z0-9]/g, '');
   const id = (name) => `bl${uid}${name}`;
   const t = useRef(new Animated.Value(startAt)).current;
   const [still] = useState(() => reduceMotion);
-  const built = useRef(onBuilt);
-  built.current = onBuilt;
 
   useEffect(() => {
-    if (once) {
-      if (still) { built.current?.(); return undefined; }
-      let running = null;
-      let live = true;
-      const run = (from, to, done) => {
-        t.setValue(from);
-        running = Animated.timing(t, { toValue: to, duration: duration * (to - from), easing: Easing.linear, useNativeDriver: true });
-        running.start(({ finished }) => { if (finished && live) done(); });
-      };
-      // The rest of this round (the logo nods and goes), then one build.
-      const build = () => run(0, BUILT, () => built.current?.());
-      if (startAt > 0 && startAt < 1) run(startAt, 1, build);
-      else build();
-      return () => { live = false; running?.stop(); };
-    }
     if (still) {
       const pulse = Animated.loop(Animated.sequence([
         Animated.timing(t, { toValue: 1, duration: 900, easing: EASE.inOut, useNativeDriver: true }),

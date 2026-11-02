@@ -66,7 +66,7 @@ const ChatComposer = forwardRef(function ChatComposer({
           disabled={sending || attachProductDisabled}
           style={({ pressed }) => [styles.icon, pressed && styles.iconPressed, (sending || attachProductDisabled) && styles.iconOff]}
         >
-          <TagIcon size={20} color={t.neutral[500]} />
+          <TagIcon size={28} color={t.neutral[500]} />
         </Pressable>
         <Pressable
           accessibilityRole="button"
@@ -75,7 +75,7 @@ const ChatComposer = forwardRef(function ChatComposer({
           disabled={sending}
           style={({ pressed }) => [styles.icon, pressed && styles.iconPressed, sending && styles.iconOff]}
         >
-          <ImageIcon size={20} color={t.neutral[500]} />
+          <ImageIcon size={28} color={t.neutral[500]} />
         </Pressable>
         <TextInput
           ref={inputRef}
@@ -106,8 +106,8 @@ const ChatComposer = forwardRef(function ChatComposer({
           style={({ pressed }) => [styles.send, pressed && canSend && styles.sendPressed, !canSend && styles.sendOff]}
         >
           {sending
-            ? <InboxSpinner size={18} color={t.success[500]} />
-            : <PaperPlaneTiltIcon size={20} weight="fill" color={canSend ? t.success[500] : t.neutral[300]} />}
+            ? <InboxSpinner size={24} color={t.success[500]} />
+            : <PaperPlaneTiltIcon size={28} weight="fill" color={canSend ? t.success[500] : t.neutral[300]} />}
         </Pressable>
       </View>
     </Glass>
@@ -134,7 +134,9 @@ const styles = themed(() => StyleSheet.create({
   chipText: { flexShrink: 1, fontSize: 12.5, lineHeight: 18.75, color: t.primary[800], ...font(400) },
   chipX: { width: 18, height: 18, borderRadius: 9, alignItems: 'center', justifyContent: 'center', backgroundColor: 'rgba(6, 95, 70, 0.12)' },
   row: { flexDirection: 'row', alignItems: 'center', gap: 6 },
-  icon: { width: 40, height: 40, borderRadius: 20, alignItems: 'center', justifyContent: 'center', flexShrink: 0 },
+  // 44 to carry a 28px icon -- the bottom navigation's size -- and the
+  // smallest tap target iOS asks for.
+  icon: { width: 44, height: 44, borderRadius: 22, alignItems: 'center', justifyContent: 'center', flexShrink: 0 },
   iconPressed: { backgroundColor: t.neutral[100] },
   iconOff: { opacity: 0.4 },
   input: {
@@ -144,7 +146,12 @@ const styles = themed(() => StyleSheet.create({
     maxHeight: 120,
     paddingVertical: 10,
     paddingHorizontal: 16,
-    borderRadius: 9999,
+    // A box, not a pill. This grows to 120 tall as a message runs on,
+    // and at 9999 the corners stayed fully round while the middle
+    // stretched -- a long message sat in a lozenge. Square corners keep
+    // the same shape whatever is typed into it. The bubbles above are
+    // still soft; it is only the thing being typed in that is square.
+    borderRadius: 0,
     backgroundColor: t.neutral[100],
     color: t.neutral[900],
     fontSize: 16,
@@ -153,7 +160,7 @@ const styles = themed(() => StyleSheet.create({
     outlineStyle: 'none',
   },
   inputFocus: { boxShadow: `0px 0px 0px 1px ${t.primary[600]}` },
-  send: { width: 40, height: 40, borderRadius: 20, alignItems: 'center', justifyContent: 'center', flexShrink: 0 },
+  send: { width: 44, height: 44, borderRadius: 22, alignItems: 'center', justifyContent: 'center', flexShrink: 0 },
   sendPressed: { backgroundColor: 'rgba(34, 197, 94, 0.1)' },
   sendOff: { opacity: 0.35 },
 }));

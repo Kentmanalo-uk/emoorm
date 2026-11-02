@@ -1,13 +1,15 @@
 import { memo, useEffect, useRef, useState } from 'react';
 import {
-  ActivityIndicator, Animated, Image, Pressable, StyleSheet, Text, View,
+  ActivityIndicator, Animated, Image, Linking, Pressable, StyleSheet, Text, View,
 } from 'react-native';
 import { useRouter } from 'expo-router';
-import { EyeIcon, PackageIcon } from '../../../lib/icons';
+import {
+  EyeIcon, MapPinIcon, PackageIcon, PhoneIcon, StorefrontIcon, UserIcon,
+} from '../../../lib/icons';
 import { resolveImg } from '../../../lib/media';
 import { variationImage } from '../../../lib/variationImage';
 import { spanLabel } from '../../../lib/availability';
-import { font, t, themed } from '../../../theme';
+import { colors, font, t, themed } from '../../../theme';
 import TimeLeft from './TimeLeft';
 import {
   ACTION_LABELS, statusOf, cookingFor, countLabel, etaLabel, lineKind, money, nextStep, orderNo, shortDate,
@@ -75,17 +77,32 @@ export function CookTag({ order }) {
   );
 }
 
-/** A product photo (.so-product-thumb): hidden on a broken link, a box icon without one. */
-function Thumb({ item }) {
-  // The chosen option's own photo when it has one.
-  const src = resolveImg(variationImage(item.product, item.selectedVariations));
+/**
+ * The order's picture (.soc-pic on the website): one photo at a size worth
+ * looking at, with a count when there is more than one item.
+ *
+ * It used to be three small thumbnails overlapping. Three stamps of 44px
+ * tell you less than one picture of 72 does -- a seller glancing down a
+ * list is recognising the thing they packed, and the second and third
+ * photos were never legible enough to help with that.
+ */
+function OrderPicture({ items }) {
+  const first = items[0];
+  const src = first ? resolveImg(variationImage(first.product, first.selectedVariations)) : null;
   const [broken, setBroken] = useState(false);
   return (
-    <View style={styles.thumb}>
+    <View style={styles.pic}>
       {src && !broken ? (
-        <Image source={{ uri: src }} style={styles.thumbImg} onError={() => setBroken(true)} accessibilityLabel={item.product?.name || 'Product'} />
-      ) : null}
-      {!src ? <PackageIcon size={14} color={t.neutral[500]} /> : null}
+        <Image
+          source={{ uri: src }}
+          style={styles.picImg}
+          onError={() => setBroken(true)}
+          accessibilityLabel={first?.product?.name || 'Product'}
+        />
+      ) : (
+        <PackageIcon size={24} color={t.neutral[400]} />
+      )}
+      {items.length > 1 ? <Text style={styles.picMore}>+{items.length - 1}</Text> : null}
     </View>
   );
 }
@@ -99,6 +116,8 @@ function OrderCard({
   const items = order.items || [];
   const totalQty = items.reduce((sum, it) => sum + (Number(it.quantity) || 0), 0);
   const one = items.length === 1;
+  const pickup = order.fulfillmentMethod === 'PICKUP';
+  const phone = order.contactNumber || order.buyer?.contactNumber;
   // Held: every item, the buyer and the total, with Details and the next step.
   const peek = useSellerOrderPeek()(order, { statusColor: STATUS_INK[s.cls], onDetails, onNext });
 
@@ -108,14 +127,20 @@ function OrderCard({
   useEffect(() => {
     if (!moved) return undefined;
     wash.setValue(1);
-    const anim = Animated.timing(wash, { toValue: 0, duration: 3000, useNativeDriver: false });
+    // Opacity, not backgroundColor: a colour cannot be animated by the
+    // native driver, so the old version ran this 3-second fade on the JS
+    // thread -- on a card in a list, while the seller is scrolling it.
+    // The wash is now a mint sheet over the card whose opacity fades,
+    // which looks the same and runs off the JS thread entirely.
+    const anim = Animated.timing(wash, { toValue: 0, duration: 3000, useNativeDriver: true });
     anim.start();
     return () => anim.stop();
   }, [moved, wash]);
-  const washColor = wash.interpolate({ inputRange: [0, 1], outputRange: ['rgba(209, 250, 229, 0)', 'rgba(209, 250, 229, 1)'] });
+
 
   return (
-    <Animated.View style={[styles.card, moved && { backgroundColor: washColor }]}>
+    <Animated.View style={styles.card}>
+      {moved ? <Animated.View pointerEvents="none" style={[styles.wash, { opacity: wash }]} /> : null}
       <View style={styles.top}>
         <View style={styles.num}>
           <Text style={styles.numText}>#{orderNo(order)}</Text>
@@ -127,24 +152,14 @@ function OrderCard({
       </View>
 
       <Pressable style={styles.products} {...peek} onPress={() => onDetails?.(order)} accessibilityLabel={`Order ${orderNo(order)} items`}>
-        <View style={styles.thumbs}>
-          {items.slice(0, 3).map((it, i) => (
-            <View key={it.id || i} style={i > 0 && styles.overlap}><Thumb item={it} /></View>
-          ))}
-          {items.length > 3 ? (
-            <View style={[styles.thumb, styles.more, styles.overlap]}>
-              <Text style={styles.moreText}>+{items.length - 3}</Text>
-            </View>
-          ) : null}
-        </View>
+        <OrderPicture items={items} />
         <View style={styles.summary}>
           {items.length === 0 ? (
             <Text style={styles.productName}>No items</Text>
           ) : (
             <>
-              <Text style={styles.productName} numberOfLines={1}>
+              <Text style={styles.productName} numberOfLines={2}>
                 {items[0].product?.name || 'Product'}
-                {items.length > 1 ? <Text style={styles.productExtra}> +{items.length - 1} more</Text> : null}
               </Text>
               <Text style={styles.productMeta}>
                 {items.length} {one ? 'item' : 'items'} · {one && ['LIVESTOCK', 'PACKAGE'].includes(lineKind(items[0])) ? countLabel(items[0]) : `Qty ${totalQty}`}
@@ -152,13 +167,19 @@ function OrderCard({
             </>
           )}
         </View>
+        <Text style={styles.total}>{money(order.total)}</Text>
       </Pressable>
 
-      <View style={styles.mid}>
-        <View style={styles.buyer}>
+      {/* Who ordered it and where it goes -- the two things a seller is
+          actually deciding on, and the delivery address was not on the
+          card at all before: it meant opening every order to find out
+          whether it was near enough to take on. */}
+      <View style={styles.lines}>
+        <View style={styles.line}>
+          <UserIcon size={15} color={t.neutral[500]} />
           {order.buyer?.id ? (
             <Text
-              style={styles.buyerName}
+              style={[styles.lineText, styles.lineLink]}
               numberOfLines={1}
               accessibilityRole="link"
               accessibilityHint="View buyer profile"
@@ -167,14 +188,31 @@ function OrderCard({
               {order.buyer.fullName || 'Buyer'}
             </Text>
           ) : (
-            <Text style={styles.buyerName} numberOfLines={1}>{order.buyer?.fullName || 'Buyer'}</Text>
+            <Text style={styles.lineText} numberOfLines={1}>{order.buyer?.fullName || 'Buyer'}</Text>
           )}
-          {order.buyer?.contactNumber ? <Text style={styles.buyerMeta}>{order.buyer.contactNumber}</Text> : null}
         </View>
-        <Text style={styles.total}>{money(order.total)}</Text>
+        <View style={styles.line}>
+          {pickup
+            ? <StorefrontIcon size={15} color={t.neutral[500]} />
+            : <MapPinIcon size={15} color={t.neutral[500]} />}
+          <Text style={styles.lineText} numberOfLines={2}>
+            {pickup ? 'Picking up at your shop' : (order.deliveryAddress || 'No address given')}
+          </Text>
+        </View>
       </View>
 
       <View style={styles.actions}>
+        {phone ? (
+          <Pressable
+            accessibilityRole="button"
+            accessibilityLabel={`Call ${order.buyer?.fullName || 'the buyer'} at ${phone}`}
+            onPress={() => Linking.openURL(`tel:${String(phone).replace(/[^+\d]/g, '')}`).catch(() => {})}
+            style={({ pressed }) => [styles.btn, styles.details, pressed && styles.detailsPressed]}
+          >
+            <PhoneIcon size={15} color={t.neutral[600]} />
+            <Text style={styles.detailsText}>Call</Text>
+          </Pressable>
+        ) : null}
         <Pressable
           accessibilityRole="button"
           accessibilityLabel="View order details"
@@ -220,6 +258,8 @@ const styles = themed(() => StyleSheet.create({
     marginHorizontal: -12, paddingTop: 14, paddingHorizontal: 14, borderRadius: 12, backgroundColor: t.neutral[0],
     boxShadow: [{ offsetX: 0, offsetY: 8, blurRadius: 24, color: 'rgba(149, 157, 165, 0.06)' }],
   },
+  // The mint sheet that fades out on an order that just moved here.
+  wash: { ...StyleSheet.absoluteFill, borderRadius: 12, backgroundColor: 'rgb(209, 250, 229)' },
   ring: { ...StyleSheet.absoluteFill, borderRadius: 12, borderWidth: 2, borderColor: t.primary[600] },
   edge: { ...StyleSheet.absoluteFill, borderRadius: 12, borderLeftWidth: 3, borderColor: t.primary[600] },
 
@@ -241,26 +281,29 @@ const styles = themed(() => StyleSheet.create({
   products: {
     flexDirection: 'row', alignItems: 'center', gap: 10, marginVertical: 12, padding: 10, borderRadius: 10, backgroundColor: t.neutral[50],
   },
-  thumbs: { flexDirection: 'row', alignItems: 'center', flexShrink: 0 },
-  overlap: { marginLeft: -8 },
-  thumb: {
-    width: 44, height: 44, borderRadius: 8, borderWidth: 2, borderColor: t.neutral[0], overflow: 'hidden',
+  // One picture, big enough to recognise what was packed (.soc-pic).
+  pic: {
+    width: 72, height: 72, borderRadius: 10, overflow: 'hidden', flexShrink: 0,
     alignItems: 'center', justifyContent: 'center', backgroundColor: t.neutral[100],
-    boxShadow: [{ offsetX: 0, offsetY: 8, blurRadius: 24, color: 'rgba(149, 157, 165, 0.06)' }],
   },
-  thumbImg: { ...StyleSheet.absoluteFill },
-  more: { backgroundColor: t.neutral[200] },
-  moreText: { fontSize: 11, lineHeight: 17.6, ...font(600), color: t.neutral[600] },
+  picImg: { ...StyleSheet.absoluteFill },
+  picMore: {
+    position: 'absolute', right: 0, bottom: 0,
+    paddingHorizontal: 6, paddingVertical: 1,
+    borderTopLeftRadius: 8,
+    fontSize: 11, lineHeight: 17.6, ...font(700),
+    color: colors.white, backgroundColor: 'rgba(17, 24, 39, 0.72)',
+  },
   summary: { flex: 1, minWidth: 0, gap: 2 },
-  productName: { fontSize: 14, lineHeight: 22.4, ...font(500), color: t.neutral[900] },
-  productExtra: { fontSize: 12, ...font(400), color: t.neutral[500] },
+  productName: { fontSize: 14, lineHeight: 19.6, ...font(500), color: t.neutral[900] },
   productMeta: { fontSize: 11.5, lineHeight: 18.4, ...font(400), color: t.neutral[500] },
-
-  mid: { flexDirection: 'row', alignItems: 'center', gap: 12 },
-  buyer: { flex: 1, minWidth: 0, gap: 2 },
-  buyerName: { fontSize: 14.5, lineHeight: 23.2, ...font(500), color: t.neutral[900] },
-  buyerMeta: { fontSize: 11.5, lineHeight: 18.4, ...font(400), color: t.neutral[500] },
   total: { fontSize: 16, lineHeight: 25.6, ...font(700), color: t.neutral[900] },
+
+  // Who ordered, and where it goes (.soc-lines).
+  lines: { gap: 5 },
+  line: { flexDirection: 'row', alignItems: 'flex-start', gap: 7 },
+  lineText: { flex: 1, minWidth: 0, fontSize: 13, lineHeight: 18.2, ...font(400), color: t.neutral[700] },
+  lineLink: { ...font(500), color: t.neutral[900] },
 
   actions: {
     flexDirection: 'row', gap: 8, marginTop: 12, paddingVertical: 8, borderTopWidth: 1, borderTopColor: t.neutral[100],

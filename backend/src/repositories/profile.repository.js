@@ -16,6 +16,7 @@ const findPublicUser = (id) => prisma.user.findFirst({
     fullName: true,
     username: true,
     profilePhoto: true,
+    avatarKey: true,
     province: true,
     createdAt: true,
     municipality: { select: { id: true, name: true } },

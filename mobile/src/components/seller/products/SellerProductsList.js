@@ -340,6 +340,12 @@ export default function SellerProductsList() {
   return (
     <>
       <FlatList showsVerticalScrollIndicator={false} showsHorizontalScrollIndicator={false}
+        // Rows far off screen are detached rather than kept mounted;
+        // React Native's default keeps about twenty-one screens of them.
+        removeClippedSubviews
+        initialNumToRender={8}
+        maxToRenderPerBatch={8}
+        windowSize={7}
         {...tabScroll}
         data={isLoading ? [] : products}
         keyExtractor={(item) => String(item.id)}

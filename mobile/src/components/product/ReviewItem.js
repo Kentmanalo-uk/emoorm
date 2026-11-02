@@ -4,6 +4,7 @@ import { useRouter } from 'expo-router';
 import { useVideoPlayer, VideoView } from 'expo-video';
 import { ChatCircleDotsIcon, StarIcon, StorefrontIcon, ThumbsUpIcon } from '../../lib/icons';
 import { resolveImg } from '../../lib/media';
+import UserAvatar from '../UserAvatar';
 import { font, t, themed } from '../../theme';
 import { localDate } from './productLib';
 
@@ -20,20 +21,6 @@ export function Stars({ rating, size = 14, gap = 1 }) {
 }
 
 /** A person's photo, or their initial on the pale green circle. */
-function Avatar({ src, name }) {
-  const [failed, setFailed] = useState(false);
-  const uri = src ? resolveImg(src) : null;
-  return (
-    <View style={styles.avatar}>
-      {uri && !failed ? (
-        <Image source={{ uri }} style={styles.avatarImg} onError={() => setFailed(true)} />
-      ) : (
-        <Text style={styles.avatarText}>{(name || 'U').trim().charAt(0).toUpperCase()}</Text>
-      )}
-    </View>
-  );
-}
-
 function ReviewVideo({ source }) {
   const player = useVideoPlayer(resolveImg(source) || source);
   return <VideoView player={player} style={styles.video} nativeControls contentFit="cover" />;
@@ -67,10 +54,21 @@ export default function ReviewItem({
   return (
     <View style={[styles.review, last && styles.reviewLast]} onLayout={(e) => setBoxW(e.nativeEvent.layout.width)}>
       <View style={styles.head}>
-        <Avatar src={reviewer.profilePhoto} name={reviewer.fullName || 'U'} />
+        {/*
+          * Written without a name: the server has already taken away the
+          * photo, the handle and the id, so the picture is drawn from the
+          * review's own id. That gives an anonymous review a steady little
+          * face of its own that leads nowhere -- not to a profile, and not
+          * to the writer's other anonymous reviews.
+          */}
+        <UserAvatar
+          user={reviewer.anonymous ? { id: review.id } : reviewer}
+          src={reviewer.anonymous ? null : undefined}
+          size={32}
+        />
         <View style={styles.who}>
           {reviewer.id ? (
-            <Text style={[styles.name, styles.nameLink]} numberOfLines={1} onPress={() => router.push(`/u/${reviewer.id}`)}>
+            <Text style={styles.name} numberOfLines={1} onPress={() => router.push(`/u/${reviewer.id}`)}>
               {reviewer.fullName || 'Anonymous'}
             </Text>
           ) : (
@@ -158,7 +156,6 @@ const styles = themed(() => StyleSheet.create({
   avatarText: { fontSize: 12, lineHeight: 19.2, ...font(500), color: t.primary[700] },
   who: { flex: 1, minWidth: 0 },
   name: { alignSelf: 'flex-start', fontSize: 13.5, lineHeight: 21.6, ...font(500), color: t.neutral[900] },
-  nameLink: { textDecorationLine: 'underline', textDecorationStyle: 'dotted' },
   starLine: { height: 24, paddingTop: 4.4 },
   date: { fontSize: 12, lineHeight: 19.2, ...font(400), color: t.neutral[500] },
   comment: { fontSize: 14, lineHeight: 22.4, ...font(400), color: t.neutral[700] },

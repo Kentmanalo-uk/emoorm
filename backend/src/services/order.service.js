@@ -1085,6 +1085,82 @@ const updateOrderStatus = async (orderId, userId, newStatus, { proofUrl, cancelR
 };
 
 /**
+ * The seller swaps the hand-over photo (proof of delivery or pickup).
+ *
+ * It can be evidence, so it stays open only while the order waits for the
+ * buyer: not once the order is complete, not once a return exists, and never
+ * on a MoorMove delivery, where the photo is the rider's. The auto-complete
+ * clock runs from fulfillmentProofAt and is carried over unchanged, so a new
+ * photo neither shortens nor extends the buyer's time. The buyer is told, and
+ * the order's history records it.
+ * @param {String} orderId - Order ID
+ * @param {String} userId - Seller user ID
+ * @param {String} proofUrl - The new photo, already uploaded
+ * @returns {Promise<Object>} The order's proof fields
+ */
+const replaceFulfillmentProof = async (orderId, userId, proofUrl) => {
+  const order = await orderRepository.findById(orderId);
+  if (!order) throw new ApiError('Order not found', 404);
+  if (order.store.ownerId !== userId) throw new ApiError('You can only update orders for your store', 403);
+
+  if (order.status === 'COMPLETED') {
+    throw new ApiError('This order is complete, so its photo can no longer be changed', 409);
+  }
+  if (!['DELIVERED', 'PICKED_UP'].includes(order.status)) {
+    throw new ApiError('The photo can be changed once the order is handed over', 409);
+  }
+  if (order.deliveryPartner === 'MOORMOVE') {
+    throw new ApiError('This photo was taken by the MoorMove rider and cannot be changed', 409);
+  }
+
+  const next = privateMedia.normalize(String(proofUrl).trim());
+  if (next === order.fulfillmentProofUrl) {
+    return {
+      id: order.id,
+      status: order.status,
+      fulfillmentProofUrl: order.fulfillmentProofUrl,
+      fulfillmentProofAt: order.fulfillmentProofAt,
+    };
+  }
+
+  const pickup = order.status === 'PICKED_UP';
+  const label = pickup ? 'proof of pickup' : 'proof of delivery';
+  let updated;
+  try {
+    updated = await orderRepository.replaceFulfillmentProof(orderId, {
+      expectedStatus: order.status,
+      proofUrl: next,
+      proofAt: order.fulfillmentProofAt || order.updatedAt,
+      actorId: userId,
+      note: `The seller ${order.fulfillmentProofUrl ? 'changed' : 'added'} the ${label} photo`,
+    });
+  } catch (err) {
+    if (err.code === 'ORDER_HAS_RETURN') {
+      throw new ApiError('This order has a return, so its photo can no longer be changed', 409);
+    }
+    if (err.code === 'STALE_ORDER_STATUS') {
+      throw new ApiError('This order was updated elsewhere. Refresh and try again.', 409);
+    }
+    throw err;
+  }
+
+  try {
+    await notificationService.createNotification({
+      userId: order.buyerId,
+      type: 'ORDER_CONFIRMED',
+      title: `Photo updated on order ${order.orderNumber}`,
+      message: `${order.store?.name || 'The seller'} ${order.fulfillmentProofUrl ? 'changed' : 'added'} the ${label} photo on order ${order.orderNumber}.`,
+      relatedId: orderId,
+      target: { kind: 'buyer-order', id: orderId },
+    });
+  } catch (err) {
+    console.error('[replaceFulfillmentProof] notification failed:', err.message);
+  }
+
+  return updated;
+};
+
+/**
  * Cancel order (buyer)
  * @param {String} orderId - Order ID
  * @param {String} userId - Buyer user ID
@@ -1593,6 +1669,7 @@ module.exports = {
   getAllOrders,
   revealOrderDetails,
   updateOrderStatus,
+  replaceFulfillmentProof,
   cancelOrder,
   verifyPayment,
   submitPaymentProof,
