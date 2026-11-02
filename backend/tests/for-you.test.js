@@ -53,10 +53,10 @@ test('a search outranks a category, and what was just viewed gives way', () => {
   assert.ok(order.findIndex((p) => p.id === 'fresh') < order.findIndex((p) => p.id === 'seen'));
 });
 
-test('something in the cart is left out, and something sold out drops down', () => {
+test('something in the cart and something sold out drop down, and stay in', () => {
   const profile = buildProfile({});
-  const order = rankPool([row('gone', { stock: 0 }), row('here'), row('carted')], profile, { excluded: new Set(['carted']) });
-  assert.deepEqual(order.map((p) => p.id), ['here', 'gone']);
+  const order = rankPool([row('gone', { stock: 0 }), row('carted'), row('here')], profile, { carted: new Set(['carted']) });
+  assert.deepEqual(order.map((p) => p.id), ['here', 'carted', 'gone']);
 });
 
 test('a dish cooked to order is never sold out', () => {
@@ -122,12 +122,12 @@ test('a saved product pulls its category up for that person only', async () => {
   await prisma.wishlistItem.deleteMany({ where: { userId: buyer.id } });
 });
 
-test('what is in the cart stays out of the feed', async () => {
+test('what is in the cart is still in the feed', async () => {
   const { item } = await shopWith();
   const buyer = await h.user('BUYER');
   await prisma.cartItem.create({ data: { userId: buyer.id, productId: item.id } });
   const res = await feed({}, buyer);
-  assert.equal(ids(res).includes(item.id), false);
+  assert.equal(ids(res).includes(item.id), true);
   await prisma.cartItem.deleteMany({ where: { userId: buyer.id } });
 });
 
@@ -148,7 +148,7 @@ test('a seller is not shown their own products', async () => {
   assert.equal(ids(res).includes(item.id), false);
 });
 
-test('pages and skip do not repeat a product', async () => {
+test('pages do not repeat a product, and every product is in the feed', async () => {
   await shopWith();
   await shopWith();
   await shopWith();
@@ -158,7 +158,8 @@ test('pages and skip do not repeat a product', async () => {
   const second = await feed({ terms, pageSize: 2, page: 2 });
   const skipped = await feed({ terms, pageSize: 2, page: 1, skip: 2 });
   assert.equal(ids(first).some((id) => ids(second).includes(id)), false);
-  assert.deepEqual(ids(second), ids(skipped));
+  // skip is no longer honoured: the list starts from the top.
+  assert.deepEqual(ids(skipped), ids(first));
   assert.equal(first.body.pagination.hasNext, true);
 });
 

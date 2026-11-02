@@ -17,7 +17,8 @@ const productService = require('./product.service');
  *   2. Pool: products from the top categories and shops, each search's
  *      matches, and the best sellers and newest so the feed never runs dry.
  *   3. Score: interest first, then quality and freshness, less for what they
- *      just looked at or already bought, so the feed moves on.
+ *      just looked at, already bought or have in their cart, so the feed
+ *      moves on. Nothing is left out: every product anyone may see is in it.
  *   4. Mix: no more than two in a row from one shop.
  *
  * The score uses no randomness beyond a small nudge that changes daily, so
@@ -34,13 +35,17 @@ const TERM_SPILL = 0.5;
 // How the parts of a score weigh against each other.
 const SCORE = {
   category: 6, store: 3, term: 10, sold: 1, rating: 0.5, fresh: 1, nudge: 0.5,
-  seen: -1.5, bought: -3, soldOut: -4,
+  seen: -1.5, bought: -3, inCart: -2, soldOut: -4,
 };
 const FRESH_DAYS = 30;
 const SOLD_ENOUGH = 50; // Units at which the sold part of a score is full.
 
 const TOP_INTERESTS = 6;
-const POOL = { interest: 120, term: 60, general: 120 };
+// `all`: the newest of everything, so every product is in the feed (only its
+// place is personal) until the catalogue outgrows it.
+const POOL = {
+  interest: 120, term: 60, general: 120, all: 2000,
+};
 const MAX_RUN = 2; // From one shop in a row.
 
 const MAX_VIEWED = 20;
@@ -87,7 +92,9 @@ const isSoldOut = (p) => p.stock <= 0 && p.listingKind === 'REGULAR' && p.produc
 
 /** How well one product suits a profile. */
 const scoreProduct = (p, profile, context) => {
-  const { topCategory, topStore, termHits, seen, bought, now, day } = context;
+  const {
+    topCategory, topStore, termHits, seen, bought, carted, now, day,
+  } = context;
   const ageDays = (now - new Date(p.createdAt).getTime()) / 86400e3;
   const rated = p.reviewCount > 0 ? (p.ratingAvg - 3) / 2 : 0;
   let score = SCORE.category * ((profile.categories.get(p.categoryId) || 0) / topCategory)
@@ -99,6 +106,7 @@ const scoreProduct = (p, profile, context) => {
     + SCORE.nudge * dailyNudge(p.id, day);
   if (seen.has(p.id)) score += SCORE.seen;
   if (bought.has(p.id)) score += SCORE.bought;
+  if (carted.has(p.id)) score += SCORE.inCart;
   if (isSoldOut(p)) score += SCORE.soldOut;
   return score;
 };
@@ -120,17 +128,19 @@ const mixShops = (sorted) => {
  * The pool in the order to show it.
  * @param {Array} pool - Light product rows
  * @param {Object} profile - From buildProfile
- * @param {Object} [options] - termHits (Map of id to 0..1), seen, bought and
- *   excluded (Sets of ids), now (ms)
+ * @param {Object} [options] - termHits (Map of id to 0..1), seen, bought,
+ *   carted and excluded (Sets of ids), now (ms)
  * @returns {Array} The rows, best first
  */
 const rankPool = (pool, profile, {
-  termHits = new Map(), seen = new Set(), bought = new Set(), excluded = new Set(), now = Date.now(),
+  termHits = new Map(), seen = new Set(), bought = new Set(), carted = new Set(), excluded = new Set(),
+  now = Date.now(),
 } = {}) => {
   const context = {
     termHits,
     seen,
     bought,
+    carted,
     now,
     day: new Date(now).toISOString().slice(0, 10),
     topCategory: Math.max(1, ...profile.categories.values()),
@@ -200,7 +210,7 @@ const rankedIds = async ({ userId, ownerId, viewedIds, terms }) => {
       ownerId, where: { storeId: { in: top(profile.stores) } }, take: POOL.interest, orderBy: { soldCount: 'desc' },
     }) : [],
     productRepository.findRecommendable({ ownerId, take: POOL.general, orderBy: { soldCount: 'desc' } }),
-    productRepository.findRecommendable({ ownerId, take: POOL.general, orderBy: { createdAt: 'desc' } }),
+    productRepository.findRecommendable({ ownerId, take: POOL.all, orderBy: { createdAt: 'desc' } }),
   ]);
   const pool = new Map([...search.matches, ...fromCategories, ...fromStores, ...popular, ...newest].map((p) => [p.id, p]));
 
@@ -208,7 +218,7 @@ const rankedIds = async ({ userId, ownerId, viewedIds, terms }) => {
     termHits: search.termHits,
     seen: new Set(viewedIds),
     bought: new Set(account.orders.map((p) => p.id)),
-    excluded: new Set(account.cart.map((p) => p.id)),
+    carted: new Set(account.cart.map((p) => p.id)),
   }).map((p) => p.id);
 };
 
@@ -234,12 +244,13 @@ const parseTerms = (value) => [...new Set(String(value || '').split('|').map((t)
  * @param {Object} [options.user] - The signed-in person, if any
  * @param {String} [options.viewed] - Viewed product ids, comma separated
  * @param {String} [options.terms] - Searches, | separated
- * @param {Number} [options.skip] - From the top, before paging: what the page
- *   above already shows
+ * @param {Number} [options.skip] - Accepted and not used. Home asked to skip
+ *   what Suggested for You shows above Explore, which left a small catalogue's
+ *   Explore all but empty; every list now has every product.
  * @returns {Promise<Object>} Products and paging
  */
 const getForYou = async ({
-  user = null, viewed, terms, page = 1, pageSize = 20, skip = 0,
+  user = null, viewed, terms, page = 1, pageSize = 20,
 }) => {
   const viewedIds = parseViewed(viewed);
   const words = parseTerms(terms);
@@ -253,11 +264,13 @@ const getForYou = async ({
     ? saved.ids
     : remember(key, await rankedIds({ userId, ownerId, viewedIds, terms: words }));
 
-  const from = skip + (page - 1) * pageSize;
+  const from = (page - 1) * pageSize;
   const products = await productService.toPublicList(
     await productRepository.findListByIds(ids.slice(from, from + pageSize)),
   );
-  return { products, total: Math.max(0, ids.length - skip), page, pageSize };
+  return {
+    products, total: ids.length, page, pageSize,
+  };
 };
 
 module.exports = { getForYou, buildProfile, rankPool, parseViewed, parseTerms };

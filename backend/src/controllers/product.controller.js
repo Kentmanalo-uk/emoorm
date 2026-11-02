@@ -127,9 +127,8 @@ const getForYou = asyncHandler(async (req, res) => {
   const { viewed, terms } = req.query;
   const page = Math.max(1, parseInt(req.query.page, 10) || 1);
   const pageSize = Math.min(50, Math.max(1, parseInt(req.query.pageSize, 10) || 20));
-  const skip = Math.max(0, parseInt(req.query.skip, 10) || 0);
   const result = await recommendationService.getForYou({
-    user: req.user, viewed, terms, page, pageSize, skip,
+    user: req.user, viewed, terms, page, pageSize,
   });
   // Different for everyone, and what was searched for is in the address.
   res.set('Cache-Control', 'private, no-store');
