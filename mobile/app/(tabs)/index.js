@@ -29,8 +29,8 @@ import { font, t, themed } from '../../src/theme';
 
 /*
  * Home (web/src/pages/Home.jsx, phone view): quick search words, the banner
- * carousel, the quick entries (HomeShortcuts, where the website keeps its
- * two side banners), Shop by Category, Available Today,
+ * carousel, the quick entries (HomeShortcuts, which the website's phone view
+ * shows too; its two side banners are for computers), Shop by Category, Available Today,
  * Suggested for You, Stores Near You, Explore Municipals, Discover Stores
  * (the map) and Explore Products, which loads its next batch on its own as
  * the page nears the bottom (one request at a time, small batches). The
@@ -55,6 +55,9 @@ const loadAppSettings = () => {
     .catch(() => { settingsRequest = null; return {}; });
   return settingsRequest;
 };
+
+// How many "Suggested for You" shows. A saved page may hold more, from before.
+const SUGGESTED = 4;
 
 const mapBanner = (b) => ({
   id: b.id,
@@ -96,8 +99,8 @@ export default function Home() {
   const exploreBusy = useRef(false);
   const exploreSaved = useRef(cache.explorePage || 1);
 
-  // Banners: the carousel and the popup. The two sidebar placements are
-  // the website's; the phone shows HomeShortcuts in that space.
+  // Banners: the carousel and the popup. The two sidebar placements are for
+  // the website on computers; phones show HomeShortcuts in that space.
   useEffect(() => {
     let cancelled = false;
     (async () => {
@@ -154,7 +157,7 @@ export default function Home() {
       .catch((err) => console.error('Failed to load home data:', err?.message || err));
 
     load(
-      apiClient.get('/products', { params: { pageSize: 6, sortBy: 'createdAt', sortOrder: 'desc' } }),
+      apiClient.get('/products', { params: { pageSize: SUGGESTED, sortBy: 'createdAt', sortOrder: 'desc' } }),
       (res) => {
         setFeatured(res.data || []);
         patchCache({ featured: res.data || [] });
@@ -307,7 +310,7 @@ export default function Home() {
         {/* Suggested for You */}
         <View style={styles.listSection}>
           <SectionHeader title="Suggested for You" />
-          {featured.length > 0 ? grid(featured) : (
+          {featured.length > 0 ? grid(featured.slice(0, SUGGESTED)) : (
             <HomeEmpty
               art="products"
               title="No suggestions yet"

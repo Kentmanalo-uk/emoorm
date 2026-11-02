@@ -5,6 +5,7 @@ const orderRepository = require('../repositories/order.repository');
 const storeRepository = require('../repositories/store.repository');
 const { cleanText } = require('../utils/sanitize');
 const { maskReview, maskReviews } = require('../utils/reviewIdentity');
+const { imageForSelection, priceForSelection } = require('../utils/variantPricing');
 const { ApiError } = require('../middleware/errorHandler');
 
 /**
@@ -118,6 +119,52 @@ const getReviews = async (options) => {
   return maskReviews(await reviewRepository.findAll(options));
 };
 
+/** "Red, L" from a line's chosen options; '' when it had none. */
+const variationText = (selected) => (selected && typeof selected === 'object' && !Array.isArray(selected)
+  ? Object.values(selected).join(', ')
+  : '');
+
+/**
+ * What a reviewer ordered, for the strip under their review.
+ *
+ * A review belongs to a product and not to an order, so someone who bought
+ * twice is matched to the last order they had placed when they wrote it.
+ * One order can hold the same product in two options, so all of its lines
+ * come along. `lines` is empty when no received order is left to point to.
+ *
+ * The price and photo are the listing's as it stands today, for that option,
+ * because the strip is a way back to buying it. What this buyer paid stays
+ * private: a deal agreed in chat is between them and the shop.
+ *
+ * Nothing here says who they are, so it is safe on an anonymous review.
+ */
+const withOrdered = async (reviews, product) => {
+  const buyerIds = [...new Set(reviews.map((r) => r.userId))];
+  const lines = buyerIds.length ? await reviewRepository.findPurchasedLines(product.id, buyerIds) : [];
+
+  return reviews.map((review) => {
+    const own = lines.filter((line) => line.order.buyerId === review.userId);
+    const order = (own.find((line) => line.order.createdAt <= review.createdAt) || own[0])?.order;
+    const inOrder = own.filter((line) => line.order.id === order?.id);
+
+    const counted = new Map();
+    for (const line of inOrder) {
+      const variation = variationText(line.selectedVariations);
+      counted.set(variation, (counted.get(variation) || 0) + line.quantity);
+    }
+
+    const selected = inOrder[0]?.selectedVariations || null;
+    return {
+      ...review,
+      ordered: {
+        image: imageForSelection(product, selected),
+        price: priceForSelection(product, selected),
+        lines: [...counted].map(([variation, quantity]) => ({ variation, quantity })),
+      },
+    };
+  });
+};
+
 /**
  * Get product reviews
  * @param {String} productId - Product ID
@@ -136,8 +183,11 @@ const getProductReviews = async (productId, options) => {
     reviewRepository.getProductRatingStats(productId),
   ]);
 
+  // Before masking, which takes away the user id this needs.
+  const reviews = await withOrdered(reviewsData.reviews, product);
+
   return {
-    ...maskReviews(reviewsData),
+    ...maskReviews({ ...reviewsData, reviews }),
     ratingStats,
   };
 };

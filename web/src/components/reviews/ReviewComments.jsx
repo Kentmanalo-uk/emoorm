@@ -115,7 +115,7 @@ export default function ReviewComments({ review, onClose, onCountChange }) {
               {/* UserAvatar renders only what goes inside; the wrapper and
                   its size belong to the caller. */}
               <span className="rc-face">
-                <UserAvatar src={c.user?.profilePhoto} name={c.user?.fullName || 'U'} alt="" />
+                <UserAvatar src={c.user?.profilePhoto} person={c.user} name={c.user?.fullName || 'U'} alt="" />
               </span>
               <div className="rc-body">
                 <p className="rc-who">

@@ -877,13 +877,14 @@ function ProductPage({ slug }) {
           <SectionBody>
             {reviews.length === 0 ? (
               <EmptyState compact art="reviews" text="No reviews yet. Be the first to review this product." />
-            ) : reviews.slice(0, 10).map((r, i, all) => (
+            ) : reviews.slice(0, 5).map((r, i, all) => (
               <ReviewItem
                 key={r.id}
                 review={r}
                 last={i === all.length - 1}
                 social={reviewSocial}
                 onOpenMedia={openReviewMedia}
+                onOpenProduct={() => goToSection('overview')}
               />
             ))}
           </SectionBody>

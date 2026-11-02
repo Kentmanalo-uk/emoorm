@@ -153,6 +153,7 @@ export function ConversationPeekCard({ item, currentUserId }) {
         <div className="peek-chat-avatar">
           <UserAvatar
             src={sellerView ? item.buyer?.profilePhoto : item.store?.logo}
+            person={sellerView ? item.buyer : null}
             name={title}
             alt=""
             fallbackIcon={sellerView ? null : Storefront}

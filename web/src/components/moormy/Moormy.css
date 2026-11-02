@@ -22,7 +22,6 @@
   flex-shrink: 0;
   place-items: center;
   border-radius: 50%;
-  background: linear-gradient(135deg, var(--t-accent-500, #ec4899), var(--t-primary-500, #10b981));
   color: #fff;
   isolation: isolate;
 }
@@ -30,19 +29,6 @@
 .mmy-avatar .mmy-face {
   display: block;
   border-radius: 50%;
-}
-
-/* A soft halo that breathes pink to green. */
-.mmy-avatar.is-glow::after {
-  content: '';
-  position: absolute;
-  inset: -4px;
-  z-index: -1;
-  border-radius: 50%;
-  background: linear-gradient(135deg, var(--t-accent-500, #ec4899), var(--t-primary-500, #10b981));
-  opacity: 0.28;
-  filter: blur(8px);
-  animation: mmy-breathe 3.2s ease-in-out infinite;
 }
 
 .mmy-ai-tag {
@@ -294,8 +280,8 @@
 
 .mmy-thread .mmy-bubble {
   max-width: 100%;
-  border-color: var(--mmy-pink-line);
-  background: var(--mmy-pink-soft);
+  border-color: transparent;
+  background: var(--t-neutral-100, #f3f4f6);
 }
 
 .mmy-thread .msgr-bubble-row.is-self .mmy-bubble {
@@ -371,10 +357,10 @@
 
 .mmy-chip {
   padding: 6px 12px;
-  border: 1px solid var(--mmy-pink-line);
+  border: 1px solid var(--t-neutral-200, #e5e7eb);
   border-radius: 999px;
   background: var(--t-neutral-0, #fff);
-  color: var(--mmy-pink-ink);
+  color: var(--t-neutral-700, #374151);
   font: inherit;
   font-size: 13px;
   text-align: left;
@@ -390,7 +376,7 @@
 
 .mmy-chip:active,
 .mmy-chip:hover:not(:disabled) {
-  background: var(--mmy-pink-soft);
+  background: var(--t-neutral-100, #f3f4f6);
 }
 
 .mmy-chip:disabled {
@@ -429,7 +415,7 @@
   width: 6px;
   height: 6px;
   border-radius: 50%;
-  background: var(--mmy-pink);
+  background: var(--t-neutral-400, #9ca3af);
   animation: mmy-dot 1s ease-in-out infinite;
 }
 
@@ -505,7 +491,6 @@
   .mmy-chip,
   .mmy-ask-hint,
   .mmy-avatar svg,
-  .mmy-avatar.is-glow::after,
   .mmy-caret,
   .mmy-intro.is-sending .mmy-ask-send svg {
     animation: none;

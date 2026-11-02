@@ -1,13 +1,13 @@
 import React, { useEffect, useState, useRef } from 'react';
 import EmptyArt from '../components/ui/EmptyArt';
-import ToolGradients from '../components/ui/ToolGradients';
+import { HOME_TOOLS, TOOLS_BY_KEY } from '../components/seller/sellerTools';
 import { Link, useOutletContext, useNavigate } from 'react-router-dom';
 import {
   Plus, Clock, Truck, CheckCircle, Package,
-  TrendUp as TrendingUp, Star, ChartBar as BarChart2, Users, WarningCircle, X,
-  IdentificationCard, ArrowRight, Wallet, CaretRight, LockSimple, Bell,
-  ArrowCounterClockwise, PaintBrush, Megaphone, ShareNetwork, PlusCircle, Check, ExclamationMark,
-  Sparkle, Palette, Heart, UsersThree, LinkSimple, ChatCircleDots, CookingPot,
+  TrendUp as TrendingUp, Star, Users, WarningCircle, X,
+  IdentificationCard, ArrowRight, CaretRight, LockSimple, Bell,
+  ArrowCounterClockwise, PaintBrush, Megaphone, ShareNetwork, Check, ExclamationMark,
+  Sparkle, Palette, Heart, UsersThree, LinkSimple, ChatCircleDots,
   GraduationCap, BookOpen, Lightbulb, ArrowClockwise, Handshake, Question, QrCode, ListChecks,
 } from '../lib/icons';
 import { countLabel } from '../lib/orderLines';
@@ -486,7 +486,7 @@ export default function SellerDashboard() {
                               className="sd-followers-avatar"
                               title={r.buyer.fullName}
                             >
-                              <UserAvatar src={r.buyer.profilePhoto} name={r.buyer.fullName} alt={r.buyer.fullName} />
+                              <UserAvatar src={r.buyer.profilePhoto} person={r.buyer} name={r.buyer.fullName} alt={r.buyer.fullName} />
                             </div>
                           ))}
                           {followerStats.recent.length > 6 && (
@@ -650,23 +650,6 @@ function DashboardTour({ steps, onFinish, onClose }) {
 }
 
 /** Phones: the order statuses counted on Home. */
-
-/**
- * Phones: Home's shop tools, each a filled icon in its own colour. Orders
- * has its own tab, so Marketing (no longer a tab) takes its place; shops
- * that sell livestock also get Offers.
- */
-const HOME_TOOLS = [
-  { to: '/seller/products', label: 'My products', Icon: Package, tone: 'orange' },
-  { to: '/seller/marketing', label: 'Marketing', Icon: Megaphone, tone: 'blue' },
-  { to: '/seller/analytics', label: 'Analytics', Icon: BarChart2, tone: 'violet' },
-  { to: '/seller/finance', label: 'Earnings', Icon: Wallet, tone: 'green' },
-  { to: '/seller/reviews', label: 'Reviews', Icon: Star, tone: 'amber' },
-  { to: '/seller/returns', label: 'Returns', Icon: ArrowCounterClockwise, tone: 'rose' },
-  { to: '/seller/today', label: 'Available today', Icon: CookingPot, tone: 'pink' },
-  { to: '/seller/products/new', label: 'Add product', Icon: PlusCircle, tone: 'teal', tour: 'add-product' },
-];
-const OFFERS_TOOL = { to: '/seller/offers', label: 'Offers', Icon: Handshake, tone: 'teal' };
 
 const ACADEMY_CARD = 'academy-card';
 
@@ -1112,7 +1095,7 @@ function PhoneHome({
     { key: 'questions', n: waiting['/seller/questions']?.count || 0, one: 'buyer question to answer', many: 'buyer questions to answer', to: '/seller/questions', Icon: Question },
     ...(sellsLivestock ? [{ key: 'offers', n: waiting['/seller/offers']?.count || 0, one: 'offer to answer', many: 'offers to answer', to: '/seller/offers', Icon: Handshake }] : []),
   ].filter((x) => x.n > 0);
-  const tools = sellsLivestock ? [...HOME_TOOLS.slice(0, 7), OFFERS_TOOL, HOME_TOOLS[7]] : HOME_TOOLS;
+  const tools = sellsLivestock ? [...HOME_TOOLS.slice(0, 7), TOOLS_BY_KEY.offers, HOME_TOOLS[7]] : HOME_TOOLS;
 
   return (
     <div className="seller-dashboard sh">
@@ -1133,7 +1116,7 @@ function PhoneHome({
             {unreadCount > 0 && <b className="sh-badge">{unreadCount > 9 ? '9+' : unreadCount}</b>}
           </Link>
           <button type="button" className="sh-icon sh-me" onClick={switchToPersonal} aria-label="Switch to my buyer account" title="Switch to my buyer account">
-            <UserAvatar src={user?.profilePhoto} name={(user?.fullName || 'U').charAt(0)} alt="" imgClassName="sh-me-img" fallbackClassName="sh-me-img sh-me-fallback" />
+            <UserAvatar src={user?.profilePhoto} person={user} name={(user?.fullName || 'U').charAt(0)} alt="" imgClassName="sh-me-img" fallbackClassName="sh-me-img sh-me-fallback" />
           </button>
           <PageMenu area="seller" />
         </div>
@@ -1184,12 +1167,16 @@ function PhoneHome({
         <PrepList prep={prep} phone />
 
         <section className="sh-card">
-          <div className="sh-card-head"><h2>Shop tools</h2></div>
-          <ToolGradients />
+          <div className="sh-card-head">
+            <h2>Shop tools</h2>
+            <Link to="/seller/tools">All tools <CaretRight size={14} /></Link>
+          </div>
           <div className="sh-tools">
-            {tools.map(({ to, label, Icon, tone, tour }) => (
+            {tools.map(({
+              to, label, Art, tone, tour,
+            }) => (
               <Link key={to} to={to} className="sh-tool" {...(tour ? { 'data-tour': tour } : {})}>
-                <span className={`sh-tool-icon is-${tone}`}><Icon size={30} weight="fill" /></span>
+                <span className="sh-tool-icon"><Art size={36} tone={tone} /></span>
                 <span>{label}</span>
               </Link>
             ))}

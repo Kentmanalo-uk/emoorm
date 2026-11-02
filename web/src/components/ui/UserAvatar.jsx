@@ -1,5 +1,6 @@
 import { useState } from 'react';
 import { resolveImg } from '../../lib/media';
+import Avatar from '../avatars/Avatar';
 
 /**
  * A person's picture, with the two things every avatar in the app needs.
@@ -15,8 +16,14 @@ import { resolveImg } from '../../lib/media';
  * The caller keeps its own wrapper element and class names; this renders
  * only what goes inside, so it drops into existing markup unchanged.
  *
+ * With `person`, nobody is a grey letter: no photo means the avatar they
+ * picked, or the one their account id works out to (components/avatars).
+ * This is for people. A shop's logo is not a person and does not get a
+ * creature, so a shop is never passed as one.
+ *
  * @param {String} src - Stored photo path or absolute URL
  * @param {String} name - Display name, used for the initial and alt text
+ * @param {{ id, avatarKey }} [person] - Whose picture this is
  * @param {String} [imgClassName] - Class for the <img>
  * @param {String} [fallbackClassName] - Class for the fallback <span>
  * @param {Function} [fallbackIcon] - Icon component to use instead of an initial
@@ -25,6 +32,7 @@ import { resolveImg } from '../../lib/media';
 export default function UserAvatar({
   src,
   name,
+  person = null,
   imgClassName = '',
   fallbackClassName = '',
   fallbackIcon: Icon = null,
@@ -43,6 +51,10 @@ export default function UserAvatar({
         onError={() => setFailed(true)}
       />
     );
+  }
+
+  if (person?.id || person?.avatarKey) {
+    return <Avatar seed={person.id} name={person.avatarKey} size="100%" className={imgClassName || undefined} />;
   }
 
   return (

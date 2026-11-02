@@ -143,6 +143,7 @@ function ConversationListItem({
       <div className="msgr-avatar">
         <UserAvatar
           src={avatar}
+          person={isSellerView ? item.buyer : null}
           name={title}
           alt={title}
           fallbackIcon={isSellerView ? null : StoreIcon}
@@ -219,6 +220,7 @@ function MessageBubble({ message, isSelf, seen, onOpenImage, onUnsend }) {
         <div className="msgr-bubble-avatar">
           <UserAvatar
             src={message.sender?.profilePhoto}
+            person={message.sender?.role === 'BUYER' ? message.sender : null}
             name={message.sender?.fullName}
             alt=""
             fallbackIcon={UserIcon}
@@ -686,6 +688,7 @@ export default function Messenger({ role = 'buyer', className = '', title = '', 
         title: activeConvo.buyer?.fullName || 'Buyer',
         subtitle: 'Customer',
         avatar: activeConvo.buyer?.profilePhoto,
+        person: activeConvo.buyer,
         icon: <UserIcon size={16} />,
         link: activeConvo.buyer?.id ? `/u/${activeConvo.buyer.id}` : null,
       };
@@ -976,8 +979,8 @@ export default function Messenger({ role = 'buyer', className = '', title = '', 
                 <CaretLeft size={22} />
               </button>
               <div className="msgr-avatar msgr-avatar-lg">
-                {activeHeader?.avatar
-                  ? <UserAvatar src={activeHeader.avatar} name={activeHeader.title} alt={activeHeader.title} />
+                {activeHeader?.avatar || activeHeader?.person
+                  ? <UserAvatar src={activeHeader.avatar} person={activeHeader.person} name={activeHeader.title} alt={activeHeader.title} />
                   : activeHeader?.icon}
               </div>
               <div className="msgr-thread-title">
@@ -1057,8 +1060,8 @@ export default function Messenger({ role = 'buyer', className = '', title = '', 
               {timeline.length === 0 ? (
                 <div className="msgr-messages-empty">
                   <div className="msgr-intro-avatar">
-                    {activeHeader?.avatar
-                      ? <UserAvatar src={activeHeader.avatar} name={activeHeader.title} alt="" />
+                    {activeHeader?.avatar || activeHeader?.person
+                      ? <UserAvatar src={activeHeader.avatar} person={activeHeader.person} name={activeHeader.title} alt="" />
                       : activeHeader?.icon}
                   </div>
                   <h3>{activeHeader?.title}</h3>

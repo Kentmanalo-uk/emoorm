@@ -182,7 +182,7 @@ export default function AvailableToday() {
   return (
     <View style={styles.screen}>
       <Stack.Screen options={{ headerShown: false }} />
-      <ScreenHeader title="Available Today" />
+      <ScreenHeader title="Available Today" titleStyle={styles.pageTitle} />
       <ScrollView showsVerticalScrollIndicator={false} showsHorizontalScrollIndicator={false}
         style={styles.scroll}
         contentContainerStyle={isEmpty ? styles.grow : null}
@@ -301,6 +301,7 @@ export default function AvailableToday() {
 }
 
 const styles = themed(() => StyleSheet.create({
+  pageTitle: { fontSize: 20, lineHeight: 26, ...font(800), color: t.accent[600] },
   screen: { flex: 1, backgroundColor: t.neutral[0] },
   scroll: { flex: 1 },
   grow: { flexGrow: 1 },

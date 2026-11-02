@@ -1656,8 +1656,14 @@ const ProductDetails = () => {
                     <EmptyArt name="reviews" size={72} />
                     <span>No reviews yet. Be the first to review this product.</span>
                   </div>
-                ) : reviews.slice(0, 10).map((r) => (
-                  <ReviewItem key={r.id} review={r} social={reviewSocial} onOpenMedia={openReviewMedia} />
+                ) : reviews.slice(0, 5).map((r) => (
+                  <ReviewItem
+                    key={r.id}
+                    review={r}
+                    social={reviewSocial}
+                    onOpenMedia={openReviewMedia}
+                    onOpenProduct={() => window.scrollTo({ top: 0, behavior: 'smooth' })}
+                  />
                 ))}
               </div>
             </div>

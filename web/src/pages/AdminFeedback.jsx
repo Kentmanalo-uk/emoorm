@@ -340,6 +340,7 @@ export default function AdminFeedback() {
                         <div className="afb-person">
                           <UserAvatar
                             src={r.user?.profilePhoto}
+                            person={r.user}
                             name={r.user?.fullName || '?'}
                             alt=""
                             className="afb-avatar"

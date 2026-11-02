@@ -1,6 +1,6 @@
 import { useEffect, useMemo, useRef, useState } from 'react';
 import {
-  Camera, CircleNotch as Loader2, FloppyDisk as Save, CheckCircle, SignOut, UsersThree, CaretRight,
+  Camera, Smiley, CircleNotch as Loader2, FloppyDisk as Save, CheckCircle, SignOut, UsersThree, CaretRight,
 } from '../lib/icons';
 import toast from 'react-hot-toast';
 import axios from '../lib/axios';
@@ -26,12 +26,14 @@ import {
   cleanUsername, fullNameProblem, usernameProblem, contactProblem, passwordProblem, uploadProfilePhoto,
 } from '../lib/profileForm';
 import { IMAGE_ACCEPT } from '../lib/uploadableImage';
+import AvatarPicker from '../components/avatars/AvatarPicker';
 
 const initialProfileState = (user) => ({
   fullName: user?.fullName || '',
   username: user?.username || '',
   contactNumber: user?.contactNumber || '',
   profilePhoto: user?.profilePhoto || '',
+  avatarKey: user?.avatarKey || '',
   // The home address, as the address picker takes it.
   municipalityId: user?.municipalityId || '',
   municipalityName: user?.municipality?.name || '',
@@ -40,7 +42,7 @@ const initialProfileState = (user) => ({
 });
 
 // What a save would change (the picker also keeps codes, which are not saved).
-const SAVED_FIELDS = ['fullName', 'username', 'contactNumber', 'profilePhoto', 'municipalityId', 'barangay', 'street'];
+const SAVED_FIELDS = ['fullName', 'username', 'contactNumber', 'profilePhoto', 'avatarKey', 'municipalityId', 'barangay', 'street'];
 
 /**
  * /profile/settings. Phones: the settings as a list, each part on a page of
@@ -69,6 +71,7 @@ function ProfileSettings() {
 
   const [saving, setSaving] = useState(false);
   const [uploading, setUploading] = useState(false);
+  const [picking, setPicking] = useState(false);
   const fileRef = useRef(null);
 
   // Password form
@@ -121,6 +124,7 @@ function ProfileSettings() {
         barangay: form.barangay?.trim() || null,
         address: form.street?.trim() || null,
         profilePhoto: form.profilePhoto || null,
+        avatarKey: form.avatarKey || null,
       };
       // Only send the username when it actually changed: sending the same
       // one back is a no-op server side, but there is no reason to risk it.
@@ -149,7 +153,7 @@ function ProfileSettings() {
     setUploading(true);
     try {
       const url = await uploadProfilePhoto(file);
-      setForm((f) => ({ ...f, profilePhoto: url }));
+      setForm((f) => ({ ...f, profilePhoto: url, avatarKey: '' }));
       toast.success('Photo uploaded — click Save to apply');
     } catch (err) {
       toast.error(err?.message || 'Upload failed');
@@ -212,6 +216,7 @@ function ProfileSettings() {
           <div className="ps-photo">
             <UserAvatar
               src={form.profilePhoto}
+              person={{ id: user?.id, avatarKey: form.avatarKey }}
               name={initials}
               alt={form.fullName}
               fallbackClassName="ps-photo-fallback"
@@ -232,6 +237,15 @@ function ProfileSettings() {
               <Camera size={15} />
               {photoUrl ? 'Change photo' : 'Upload photo'}
             </button>
+            <button
+              type="button"
+              className="ps-btn ps-btn-outline"
+              onClick={() => setPicking(true)}
+              disabled={uploading}
+            >
+              <Smiley size={15} />
+              Pick an avatar
+            </button>
             {photoUrl && (
               <button
                 type="button"
@@ -241,6 +255,14 @@ function ProfileSettings() {
               >
                 Remove
               </button>
+            )}
+            {picking && (
+              <AvatarPicker
+                current={form.avatarKey}
+                seed={user?.id}
+                onPick={(key) => setForm((f) => ({ ...f, avatarKey: key, profilePhoto: '' }))}
+                onClose={() => setPicking(false)}
+              />
             )}
             <input
               ref={fileRef}

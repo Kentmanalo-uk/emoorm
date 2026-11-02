@@ -352,6 +352,7 @@ export default function AdminLayout({ children }) {
           <Link to="/admin/settings?tab=profile" className="ac-user-card" title="View profile">
             <UserAvatar
               src={user?.profilePhoto}
+              person={user}
               name={initial}
               alt=""
               imgClassName="ac-user-avatar"

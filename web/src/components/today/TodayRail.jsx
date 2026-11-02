@@ -48,7 +48,7 @@ export default function TodayRail() {
       <div className="container">
         <div className="section-header">
           <div className="today-rail-titles">
-            <h2 className="section-title title-medium" id="today-rail-title">Available Today</h2>
+            <h2 className="section-title" id="today-rail-title">Available Today</h2>
             <p className="today-rail-sub">Fresh from local shops, for a limited time</p>
           </div>
           <Link to={allTowns && townId ? '/today?town=all' : '/today'} className="section-arrow-link" aria-label="See all available today" title="See all">

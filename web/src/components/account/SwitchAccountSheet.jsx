@@ -179,7 +179,7 @@ export default function SwitchAccountSheet({ open, onClose }) {
                         disabled={Boolean(busy) && busy !== a.id}
                       >
                         <span className="sas-avatar">
-                          <UserAvatar src={a.profilePhoto} name={name} alt="" fallbackClassName="sas-avatar-initial" />
+                          <UserAvatar src={a.profilePhoto} person={a} name={name} alt="" fallbackClassName="sas-avatar-initial" />
                         </span>
                         <span className="sas-account-text">
                           <strong>{name}</strong>

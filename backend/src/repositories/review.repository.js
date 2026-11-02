@@ -399,6 +399,25 @@ const countPurchases = (buyerId, productId) => prisma.orderItem.count({
 });
 
 /**
+ * Every received line of one product for these buyers, newest order first.
+ * @param {String} productId
+ * @param {String[]} buyerIds
+ * @returns {Promise<Array>}
+ */
+const findPurchasedLines = (productId, buyerIds) => prisma.orderItem.findMany({
+  where: {
+    productId,
+    order: { buyerId: { in: buyerIds }, status: { in: PURCHASED_STATUSES } },
+  },
+  select: {
+    quantity: true,
+    selectedVariations: true,
+    order: { select: { id: true, buyerId: true, createdAt: true } },
+  },
+  orderBy: { order: { createdAt: 'desc' } },
+});
+
+/**
  * Products this buyer has received but not yet reviewed, newest purchase
  * first, one entry per product.
  */
@@ -460,6 +479,7 @@ module.exports = {
   findAll,
   findAllForStore,
   countPurchases,
+  findPurchasedLines,
   findPendingForBuyer,
   updateReview,
   softDeleteReview,

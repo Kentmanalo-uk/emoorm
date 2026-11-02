@@ -5,7 +5,8 @@ import { ArrowRightIcon } from '../../lib/icons';
 import apiClient from '../../api/client';
 import { isOpen } from '../../lib/availability';
 import useAuthStore from '../../store/authStore';
-import { font, t, text, themed } from '../../theme';
+import { font, t, themed } from '../../theme';
+import { GradientFill } from '../inbox/InboxGradient';
 import TodayCard from '../TodayCard';
 
 /**
@@ -50,6 +51,9 @@ export default function HomeTodayRail({ refreshKey = 0 }) {
 
   return (
     <View style={styles.section}>
+      {/* White heading on it, so it starts from the full brand pink. Fixed
+          colours: the same in dark mode, where the theme's pinks are reversed. */}
+      <GradientFill vertical colors={['#DB2777', 'rgba(219, 39, 119, 0)']} />
       <View style={styles.header}>
         <Text style={styles.title} accessibilityRole="header">Available Today</Text>
         <Pressable
@@ -59,7 +63,7 @@ export default function HomeTodayRail({ refreshKey = 0 }) {
           hitSlop={6}
           style={({ pressed }) => [styles.arrow, pressed && styles.arrowPressed]}
         >
-          <ArrowRightIcon size={19} color={t.primary[600]} />
+          <ArrowRightIcon size={19} color="#FFFFFF" />
         </Pressable>
       </View>
       <ScrollView showsVerticalScrollIndicator={false}
@@ -75,10 +79,10 @@ export default function HomeTodayRail({ refreshKey = 0 }) {
 }
 
 const styles = themed(() => StyleSheet.create({
-  // .today-rail on phones: on the page background, 16px top, 4px bottom.
+  // .today-rail on phones: the wash fading into the page, 16px top, 4px bottom.
   section: { paddingTop: 16, paddingBottom: 4 },
   header: { flexDirection: 'row', alignItems: 'center', gap: 12, marginBottom: 12, paddingLeft: 16, paddingRight: 16 },
-  title: { flex: 1, minWidth: 0, fontSize: 18, lineHeight: 22.5, ...font(500), color: text.strong },
+  title: { flex: 1, minWidth: 0, fontSize: 20, lineHeight: 26, ...font(800), color: '#FFFFFF' },
   arrow: { width: 32, height: 32, alignItems: 'center', justifyContent: 'center' },
   arrowPressed: { transform: [{ translateX: 2 }] },
   row: { gap: 8, paddingLeft: 16, paddingRight: 16 },

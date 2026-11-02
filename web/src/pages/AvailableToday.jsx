@@ -240,7 +240,7 @@ export default function AvailableToday() {
     return (
       <Layout>
         <div className="avt is-phone">
-          <h1 className="avt-title title-medium">Available Today</h1>
+          <h1 className="avt-title">Available Today</h1>
           <div className="avt-m-top">
             {searchForm}
             {modeChips}
@@ -307,7 +307,7 @@ export default function AvailableToday() {
 
           <header className="avt-head">
             <div>
-              <h1 className="avt-title title-medium">Available Today</h1>
+              <h1 className="avt-title">Available Today</h1>
               <p className="avt-sub">Fresh from local kitchens and farms, for a limited time. Order before it&apos;s gone.</p>
             </div>
             {searchForm}

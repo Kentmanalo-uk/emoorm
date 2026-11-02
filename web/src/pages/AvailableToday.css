@@ -43,11 +43,16 @@
   margin-bottom: 20px;
 }
 
+.avt-title,
+body:has(.avt.is-phone) .layout-back-title {
+  color: var(--t-accent-600, #db2777);
+  --phone-bold: 800;
+  font-weight: 800;
+}
+
 .avt-title {
   margin: 0;
-  color: var(--t-neutral-900, #111827);
-  font-size: 28px;
-  font-weight: 500;
+  font-size: 30px;
   line-height: 1.2;
 }
 
@@ -474,4 +479,9 @@
     width: 100%;
     border-radius: 999px;
   }
+}
+
+/* Phones: the bar's title, outranking the rule that sets headings to medium. */
+html body #root .layout:has(.avt.is-phone) .layout-back-title {
+  font-weight: 800 !important;
 }

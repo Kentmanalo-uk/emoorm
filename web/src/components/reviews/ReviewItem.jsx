@@ -1,7 +1,9 @@
 import { Link } from 'react-router-dom';
-import { ChatCircleDots, Star, Storefront, ThumbsUp } from '../../lib/icons';
+import { CaretRight, ChatText, Star, Storefront, ThumbsUp } from '../../lib/icons';
 import UserAvatar from '../ui/UserAvatar';
+import { peso } from '../../lib/format';
 import { resolveImg } from '../../lib/media';
+import { lineImage } from '../../lib/variationImage';
 
 /** Five stars, filled up to the (rounded) rating. */
 export function Stars({ rating, size = 14 }) {
@@ -15,10 +17,43 @@ export function Stars({ rating, size = 14 }) {
   ));
 }
 
+/** "Red, L · Qty 2", or each option's count when the order had several. */
+const orderedNote = (lines = []) => (lines.length > 1
+  ? lines.map((l) => (l.variation ? `${l.variation} × ${l.quantity}` : `Qty ${l.quantity}`)).join(' · ')
+  : lines.map((l) => [l.variation, `Qty ${l.quantity}`].filter(Boolean).join(' · ')).join(''));
+
+/**
+ * What the reviewer bought, and the way to it. onOpen replaces the link on
+ * the product's own page, where the link would lead nowhere.
+ */
+function OrderedStrip({ review, onOpen }) {
+  const { product, ordered } = review;
+  const note = orderedNote(ordered.lines);
+  return (
+    <Link
+      to={`/product/${product.slug}`}
+      className="pdp-review-ordered"
+      onClick={onOpen ? (e) => { e.preventDefault(); onOpen(); } : undefined}
+    >
+      <img
+        src={resolveImg(lineImage(product, null, ordered.image)) || '/placeholder-product.png'}
+        alt=""
+        onError={(e) => { e.currentTarget.src = '/placeholder-product.png'; }}
+      />
+      <span className="pdp-review-ordered-text">
+        <span className="pdp-review-ordered-name">{product.name}</span>
+        {note && <span className="pdp-review-ordered-note">{note}</span>}
+      </span>
+      <span className="pdp-review-ordered-price">{peso(ordered.price)}</span>
+      <CaretRight size={14} />
+    </Link>
+  );
+}
+
 /**
  * One buyer review: who wrote it, the stars, the comment, any photos or
- * video, and (when showReply is set) the shop's reply. The styles live in
- * ProductDetails.css under .pdp-review*.
+ * video, what they ordered, and (when showReply is set) the shop's reply.
+ * The styles live in ProductDetails.css under .pdp-review*.
  *
  * With onOpenMedia, a photo opens the full-screen review viewer at that
  * photo (useReviewViewer supplies it). Without it, a photo opens in a new
@@ -30,14 +65,22 @@ export function Stars({ rating, size = 14 }) {
  * into the viewer at all, and those can be the most useful ones to agree
  * with or ask about.
  */
-export default function ReviewItem({ review, showReply = false, onOpenMedia, social }) {
+export default function ReviewItem({ review, showReply = false, onOpenMedia, onOpenProduct, social }) {
   const reviewer = review.user || review.buyer || {};
   const mediaImages = Array.isArray(review.images) ? review.images : [];
   return (
     <div className="pdp-review">
       <div className="pdp-review-head">
         <div className="pdp-review-avatar">
-          <UserAvatar src={reviewer.profilePhoto} name={reviewer.fullName || 'U'} alt="" />
+          {/* Written without a name: the server has already taken away the photo,
+              the handle and the id, so the picture is drawn from the review's own
+              id, a steady little face that leads nowhere. */}
+          <UserAvatar
+            src={reviewer.profilePhoto}
+            person={reviewer.anonymous ? { id: review.id } : reviewer}
+            name={reviewer.fullName || 'U'}
+            alt=""
+          />
         </div>
         <div>
           <div className="pdp-review-name">
@@ -86,6 +129,7 @@ export default function ReviewItem({ review, showReply = false, onOpenMedia, soc
           ))}
         </div>
       )}
+      {review.ordered && review.product?.slug && <OrderedStrip review={review} onOpen={onOpenProduct} />}
       {social && (
         <div className="pdp-review-acts">
           <button
@@ -93,13 +137,19 @@ export default function ReviewItem({ review, showReply = false, onOpenMedia, soc
             className={`pdp-review-act${social.likeOf(review).liked ? ' is-on' : ''}`}
             onClick={() => social.toggle(review)}
             aria-pressed={social.likeOf(review).liked}
+            aria-label={`Helpful, ${social.likeOf(review).count}`}
           >
-            <ThumbsUp size={15} weight={social.likeOf(review).liked ? 'fill' : 'regular'} />
-            Helpful{social.likeOf(review).count ? ` ${social.likeOf(review).count}` : ''}
+            <ThumbsUp size={19} weight={social.likeOf(review).liked ? 'fill' : 'regular'} />
+            {social.likeOf(review).count || null}
           </button>
-          <button type="button" className="pdp-review-act" onClick={() => social.openComments(review)}>
-            <ChatCircleDots size={15} />
-            {social.commentsOf(review) ? `${social.commentsOf(review)} comment${social.commentsOf(review) === 1 ? '' : 's'}` : 'Comment'}
+          <button
+            type="button"
+            className="pdp-review-act"
+            onClick={() => social.openComments(review)}
+            aria-label={`Comments, ${social.commentsOf(review)}`}
+          >
+            <ChatText size={19} />
+            {social.commentsOf(review) || 'Comment'}
           </button>
         </div>
       )}

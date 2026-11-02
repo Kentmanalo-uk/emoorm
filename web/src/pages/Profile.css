@@ -224,8 +224,30 @@
 .profile-name {
   font-size: 22px;
   font-weight: 700;
+  line-height: 1.2;
   color: var(--t-neutral-900, #111827);
   margin: 0;
+}
+
+/* The picture and what sits on its edge (the circle clips, this does not). */
+.pf-avatar-wrap {
+  position: relative;
+  display: block;
+  flex-shrink: 0;
+}
+
+/* The G on the picture's lower right edge: a white disc so it reads against
+   a dark photo too, with no ring or shadow. */
+.pf-google {
+  position: absolute;
+  right: -3px;
+  bottom: -3px;
+  display: grid;
+  place-items: center;
+  width: 26px;
+  height: 26px;
+  border-radius: 50%;
+  background: var(--t-neutral-0, #fff);
 }
 
 .profile-email {
@@ -1361,7 +1383,7 @@
 .pf-m-id-text {
   display: flex;
   flex-direction: column;
-  gap: 2px;
+  gap: 1px;
   flex: 1;
   min-width: 0;
 }

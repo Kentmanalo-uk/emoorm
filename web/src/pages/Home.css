@@ -678,6 +678,13 @@
   gap: 7px;
 }
 
+/* Four cards across, not four in a row of six with two holes after them. */
+@media (min-width: 769px) {
+  .products-section .products-grid.is-suggested {
+    grid-template-columns: repeat(4, minmax(0, 1fr));
+  }
+}
+
 .stores-grid {
   display: grid;
   grid-template-columns: repeat(auto-fill, minmax(220px, 1fr));

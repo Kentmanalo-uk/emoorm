@@ -277,7 +277,12 @@ export default function ReviewViewer({ items, index, product, social, onIndexCha
               {/* UserAvatar renders only what goes inside; the wrapper and
                   its size belong to the caller. */}
               <span className="rv-face">
-                <UserAvatar src={reviewer.profilePhoto} name={reviewer.fullName || 'U'} alt="" />
+                <UserAvatar
+                  src={reviewer.profilePhoto}
+                  person={reviewer.anonymous ? { id: review.id } : reviewer}
+                  name={reviewer.fullName || 'U'}
+                  alt=""
+                />
               </span>
               {reviewer.id
                 ? <Link to={`/u/${reviewer.id}`} className="rv-name" onClick={onClose}>{reviewer.fullName || 'Anonymous'}</Link>

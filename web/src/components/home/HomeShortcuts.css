@@ -1,0 +1,122 @@
+/* The quick entries under the banner (HomeShortcuts.jsx). */
+.hsc {
+  margin-top: 28px;
+  padding: 16px 0;
+  background: var(--t-neutral-0, #fff);
+}
+
+/* Computers: one line, scrolled sideways. The pages step aside. */
+.hsc-pages {
+  display: flex;
+  gap: 4px;
+  overflow-x: auto;
+  scrollbar-width: none;
+  overscroll-behavior-x: contain;
+  cursor: grab;
+}
+
+.hsc-pages::-webkit-scrollbar {
+  display: none;
+}
+
+.hsc-pages.is-dragging {
+  cursor: grabbing;
+  user-select: none;
+}
+
+.hsc-pages.is-dragging .hsc-tile {
+  pointer-events: none;
+}
+
+.hsc-page {
+  display: contents;
+}
+
+.hsc-tile {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  flex: 0 0 118px;
+  gap: 8px;
+  min-width: 0;
+  padding: 8px 2px;
+  border-radius: 10px;
+  color: var(--t-neutral-700, #374151);
+  font-size: 12.5px;
+  line-height: 1.25;
+  text-align: center;
+  text-decoration: none;
+  transition: background 0.15s ease;
+}
+
+.hsc-tile svg {
+  width: 52px;
+  height: 52px;
+}
+
+.hsc-tile:hover {
+  background: var(--t-neutral-100, #f3f4f6);
+}
+
+/* The same little bar on every screen, in place of a scrollbar. */
+.hsc-track {
+  width: 34px;
+  height: 3px;
+  margin: 10px auto 0;
+  overflow: hidden;
+  border-radius: 2px;
+  background: var(--t-neutral-200, #e5e7eb);
+}
+
+.hsc-track span {
+  display: block;
+  height: 100%;
+  border-radius: 2px;
+  background: var(--t-primary-500, #10b981);
+}
+
+/* Phones: two pages of ten, swiped sideways. */
+@media (max-width: 768px) {
+  .hsc {
+    margin-top: 12px;
+    padding: 14px 0;
+  }
+
+  .hsc .container {
+    padding-inline: 0;
+  }
+
+  .hsc-pages {
+    gap: 0;
+    scroll-snap-type: x mandatory;
+    cursor: auto;
+  }
+
+  .hsc-page {
+    flex: 0 0 100%;
+    display: grid;
+    grid-template-columns: repeat(5, minmax(0, 1fr));
+    scroll-snap-align: start;
+  }
+
+  /* Tall enough for the mark, the gap and two lines of label, so larger
+     text does not clip the longer names. */
+  .hsc-tile {
+    flex: none;
+    gap: 6px;
+    height: 78px;
+    padding: 6px 2px 0;
+    font-size: 10.5px;
+    line-height: 13px;
+  }
+
+  .hsc-tile svg {
+    width: 36px;
+    height: 36px;
+  }
+
+  .hsc-tile:active {
+    opacity: 0.6;
+    background: none;
+  }
+}

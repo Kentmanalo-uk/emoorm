@@ -2,6 +2,7 @@ import { useRef, useState } from 'react';
 import { X, Star, Image as ImageIcon, Video, Trash as Trash2 } from '../lib/icons';
 import toast from 'react-hot-toast';
 import axios from '../lib/axios';
+import useAuthStore from '../store/authStore';
 import { resolveImg } from '../lib/media';
 import { IMAGE_ACCEPT, uploadableImage } from '../lib/uploadableImage';
 import './ReviewModal.css';
@@ -31,6 +32,8 @@ export default function ReviewModal({ product, orderId, onClose: onCloseProp, on
   const [rating, setRating] = useState(existing?.rating || initialRating || 0);
   const [hovered, setHovered] = useState(0);
   const [comment, setComment] = useState(existing?.comment || '');
+  const me = useAuthStore((s) => s.user);
+  const [displayAs, setDisplayAs] = useState('NAME');
   const [submitting, setSubmitting] = useState(false);
 
   const [images, setImages] = useState([]); // [{ file, preview }]
@@ -101,6 +104,7 @@ export default function ReviewModal({ product, orderId, onClose: onCloseProp, on
       form.append('productId', product.id);
       if (orderId) form.append('orderId', orderId);
       form.append('rating', String(rating));
+      form.append('displayAs', displayAs);
       if (comment.trim()) form.append('comment', comment.trim());
       // Any photo goes: shrunk here when the browser can open it, converted by the server otherwise.
       const photos = await Promise.all(images.map(({ file }) => uploadableImage(file)));
@@ -165,6 +169,35 @@ export default function ReviewModal({ product, orderId, onClose: onCloseProp, on
             maxLength={1000}
           />
           <div className="review-char-count">{comment.length}/1000</div>
+
+          {/* New reviews only: the name goes on when it is posted. */}
+          {!editing && (
+            <div className="review-who">
+              <div className="review-who-label" id="review-who-label">Show my name as</div>
+              <div className="review-who-choices" role="radiogroup" aria-labelledby="review-who-label">
+                {[
+                  { key: 'NAME', label: me?.fullName || 'My name' },
+                  { key: 'USERNAME', label: me?.username ? `@${me.username}` : 'My username', off: !me?.username },
+                  { key: 'ANONYMOUS', label: 'Anonymous' },
+                ].map((choice) => (
+                  <button
+                    key={choice.key}
+                    type="button"
+                    role="radio"
+                    aria-checked={displayAs === choice.key}
+                    className={`review-who-choice${displayAs === choice.key ? ' is-on' : ''}`}
+                    disabled={choice.off}
+                    onClick={() => setDisplayAs(choice.key)}
+                  >
+                    {choice.label}
+                  </button>
+                ))}
+              </div>
+              {displayAs === 'ANONYMOUS' && (
+                <p className="review-who-note">Your photo is hidden too — the review shows a drawn avatar instead.</p>
+              )}
+            </div>
+          )}
 
           {/* Media uploads (new reviews only; photos and video stay as posted) */}
           {!editing && (

@@ -138,7 +138,7 @@ function AddAdmin({ townName, onClose, onAdded }) {
 
       {found && (
         <div className={`at-found${found.reason ? ' is-refused' : ''}`}>
-          <UserAvatar src={found.user.profilePhoto} name={found.user.fullName?.[0]} imgClassName="at-avatar" fallbackClassName="at-avatar at-avatar--fallback" />
+          <UserAvatar src={found.user.profilePhoto} person={found.user} name={found.user.fullName?.[0]} imgClassName="at-avatar" fallbackClassName="at-avatar at-avatar--fallback" />
           <div className="at-found-text">
             <strong>{found.user.fullName}</strong>
             <span>{found.user.email}</span>
@@ -427,7 +427,7 @@ export default function AdminTeam() {
             {members.map((m) => (
               <li key={m.id} className={`at-member${m.isActive ? '' : ' is-suspended'}`}>
                 <span className="at-avatar-wrap">
-                  <UserAvatar src={m.profilePhoto} name={m.fullName?.[0]} imgClassName="at-avatar" fallbackClassName="at-avatar at-avatar--fallback" />
+                  <UserAvatar src={m.profilePhoto} person={m} name={m.fullName?.[0]} imgClassName="at-avatar" fallbackClassName="at-avatar at-avatar--fallback" />
                   <span className={`at-dot${m.online ? ' is-online' : ''}`} aria-hidden="true" />
                 </span>
                 <div className="at-member-text">

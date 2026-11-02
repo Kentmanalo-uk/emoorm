@@ -104,7 +104,7 @@ export default function DealList({ side }) {
                   </div>
                   {side === 'seller' ? (
                     <span className="of-row-meta of-row-buyer">
-                      <UserAvatar src={d.buyer?.profilePhoto} name={d.buyer?.fullName?.[0]} imgClassName="of-mini-avatar" fallbackClassName="of-mini-avatar of-mini-avatar--fallback" />
+                      <UserAvatar src={d.buyer?.profilePhoto} person={d.buyer} name={d.buyer?.fullName?.[0]} imgClassName="of-mini-avatar" fallbackClassName="of-mini-avatar of-mini-avatar--fallback" />
                       {d.buyer?.fullName || 'A buyer'}
                     </span>
                   ) : (

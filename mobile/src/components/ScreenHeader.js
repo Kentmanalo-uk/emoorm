@@ -22,7 +22,7 @@ import ShellPageMenu from './ShellPageMenu';
  *   ported pages put that text in the page instead.
  */
 export default function ScreenHeader({
-  title, subtitle, action, menu = true, menuItems, onBack, backTo = '/',
+  title, subtitle, action, menu = true, menuItems, onBack, backTo = '/', titleStyle,
 }) {
   const router = useRouter();
   const insets = useSafeAreaInsets();
@@ -34,7 +34,7 @@ export default function ScreenHeader({
         <CaretLeftIcon size={22} weight="bold" color={text.strong} />
       </ShellBarButton>
       <View style={styles.text}>
-        {title ? <Text style={styles.title} numberOfLines={1} accessibilityRole="header">{title}</Text> : null}
+        {title ? <Text style={[styles.title, titleStyle]} numberOfLines={1} accessibilityRole="header">{title}</Text> : null}
         {subtitle ? <Text style={styles.subtitle} numberOfLines={1}>{subtitle}</Text> : null}
       </View>
       {action || menu ? (

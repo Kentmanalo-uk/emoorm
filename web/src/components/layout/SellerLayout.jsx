@@ -441,6 +441,7 @@ export default function SellerLayout() {
               >
                 <UserAvatar
                   src={user?.profilePhoto}
+                  person={user}
                   name={personalInitial}
                   alt=""
                   imgClassName="sc-account-switch-avatar"
@@ -746,6 +747,7 @@ const LABELS = {
   '/seller/fulfillment': 'Delivery & payment',
   '/seller/settings': 'Settings',
   '/seller/shop-qr': 'Shop QR',
+  '/seller/tools': 'Shop tools',
 };
 
 /** Phone: the five tabs on the bottom bar. */

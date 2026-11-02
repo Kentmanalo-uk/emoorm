@@ -139,7 +139,7 @@ function Thread({ chat, meId, onBack, onRead }) {
             <div key={m.id} className={`tc-msg${mine ? ' is-mine' : ''}${firstOfRun ? ' is-first' : ''}`}>
               {!mine && chat.thread === TEAM && (
                 firstOfRun
-                  ? <UserAvatar src={m.sender?.profilePhoto} name={m.sender?.fullName?.[0]} imgClassName="tc-msg-avatar" fallbackClassName="tc-msg-avatar tc-avatar--fallback" />
+                  ? <UserAvatar src={m.sender?.profilePhoto} person={m.sender} name={m.sender?.fullName?.[0]} imgClassName="tc-msg-avatar" fallbackClassName="tc-msg-avatar tc-avatar--fallback" />
                   : <span className="tc-msg-avatar is-blank" />
               )}
               <div className="tc-bubble-wrap">

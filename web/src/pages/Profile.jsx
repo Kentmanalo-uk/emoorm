@@ -3,7 +3,7 @@ import EmptyArt from '../components/ui/EmptyArt';
 import toast from 'react-hot-toast';
 import { Link, useNavigate } from 'react-router-dom';
 import {
-  PencilSimple as Edit, Package, Heart, ChatText as MessageSquare, Bell, Storefront as Store,
+  Package, Heart, ChatText as MessageSquare, Bell, Storefront as Store,
   ShoppingBag, Truck, Gear as Settings, QrCode, CaretRight as ChevronRight, Star,
   ShieldCheck, ShieldWarning, Question, EnvelopeSimple,
   Eye, MapPin, ArrowCounterClockwise, Lifebuoy, Flag, SignOut, Handshake,
@@ -15,7 +15,7 @@ import useAccountSwitchStore from '../store/accountSwitchStore';
 import { fetchIdentityStatus } from '../lib/identity';
 import './Profile.css';
 import UserAvatar from '../components/ui/UserAvatar';
-import GradientUserIcon from '../components/ui/GradientUserIcon';
+import GoogleMark from '../components/ui/GoogleMark';
 import ConfirmDialog from '../components/ui/ConfirmDialog';
 import useWishlistStore from '../store/wishlistStore';
 import { listMyFollowing } from '../lib/follow';
@@ -141,6 +141,23 @@ const Profile = () => {
     ['To Receive', Truck, '/profile/orders?status=to_receive', stats.toReceiveCount],
     ['To Pick Up', Store, '/profile/orders?status=to_pickup', stats.toPickupCount],
   ];
+  const me = { id: user?.id ?? profile?.id, avatarKey: user?.avatarKey ?? profile?.avatarKey };
+
+  /*
+   * The picture wears a small Google mark for accounts that use Continue
+   * with Google. For now every account wears it, as the app's profile does:
+   * setting ALWAYS to false brings back the rule. googleId is the third
+   * fallback because signing in through Google hands back the account with
+   * that id on it but no hasGoogle.
+   */
+  const ALWAYS = true;
+  const linkedToGoogle = Boolean(profile?.hasGoogle ?? user?.hasGoogle ?? user?.googleId);
+  const googleBadge = ALWAYS || linkedToGoogle ? (
+    <span className="pf-google" role="img" aria-label={linkedToGoogle ? 'Signed in with Google, email confirmed' : 'Google'}>
+      <GoogleMark size={16} />
+    </span>
+  ) : null;
+
   if (isPhone) {
     return (
       <div className="pf-m">
@@ -162,15 +179,17 @@ const Profile = () => {
         {/* Account card: tap to edit the name and photo. */}
         <section className="pf-m-card">
           <Link to="/profile/settings/profile" className="pf-m-id" aria-label="Edit profile">
-            <span className="pf-m-avatar">
-              <UserAvatar
-                src={profile?.profilePhoto}
-                name={name}
-                alt=""
-                fallbackClassName="profile-avatar-placeholder"
-                fallbackIcon={GradientUserIcon}
-                iconSize={64}
-              />
+            <span className="pf-avatar-wrap">
+              <span className="pf-m-avatar">
+                <UserAvatar
+                  src={profile?.profilePhoto}
+                  person={me}
+                  name={name}
+                  alt=""
+                  fallbackClassName="profile-avatar-placeholder"
+                />
+              </span>
+              {googleBadge}
             </span>
             <span className="pf-m-id-text">
               <strong>{name}</strong>
@@ -180,7 +199,6 @@ const Profile = () => {
                   {emailUnverified && <b className="pf-unverified">Unverified</b>}
                 </span>
               )}
-              <em><Edit size={12} weight="bold" /> Edit profile</em>
             </span>
             <ChevronRight size={18} className="pf-m-row-chev" />
           </Link>
@@ -300,13 +318,17 @@ const Profile = () => {
       {/* Profile Header */}
       <div className="profile-header-card">
         <div className="profile-header-left">
-          <div className="profile-avatar">
-            <UserAvatar
-              src={profile?.profilePhoto}
-              name={profile?.fullName || 'U'}
-              alt={profile?.fullName || ''}
-              fallbackClassName="profile-avatar-placeholder"
-            />
+          <div className="pf-avatar-wrap">
+            <div className="profile-avatar">
+              <UserAvatar
+                src={profile?.profilePhoto}
+                person={me}
+                name={profile?.fullName || 'U'}
+                alt={profile?.fullName || ''}
+                fallbackClassName="profile-avatar-placeholder"
+              />
+            </div>
+            {googleBadge}
           </div>
           <div className="profile-header-info">
             <h2 className="profile-name">{profile?.fullName || user?.fullName}</h2>
@@ -344,10 +366,6 @@ const Profile = () => {
               View public profile
             </Link>
           )}
-          <Link to="/profile/settings" className="profile-edit-button">
-            <Edit size={18} />
-            Edit Profile
-          </Link>
         </div>
       </div>
 

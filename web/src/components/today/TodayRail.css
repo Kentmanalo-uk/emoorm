@@ -2,7 +2,9 @@
    Home sections, its cards the size of the product cards around it. */
 .today-rail {
   padding: 48px 0 0;
-  background: var(--t-neutral-100, #f5f5f5);
+  /* White heading on it, so it starts from the full brand pink. Fixed colours:
+     the same in dark mode, where the theme's pinks are reversed. */
+  background: linear-gradient(to bottom, #db2777, rgba(219, 39, 119, 0)), var(--t-neutral-100, #f5f5f5);
 }
 
 .today-rail > .container {
@@ -20,16 +22,21 @@
 
 .today-rail .section-title {
   margin: 0;
-  color: var(--color-text-primary);
-  font-size: 28px;
-  font-weight: 500;
+  color: #fff;
+  --phone-bold: 800;
+  font-weight: 800;
+  font-size: 30px;
   line-height: 1.2;
   text-align: left;
 }
 
+.banner-section ~ .today-rail .section-header .section-arrow-link {
+  color: #fff;
+}
+
 .today-rail-sub {
   margin: 4px 0 0;
-  color: var(--t-neutral-500, #636b78);
+  color: #fff;
   font-size: 14px;
 }
 
@@ -55,11 +62,10 @@
 }
 
 @media (max-width: 768px) {
-  /* Phones: on the page background like "Suggested for You", one
-     swipeable row. */
+  /* Phones: the wash fades into the page background, one swipeable row. */
   .today-rail {
     padding: 16px 0 4px;
-    background: transparent;
+    background: linear-gradient(to bottom, #db2777, rgba(219, 39, 119, 0));
   }
 
   .today-rail > .container {
@@ -72,7 +78,7 @@
   }
 
   .today-rail .section-title {
-    font-size: 18px;
+    font-size: 21px;
   }
 
   .today-rail-sub {

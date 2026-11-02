@@ -201,7 +201,7 @@ export default function MoormyThread({ userId, pendingAsk, onAsked, onBack }) {
 
       <div className="msgr-messages mmy-messages" role="log" aria-live="polite" aria-label="Chat with Ate Moormy">
         <div className="mmy-hero" {...tlProps(lang)}>
-          <MoormyAvatar size={64} glow />
+          <MoormyAvatar size={64} />
           <strong>Ate Moormy</strong>
           <small>{t.note}</small>
         </div>

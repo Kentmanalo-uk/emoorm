@@ -64,7 +64,7 @@ function IntroCard({ firstName, onAsk }) {
   return (
     <section className={`mmy-intro${sending ? ' is-sending' : ''}`} aria-label="Ate Moormy, your AI shopping helper">
       <div className="mmy-intro-head">
-        <MoormyAvatar size={44} glow />
+        <MoormyAvatar size={44} />
         <div className="mmy-intro-text">
           <div className="mmy-intro-name">
             <strong>Ate Moormy</strong>

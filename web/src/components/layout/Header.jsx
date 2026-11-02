@@ -422,6 +422,7 @@ const Header = () => {
                 <Link to="/profile" className="topbar-link account-trigger account-trigger-user">
                   <UserAvatar
                     src={user?.profilePhoto}
+                    person={user}
                     name={user?.fullName || 'U'}
                     alt=""
                     imgClassName="account-avatar"

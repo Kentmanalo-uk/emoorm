@@ -16,15 +16,18 @@ export const MMY = themed(() => ({
 
 /**
  * A CSS linear-gradient as a background: fills its parent (absolute), with
- * the parent's corner radius given as `radius`. `diagonal` is 135deg, else 90deg.
+ * the parent's corner radius given as `radius`. `diagonal` is 135deg, else
+ * 90deg; `vertical` runs top to bottom.
  */
-export function GradientFill({ colors = [MMY.pink, MMY.green], radius = 0, diagonal = true, opacity = 1, style }) {
+export function GradientFill({
+  colors = [MMY.pink, MMY.green], radius = 0, diagonal = true, vertical = false, opacity = 1, style,
+}) {
   const id = `ig${useId().replace(/[^a-zA-Z0-9]/g, '')}`;
   return (
     <View pointerEvents="none" style={[StyleSheet.absoluteFill, { borderRadius: radius, overflow: 'hidden', opacity }, style]}>
       <Svg width="100%" height="100%">
         <Defs>
-          <LinearGradient id={id} x1="0" y1="0" x2="1" y2={diagonal ? '1' : '0'}>
+          <LinearGradient id={id} x1="0" y1="0" x2={vertical ? '0' : '1'} y2={vertical || diagonal ? '1' : '0'}>
             {colors.map((c, i) => <Stop key={`${c}${i}`} offset={String(i / (colors.length - 1))} {...stopPaint(c)} />)}
           </LinearGradient>
         </Defs>

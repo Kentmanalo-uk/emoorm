@@ -1098,6 +1098,11 @@
   color: var(--t-neutral-900, #111827);
 }
 
+.pdp-review-name .profile-link {
+  border-bottom: 0;
+  text-decoration: none;
+}
+
 .pdp-review-stars {
   display: inline-flex;
   gap: 1px;
@@ -1114,7 +1119,6 @@
   font-size: 14px;
   line-height: 1.6;
   margin: 0;
-  padding-left: 52px;
 }
 
 /* =========================================================
@@ -1472,18 +1476,20 @@
 
 
 /* ===== Review media (photos/video) ===== */
+/* Three across, and no wider than a phone: a desktop page would otherwise
+   blow somebody's snapshot up past the point it stays sharp. */
 .pdp-review-media {
   display: grid;
-  grid-template-columns: repeat(auto-fill, minmax(96px, 1fr));
-  gap: 8px;
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+  gap: 6px;
+  max-width: 520px;
   margin-top: 10px;
 }
 
 .pdp-review-media-item {
   display: block;
-  border-radius: 8px;
+  border-radius: 6px;
   overflow: hidden;
-  border: 1px solid var(--t-neutral-200, #e5e7eb);
   background: var(--t-neutral-100, #f3f4f6);
   aspect-ratio: 1 / 1;
 }
@@ -1825,12 +1831,7 @@
   }
 
   .pdp-review-comment {
-    padding-left: 0;
     overflow-wrap: anywhere;
-  }
-
-  .pdp-review-media {
-    grid-template-columns: repeat(3, minmax(0, 1fr));
   }
 
   .pdp-review-media-video {
@@ -3611,33 +3612,92 @@ button.pdp-review-media-item video {
   display: block;
 }
 
+/* What they ordered: a quiet grey strip, so it reads as a note on the review
+   and not as an advert in the middle of it. */
+.pdp-review-ordered {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  max-width: 520px;
+  margin-top: 10px;
+  padding: 6px 10px 6px 6px;
+  border-radius: 6px;
+  background: var(--t-neutral-100, #f3f4f6);
+  color: var(--t-neutral-500, #636b78);
+  text-decoration: none;
+}
+
+.pdp-review-ordered:hover {
+  background: var(--t-neutral-150, #eef0f3);
+}
+
+.pdp-review-ordered img {
+  flex: 0 0 auto;
+  width: 44px;
+  height: 44px;
+  border-radius: 4px;
+  object-fit: cover;
+}
+
+.pdp-review-ordered-text {
+  flex: 1;
+  min-width: 0;
+  display: flex;
+  flex-direction: column;
+  gap: 1px;
+}
+
+.pdp-review-ordered-name,
+.pdp-review-ordered-note {
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.pdp-review-ordered-name {
+  font-size: 13px;
+  line-height: 18px;
+  color: var(--t-neutral-700, #374151);
+}
+
+.pdp-review-ordered-note {
+  font-size: 12px;
+  line-height: 17px;
+}
+
+.pdp-review-ordered-price {
+  flex: 0 0 auto;
+  font-size: 13.5px;
+  font-weight: 600;
+  color: var(--t-accent-600, #ff135e);
+}
+
 /* Helpful, and the comments under a review. Quiet by design: they sit
    under somebody's words and must not compete with them. */
 .pdp-review-acts {
   display: flex;
-  gap: 8px;
-  margin-top: 8px;
+  justify-content: flex-end;
+  gap: 20px;
+  max-width: 520px;
+  margin-top: 10px;
 }
 
 .pdp-review-act {
   display: inline-flex;
   align-items: center;
   gap: 5px;
-  padding: 5px 11px;
-  border: 1px solid var(--t-neutral-200, #e5e7eb);
-  border-radius: 999px;
+  padding: 2px 0;
+  border: 0;
   background: transparent;
-  color: var(--t-neutral-600, #4b5563);
-  font-size: 12.5px;
-  font-weight: 500;
+  color: var(--t-neutral-500, #636b78);
+  font-size: 13.5px;
   cursor: pointer;
 }
 
 .pdp-review-act:hover {
-  background: var(--t-neutral-100, #f3f4f6);
+  color: var(--t-neutral-700, #374151);
 }
 
 .pdp-review-act.is-on {
-  border-color: var(--t-primary-600, #055d07);
   color: var(--t-primary-700, #044a06);
 }

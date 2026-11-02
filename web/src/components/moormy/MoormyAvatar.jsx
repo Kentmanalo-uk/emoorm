@@ -1,9 +1,9 @@
 import MoormyFace from './MoormyFace';
 
-/** Ate Moormy's picture: her face on Emoorm's pink-to-green. `glow` adds a soft halo. */
-export default function MoormyAvatar({ size = 40, glow = false }) {
+/** Ate Moormy's picture: her face, round. She is drawn flat, so nothing glows behind her. */
+export default function MoormyAvatar({ size = 40 }) {
   return (
-    <span className={`mmy-avatar${glow ? ' is-glow' : ''}`} style={{ width: size, height: size }} aria-hidden="true">
+    <span className="mmy-avatar" style={{ width: size, height: size }} aria-hidden="true">
       <MoormyFace size={size} />
     </span>
   );

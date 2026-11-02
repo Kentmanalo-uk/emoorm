@@ -384,3 +384,57 @@
   color: var(--t-neutral-600, #4b5563);
   line-height: 1.5;
 }
+
+/* Whose name goes on the review. */
+.review-who {
+  margin-top: 14px;
+  padding-top: 14px;
+  border-top: 1px solid var(--t-neutral-100, #f3f4f6);
+}
+
+.review-who-label {
+  margin-bottom: 8px;
+  color: var(--t-neutral-700, #374151);
+  font-size: 13.5px;
+  font-weight: 500;
+}
+
+.review-who-choices {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px;
+}
+
+.review-who-choice {
+  max-width: 100%;
+  overflow: hidden;
+  padding: 7px 13px;
+  border: 1px solid var(--t-neutral-200, #e5e7eb);
+  border-radius: 999px;
+  background: var(--t-neutral-0, #fff);
+  color: var(--t-neutral-700, #374151);
+  font: inherit;
+  font-size: 13px;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+  cursor: pointer;
+}
+
+.review-who-choice.is-on {
+  border-color: var(--t-primary-600, #059669);
+  background: var(--t-primary-50, #ecfdf5);
+  color: var(--t-primary-700, #047857);
+  font-weight: 500;
+}
+
+.review-who-choice:disabled {
+  opacity: 0.45;
+  cursor: default;
+}
+
+.review-who-note {
+  margin: 8px 0 0;
+  color: var(--t-neutral-500, #636b78);
+  font-size: 12px;
+  line-height: 17px;
+}

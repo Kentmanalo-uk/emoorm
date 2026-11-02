@@ -3,7 +3,7 @@ import { Navigate, useNavigate } from 'react-router-dom';
 import toast from 'react-hot-toast';
 import {
   UserCircle, EnvelopeSimple, Phone, House, MapPin, ShieldCheck, LockKey, CalendarBlank,
-  SignOut, Camera, CircleNotch as Loader2, Database, UsersThree, CaretRight,
+  SignOut, Camera, Smiley, CircleNotch as Loader2, Database, UsersThree, CaretRight,
 } from '../lib/icons';
 import axios from '../lib/axios';
 import useAuthStore from '../store/authStore';
@@ -14,6 +14,7 @@ import {
   uploadProfilePhoto, homeAddressLine,
 } from '../lib/profileForm';
 import { IMAGE_ACCEPT } from '../lib/uploadableImage';
+import AvatarPicker from '../components/avatars/AvatarPicker';
 import { SettingsList, SettingsRow } from '../components/seller/SettingsList';
 import PhoneSaveBar from '../components/seller/PhoneSaveBar';
 import PhAddressPicker from '../components/common/PhAddressPicker';
@@ -295,9 +296,11 @@ function ProfilePart({ title }) {
     fullName: user?.fullName || '',
     username: user?.username || '',
     profilePhoto: user?.profilePhoto || '',
+    avatarKey: user?.avatarKey || '',
   };
   const [form, setForm] = useState(original);
   const [uploading, setUploading] = useState(false);
+  const [picking, setPicking] = useState(false);
   const [verified, setVerified] = useState(false);
   const fileRef = useRef(null);
 
@@ -311,7 +314,7 @@ function ProfilePart({ title }) {
   }, []);
 
   const nameChanged = form.fullName.trim() !== original.fullName.trim();
-  const dirty = nameChanged || form.username !== original.username || form.profilePhoto !== original.profilePhoto;
+  const dirty = nameChanged || form.username !== original.username || form.profilePhoto !== original.profilePhoto || form.avatarKey !== original.avatarKey;
 
   const handlePhoto = async (e) => {
     const file = e.target.files?.[0];
@@ -319,7 +322,7 @@ function ProfilePart({ title }) {
     setUploading(true);
     try {
       const url = await uploadProfilePhoto(file);
-      setForm((f) => ({ ...f, profilePhoto: url }));
+      setForm((f) => ({ ...f, profilePhoto: url, avatarKey: '' }));
     } catch (err) {
       toast.error(err?.message || 'Upload failed');
     } finally {
@@ -334,7 +337,7 @@ function ProfilePart({ title }) {
       toast.error(problem);
       return;
     }
-    const payload = { fullName: form.fullName.trim(), profilePhoto: form.profilePhoto || null };
+    const payload = { fullName: form.fullName.trim(), profilePhoto: form.profilePhoto || null, avatarKey: form.avatarKey || null };
     if (form.username !== original.username) payload.username = form.username.trim();
     save(payload, done, 'Profile updated');
   };
@@ -345,6 +348,7 @@ function ProfilePart({ title }) {
         <div className="ps-photo">
           <UserAvatar
             src={form.profilePhoto}
+            person={{ id: user?.id, avatarKey: form.avatarKey }}
             name={(form.fullName || user?.email || '?').trim().charAt(0).toUpperCase()}
             alt={form.fullName}
             fallbackClassName="ps-photo-fallback"
@@ -365,6 +369,15 @@ function ProfilePart({ title }) {
             <Camera size={15} />
             {form.profilePhoto ? 'Change photo' : 'Upload photo'}
           </button>
+          <button
+            type="button"
+            className="ps-btn ps-btn-outline"
+            onClick={() => setPicking(true)}
+            disabled={uploading}
+          >
+            <Smiley size={15} />
+            Pick an avatar
+          </button>
           {form.profilePhoto && (
             <button
               type="button"
@@ -375,6 +388,14 @@ function ProfilePart({ title }) {
               Remove
             </button>
           )}
+          {picking && (
+            <AvatarPicker
+              current={form.avatarKey}
+              seed={user?.id}
+              onPick={(key) => setForm((f) => ({ ...f, avatarKey: key, profilePhoto: '' }))}
+              onClose={() => setPicking(false)}
+            />
+          )}
           <input
             ref={fileRef}
             type="file"
@@ -382,7 +403,7 @@ function ProfilePart({ title }) {
             onChange={handlePhoto}
             hidden
           />
-          <p className="ps-photo-hint">Any photo from your device.</p>
+          <p className="ps-photo-hint">Any photo from your device, or pick an avatar.</p>
         </div>
       </div>
 

@@ -8,6 +8,7 @@ import Layout from '../components/layout/Layout';
 import ProductImage from '../components/ProductImage';
 import HomeStoresMap from '../components/home/HomeStoresMapLazy';
 import StartSellingSticker from '../components/home/StartSellingSticker';
+import HomeShortcuts from '../components/home/HomeShortcuts';
 import Spinner from '../components/ui/Spinner';
 import ChatDock from '../components/chat/ChatDock';
 import { readCache, patchCache } from '../lib/pageCache';
@@ -43,6 +44,9 @@ const exploreColumns = () => {
   if (width <= 1024) return 4;
   return 6;
 };
+
+// How many "Suggested for You" shows. A saved page may hold more, from before.
+const SUGGESTED = 4;
 
 const Home = () => {
   useSeo({
@@ -166,7 +170,7 @@ const Home = () => {
       .catch((err) => console.error('Failed to load home data:', err));
 
     load(
-      axios.get('/products', { params: { pageSize: 6, sortBy: 'createdAt', sortOrder: 'desc' } }),
+      axios.get('/products', { params: { pageSize: SUGGESTED, sortBy: 'createdAt', sortOrder: 'desc' } }),
       (res) => {
         setFeaturedProducts(res.data || []);
         patchCache('home', { featured: res.data || [] });
@@ -303,7 +307,8 @@ const Home = () => {
             {/* Left: Carousel */}
             <HomeBannerCarousel bannerData={bannerData} />
 
-            {/* Right: Two Cards */}
+            {/* Right: Two Cards. Computers only: phones have the shortcuts instead. */}
+            {!isPhone && (
             <div className="banner-sidebar">
               {!sideBannersReady ? (
                 <SideBannerSkeleton />
@@ -317,9 +322,12 @@ const Home = () => {
                 <HomepageSideBanner banner={sideBanners.bottom} />
               ) : null}
             </div>
+            )}
           </div>
         </div>
       </section>
+
+      <HomeShortcuts />
 
       {/* Categories Section: pictures, or gradient icons (Settings › Branding) */}
       <section className={`categories-section${categoryIcons ? ' is-icons' : ''}`}>
@@ -360,8 +368,8 @@ const Home = () => {
             <h2 className="section-title title-medium">Suggested for You</h2>
           </div>
           {featuredProducts.length > 0 ? (
-            <div className="products-grid">
-              {featuredProducts.map((product) => (
+            <div className="products-grid is-suggested">
+              {featuredProducts.slice(0, SUGGESTED).map((product) => (
                 <Link key={product.id} to={`/product/${product.slug}`} className="product-card" {...peekProduct(product)}>
                   <div className="product-image">
                     <ProductImage src={product.images?.[0]} alt={product.name} />

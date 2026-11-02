@@ -301,6 +301,10 @@ export const BUYER_TABS = [
   { key: 'to_ship', label: 'To Ship' },
   { key: 'to_receive', label: 'To Receive' },
   { key: 'to_pickup', label: 'To Pick Up' },
+  // Not a bucket: a finished order is "completed" whether or not it has
+  // been rated, so this one is filtered in the page from what is still
+  // unreviewed (pages/Orders.jsx).
+  { key: 'to_review', label: 'To Review' },
   { key: 'completed', label: 'Completed' },
   { key: 'cancelled', label: 'Cancelled' },
 ];
@@ -334,6 +338,7 @@ const TAB_ALIASES = {
   to_receive: 'to_receive', shipped: 'to_receive', shipping: 'to_receive',
   to_pickup: 'to_pickup', ready: 'to_pickup', pickup: 'to_pickup',
   completed: 'completed', cancelled: 'cancelled', canceled: 'cancelled', all: 'all',
+  to_review: 'to_review', to_rate: 'to_review', review: 'to_review',
 };
 export const buyerTabFrom = (value) => TAB_ALIASES[String(value || '').toLowerCase()] || 'all';
 

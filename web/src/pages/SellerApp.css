@@ -362,7 +362,7 @@
 .sh-tool-icon {
   display: grid;
   place-items: center;
-  height: 34px;
+  height: 36px;
   color: var(--tone, var(--sa-green));
 }
 

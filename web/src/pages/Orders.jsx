@@ -125,8 +125,14 @@ const Orders = () => {
   const [cancelTarget, setCancelTarget] = useState(null); // order id
   const [cancelling, setCancelling] = useState(false);
 
-  const orderMatchesTab = (order, tabKey) => tabKey === 'all' || buyerBucket(order) === tabKey;
+  // Finished, and still waiting to be rated.
+  const awaitingReview = (order) => buyerBucket(order) === 'completed' && unreviewedItems(order).length > 0;
+  const orderMatchesTab = (order, tabKey) => {
+    if (tabKey === 'to_review') return awaitingReview(order);
+    return tabKey === 'all' || buyerBucket(order) === tabKey;
+  };
   const tabCounts = countBuyerTabs(orders);
+  tabCounts.to_review = orders.filter(awaitingReview).length;
 
   useEffect(() => {
     if (!isAuthenticated) {
@@ -424,7 +430,7 @@ const Orders = () => {
       <div className="orders-tabs" role="tablist">
         {BUYER_TABS.map((tab) => {
           // Counts on the tabs that need something from the buyer (as on Shopee).
-          const count = ['to_pay', 'to_ship', 'to_receive', 'to_pickup'].includes(tab.key) ? (tabCounts[tab.key] || 0) : 0;
+          const count = ['to_pay', 'to_ship', 'to_receive', 'to_pickup', 'to_review'].includes(tab.key) ? (tabCounts[tab.key] || 0) : 0;
 
           return (
             <button
