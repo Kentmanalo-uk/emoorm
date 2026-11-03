@@ -123,6 +123,8 @@ mount('/couriers', courierRoutes);
 mount('/vouchers', voucherRoutes);
 // Invites: codes, shops' invite rewards, seller invites (services/referral).
 mount('/referrals', require('./referral.routes'));
+// A shop's own photo designs (services/photoDesign).
+mount('/photo-designs', require('./photoDesign.routes'));
 mount('/app-settings', appSettingRoutes);
 mount('/profiles', require('./profile.routes'));
 mount('/identity-verification', require('./identityVerification.routes'));

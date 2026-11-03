@@ -126,6 +126,7 @@ const SELLER_RULES = [
   [/^\/seller\/products\/new/, [S.products, S.fulfillment]],
   [/^\/seller\/products/, [S.add, S.today, S.reviews, S.marketing]],
   [/^\/seller\/today/, [S.products, S.orders, S.marketing]],
+  [/^\/seller\/photo-designs/, [S.products, S.add, S.decorate]],
   [/^\/seller\/offers/, [S.chat, S.products, S.orders]],
   [/^\/seller\/questions/, [S.products, S.reviews, S.chat]],
   [/^\/seller\/marketing/, [S.decorate, S.products, S.analytics]],

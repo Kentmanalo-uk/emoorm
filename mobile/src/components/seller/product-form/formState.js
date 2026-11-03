@@ -259,8 +259,12 @@ export const toFormState = (product) => {
     returnPolicy: product?.returnPolicy || '',
     variations: variations.map(groupOf),
     fulfillment: FULFILLMENT_KEYS.includes(product?.fulfillment) ? product.fulfillment : null,
-    // The shop-branding design over its photos; null is off.
+    // The shop-branding design over its photos; null is off. With 'custom',
+    // photoDesign is the shop's own design it wears ({ id, layers }).
     imageOverlay: overlayOf(product),
+    photoDesign: product?.photoDesign?.layers
+      ? { id: product.photoDesign.id, layers: product.photoDesign.layers }
+      : null,
     // The kinds' own facts (product.details).
     size: d.size || '',
     serves: d.serves || '',
@@ -480,6 +484,7 @@ export const buildPayload = (state, { kind, hasOptions, editing, product }) => {
     details: detailsFor(kind, state),
     fulfillment: state.fulfillment || null,
     imageOverlay: state.imageOverlay || null,
+    photoDesignId: state.imageOverlay === 'custom' ? state.photoDesign?.id || null : null,
   };
 
   if (kind === 'REGULAR') {
@@ -695,6 +700,7 @@ export const draftProduct = (s, ctx) => {
     images: s.images,
     fulfillment: s.fulfillment,
     imageOverlay: s.imageOverlay || null,
+    photoDesign: s.imageOverlay === 'custom' ? s.photoDesign : null,
   };
 };
 

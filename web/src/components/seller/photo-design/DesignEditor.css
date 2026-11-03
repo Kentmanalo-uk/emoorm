@@ -1,0 +1,657 @@
+/* The photo design editor (DesignEditor.jsx): the design on a photo at the
+   left, the picked piece's settings and the list of pieces at the right;
+   on phones one under the other. */
+
+.pde {
+  --pde-green: var(--t-primary-600, #059669);
+  --pde-green-deep: var(--t-primary-700, #047857);
+  --pde-mint: var(--t-primary-50, #ecfdf5);
+  --pde-line: var(--t-neutral-200, #e5e7eb);
+  --pde-ink: var(--t-neutral-900, #111827);
+  --pde-text: var(--t-neutral-700, #374151);
+  --pde-muted: var(--t-neutral-500, #6b7280);
+  color: var(--pde-ink);
+}
+
+/* ── Top: back, name, undo, redo, save ───────────────────────────────── */
+
+.pde-top {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  margin-bottom: 16px;
+}
+
+.pde-name {
+  flex: 1;
+  min-width: 0;
+  height: 44px;
+  padding: 0 14px;
+  border: 1.5px solid var(--pde-line);
+  border-radius: 12px;
+  background: var(--t-neutral-0, #ffffff);
+  color: var(--pde-ink);
+  font: inherit;
+  font-size: 17px;
+  font-weight: 600;
+}
+
+.pde-name:focus {
+  border-color: var(--pde-green);
+  outline: none;
+}
+
+.pde-top-actions {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+}
+
+.pde-icon-btn {
+  display: grid;
+  place-items: center;
+  width: 42px;
+  height: 42px;
+  border: 1px solid var(--pde-line);
+  border-radius: 12px;
+  background: var(--t-neutral-0, #ffffff);
+  color: var(--pde-text);
+  cursor: pointer;
+}
+
+.pde-icon-btn:disabled {
+  opacity: 0.4;
+  cursor: default;
+}
+
+.pde-icon-btn.is-danger {
+  color: var(--t-danger-600, #dc2626);
+}
+
+.pde-save {
+  display: inline-flex;
+  align-items: center;
+  gap: 7px;
+  height: 42px;
+  padding: 0 20px;
+  border: 0;
+  border-radius: 12px;
+  background: var(--pde-green);
+  color: #ffffff;
+  font: inherit;
+  font-size: 15px;
+  font-weight: 700;
+  cursor: pointer;
+}
+
+.pde-save:hover {
+  background: var(--pde-green-deep);
+}
+
+.pde-save:disabled {
+  opacity: 0.7;
+  cursor: progress;
+}
+
+.pde-spin {
+  animation: pde-spin 0.9s linear infinite;
+}
+
+@keyframes pde-spin {
+  to {
+    transform: rotate(360deg);
+  }
+}
+
+/* ── Body ────────────────────────────────────────────────────────────── */
+
+.pde-body {
+  display: grid;
+  grid-template-columns: minmax(0, 520px) minmax(280px, 1fr);
+  gap: 24px;
+  align-items: start;
+}
+
+.pde-work {
+  display: grid;
+  gap: 12px;
+  min-width: 0;
+}
+
+.pde-add {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px;
+}
+
+.pde-add-btn {
+  display: inline-flex;
+  align-items: center;
+  gap: 7px;
+  height: 40px;
+  padding: 0 14px;
+  border: 1px solid var(--pde-line);
+  border-radius: 999px;
+  background: var(--t-neutral-0, #ffffff);
+  color: var(--pde-ink);
+  font: inherit;
+  font-size: 14px;
+  font-weight: 600;
+  cursor: pointer;
+}
+
+.pde-add-btn:hover {
+  border-color: var(--pde-green);
+  background: var(--pde-mint);
+}
+
+.pde-add-btn:disabled {
+  opacity: 0.45;
+  cursor: default;
+}
+
+.pde-glyph {
+  font-size: 15px;
+  font-weight: 800;
+  letter-spacing: -0.03em;
+}
+
+/* The canvas: the photo, the design over it, the picked piece's frame. */
+.pde-canvas {
+  position: relative;
+  aspect-ratio: 1;
+  overflow: hidden;
+  border-radius: 18px;
+  background: var(--t-neutral-100, #f3f4f6);
+  box-shadow: 0 0 0 1px var(--pde-line);
+  touch-action: none;
+  user-select: none;
+}
+
+.pde-canvas.is-tall {
+  aspect-ratio: 5 / 6;
+}
+
+.pde-photo {
+  position: absolute;
+  inset: 0;
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+  pointer-events: none;
+}
+
+.pde-photo.is-blank {
+  background:
+    linear-gradient(45deg, var(--t-neutral-200, #e5e7eb) 25%, transparent 25%) 0 0 / 24px 24px,
+    linear-gradient(-45deg, var(--t-neutral-200, #e5e7eb) 25%, transparent 25%) 0 12px / 24px 24px,
+    linear-gradient(45deg, transparent 75%, var(--t-neutral-200, #e5e7eb) 75%) 12px -12px / 24px 24px,
+    linear-gradient(-45deg, transparent 75%, var(--t-neutral-200, #e5e7eb) 75%) -12px 0 / 24px 24px,
+    var(--t-neutral-100, #f3f4f6);
+}
+
+.pde-stage {
+  pointer-events: none;
+}
+
+.pde-stage .iov-c {
+  pointer-events: auto;
+  cursor: grab;
+}
+
+.pde-stage .iov-c:active {
+  cursor: grabbing;
+}
+
+.pde-frame {
+  position: absolute;
+  inset: -4px;
+  border: 2px solid #2563eb;
+  border-radius: 4px;
+  pointer-events: none;
+}
+
+.pde-handle {
+  position: absolute;
+  width: 18px;
+  height: 18px;
+  border: 2px solid #2563eb;
+  border-radius: 50%;
+  background: #ffffff;
+  box-shadow: 0 1px 4px rgba(0, 0, 0, 0.3);
+  touch-action: none;
+}
+
+.pde-handle.is-size {
+  right: -13px;
+  bottom: -13px;
+  cursor: nwse-resize;
+}
+
+.pde-handle.is-turn {
+  top: -34px;
+  left: 50%;
+  margin-left: -9px;
+  cursor: grab;
+}
+
+.pde-handle.is-turn::after {
+  position: absolute;
+  top: 16px;
+  left: 50%;
+  width: 2px;
+  height: 14px;
+  margin-left: -1px;
+  background: #2563eb;
+  content: "";
+}
+
+/* Phones: bigger dots for fingers. */
+@media (pointer: coarse) {
+  .pde-handle {
+    width: 26px;
+    height: 26px;
+  }
+
+  .pde-handle.is-size {
+    right: -17px;
+    bottom: -17px;
+  }
+
+  .pde-handle.is-turn {
+    top: -42px;
+    margin-left: -13px;
+  }
+
+  .pde-handle.is-turn::after {
+    top: 24px;
+  }
+}
+
+.pde-guide {
+  position: absolute;
+  background: #ec4899;
+  pointer-events: none;
+}
+
+.pde-guide.is-x {
+  top: 0;
+  bottom: 0;
+  left: 50%;
+  width: 1px;
+}
+
+.pde-guide.is-y {
+  top: 50%;
+  right: 0;
+  left: 0;
+  height: 1px;
+}
+
+.pde-empty {
+  position: absolute;
+  inset: 0;
+  display: grid;
+  place-items: center;
+  margin: 0;
+  padding: 24px;
+  color: var(--pde-muted);
+  font-size: 15px;
+  text-align: center;
+  pointer-events: none;
+}
+
+.pde-view {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 10px;
+}
+
+.pde-count {
+  font-size: 13px;
+  color: var(--pde-muted);
+}
+
+.pde-photos {
+  display: grid;
+  gap: 6px;
+}
+
+.pde-photo-row {
+  display: flex;
+  gap: 8px;
+  overflow-x: auto;
+  padding: 3px;
+  scrollbar-width: thin;
+}
+
+.pde-photo-pick {
+  flex: none;
+  width: 56px;
+  height: 56px;
+  padding: 0;
+  overflow: hidden;
+  border: 0;
+  border-radius: 10px;
+  background: var(--t-neutral-100, #f3f4f6);
+  box-shadow: 0 0 0 1px var(--pde-line);
+  cursor: pointer;
+}
+
+.pde-photo-pick img {
+  display: block;
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+}
+
+.pde-photo-pick.is-blank {
+  background:
+    linear-gradient(45deg, var(--t-neutral-200, #e5e7eb) 25%, transparent 25%) 0 0 / 12px 12px,
+    linear-gradient(-45deg, var(--t-neutral-200, #e5e7eb) 25%, transparent 25%) 0 6px / 12px 12px,
+    var(--t-neutral-100, #f3f4f6);
+}
+
+.pde-photo-pick.is-on {
+  box-shadow: 0 0 0 3px var(--pde-green);
+}
+
+/* ── Settings ────────────────────────────────────────────────────────── */
+
+.pde-side {
+  display: grid;
+  gap: 16px;
+  min-width: 0;
+}
+
+.pde-inspector {
+  display: grid;
+  gap: 14px;
+  padding: 16px;
+  border: 1px solid var(--pde-line);
+  border-radius: 16px;
+  background: var(--t-neutral-0, #ffffff);
+}
+
+.pde-inspector.is-empty p {
+  margin: 0;
+  color: var(--pde-muted);
+  font-size: 14px;
+}
+
+.pde-inspector-head {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 8px;
+}
+
+.pde-inspector-head strong {
+  font-size: 16px;
+}
+
+.pde-inspector-actions {
+  display: flex;
+  gap: 4px;
+}
+
+.pde-inspector-actions button {
+  display: grid;
+  place-items: center;
+  width: 34px;
+  height: 34px;
+  border: 1px solid var(--pde-line);
+  border-radius: 10px;
+  background: var(--t-neutral-0, #ffffff);
+  color: var(--pde-text);
+  cursor: pointer;
+}
+
+.pde-inspector-actions button:disabled {
+  opacity: 0.4;
+  cursor: default;
+}
+
+.pde-inspector-actions .is-danger {
+  color: var(--t-danger-600, #dc2626);
+}
+
+.pde-field {
+  display: grid;
+  gap: 6px;
+}
+
+.pde-label {
+  display: flex;
+  justify-content: space-between;
+  gap: 8px;
+  font-size: 13px;
+  font-weight: 600;
+  color: var(--pde-text);
+}
+
+.pde-label em {
+  font-style: normal;
+  font-weight: 500;
+  color: var(--pde-muted);
+}
+
+.pde-input {
+  height: 42px;
+  padding: 0 12px;
+  border: 1.5px solid var(--pde-line);
+  border-radius: 10px;
+  color: var(--pde-ink);
+  font: inherit;
+  font-size: 15px;
+}
+
+.pde-input:focus {
+  border-color: var(--pde-green);
+  outline: none;
+}
+
+.pde-slider input {
+  width: 100%;
+  accent-color: var(--pde-green);
+}
+
+.pde-chips {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 6px;
+}
+
+.pde-chip {
+  height: 34px;
+  padding: 0 12px;
+  border: 1px solid var(--pde-line);
+  border-radius: 999px;
+  background: var(--t-neutral-0, #ffffff);
+  color: var(--pde-text);
+  font: inherit;
+  font-size: 13px;
+  font-weight: 600;
+  cursor: pointer;
+}
+
+.pde-chip.is-on {
+  border-color: var(--pde-green);
+  background: var(--pde-mint);
+  color: var(--pde-green-deep);
+}
+
+.pde-swatches {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 7px;
+}
+
+.pde-swatch {
+  position: relative;
+  width: 28px;
+  height: 28px;
+  padding: 0;
+  border: 0;
+  border-radius: 50%;
+  box-shadow: inset 0 0 0 1px rgba(0, 0, 0, 0.15);
+  cursor: pointer;
+}
+
+.pde-swatch.is-on {
+  box-shadow: inset 0 0 0 1px rgba(0, 0, 0, 0.15), 0 0 0 2px #ffffff, 0 0 0 4px var(--pde-green);
+}
+
+.pde-swatch.is-none {
+  background:
+    linear-gradient(135deg, transparent 45%, #dc2626 45%, #dc2626 55%, transparent 55%),
+    #ffffff;
+}
+
+.pde-swatch.is-custom {
+  overflow: hidden;
+  background: conic-gradient(#ef4444, #f59e0b, #22c55e, #06b6d4, #3b82f6, #a855f7, #ef4444);
+}
+
+.pde-swatch.is-custom input {
+  position: absolute;
+  inset: 0;
+  width: 100%;
+  height: 100%;
+  opacity: 0;
+  cursor: pointer;
+}
+
+.pde-toggle {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  font-size: 14px;
+  font-weight: 500;
+  cursor: pointer;
+}
+
+.pde-toggle input {
+  width: 18px;
+  height: 18px;
+  accent-color: var(--pde-green);
+}
+
+.pde-note {
+  margin: 0;
+  padding: 10px 12px;
+  border-radius: 10px;
+  background: var(--pde-mint);
+  color: var(--pde-text);
+  font-size: 13px;
+  line-height: 1.45;
+}
+
+.pde-btn {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: 7px;
+  height: 40px;
+  border: 1px solid var(--pde-line);
+  border-radius: 10px;
+  background: var(--t-neutral-0, #ffffff);
+  color: var(--pde-ink);
+  font: inherit;
+  font-size: 14px;
+  font-weight: 600;
+  cursor: pointer;
+}
+
+.pde-layers {
+  display: grid;
+  gap: 8px;
+}
+
+.pde-layers ul {
+  display: grid;
+  gap: 4px;
+  margin: 0;
+  padding: 0;
+  list-style: none;
+}
+
+.pde-layer {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  width: 100%;
+  min-height: 40px;
+  padding: 6px 12px;
+  border: 1px solid var(--pde-line);
+  border-radius: 10px;
+  background: var(--t-neutral-0, #ffffff);
+  color: var(--pde-ink);
+  font: inherit;
+  text-align: left;
+  cursor: pointer;
+}
+
+.pde-layer.is-on {
+  border-color: var(--pde-green);
+  background: var(--pde-mint);
+}
+
+.pde-layer-kind {
+  flex: none;
+  font-size: 13px;
+  font-weight: 700;
+}
+
+.pde-layer-text {
+  overflow: hidden;
+  font-size: 13px;
+  color: var(--pde-muted);
+  white-space: nowrap;
+  text-overflow: ellipsis;
+}
+
+/* ── Phones ──────────────────────────────────────────────────────────── */
+
+@media (max-width: 900px) {
+  .pde-body {
+    grid-template-columns: minmax(0, 1fr);
+  }
+}
+
+@media (max-width: 768px) {
+  .pde-top {
+    flex-wrap: wrap;
+  }
+
+  .pde-name {
+    order: 3;
+    flex-basis: 100%;
+  }
+
+  .pde-top-actions {
+    margin-left: auto;
+  }
+
+  /* The phone bar above has its own back arrow. */
+  .pde-top > .pde-icon-btn:first-child {
+    display: none;
+  }
+
+  .pde-name {
+    order: 0;
+  }
+
+  .pde-add {
+    flex-wrap: nowrap;
+    margin: 0 -16px;
+    padding: 0 16px 2px;
+    overflow-x: auto;
+    scrollbar-width: none;
+  }
+
+  .pde-add-btn {
+    flex: none;
+  }
+}

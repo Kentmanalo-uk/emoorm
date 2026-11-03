@@ -765,7 +765,8 @@ export default function ProductForm({
         </Field>
         <PhotoDesign
           value={form.imageOverlay}
-          onChange={(v) => set('imageOverlay', v)}
+          design={form.photoDesign}
+          onChange={(key, picked) => patch({ imageOverlay: key, photoDesign: picked })}
           store={outlet?.store}
           cover={form.images[0]}
         />

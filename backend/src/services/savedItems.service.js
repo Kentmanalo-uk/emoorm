@@ -36,6 +36,7 @@ const PRODUCT_CARD = {
   deletedAt: true,
   // The shop-branding design over its photo, in the shop's colour.
   imageOverlay: true,
+  photoDesign: { select: { id: true, layers: true } },
   store: { select: { id: true, name: true, logo: true, primaryColor: true } },
 };
 

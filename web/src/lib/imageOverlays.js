@@ -19,8 +19,14 @@ export const IMAGE_OVERLAYS = [
 
 const KEYS = new Set(IMAGE_OVERLAYS.map((o) => o.key));
 
-/** A product's design when it is one this version knows, else null. */
-export const overlayOf = (product) => (KEYS.has(product?.imageOverlay) ? product.imageOverlay : null);
+/**
+ * A product's design when it is one this version knows, else null: a ready
+ * design's key, or 'custom' when it wears its shop's own (product.photoDesign).
+ */
+export const overlayOf = (product) => {
+  if (product?.imageOverlay === 'custom') return product.photoDesign?.layers ? 'custom' : null;
+  return KEYS.has(product?.imageOverlay) ? product.imageOverlay : null;
+};
 
 const BRAND = '#055D07';
 const HEX = /^#(?:[0-9a-f]{3}|[0-9a-f]{6})$/i;

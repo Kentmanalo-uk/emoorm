@@ -699,6 +699,7 @@ function ProductPage({ slug, via }) {
             jump={jump}
             onOpen={setViewerAt}
             overlay={overlayOf(product)}
+            layers={product.photoDesign?.layers}
             store={product.store}
           />
           {product.status === 'PENDING' ? (
@@ -1225,7 +1226,7 @@ function ArrivingPhoto({
  * the main thread and keeps what it has decoded.
  */
 function GallerySlide({
-  src, width, label, first, slug, onShown, onPress, overlay, store,
+  src, width, label, first, slug, onShown, onPress, overlay, layers, store,
 }) {
   const [step, setStep] = useState(0);
   // The first photo stands on the opened picture until it has loaded.
@@ -1261,7 +1262,7 @@ function GallerySlide({
           }}
         />
       </ArrivingPhoto>
-      {src ? <ImageOverlay design={overlay} store={store} /> : null}
+      {src ? <ImageOverlay design={overlay} layers={layers} store={store} /> : null}
     </Box>
   );
 }
@@ -1272,7 +1273,7 @@ function GallerySlide({
  * the ones beside it exist at a time, however many a product has.
  */
 const GalleryPager = memo(({
-  slides, width, name, slug, jump, onOpen, overlay = null, store = null,
+  slides, width, name, slug, jump, onOpen, overlay = null, layers = null, store = null,
 }) => {
   const [active, setActive] = useState(0);
   const pager = useRef(null);
@@ -1305,6 +1306,7 @@ const GalleryPager = memo(({
             onShown={i === 0 ? () => heroImageReady(slug) : undefined}
             onPress={img ? () => onOpen(i) : undefined}
             overlay={overlay}
+            layers={layers}
             store={store}
           />
         )))}
@@ -1315,7 +1317,7 @@ const GalleryPager = memo(({
     </>
   );
 }, (a, b) => a.width === b.width && a.jump === b.jump && a.name === b.name && a.slides.join() === b.slides.join()
-  && a.overlay === b.overlay && a.store === b.store);
+  && a.overlay === b.overlay && a.layers === b.layers && a.store === b.store);
 
 function StoreAvatar({ uri, name }) {
   const [failed, setFailed] = useState(false);

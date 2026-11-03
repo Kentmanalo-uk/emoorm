@@ -96,6 +96,7 @@ const SellerVerification = lazy(() => import('./pages/SellerVerification'));
 const SellerMenu = lazy(() => import('./pages/SellerMenu'));
 const SellerTools = lazy(() => import('./pages/SellerTools'));
 const SellerShopQr = lazy(() => import('./pages/SellerShopQr'));
+const SellerPhotoDesigns = lazy(() => import('./pages/SellerPhotoDesigns'));
 const SellerMarketing = lazy(() => import('./pages/SellerMarketing'));
 const SellerDecorate = lazy(() => import('./pages/SellerDecorate'));
 const SellerTemplates = lazy(() => import('./pages/SellerDecorate').then((m) => ({ default: m.SellerTemplates })));
@@ -130,6 +131,7 @@ const AdminTools = lazy(() => import('./pages/AdminTools'));
 const AdminSupport = lazy(() => import('./pages/AdminSupport'));
 const AdminNotifications = lazy(() => import('./pages/AdminNotifications'));
 const AdminReviews = lazy(() => import('./pages/AdminReviews'));
+const AdminPhotoDesigns = lazy(() => import('./pages/AdminPhotoDesigns'));
 const AdminInvites = lazy(() => import('./pages/AdminInvites'));
 const AdminReturns = lazy(() => import('./pages/AdminReturns'));
 const About = lazy(() => import('./pages/About'));
@@ -356,6 +358,9 @@ function AppRoutes() {
           <Route path="notifications" element={<Notifications mode="SELLER" bare shell="seller" />} />
           <Route path="products" element={<SellerProducts />} />
           <Route path="products/new" element={<SellerProducts />} />
+          <Route path="photo-designs" element={<SellerPhotoDesigns />} />
+          <Route path="photo-designs/new" element={<SellerPhotoDesigns />} />
+          <Route path="photo-designs/:id" element={<SellerPhotoDesigns />} />
           <Route path="today" element={<SellerToday />} />
           <Route path="today/new" element={<SellerTodayPost />} />
           <Route path="today/:id/edit" element={<SellerTodayPost />} />
@@ -408,6 +413,7 @@ function AppRoutes() {
         <Route path="/admin/notifications" element={<AdminRoute><AdminNotifications /></AdminRoute>} />
         <Route path="/admin/notifications/:id" element={<AdminRoute><NotificationDetail admin /></AdminRoute>} />
         <Route path="/admin/reviews" element={<AdminRoute><AdminReviews /></AdminRoute>} />
+        <Route path="/admin/photo-designs" element={<AdminRoute><AdminPhotoDesigns /></AdminRoute>} />
         <Route path="/admin/invites" element={<AdminRoute><AdminInvites /></AdminRoute>} />
         <Route path="/admin/returns" element={<AdminRoute><AdminReturns /></AdminRoute>} />
         <Route path="/admin/settings" element={<AdminRoute><AdminSettings /></AdminRoute>} />

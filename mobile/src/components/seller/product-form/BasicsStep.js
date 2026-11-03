@@ -32,7 +32,13 @@ export default function BasicsStep({
     <>
       <Field label="Photos" required error={errors.images}>
         <PhotoPicker images={form.images} onChange={(imgs) => set('images', imgs)} />
-        <PhotoDesign value={form.imageOverlay} onChange={(v) => set('imageOverlay', v)} store={store} cover={form.images[0]} />
+        <PhotoDesign
+          value={form.imageOverlay}
+          design={form.photoDesign}
+          onChange={(v, d) => { set('imageOverlay', v); set('photoDesign', d); }}
+          store={store}
+          cover={form.images[0]}
+        />
       </Field>
 
       <Field label={kind === 'LIVESTOCK' ? 'Name of the listing' : 'Name'} required error={errors.name}>

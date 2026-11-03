@@ -43,7 +43,7 @@ test('a seller turns a photo design on, changes it and turns it off; buyers get 
 
 test('a new product can be saved with a design, and none is the default', async () => {
   const { parseImageOverlay, IMAGE_OVERLAYS } = require('../src/utils/imageOverlays');
-  assert.equal(IMAGE_OVERLAYS.length, 10);
+  assert.equal(IMAGE_OVERLAYS.filter((k) => k !== 'custom').length, 10);
   for (const off of [null, undefined, '', 'none']) assert.equal(parseImageOverlay(off), null);
   for (const key of IMAGE_OVERLAYS) assert.equal(parseImageOverlay(key), key);
   for (const bad of ['x', 3, {}, 'LOGO-CORNER']) assert.throws(() => parseImageOverlay(bad), /photo designs/);

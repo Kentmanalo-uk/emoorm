@@ -38,6 +38,7 @@ const PRODUCT_SELECT = {
   municipalityId: true,
   returnPolicy: true,
   imageOverlay: true,
+  photoDesign: { select: { id: true, layers: true } },
   deletedAt: true,
 };
 

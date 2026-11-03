@@ -5,6 +5,7 @@ const { authenticate, authorize, optionalAuth } = require('../middleware/auth');
 const { asyncHandler } = require('../middleware/errorHandler');
 const { recordPing, getStats, getPublicDownloads } = require('../services/appInstall.service');
 const playTesters = require('../services/playTester.service');
+const { senderStatus } = require('../utils/email');
 
 // A phone pings once per launch and once per sign-in; this is generous.
 const pingLimiter = rateLimit({
@@ -54,11 +55,18 @@ router.post('/testers', testerLimiter, optionalAuth, asyncHandler(async (req, re
 
 // Super admin: the list, marking people added (emails them), removing one.
 router.get('/testers', authenticate, authorize('SUPER_ADMIN'), asyncHandler(async (req, res) => {
-  res.json({ success: true, data: await playTesters.list() });
+  // `sender`: whether the emails to testers can go out now.
+  const [list, sender] = await Promise.all([playTesters.list(), senderStatus()]);
+  res.json({ success: true, data: { ...list, sender } });
 }));
 
 router.post('/testers/added', authenticate, authorize('SUPER_ADMIN'), asyncHandler(async (req, res) => {
   res.json({ success: true, data: await playTesters.markAdded(req.body?.ids) });
+}));
+
+// Super admin: the link again, to testers already added.
+router.post('/testers/resend', authenticate, authorize('SUPER_ADMIN'), asyncHandler(async (req, res) => {
+  res.json({ success: true, data: await playTesters.resend(req.body?.ids) });
 }));
 
 router.delete('/testers/:id', authenticate, authorize('SUPER_ADMIN'), asyncHandler(async (req, res) => {

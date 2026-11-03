@@ -1758,3 +1758,32 @@
   background: var(--t-neutral-200, #e2e8f0);
   color: transparent;
 }
+
+/* Email cannot go out (SenderWarning.jsx): on the pages that send it. */
+.admin-sender-warning {
+  display: flex;
+  gap: 12px;
+  margin: 12px 16px;
+  padding: 14px 16px;
+  border: 1px solid #fecaca;
+  border-radius: 12px;
+  background: #fef2f2;
+  color: #7f1d1d;
+}
+
+.admin-sender-warning svg {
+  flex: none;
+  margin-top: 1px;
+  color: #dc2626;
+}
+
+.admin-sender-warning strong {
+  display: block;
+  font-size: 14px;
+}
+
+.admin-sender-warning p {
+  margin: 4px 0 0;
+  font-size: 13px;
+  line-height: 1.5;
+}

@@ -2,6 +2,7 @@ import { resolveImg } from '../../lib/media';
 import {
   brandColor, inkOn, initialsOf, overlayOf,
 } from '../../lib/imageOverlays';
+import CustomOverlay from './CustomOverlay';
 import './ImageOverlay.css';
 
 /**
@@ -12,11 +13,23 @@ import './ImageOverlay.css';
  * through. It scales with the photo, so it reads the same on a small card
  * and on the product page.
  *
- * `design` overrides the product's own (the seller's preview).
+ * `design` overrides the product's own (the seller's preview), and with
+ * 'custom', `layers` the shop's own design to draw (else the product's).
  */
-export default function ImageOverlay({ product, store = product?.store, design }) {
+export default function ImageOverlay({
+  product, store = product?.store, design, layers,
+}) {
   const key = design === undefined ? overlayOf(product) : design;
   if (!key || !store) return null;
+  if (key === 'custom') {
+    const own = layers || product?.photoDesign?.layers;
+    if (!own) return null;
+    return (
+      <div className="iov iov--custom" aria-hidden="true">
+        <CustomOverlay layers={own} store={store} />
+      </div>
+    );
+  }
   const name = store.name || '';
   const color = brandColor(store);
   const ink = inkOn(color);

@@ -10,6 +10,7 @@ const { cached } = require('../lib/cachePolicy');
 const { cleanText, cleanFields } = require('../utils/sanitize');
 const { ApiError } = require('../middleware/errorHandler');
 const { parseImageOverlay } = require('../utils/imageOverlays');
+const photoDesignService = require('./photoDesign.service');
 const shopReadiness = require('./shopReadiness.service');
 const availabilityRepository = require('../repositories/availability.repository');
 const availabilityService = require('./availability.service');
@@ -598,6 +599,16 @@ const setModel3d = async (productId, userId, body = {}) => {
   return stripStoreInternals(updated);
 };
 
+/**
+ * The photo design to save: one of the ready designs, the shop's own
+ * ('custom' with photoDesignId, one of this shop's), or off.
+ */
+const overlayFields = async (data, storeId) => {
+  const imageOverlay = parseImageOverlay(data.imageOverlay);
+  if (imageOverlay !== 'custom') return { imageOverlay, photoDesignId: null };
+  return { imageOverlay, photoDesignId: await photoDesignService.assertUsable(data.photoDesignId, storeId) };
+};
+
 // ── Public shaping ──────────────────────────────────────────────────────
 
 const PUBLIC_STORE_FIELDS = [
@@ -818,7 +829,7 @@ const createProduct = async (userId, rawData) => {
 
   const kindData = { productType: kind, listingKind: kind === 'READY_TO_EAT' ? 'TODAY' : 'REGULAR' };
   if (has(data, 'fulfillment')) kindData.fulfillment = validateFulfillment(data.fulfillment, store);
-  if (has(data, 'imageOverlay')) kindData.imageOverlay = parseImageOverlay(data.imageOverlay);
+  if (has(data, 'imageOverlay')) Object.assign(kindData, await overlayFields(data, store.id));
   if (kind === 'PACKAGE') {
     const { items, ...pkg } = await packageFields({ data, store, product: null, fields });
     Object.assign(kindData, pkg, { packageItems: { create: items } });
@@ -1171,7 +1182,7 @@ const updateProduct = async (productId, userId, rawData) => {
     updateData.listingKind = kind === 'READY_TO_EAT' ? 'TODAY' : 'REGULAR';
   }
   if (has(data, 'fulfillment')) updateData.fulfillment = validateFulfillment(data.fulfillment, store);
-  if (has(data, 'imageOverlay')) updateData.imageOverlay = parseImageOverlay(data.imageOverlay);
+  if (has(data, 'imageOverlay')) Object.assign(updateData, await overlayFields(data, store.id));
 
   // The kind's facts: checked again when sent, or when the kind changes.
   const heads = updateData.stock !== undefined ? updateData.stock : Number(product.stock);

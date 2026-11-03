@@ -7,6 +7,7 @@ import { resolveImg } from '../../lib/media';
 import {
   brandColor, inkOn, initialsOf, overlayOf,
 } from '../../lib/imageOverlays';
+import CustomOverlay from './CustomOverlay';
 
 /**
  * A shop's branding drawn over a product photo: the design the seller chose
@@ -16,12 +17,16 @@ import {
  * the photo's shorter side (u = 1%), so a design looks the same on a small
  * card and on the product page. Mirrors web/src/components/product/ImageOverlay.
  *
- * `design` overrides the product's own (the seller's preview).
+ * `design` overrides the product's own (the seller's preview), and with
+ * 'custom', `layers` the shop's own design to draw (else the product's).
  */
-export default function ImageOverlay({ product, store = product?.store, design }) {
+export default function ImageOverlay({
+  product, store = product?.store, design, layers,
+}) {
   const key = design === undefined ? overlayOf(product) : design;
   const [box, setBox] = useState(null);
-  if (!key || !store) return null;
+  const own = key === 'custom' ? layers || product?.photoDesign?.layers : null;
+  if (!key || !store || (key === 'custom' && !own)) return null;
 
   const onLayout = (e) => {
     const { width, height } = e.nativeEvent.layout;
@@ -30,7 +35,8 @@ export default function ImageOverlay({ product, store = product?.store, design }
 
   return (
     <View style={[StyleSheet.absoluteFill, { overflow: 'hidden' }]} pointerEvents="none" onLayout={onLayout} accessible={false}>
-      {box ? <Design design={key} store={store} box={box} /> : null}
+      {box && own ? <CustomOverlay layers={own} store={store} box={box} /> : null}
+      {box && !own ? <Design design={key} store={store} box={box} /> : null}
     </View>
   );
 }

@@ -273,3 +273,42 @@
   background-color: transparent;
   font-size: 6cqmin;
 }
+
+/* A shop's own design (CustomOverlay.jsx): each piece centred on its x, y. */
+.iov-c {
+  position: absolute;
+  display: block;
+  white-space: nowrap;
+  transform-origin: center;
+}
+
+.iov-c > span {
+  display: block;
+}
+
+.iov-c-text {
+  overflow: hidden;
+  max-width: 96cqw;
+  line-height: 1.15;
+  text-overflow: ellipsis;
+}
+
+.iov-c-logo {
+  display: grid !important;
+  place-items: center;
+  box-sizing: border-box;
+  background-position: center;
+  background-repeat: no-repeat;
+  font-weight: 800;
+  letter-spacing: -0.02em;
+}
+
+.iov-c-shape {
+  box-sizing: border-box;
+}
+
+.iov-c-image {
+  background-position: center;
+  background-repeat: no-repeat;
+  background-size: contain;
+}

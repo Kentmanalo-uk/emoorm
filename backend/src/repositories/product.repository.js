@@ -202,9 +202,13 @@ const PACKAGE_ITEMS_INCLUDE = {
 };
 
 /** Include used by every detail-shaped read and write (owner id for the ownership check, no contact number). */
+/** A shop's own photo design a product wears (imageOverlay 'custom'). */
+const PHOTO_DESIGN_SELECT = { select: { id: true, layers: true } };
+
 const DETAIL_INCLUDE = {
   availabilities: AVAILABILITY_INCLUDE,
   packageItems: PACKAGE_ITEMS_INCLUDE,
+  photoDesign: PHOTO_DESIGN_SELECT,
   store: {
     select: {
       ...PUBLIC_STORE_SELECT,
@@ -219,6 +223,7 @@ const DETAIL_INCLUDE = {
 const LIST_INCLUDE = {
   availabilities: AVAILABILITY_INCLUDE,
   packageItems: PACKAGE_ITEMS_INCLUDE,
+  photoDesign: PHOTO_DESIGN_SELECT,
   store: { select: PUBLIC_STORE_SELECT },
   category: { select: CATEGORY_SELECT },
   municipality: { select: { id: true, name: true } },

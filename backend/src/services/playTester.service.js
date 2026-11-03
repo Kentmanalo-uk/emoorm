@@ -56,23 +56,12 @@ const list = async () => {
 };
 
 /**
- * Marks testers added to Play Console and emails each the link to join. An
- * email that cannot be sent leaves them marked: the admin sees it failed.
- * @returns {Promise<{ marked: number, emailed: number, failed: string[] }>}
+ * Emails each the link to join; answers who could not be emailed and why
+ * (the first reason: when one fails, they usually all fail alike).
  */
-const markAdded = async (ids) => {
-  const wanted = [...new Set((Array.isArray(ids) ? ids : []).filter((id) => typeof id === 'string'))].slice(0, 500);
-  if (!wanted.length) throw new ApiError('Choose who was added', 400);
-  const rows = await prisma.playTester.findMany({
-    where: { id: { in: wanted }, addedAt: null },
-    select: { id: true, email: true, user: { select: { fullName: true } } },
-  });
-  if (!rows.length) return { marked: 0, emailed: 0, failed: [] };
-  await prisma.playTester.updateMany({
-    where: { id: { in: rows.map((r) => r.id) }, addedAt: null },
-    data: { addedAt: new Date() },
-  });
+const emailAll = async (rows) => {
   const failed = [];
+  let reason = null;
   for (const row of rows) {
     try {
       // eslint-disable-next-line no-await-in-loop
@@ -81,10 +70,50 @@ const markAdded = async (ids) => {
       });
     } catch (err) {
       console.error(`[play-testers] could not email ${row.email}: ${err.message}`);
-      failed.push(row.email);
+      failed.push(row);
+      reason = reason || err.message;
     }
   }
-  return { marked: rows.length, emailed: rows.length - failed.length, failed };
+  return { failed, reason };
+};
+
+/**
+ * Marks testers added to Play Console and emails each the link to join.
+ * Those who could not be emailed stay waiting, so marking them again (once
+ * email works) sends it; the answer says why it failed.
+ * @returns {Promise<{ marked: number, emailed: number, failed: string[], reason: string|null }>}
+ */
+const markAdded = async (ids) => {
+  const wanted = [...new Set((Array.isArray(ids) ? ids : []).filter((id) => typeof id === 'string'))].slice(0, 500);
+  if (!wanted.length) throw new ApiError('Choose who was added', 400);
+  const rows = await prisma.playTester.findMany({
+    where: { id: { in: wanted }, addedAt: null },
+    select: { id: true, email: true, user: { select: { fullName: true } } },
+  });
+  if (!rows.length) return { marked: 0, emailed: 0, failed: [], reason: null };
+  await prisma.playTester.updateMany({
+    where: { id: { in: rows.map((r) => r.id) }, addedAt: null },
+    data: { addedAt: new Date() },
+  });
+  const { failed, reason } = await emailAll(rows);
+  if (failed.length) {
+    await prisma.playTester.updateMany({ where: { id: { in: failed.map((r) => r.id) } }, data: { addedAt: null } });
+  }
+  return {
+    marked: rows.length - failed.length, emailed: rows.length - failed.length, failed: failed.map((r) => r.email), reason,
+  };
+};
+
+/** Emails testers already added the link again (one that never arrived). */
+const resend = async (ids) => {
+  const wanted = [...new Set((Array.isArray(ids) ? ids : []).filter((id) => typeof id === 'string'))].slice(0, 500);
+  if (!wanted.length) throw new ApiError('Choose who to email', 400);
+  const rows = await prisma.playTester.findMany({
+    where: { id: { in: wanted }, addedAt: { not: null } },
+    select: { id: true, email: true, user: { select: { fullName: true } } },
+  });
+  const { failed, reason } = await emailAll(rows);
+  return { emailed: rows.length - failed.length, failed: failed.map((r) => r.email), reason };
 };
 
 /** Takes someone off the list (asked to, or a mistyped address). */
@@ -94,5 +123,5 @@ const remove = async (id) => {
 };
 
 module.exports = {
-  join, list, markAdded, remove, JOIN_URL, STORE_URL,
+  join, list, markAdded, resend, remove, JOIN_URL, STORE_URL,
 };

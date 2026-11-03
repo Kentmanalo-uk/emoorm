@@ -879,6 +879,7 @@ model Store {
 
   // Relations
   products      Product[]
+  photoDesigns  StorePhotoDesign[]
   priceOffers   PriceOffer[]
   availabilities ProductAvailability[]
   orders        Order[]
@@ -1079,6 +1080,9 @@ model Product {
   /// The shop-branding design drawn over its photos when shown (utils/
   /// imageOverlays.js lists the keys). Null: off.
   imageOverlay String?      @map("image_overlay") @db.VarChar(32)
+  /// With imageOverlay 'custom': the shop's own design it wears.
+  photoDesignId String?     @map("photo_design_id")
+  photoDesign   StorePhotoDesign? @relation(fields: [photoDesignId], references: [id], onDelete: SetNull)
 
   // Ownership
   storeId     String        @map("store_id")
@@ -1143,6 +1147,7 @@ model Product {
   @@index([status, deletedAt, price], map: "products_price_idx")
   @@index([deletedAt, status, createdAt], map: "products_moderation_idx")
   @@index([status, deletedAt, soldCount], map: "products_sold_idx")
+  @@index([photoDesignId], map: "products_photo_design_id_idx")
 }
 
 /// One of the shop's products inside a package (a PACKAGE product), and how
@@ -2218,6 +2223,24 @@ model AppDownload {
 
   @@id([version, day])
   @@map("app_downloads")
+}
+
+/// A shop's own photo design, made in the website's design editor
+/// (utils/photoDesign.js describes the layers). A product wears it when its
+/// imageOverlay is 'custom'.
+model StorePhotoDesign {
+  id        String   @id @default(uuid())
+  storeId   String   @map("store_id")
+  store     Store    @relation(fields: [storeId], references: [id], onDelete: Cascade)
+  name      String   @db.VarChar(60)
+  layers    Json
+  products  Product[]
+  createdAt DateTime @default(now()) @map("created_at")
+  updatedAt DateTime @updatedAt @map("updated_at")
+
+  @@index([storeId], map: "store_photo_designs_store_idx")
+  @@index([updatedAt], map: "store_photo_designs_updated_idx")
+  @@map("store_photo_designs")
 }
 
 // People who asked on the /app page to try the early version on Google Play.

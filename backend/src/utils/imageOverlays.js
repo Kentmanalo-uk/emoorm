@@ -19,6 +19,8 @@ const IMAGE_OVERLAYS = Object.freeze([
   'label-strip',
   'hang-tag',
   'seal',
+  // The shop's own design (product.photoDesignId, services/photoDesign).
+  'custom',
 ]);
 
 /** A key from a request: a known design, or null (off). Anything else throws. */

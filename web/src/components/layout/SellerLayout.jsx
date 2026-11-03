@@ -74,6 +74,7 @@ export default function SellerLayout() {
   const mobileNav = useMobileNav(location.pathname);
   const [productsOpen, setProductsOpen] = useState(
     location.pathname.startsWith('/seller/products') || location.pathname.startsWith('/seller/today')
+    || location.pathname.startsWith('/seller/photo-designs')
   );
   const [shopOpen, setShopOpen] = useState(
     location.pathname.startsWith('/seller/store')
@@ -251,7 +252,9 @@ export default function SellerLayout() {
     ? 'Edit product'
     : /^\/seller\/today\/[^/]+\/edit$/.test(cleanPath)
       ? 'Edit post'
-      : templateKey
+      : /^\/seller\/photo-designs\/(?!new$)[^/]+$/.test(cleanPath)
+        ? 'Edit design'
+        : templateKey
         ? (SHOP_TEMPLATES.find((t) => t.key === templateKey)?.name || 'Template')
         : PHONE_TITLES[cleanPath] || crumbs[crumbs.length - 1]?.label || 'Seller Center';
   const goBack = () => {
@@ -340,6 +343,9 @@ export default function SellerLayout() {
                 </NavLink>
                 <NavLink to="/seller/today" className={subNavCls}>
                   Available today
+                </NavLink>
+                <NavLink to="/seller/photo-designs" className={subNavCls}>
+                  Photo designs
                 </NavLink>
               </div>
             </div>
@@ -748,6 +754,7 @@ const LABELS = {
   '/seller/settings': 'Settings',
   '/seller/shop-qr': 'Shop QR',
   '/seller/tools': 'Shop tools',
+  '/seller/photo-designs': 'Photo designs',
 };
 
 /** Phone: the five tabs on the bottom bar. */
@@ -795,6 +802,8 @@ const PHONE_TITLES = {
   '/seller/settings': 'Settings',
   '/seller/verification': 'Verify identity',
   '/seller/shop-qr': 'Shop QR',
+  '/seller/photo-designs': 'Photo designs',
+  '/seller/photo-designs/new': 'New design',
 };
 
 function buildCrumbs(pathname) {
@@ -812,7 +821,8 @@ function buildCrumbs(pathname) {
   for (let i = 0; i < parts.length; i++) {
     acc += '/' + parts[i];
     if (i === 0) continue; // skip 'seller' root
-    const label = LABELS[acc] || capitalize(parts[i]);
+    // A design's id is no title.
+    const label = LABELS[acc] || (parts[1] === 'photo-designs' && i === 2 ? 'Edit design' : capitalize(parts[i]));
     crumbs.push({ to: acc, label });
   }
   return crumbs;

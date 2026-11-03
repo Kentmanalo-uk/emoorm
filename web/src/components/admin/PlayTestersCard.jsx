@@ -6,6 +6,7 @@ import {
 import axios from '../../lib/axios';
 import ConfirmDialog from '../ui/ConfirmDialog';
 import EmptyArt from '../ui/EmptyArt';
+import SenderWarning from './SenderWarning';
 import LoadFailed from '../ui/LoadFailed';
 import { AdminDate, CountTag } from './AdminBits';
 import { toCSV, downloadCSV } from '../analytics/format';
@@ -54,9 +55,14 @@ export default function PlayTestersCard() {
     try {
       if (confirm.kind === 'added') {
         const res = await axios.post('/app/testers/added', { ids: confirm.ids });
-        const { emailed, failed } = res.data;
-        if (failed?.length) toast.error(`Marked added. Could not email: ${failed.join(', ')}`);
+        const { emailed, failed, reason } = res.data;
+        if (failed?.length) toast.error(`${reason || 'The email could not be sent'}. Not emailed, so still waiting: ${failed.join(', ')}`, { duration: 9000 });
         else toast.success(`${emailed} tester${emailed === 1 ? '' : 's'} emailed the link to join`);
+      } else if (confirm.kind === 'resend') {
+        const res = await axios.post('/app/testers/resend', { ids: confirm.ids });
+        const { emailed, failed, reason } = res.data;
+        if (failed?.length) toast.error(`${reason || 'The email could not be sent'}. Not emailed: ${failed.join(', ')}`, { duration: 9000 });
+        else toast.success(`Sent the link again to ${emailed} tester${emailed === 1 ? '' : 's'}`);
       } else {
         await axios.delete(`/app/testers/${confirm.ids[0]}`);
         toast.success('Taken off the list');
@@ -91,6 +97,7 @@ export default function PlayTestersCard() {
           </button>
         </div>
       </div>
+      <SenderWarning sender={data?.sender} />
       <ol className="aau-play-steps">
         <li>Copy the waiting emails.</li>
         <li>
@@ -126,9 +133,13 @@ export default function PlayTestersCard() {
                       : <span className="admin-badge admin-badge-pending">Waiting</span>}
                   </td>
                   <td className="aau-play-actions">
-                    {!t.addedAt && (
+                    {!t.addedAt ? (
                       <button type="button" className="admin-btn admin-btn-outline admin-btn-sm" onClick={() => setConfirm({ kind: 'added', ids: [t.id] })}>
                         Mark added
+                      </button>
+                    ) : (
+                      <button type="button" className="admin-btn admin-btn-outline admin-btn-sm" onClick={() => setConfirm({ kind: 'resend', ids: [t.id], email: t.email })}>
+                        Send link again
                       </button>
                     )}
                     <button
@@ -149,13 +160,15 @@ export default function PlayTestersCard() {
 
       <ConfirmDialog
         open={Boolean(confirm)}
-        title={confirm?.kind === 'remove' ? 'Take this Gmail off the list?' : 'Added in Play Console?'}
+        title={confirm?.kind === 'remove' ? 'Take this Gmail off the list?' : confirm?.kind === 'resend' ? 'Send the link again?' : 'Added in Play Console?'}
         message={confirm?.kind === 'remove'
           ? `${confirm.email} is removed here only. If it is in Play Console, remove it there too.`
+          : confirm?.kind === 'resend'
+            ? `${confirm.email} gets the email with the link to join again.`
           : confirm?.ids.length === 1
             ? 'Only if this email is already on the Play Console tester list: it is sent the link to join now.'
             : `Only if these ${confirm?.ids.length} emails are already on the Play Console tester list: each is sent the link to join now.`}
-        confirmLabel={confirm?.kind === 'remove' ? 'Remove' : 'Yes, email them'}
+        confirmLabel={confirm?.kind === 'remove' ? 'Remove' : confirm?.kind === 'resend' ? 'Send it' : 'Yes, email them'}
         danger={confirm?.kind === 'remove'}
         loading={busy}
         onConfirm={run}

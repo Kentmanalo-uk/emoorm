@@ -4,6 +4,7 @@ const adminEmailService = require('../services/adminEmail.service');
 const { authenticate, authorize } = require('../middleware/auth');
 const { asyncHandler } = require('../middleware/errorHandler');
 const { successResponse } = require('../utils/response');
+const { senderStatus } = require('../utils/email');
 
 /*
  * Admins' emails to many people (services/adminEmail.service): a super
@@ -13,11 +14,13 @@ router.use(authenticate, authorize('MUNICIPAL_ADMIN', 'SUPER_ADMIN'));
 
 // Emails already sent, with how many have gone.
 router.get('/', asyncHandler(async (req, res) => {
-  const result = await adminEmailService.list(req.user, req.query);
+  const [result, sender] = await Promise.all([adminEmailService.list(req.user, req.query), senderStatus()]);
   res.json({
     success: true,
     message: 'Emails retrieved successfully',
     data: result.emails,
+    // Whether emails can go out now (the sending domain verified).
+    sender,
     pagination: {
       page: result.page,
       pageSize: result.pageSize,

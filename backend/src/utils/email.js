@@ -120,8 +120,14 @@ const deliver = async ({ to, subject, html, text, attachments }) => {
     // The SDK reports failures in `error` rather than by throwing, so an
     // unchecked call here would record every rejected send as a success.
     if (error) {
-      const err = new Error(error.message || 'Resend rejected the message');
+      // Every email is refused while the sending domain is not verified:
+      // said so in words an admin can act on.
+      const unverified = /domain is not verified/i.test(error.message || '');
+      const err = new Error(unverified
+        ? `Emails cannot be sent: the ${domainOf(from)} domain is not verified with Resend (its DNS records are missing)`
+        : (error.message || 'Resend rejected the message'));
       err.name = error.name || 'ResendError';
+      if (unverified) senderCheck = null;
       throw err;
     }
 
@@ -141,6 +147,40 @@ const deliver = async ({ to, subject, html, text, attachments }) => {
     delivered: kind === 'smtp',
     transport: kind,
   };
+};
+
+const domainOf = (from) => (String(from).match(/@([^>\s]+)/)?.[1] || '').toLowerCase();
+
+/**
+ * Whether mail can go out now. With Resend, the sender's domain must be
+ * verified there (its DNS records in place): until it is, Resend refuses
+ * every email. Asked of Resend at most every ten minutes; when Resend cannot
+ * be asked, the answer is "ok" so a hiccup never shows a false alarm.
+ * @returns {Promise<{ ok: boolean, transport: string, domain?: string, status?: string }>}
+ */
+let senderCheck = null;
+const SENDER_CHECK_MS = 10 * 60 * 1000;
+const senderStatus = async () => {
+  if (!isResendConfigured()) return { ok: true, transport: isSmtpConfigured() ? 'smtp' : 'none' };
+  if (senderCheck && senderCheck.at > Date.now() - SENDER_CHECK_MS) return senderCheck.value;
+  const domain = domainOf(config.resend?.from || config.email?.from || 'noreply@emoorm.shop');
+  let value;
+  try {
+    const { data, error } = await withTimeout(getResend().domains.list(), SEND_TIMEOUT_MS, 'Resend domains');
+    if (error) throw new Error(error.message);
+    const found = (data?.data || []).find((d) => d.name === domain);
+    // Resend's shared sandbox sender needs no domain of ours.
+    const sandbox = domain === domainOf(SANDBOX_SENDER);
+    value = {
+      ok: sandbox || found?.status === 'verified', transport: 'resend', domain, status: sandbox ? 'sandbox' : (found?.status || 'not added'),
+    };
+  } catch {
+    value = {
+      ok: true, transport: 'resend', domain, status: 'unknown',
+    };
+  }
+  senderCheck = { at: Date.now(), value };
+  return value;
 };
 
 // ── Outbox: an email the provider could not take now is sent later ──────
@@ -853,6 +893,7 @@ module.exports = {
   sendSellerRejectedEmail,
   sendAdminTeamEmail,
   sendPlayTesterAddedEmail,
+  senderStatus,
   isSmtpConfigured,
   isResendConfigured,
 };

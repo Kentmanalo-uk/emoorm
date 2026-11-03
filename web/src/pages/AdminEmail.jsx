@@ -9,6 +9,7 @@ import EmptyArt from '../components/ui/EmptyArt';
 import useFocusTrap from '../hooks/useFocusTrap';
 import { formatRelativeTime } from '../lib/time';
 import { pollWhileVisible } from '../lib/visiblePoll';
+import SenderWarning from '../components/admin/SenderWarning';
 import AdminLayout from '../components/admin/AdminLayout';
 import useAuthStore from '../store/authStore';
 import '../components/admin/AdminLayout.css';
@@ -207,13 +208,19 @@ function EmailPreview({ open, sample, onClose }) {
 /* ── What has gone ─────────────────────────────────────────── */
 
 function SentEmails({ reloadKey, isSuperAdmin }) {
-  const [state, setState] = useState({ loading: true, emails: [], error: null });
+  const [state, setState] = useState({ loading: true, emails: [], error: null, sender: null });
   const [tick, setTick] = useState(0);
 
   useEffect(() => {
     let cancelled = false;
     axios.get('/admin-emails', { params: { pageSize: 10 } })
-      .then((res) => { if (!cancelled) setState({ loading: false, emails: Array.isArray(res.data) ? res.data : [], error: null }); })
+      .then((res) => {
+        if (!cancelled) {
+          setState({
+            loading: false, emails: Array.isArray(res.data) ? res.data : [], error: null, sender: res.sender || null,
+          });
+        }
+      })
       .catch((err) => { if (!cancelled) setState((s) => ({ ...s, loading: false, error: err.message || 'Could not load sent emails' })); });
     return () => { cancelled = true; };
   }, [reloadKey, tick]);
@@ -230,6 +237,7 @@ function SentEmails({ reloadKey, isSuperAdmin }) {
       <div className="admin-card-header">
         <h2 className="admin-card-title">Recently sent</h2>
       </div>
+      <SenderWarning sender={state.sender} />
       {state.loading ? (
         <div className="admin-empty"><p>Loading…</p></div>
       ) : state.error && state.emails.length === 0 ? (

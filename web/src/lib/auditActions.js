@@ -2,6 +2,7 @@
 export const ACTION_LABELS = {
   RESOLVE_RETURN_DISPUTE: 'Decided return dispute',
   REMOVE_REVIEW: 'Removed review',
+  REMOVE_PHOTO_DESIGN: 'Removed photo design',
   APPROVE_SELLER: 'Approved seller',
   REJECT_SELLER: 'Rejected seller',
   SUSPEND_USER: 'Suspended user',

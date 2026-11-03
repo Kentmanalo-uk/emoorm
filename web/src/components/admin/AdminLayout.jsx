@@ -4,7 +4,7 @@ import {
   SquaresFour as LayoutGrid, Users, Package, Flag, ChartPie as PieChart,
   CaretRight as ChevronRight, CaretLeft as ChevronLeft, Bell, SignOut as LogOut, Storefront as StoreIcon,
   EnvelopeSimple, Gear as SettingsIcon, Image as ImageIcon, Ticket, ChatsCircle,
-  Star, ArrowCounterClockwise, List, X, ChatCircleDots,
+  Star, ArrowCounterClockwise, List, X, ChatCircleDots, PaintBrush,
   House, Receipt, UserCircle, SquaresFour, Truck, DeviceMobile, UsersThree, PaperPlaneTilt,
   IdentificationBadge, MapPin, UserGear, ClockCounterClockwise, Gift,
 } from '../../lib/icons';
@@ -281,6 +281,9 @@ export default function AdminLayout({ children }) {
             </NavLink>
             <NavLink to="/admin/reviews" className={navCls} title="Reviews">
               <Star size={17} weight="fill" /> <span>Reviews</span>
+            </NavLink>
+            <NavLink to="/admin/photo-designs" className={navCls} title="Photo designs">
+              <PaintBrush size={17} weight="fill" /> <span>Photo designs</span>
             </NavLink>
             {/* The super admin always (the switch lives there); a town's admin once invites are on. */}
             {(isSuperAdmin || invitesOn) && (
@@ -581,6 +584,7 @@ const LABELS = {
   '/admin/support': 'Support',
   '/admin/notifications': 'Notifications',
   '/admin/reviews': 'Reviews',
+  '/admin/photo-designs': 'Photo designs',
   '/admin/invites': 'Invites',
   '/admin/returns': 'Returns',
   '/admin/banners': 'Banners',

@@ -161,7 +161,13 @@ export default function FoodStep({
         <Field error={errors.images}>
           <PhotoPicker images={form.images} onChange={(imgs) => set('images', imgs)} />
         </Field>
-        <PhotoDesign value={form.imageOverlay} onChange={(v) => set('imageOverlay', v)} store={store} cover={form.images[0]} />
+        <PhotoDesign
+          value={form.imageOverlay}
+          design={form.photoDesign}
+          onChange={(v, d) => { set('imageOverlay', v); set('photoDesign', d); }}
+          store={store}
+          cover={form.images[0]}
+        />
       </Section>
 
       {/* 2. Name and category */}

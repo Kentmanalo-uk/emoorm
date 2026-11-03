@@ -1,0 +1,55 @@
+/* Photo designs (admins): every shop's own designs on a sample photo. */
+
+.apd-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(210px, 1fr));
+  gap: 16px;
+  padding: 16px;
+}
+
+.apd-card {
+  display: grid;
+  gap: 10px;
+  min-width: 0;
+}
+
+.apd-preview {
+  position: relative;
+  aspect-ratio: 1;
+  overflow: hidden;
+  border-radius: 14px;
+  box-shadow: 0 0 0 1px var(--t-neutral-200, #e5e7eb);
+}
+
+/* A plain stand-in for a product photo, so every design reads on it. */
+.apd-sample {
+  position: absolute;
+  inset: 0;
+  background:
+    radial-gradient(circle at 35% 40%, #f5d7a1 0, #e9b872 22%, transparent 23%),
+    radial-gradient(circle at 65% 62%, #d98e5f 0, #b8693c 18%, transparent 19%),
+    linear-gradient(160deg, #cfd8dc, #90a4ae);
+}
+
+.apd-body {
+  display: grid;
+  gap: 3px;
+  min-width: 0;
+}
+
+.apd-name {
+  overflow: hidden;
+  font-size: 15px;
+  white-space: nowrap;
+  text-overflow: ellipsis;
+}
+
+.apd-meta {
+  font-size: 12.5px;
+  color: var(--t-neutral-500, #6b7280);
+}
+
+.apd-remove {
+  justify-self: start;
+  margin-top: 6px;
+}
