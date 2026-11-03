@@ -41,6 +41,7 @@ import { usePhoneLayout } from '../hooks/useMobileNav';
 import MoreMenu from '../components/MoreMenu';
 import ReviewItem from '../components/reviews/ReviewItem';
 import ProductTile from '../components/product/ProductTile';
+import ImageOverlay from '../components/product/ImageOverlay';
 import { useReviewViewer } from '../components/reviews/ReviewViewer';
 import useReviewSocial from '../components/reviews/useReviewSocial';
 import ProductOptionSheet from '../components/ProductOptionSheet';
@@ -1005,6 +1006,7 @@ const ProductDetails = () => {
                         onClick={() => setViewerAt(i)}
                         onError={photoFallback}
                       />
+                      <ImageOverlay product={product} />
                     </div>
                   ))}
                 </div>
@@ -1079,6 +1081,7 @@ const ProductDetails = () => {
                   onKeyDown={(e) => { if (e.key === 'Enter' || e.key === ' ') { e.preventDefault(); setViewerAt(selectedImage); } }}
                   onError={(e) => { e.currentTarget.src = '/placeholder-product.png'; }}
                 />
+                <ImageOverlay product={product} />
                 {gallery.length > 1 && (
                   <>
                     <button onClick={prevImage} className="pdp-gallery-nav pdp-gallery-nav-prev" aria-label="Previous image">

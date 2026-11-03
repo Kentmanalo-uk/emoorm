@@ -21,6 +21,7 @@ import ChoiceGroup from './product-form/ChoiceGroup';
 import KindDetails, { ServesField } from './product-form/KindDetails';
 import MoreDetails from './product-form/MoreDetails';
 import PreviewCard from './product-form/PreviewCard';
+import PhotoDesign from './product-form/PhotoDesign';
 import WayField from './product-form/WayField';
 import Model3dEditor from './product-form/Model3dEditor';
 import { SHAPES as SHAPES_3D } from '../../lib/model3d/templates';
@@ -762,6 +763,12 @@ export default function ProductForm({
         <Field error={errors.images}>
           <PhotoPicker images={form.images} onChange={(imgs) => set('images', imgs)} invalid={!!errors.images} />
         </Field>
+        <PhotoDesign
+          value={form.imageOverlay}
+          onChange={(v) => set('imageOverlay', v)}
+          store={outlet?.store}
+          cover={form.images[0]}
+        />
       </Card>
 
       {/* 2. Name and category */}
@@ -1044,7 +1051,7 @@ export default function ProductForm({
             </div>
             <div className="pf-aside-card">
               <h3>What buyers see</h3>
-              <PreviewCard draft={draft} kind={kind} way={showWay ? wayText : null} todayQty={todayQty} />
+              <PreviewCard draft={draft} kind={kind} way={showWay ? wayText : null} todayQty={todayQty} store={outlet?.store} />
             </div>
           </aside>
         </div>

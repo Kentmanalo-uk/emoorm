@@ -9,6 +9,7 @@ const followService = require('./storeFollow.service');
 const { cached } = require('../lib/cachePolicy');
 const { cleanText, cleanFields } = require('../utils/sanitize');
 const { ApiError } = require('../middleware/errorHandler');
+const { parseImageOverlay } = require('../utils/imageOverlays');
 const shopReadiness = require('./shopReadiness.service');
 const availabilityRepository = require('../repositories/availability.repository');
 const availabilityService = require('./availability.service');
@@ -603,6 +604,8 @@ const PUBLIC_STORE_FIELDS = [
   'id', 'name', 'slug', 'logo', 'fulfillmentMode', 'acceptsCod', 'paymentQrType',
   'pickupAddress', 'isActive', 'isSuspended', 'municipality',
   'vacationUntil', 'vacationNote', 'openingHours', 'prepDays',
+  // The shop's colour, for the photo designs (product.imageOverlay).
+  'primaryColor',
 ];
 const PRIVATE_PRODUCT_FIELDS = ['moderationNote', 'approvedById', 'imageHash'];
 
@@ -815,6 +818,7 @@ const createProduct = async (userId, rawData) => {
 
   const kindData = { productType: kind, listingKind: kind === 'READY_TO_EAT' ? 'TODAY' : 'REGULAR' };
   if (has(data, 'fulfillment')) kindData.fulfillment = validateFulfillment(data.fulfillment, store);
+  if (has(data, 'imageOverlay')) kindData.imageOverlay = parseImageOverlay(data.imageOverlay);
   if (kind === 'PACKAGE') {
     const { items, ...pkg } = await packageFields({ data, store, product: null, fields });
     Object.assign(kindData, pkg, { packageItems: { create: items } });
@@ -1167,6 +1171,7 @@ const updateProduct = async (productId, userId, rawData) => {
     updateData.listingKind = kind === 'READY_TO_EAT' ? 'TODAY' : 'REGULAR';
   }
   if (has(data, 'fulfillment')) updateData.fulfillment = validateFulfillment(data.fulfillment, store);
+  if (has(data, 'imageOverlay')) updateData.imageOverlay = parseImageOverlay(data.imageOverlay);
 
   // The kind's facts: checked again when sent, or when the kind changes.
   const heads = updateData.stock !== undefined ? updateData.stock : Number(product.stock);

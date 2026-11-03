@@ -39,6 +39,7 @@ import ReportModal from '../components/ReportModal';
 import axios from '../lib/axios';
 import { resolveImg } from '../lib/media';
 import ProductImage from '../components/ProductImage';
+import ImageOverlay from '../components/product/ImageOverlay';
 import {
   followStore as apiFollowStore,
   unfollowStore as apiUnfollowStore,
@@ -684,7 +685,7 @@ export default function StoreDetail() {
                 <div className="shop-m-panel shop-m-home">
                   {home === null
                     ? <div className="shop-m-home-loading" aria-hidden="true"><span /><span /><span /></div>
-                    : <ShopHome sections={home} onAddToCart={addFromHome} />}
+                    : <ShopHome sections={home} onAddToCart={addFromHome} store={store} />}
                 </div>
               )}
 
@@ -1058,7 +1059,7 @@ export default function StoreDetail() {
           {/* Home (computers), or the grid */}
           {!isPhone && deskView === 'home' ? (
             <div className="shop-desk-home">
-              <ShopHome sections={home} onAddToCart={addFromHome} />
+              <ShopHome sections={home} onAddToCart={addFromHome} store={store} />
             </div>
           ) : isLoadingProducts ? (
             <div className="shop-grid">
@@ -1177,6 +1178,7 @@ function PhoneProductRow({
     <div className="shop-m-row" {...peekProduct(product, { store })}>
       <Link to={`/product/${product.slug}`} className="shop-m-row-img">
         <ProductImage src={images[0] || null} alt={product.name} />
+        <ImageOverlay product={product} store={store || product.store} />
         {soldOut && <span className="shop-m-row-soldout">Sold out</span>}
       </Link>
       <div className="shop-m-row-body">

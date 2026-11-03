@@ -569,7 +569,7 @@ export default function StoreDetail() {
             <View style={[styles.panel, styles.homePanel]}>
               {home === null
                 ? <ShopHomeSkeleton />
-                : <ShopHome sections={home} accent={primary} onAddToCart={(p) => addToCartPhone(p)} />}
+                : <ShopHome sections={home} accent={primary} onAddToCart={(p) => addToCartPhone(p)} store={store} />}
             </View>
           ) : null}
 

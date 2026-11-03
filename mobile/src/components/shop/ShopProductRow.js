@@ -6,6 +6,7 @@ import { useProductPeek } from '../peek/ProductPeek';
 import { PlusIcon, ShoppingCartIcon, StarIcon } from '../../lib/icons';
 import ProductCard from '../ProductCard';
 import ShopTileImage from './ShopTileImage';
+import ImageOverlay from '../product/ImageOverlay';
 import { SaleWas } from '../SaleTag';
 import { saleInfo } from '../../lib/variantPricing';
 import { notTakingOrders, opensLabel } from '../../lib/availability';
@@ -61,6 +62,7 @@ function ShopProductRowBase({ product, onAdd, onBuy, closed = false }) {
     <View style={styles.row}>
       <Pressable style={styles.img} onPress={open} {...peek} accessibilityRole="link" accessibilityLabel={product.name}>
         <ShopTileImage src={images[0] || null} />
+        <ImageOverlay product={product} />
         {soldOut ? <Text style={styles.soldout}>Sold out</Text> : null}
       </Pressable>
       <View style={styles.body}>

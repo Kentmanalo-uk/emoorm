@@ -37,6 +37,7 @@ const PRODUCT_SELECT = {
   categoryId: true,
   municipalityId: true,
   returnPolicy: true,
+  imageOverlay: true,
   deletedAt: true,
 };
 

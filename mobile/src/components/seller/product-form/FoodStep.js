@@ -4,6 +4,7 @@ import {
 } from '../../../lib/icons';
 import { font, t, themed } from '../../../theme';
 import PhotoPicker from './PhotoPicker';
+import PhotoDesign from './PhotoDesign';
 import ChoiceGroup from './ChoiceGroup';
 import WayField, { derivedStyles } from './WayField';
 import {
@@ -93,7 +94,7 @@ function Note({ icon: Icon = InfoIcon, children }) {
  */
 export default function FoodStep({
   form, set, errors, categories, onCategory, onKind, onPackage, onHasOptions, groupActions,
-  moreOpen, onMoreToggle, moreSummary, more, ctx,
+  moreOpen, onMoreToggle, moreSummary, more, ctx, store,
 }) {
   const {
     kind, kindOpts, editing, couriersOn, shopMode, stockedGroup, hasOptions, offers, priceFrom,
@@ -160,6 +161,7 @@ export default function FoodStep({
         <Field error={errors.images}>
           <PhotoPicker images={form.images} onChange={(imgs) => set('images', imgs)} />
         </Field>
+        <PhotoDesign value={form.imageOverlay} onChange={(v) => set('imageOverlay', v)} store={store} cover={form.images[0]} />
       </Section>
 
       {/* 2. Name and category */}

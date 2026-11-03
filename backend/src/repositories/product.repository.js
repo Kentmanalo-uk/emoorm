@@ -146,6 +146,8 @@ const PUBLIC_STORE_SELECT = {
   name: true,
   slug: true,
   logo: true,
+  // The photo designs (product.imageOverlay) are drawn in the shop's colour.
+  primaryColor: true,
   fulfillmentMode: true,
   acceptsCod: true,
   paymentQrType: true,

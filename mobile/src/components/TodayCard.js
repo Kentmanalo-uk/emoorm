@@ -6,6 +6,7 @@ import { saleInfo } from '../lib/variantPricing';
 import { font, t, themed, veil } from '../theme';
 import { ProductStars } from './ProductStats';
 import ProductImage from './ProductImage';
+import ImageOverlay from './product/ImageOverlay';
 import useOpenProduct from './useOpenProduct';
 import { sizedImg } from '../lib/media';
 import { parseImages } from './product/productLib';
@@ -69,6 +70,7 @@ export default function TodayCard({ item, result = false, onPress, style }) {
     <Pressable accessibilityRole="button" accessibilityLabel={product.name} onPress={open} {...peek} style={[styles.card, style]}>
       <View ref={photoRef} collapsable={false} style={styles.image}>
         <ProductImage src={product.images?.[0]} style={StyleSheet.absoluteFill} />
+        <ImageOverlay product={product} store={store || product.store} />
         {!soldOut && remaining != null && remaining <= 5 ? (
           <Text style={styles.leftBadge}>{remaining} left</Text>
         ) : null}

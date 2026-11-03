@@ -528,6 +528,7 @@ export default function ProductForm({
         form={form}
         set={set}
         errors={errors}
+        store={store}
         categories={categories}
         onCategory={onCategory}
         onKind={onKind}
@@ -568,6 +569,7 @@ export default function ProductForm({
         form={form}
         set={set}
         errors={errors}
+        store={store}
         categories={categories}
         kind={kind}
         kindOpts={kindOpts}
@@ -610,7 +612,7 @@ export default function ProductForm({
       />
     );
   } else {
-    body = <ReviewStep draft={draft} kind={kind} way={wayText} todayQty={todayQty} sections={sumup} onEdit={jumpTo} />;
+    body = <ReviewStep draft={draft} kind={kind} way={wayText} todayQty={todayQty} sections={sumup} onEdit={jumpTo} store={store} />;
   }
 
   if (savedFood) {

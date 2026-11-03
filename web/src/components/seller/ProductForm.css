@@ -2326,3 +2326,119 @@
     justify-content: center;
   }
 }
+
+/* ── Photo design: the shop's branding over the photos ───────────────── */
+
+.pf-design {
+  margin-top: 14px;
+  padding-top: 6px;
+  border-top: 1px solid var(--t-neutral-200, #e5e7eb);
+}
+
+.pf-design-grid {
+  display: grid;
+  grid-template-columns: repeat(5, minmax(0, 1fr));
+  gap: 12px;
+  margin-top: 10px;
+}
+
+.pf-design-opt {
+  display: grid;
+  gap: 6px;
+  padding: 0;
+  border: 0;
+  background: none;
+  color: var(--t-neutral-700, #374151);
+  font: inherit;
+  text-align: center;
+  cursor: pointer;
+  -webkit-tap-highlight-color: transparent;
+}
+
+.pf-design-photo {
+  position: relative;
+  display: block;
+  aspect-ratio: 1;
+  overflow: hidden;
+  border-radius: 12px;
+  background: var(--t-neutral-100, #f3f4f6);
+  box-shadow: 0 0 0 1px var(--t-neutral-200, #e5e7eb);
+  transition: box-shadow 0.15s ease, transform 0.15s ease;
+}
+
+.pf-design-photo img {
+  display: block;
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+}
+
+.pf-design-blank {
+  position: absolute;
+  inset: 0;
+  background: linear-gradient(135deg, var(--t-neutral-200, #e5e7eb), var(--t-neutral-100, #f3f4f6));
+}
+
+.pf-design-opt:hover .pf-design-photo {
+  transform: translateY(-2px);
+}
+
+.pf-design-opt.is-on .pf-design-photo {
+  box-shadow: 0 0 0 3px var(--t-primary-600, #059669);
+}
+
+.pf-design-opt:focus-visible {
+  outline: none;
+}
+
+.pf-design-opt:focus-visible .pf-design-photo {
+  box-shadow: 0 0 0 3px rgba(5, 150, 105, 0.45);
+}
+
+.pf-design-check {
+  position: absolute;
+  top: 6px;
+  right: 6px;
+  display: grid;
+  place-items: center;
+  width: 22px;
+  height: 22px;
+  border-radius: 50%;
+  background: var(--t-primary-600, #059669);
+  color: #ffffff;
+  box-shadow: 0 1px 4px rgba(0, 0, 0, 0.25);
+}
+
+.pf-design-label {
+  font-size: 12.5px;
+  font-weight: 500;
+}
+
+.pf-design-opt.is-on .pf-design-label {
+  color: var(--t-primary-700, #047857);
+  font-weight: 600;
+}
+
+.pf-design-note {
+  margin: 12px 0 0;
+  font-size: 13px;
+  color: var(--t-neutral-500, #6b7280);
+}
+
+.pf-design-note a {
+  color: var(--t-primary-700, #047857);
+  font-weight: 600;
+}
+
+@media (max-width: 768px) {
+  .pf-design-grid {
+    grid-template-columns: repeat(3, minmax(0, 1fr));
+    gap: 10px;
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .pf-design-photo {
+    transition: none;
+  }
+}

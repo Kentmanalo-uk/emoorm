@@ -1076,6 +1076,9 @@ model Product {
   /// updatedAt }. Null: none. Shown to buyers only while the super admin's
   /// product3dEnabled switch is on.
   model3d     Json?         @map("model_3d")
+  /// The shop-branding design drawn over its photos when shown (utils/
+  /// imageOverlays.js lists the keys). Null: off.
+  imageOverlay String?      @map("image_overlay") @db.VarChar(32)
 
   // Ownership
   storeId     String        @map("store_id")

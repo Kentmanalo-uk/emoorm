@@ -4,6 +4,7 @@ import { Star, ShoppingCart, Quotes, Storefront } from '../../lib/icons';
 import { resolveImg } from '../../lib/media';
 import { saleInfo } from '../../lib/variantPricing';
 import { SaleWas } from '../ui/SaleTag';
+import ImageOverlay from '../product/ImageOverlay';
 import ProductImage from '../ProductImage';
 import ProductTile from '../product/ProductTile';
 import useProductPeek from '../peek/useProductPeek';
@@ -22,18 +23,22 @@ import './ShopHome.css';
  * Layout follows the space it is given (container queries), so the same
  * section looks right in the phone preview and on a wide desktop page.
  */
-export default function ShopHome({ sections = [], lookup = null, preview = false, onAddToCart = null }) {
+export default function ShopHome({
+  sections = [], lookup = null, preview = false, onAddToCart = null, store = null,
+}) {
   if (!sections.length) return null;
   return (
     <div className={`shop-home${preview ? ' is-preview' : ''}`}>
       {sections.map((s) => (
-        <Section key={s.id} section={s} lookup={lookup} preview={preview} onAddToCart={onAddToCart} />
+        <Section key={s.id} section={s} lookup={lookup} preview={preview} onAddToCart={onAddToCart} store={store} />
       ))}
     </div>
   );
 }
 
-function Section({ section: s, lookup, preview, onAddToCart }) {
+function Section({
+  section: s, lookup, preview, onAddToCart, store,
+}) {
   const title = s.title ? <h3 className="shh-home-title">{s.title}</h3> : null;
   if (s.type === 'banner') {
     const images = (s.images || []).map((img) => ({
@@ -67,6 +72,7 @@ function Section({ section: s, lookup, preview, onAddToCart }) {
               big={s.style === 'hero' && i === 0}
               row={s.style === 'list'}
               onAddToCart={onAddToCart}
+              store={store}
             />
           ))}
         </div>
@@ -154,12 +160,14 @@ function Slider({ images, preview }) {
 }
 
 /** The shared card, or one of the two layouts a shop can pick that it has no shape for. */
-function SpotlightTile({ product: p, preview, big = false, row = false, onAddToCart }) {
+function SpotlightTile({
+  product: p, preview, big = false, row = false, onAddToCart, store,
+}) {
   const peekProduct = useProductPeek();
   if (!big && !row) {
     return (
       <div className="shh-tile-wrap">
-        <ProductTile product={p} preview={preview || !p.slug} onAddToCart={onAddToCart && Number(p.stock) !== 0 ? onAddToCart : undefined} />
+        <ProductTile product={p} store={store || p.store} preview={preview || !p.slug} onAddToCart={onAddToCart && Number(p.stock) !== 0 ? onAddToCart : undefined} />
       </div>
     );
   }
@@ -171,6 +179,7 @@ function SpotlightTile({ product: p, preview, big = false, row = false, onAddToC
     <>
       <span className="shh-tile-img">
         <ProductImage src={images[0] || null} alt={p.name} />
+        <ImageOverlay product={p} store={store || p.store} />
         {big && <em className="shh-tile-badge">Top pick</em>}
         {Number(p.stock) === 0 && <em className="shh-tile-out">Sold out</em>}
       </span>

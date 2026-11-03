@@ -34,7 +34,9 @@ const PRODUCT_CARD = {
   categoryId: true,
   storeId: true,
   deletedAt: true,
-  store: { select: { id: true, name: true, logo: true } },
+  // The shop-branding design over its photo, in the shop's colour.
+  imageOverlay: true,
+  store: { select: { id: true, name: true, logo: true, primaryColor: true } },
 };
 
 /** Options as a stable key: the same choice always gives the same text. */

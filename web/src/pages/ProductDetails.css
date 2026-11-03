@@ -2082,6 +2082,7 @@
 
   /* A little taller than square, so the photo leads the page. */
   .pdp-m-slide {
+    position: relative;
     flex: 0 0 100%;
     aspect-ratio: 5 / 6;
     scroll-snap-align: start;

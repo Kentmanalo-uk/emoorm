@@ -4,6 +4,7 @@ import { useRouter } from 'expo-router';
 import { QuotesIcon, ShoppingCartIcon, StarIcon, StorefrontIcon } from '../../lib/icons';
 import ProductCard, { CardPhotoButton } from '../ProductCard';
 import ProductImage from '../ProductImage';
+import ImageOverlay from '../product/ImageOverlay';
 import { SaleWas, peso } from '../SaleTag';
 import { resolveImg } from '../../lib/media';
 import { saleInfo } from '../../lib/variantPricing';
@@ -18,13 +19,15 @@ import { useProductPeek } from '../peek/ProductPeek';
  *
  * <ShopHome sections={home} accent={primary} onAddToCart={(product) => …} />
  */
-export default function ShopHome({ sections = [], accent = t.primary[600], onAddToCart = null }) {
+export default function ShopHome({
+  sections = [], accent = t.primary[600], onAddToCart = null, store = null,
+}) {
   const [width, setWidth] = useState(0);
   if (!sections.length) return null;
   return (
     <View style={styles.home} onLayout={(e) => setWidth(e.nativeEvent.layout.width)}>
       {width > 0 ? sections.map((s) => (
-        <Section key={s.id} section={s} width={width} accent={accent} onAddToCart={onAddToCart} />
+        <Section key={s.id} section={s} width={width} accent={accent} onAddToCart={onAddToCart} store={store} />
       )) : null}
     </View>
   );
@@ -40,7 +43,9 @@ function Title({ text, accent }) {
   );
 }
 
-function Section({ section: s, width, accent, onAddToCart }) {
+function Section({
+  section: s, width, accent, onAddToCart, store,
+}) {
   if (s.type === 'banner') {
     const images = s.images || [];
     if (!images.length) return null;
@@ -76,7 +81,7 @@ function Section({ section: s, width, accent, onAddToCart }) {
     if (!products.length) return null;
     const half = (width - 10) / 2;
     const tile = (p, i, extra = {}) => (extra.big || extra.row ? (
-      <ProductTile key={p.id} product={p} accent={accent} onAddToCart={onAddToCart} {...extra} />
+      <ProductTile key={p.id} product={p} accent={accent} onAddToCart={onAddToCart} store={store} {...extra} />
     ) : (
       <ProductCard
         key={p.id}
@@ -84,6 +89,7 @@ function Section({ section: s, width, accent, onAddToCart }) {
         variant="home"
         priceColor={accent}
         style={extra.style}
+        store={store}
         photoExtra={onAddToCart && Number(p.stock) !== 0 ? (
           <CardPhotoButton label={`Add ${p.name} to cart`} color={accent} onPress={() => onAddToCart(p)}>
             <ShoppingCartIcon size={16} color="#fff" />
@@ -203,7 +209,9 @@ function Slider({ images, width }) {
 }
 
 /** A shop's own "list" and "hero" layouts, which the shared card has no shape for. */
-function ProductTile({ product: p, accent, big = false, row = false, onAddToCart, style }) {
+function ProductTile({
+  product: p, accent, big = false, row = false, onAddToCart, style, store,
+}) {
   const router = useRouter();
   const images = Array.isArray(p.images) ? p.images : [];
   const rating = Number(p.averageRating || 0);
@@ -225,6 +233,7 @@ function ProductTile({ product: p, accent, big = false, row = false, onAddToCart
       >
         <View style={[styles.tileImg, big && styles.tileImgBig, row && styles.tileImgRow]}>
           <ProductImage src={images[0] || null} />
+          <ImageOverlay product={p} store={store || p.store} />
           {big ? <Text style={[styles.badge, { backgroundColor: accent }]}>Top pick</Text> : null}
           {out ? <Text style={styles.out}>Sold out</Text> : null}
         </View>

@@ -1,5 +1,6 @@
 import { Link } from 'react-router-dom';
 import { Clock, Star, MapPin } from '../../lib/icons';
+import ImageOverlay from '../product/ImageOverlay';
 import ProductImage from '../ProductImage';
 import { SaleWas } from '../ui/SaleTag';
 import { saleInfo } from '../../lib/variantPricing';
@@ -43,6 +44,7 @@ export default function TodayCard({ item, result = false }) {
     >
       <div className="today-card-image">
         <ProductImage src={product.images?.[0]} alt="" />
+        <ImageOverlay product={product} store={store || product.store} />
         {!soldOut && remaining != null && remaining <= 5 && (
           <span className="today-card-left">{remaining} left</span>
         )}

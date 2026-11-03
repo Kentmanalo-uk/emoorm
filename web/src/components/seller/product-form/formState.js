@@ -3,6 +3,7 @@
  * blank), what each part checks, and the payload the product API takes.
  * Pure functions, so the form's parts stay small.
  */
+import { overlayOf } from '../../../lib/imageOverlays';
 import {
   KINDS, kindChoices, productKind, kindLabel, FULFILLMENTS,
 } from '../../../lib/productKinds';
@@ -247,6 +248,8 @@ export const toFormState = (product) => {
     returnPolicy: product?.returnPolicy || '',
     variations: variations.map(groupOf),
     fulfillment: FULFILLMENT_KEYS.includes(product?.fulfillment) ? product.fulfillment : null,
+    // The shop-branding design over its photos; null is off.
+    imageOverlay: overlayOf(product),
     // The kinds' own facts (product.details).
     size: d.size || '',
     serves: d.serves || '',
@@ -481,6 +484,7 @@ export const buildPayload = (state, { kind, hasOptions, editing, product }) => {
     variations,
     details: detailsFor(kind, state),
     fulfillment: state.fulfillment || null,
+    imageOverlay: state.imageOverlay || null,
   };
 
   if (kind === 'REGULAR') {
@@ -792,6 +796,7 @@ export const draftProduct = (s, ctx) => {
     salePrice: !span && s.saleOn && Number(s.salePrice) > 0 ? Number(s.salePrice) : null,
     images: s.images,
     fulfillment: s.fulfillment,
+    imageOverlay: s.imageOverlay || null,
   };
 };
 

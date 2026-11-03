@@ -2,6 +2,7 @@ import { Image as ImageIcon } from '../../../lib/icons';
 import { resolveImg } from '../../../lib/media';
 import { kindFacts, priceUnit } from '../../../lib/productKinds';
 import { peso } from './formState';
+import ImageOverlay from '../../product/ImageOverlay';
 
 const BADGES = {
   READY_TO_EAT: 'Available today',
@@ -10,7 +11,9 @@ const BADGES = {
 };
 
 /** What buyers will see: the product's card with its key facts. */
-export default function PreviewCard({ draft, kind, way, todayQty }) {
+export default function PreviewCard({
+  draft, kind, way, todayQty, store,
+}) {
   const cover = draft.images[0];
   const facts = kind ? kindFacts(draft) : [];
   const unit = priceUnit(draft);
@@ -19,6 +22,7 @@ export default function PreviewCard({ draft, kind, way, todayQty }) {
     <div className="pf-preview">
       <div className="pf-preview-img">
         {cover ? <img src={resolveImg(cover) || cover} alt="" /> : <span><ImageIcon size={32} /> No photo yet</span>}
+        {cover && <ImageOverlay product={draft} store={store} />}
         {BADGES[kind] && <em className="pf-preview-badge">{BADGES[kind]}</em>}
       </div>
       <div className="pf-preview-body">

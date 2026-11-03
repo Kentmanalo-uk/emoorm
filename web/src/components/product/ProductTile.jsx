@@ -2,6 +2,7 @@ import { memo } from 'react';
 import { Link } from 'react-router-dom';
 import { ShoppingCart, Star } from '../../lib/icons';
 import ProductImage from '../ProductImage';
+import ImageOverlay from './ImageOverlay';
 import { SaleWas } from '../ui/SaleTag';
 import { ProductTodayTag } from '../today/TodayTag';
 import useProductPeek from '../peek/useProductPeek';
@@ -64,6 +65,7 @@ export default memo(function ProductTile({
     <>
       <div className="product-image">
         <ProductImage src={parseImages(product.images)[0]} alt={product.name} />
+        <ImageOverlay product={product} store={store || product.store} />
         {product.stock === 0 && !isStockless(product) && !notTakingOrders(product) && (
           <div className="product-badge out-of-stock">Out of Stock</div>
         )}

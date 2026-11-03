@@ -4,6 +4,7 @@ import { MapPinIcon, StarIcon } from '../lib/icons';
 import { saleInfo } from '../lib/variantPricing';
 import { font, t, themed } from '../theme';
 import ProductImage from './ProductImage';
+import ImageOverlay from './product/ImageOverlay';
 import { ProductStats } from './ProductStats';
 import useOpenProduct from './useOpenProduct';
 import { sizedImg } from '../lib/media';
@@ -42,6 +43,8 @@ function ProductCard({
   reviewCount = 0,
   priceColor,
   photoExtra = null,
+  // The shop, when the product came without its own (a shop's home page).
+  store = null,
 }) {
   const openWith = useOpenProduct();
   const p = product || { name, price, averageRating: rating, reviewCount, images: imageUrl ? [imageUrl] : [] };
@@ -90,6 +93,7 @@ function ProductCard({
             if (w && h) photoAspect.current = w / h;
           }}
         />
+        <ImageOverlay product={p} store={store || p.store} />
         {p.stock === 0 && !isStockless(p) && !notTakingOrders(p) ? <Text style={[styles.badge, styles.badgeOut]}>Out of Stock</Text> : null}
         {result && p.isFeatured ? <Text style={[styles.badge, styles.badgeFeatured]}>Featured</Text> : null}
         {photoExtra}

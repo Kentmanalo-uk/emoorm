@@ -1,0 +1,275 @@
+/* A shop's branding over a product photo (ImageOverlay.jsx). Sizes are in
+   cqmin, a share of the photo's shorter side, so a design looks the same on
+   a 160px card and a 600px gallery. --iov-brand is the shop's colour and
+   --iov-ink the text that reads on it. */
+
+.iov {
+  position: absolute;
+  inset: 0;
+  /* No z-index: badges and buttons drawn after it stay on top. */
+  overflow: hidden;
+  container-type: size;
+  pointer-events: none;
+  user-select: none;
+  font-family: inherit;
+  line-height: 1.1;
+}
+
+.iov-logo {
+  display: grid;
+  flex: none;
+  place-items: center;
+  width: 9cqmin;
+  height: 9cqmin;
+  border-radius: 50%;
+  background-color: #ffffff;
+  background-position: center;
+  background-repeat: no-repeat;
+  background-size: cover;
+}
+
+.iov-initials {
+  background-color: var(--iov-brand);
+  color: var(--iov-ink);
+  font-size: 3.6cqmin;
+  font-weight: 800;
+  letter-spacing: -0.02em;
+}
+
+.iov-name {
+  overflow: hidden;
+  min-width: 0;
+  font-size: clamp(7px, 4.6cqmin, 26px);
+  font-weight: 700;
+  white-space: nowrap;
+  text-overflow: ellipsis;
+}
+
+.iov-chip {
+  display: flex;
+  align-items: center;
+  gap: 2.4cqmin;
+  min-width: 0;
+}
+
+/* 1. Logo badge: the logo in a white ring, bottom left. */
+.iov--logo-corner .iov-logo {
+  position: absolute;
+  bottom: 4cqmin;
+  left: 4cqmin;
+  width: 19cqmin;
+  height: 19cqmin;
+  border: 1cqmin solid #ffffff;
+  box-shadow: 0 1cqmin 3cqmin rgba(0, 0, 0, 0.28);
+}
+
+.iov--logo-corner .iov-initials {
+  font-size: 6.5cqmin;
+}
+
+/* 2. Watermark: a big, see-through logo, bottom right. */
+.iov--logo-watermark .iov-logo {
+  position: absolute;
+  right: 5cqmin;
+  bottom: 5cqmin;
+  width: 30cqmin;
+  height: 30cqmin;
+  border-radius: 0;
+  background-color: transparent;
+  background-size: contain;
+  opacity: 0.55;
+  filter: drop-shadow(0 0.6cqmin 1.6cqmin rgba(0, 0, 0, 0.35));
+}
+
+.iov--logo-watermark .iov-word {
+  position: absolute;
+  right: 5cqmin;
+  bottom: 4cqmin;
+  max-width: 80%;
+  overflow: hidden;
+  color: #ffffff;
+  font-size: 9cqmin;
+  font-weight: 800;
+  letter-spacing: -0.03em;
+  white-space: nowrap;
+  text-overflow: ellipsis;
+  opacity: 0.7;
+  text-shadow: 0 0.5cqmin 2cqmin rgba(0, 0, 0, 0.45);
+}
+
+/* 3. Name pill: logo and name on dark glass, bottom left. */
+.iov--name-pill .iov-chip {
+  position: absolute;
+  bottom: 4cqmin;
+  left: 4cqmin;
+  max-width: calc(100% - 8cqmin);
+  padding: 1.4cqmin 3.6cqmin 1.4cqmin 1.4cqmin;
+  border-radius: 999px;
+  background: rgba(17, 24, 39, 0.62);
+  color: #ffffff;
+  -webkit-backdrop-filter: blur(6px);
+  backdrop-filter: blur(6px);
+}
+
+/* 4. Brand bar: the shop's colour along the bottom. */
+.iov--brand-bar .iov-chip {
+  position: absolute;
+  right: 0;
+  bottom: 0;
+  left: 0;
+  justify-content: center;
+  padding: 2.4cqmin 4cqmin;
+  background: var(--iov-brand);
+  color: var(--iov-ink);
+}
+
+/* 5. Frame: a border in the shop's colour with the name on a tab. */
+.iov--frame {
+  border: 2.6cqmin solid var(--iov-brand);
+}
+
+.iov--frame .iov-tab {
+  position: absolute;
+  bottom: 0;
+  left: 50%;
+  display: flex;
+  max-width: 76%;
+  padding: 1.6cqmin 4.5cqmin 1cqmin;
+  border-radius: 2.6cqmin 2.6cqmin 0 0;
+  background: var(--iov-brand);
+  color: var(--iov-ink);
+  transform: translateX(-50%);
+}
+
+/* 6. Ribbon: a sash across the top right corner. */
+.iov--ribbon .iov-band {
+  position: absolute;
+  top: 11cqmin;
+  right: -17cqmin;
+  display: flex;
+  justify-content: center;
+  width: 70cqmin;
+  padding: 1.6cqmin 12cqmin;
+  background: var(--iov-brand);
+  color: var(--iov-ink);
+  box-shadow: 0 0.8cqmin 2cqmin rgba(0, 0, 0, 0.25);
+  transform: rotate(45deg);
+}
+
+.iov--ribbon .iov-name {
+  font-size: clamp(7px, 4cqmin, 22px);
+  letter-spacing: 0.02em;
+}
+
+/* 7. Top band: the shop's colour fading down from the top. */
+.iov--top-band::before {
+  position: absolute;
+  top: 0;
+  right: 0;
+  left: 0;
+  height: 30cqmin;
+  background: linear-gradient(180deg, var(--iov-brand) 0%, transparent 100%);
+  opacity: 0.92;
+  content: "";
+}
+
+.iov--top-band .iov-chip {
+  position: absolute;
+  top: 3.6cqmin;
+  left: 4cqmin;
+  max-width: calc(100% - 8cqmin);
+  color: var(--iov-ink);
+}
+
+/* 8. Label: a white strip at the bottom, marked in the shop's colour. */
+.iov--label-strip .iov-chip {
+  position: absolute;
+  right: 0;
+  bottom: 0;
+  left: 0;
+  padding: 2.2cqmin 4cqmin;
+  border-left: 2.4cqmin solid var(--iov-brand);
+  background: rgba(255, 255, 255, 0.94);
+  color: #111827;
+}
+
+.iov--label-strip .iov-logo {
+  box-shadow: 0 0 0 0.5cqmin rgba(0, 0, 0, 0.08);
+}
+
+.iov-lines {
+  display: grid;
+  min-width: 0;
+}
+
+.iov-lines small {
+  overflow: hidden;
+  font-size: clamp(6px, 3cqmin, 16px);
+  font-weight: 500;
+  color: #6b7280;
+  white-space: nowrap;
+  text-overflow: ellipsis;
+}
+
+/* 9. Hang tag: a tag with a hole, top left. */
+.iov--hang-tag .iov-tag {
+  position: absolute;
+  top: 5cqmin;
+  left: 4cqmin;
+  display: flex;
+  align-items: center;
+  max-width: 70%;
+  padding: 1.6cqmin 3.6cqmin 1.6cqmin 6.6cqmin;
+  border-radius: 1.2cqmin 2.4cqmin 2.4cqmin 1.2cqmin;
+  background: var(--iov-brand);
+  color: var(--iov-ink);
+  box-shadow: 0 0.8cqmin 2.4cqmin rgba(0, 0, 0, 0.28);
+  transform: rotate(-6deg);
+  transform-origin: left center;
+}
+
+.iov--hang-tag .iov-tag::before {
+  position: absolute;
+  top: 50%;
+  left: 2.2cqmin;
+  width: 2.4cqmin;
+  height: 2.4cqmin;
+  margin-top: -1.2cqmin;
+  border-radius: 50%;
+  background: #ffffff;
+  box-shadow: inset 0 0.3cqmin 0.6cqmin rgba(0, 0, 0, 0.3);
+  content: "";
+}
+
+/* 10. Seal: the logo in a round seal with a stitched ring, top right. */
+.iov--seal .iov-seal {
+  position: absolute;
+  top: 4cqmin;
+  right: 4cqmin;
+  display: grid;
+  place-items: center;
+  width: 23cqmin;
+  height: 23cqmin;
+  border-radius: 50%;
+  background: var(--iov-brand);
+  box-shadow: 0 1cqmin 3cqmin rgba(0, 0, 0, 0.3);
+}
+
+.iov--seal .iov-seal::before {
+  position: absolute;
+  inset: 1.5cqmin;
+  border: 0.6cqmin dashed var(--iov-ink);
+  border-radius: 50%;
+  opacity: 0.75;
+  content: "";
+}
+
+.iov--seal .iov-logo {
+  width: 14cqmin;
+  height: 14cqmin;
+}
+
+.iov--seal .iov-initials {
+  background-color: transparent;
+  font-size: 6cqmin;
+}

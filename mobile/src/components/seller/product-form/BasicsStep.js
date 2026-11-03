@@ -2,6 +2,7 @@ import { Pressable, StyleSheet, Text, View } from 'react-native';
 import { PackageIcon } from '../../../lib/icons';
 import { font, themed } from '../../../theme';
 import PhotoPicker from './PhotoPicker';
+import PhotoDesign from './PhotoDesign';
 import {
   Field, FieldError, FieldLabel, MoneyInput, PF, PfInput, PfSelect, RadioCards, useInvalidTarget,
 } from './parts';
@@ -21,7 +22,7 @@ const PRICE_WORDS = {
  * description.
  */
 export default function BasicsStep({
-  form, set, errors, categories, kind, kindOpts, onCategory, onKind, priceFrom, onPackage, editing,
+  form, set, errors, categories, kind, kindOpts, onCategory, onKind, priceFrom, onPackage, editing, store,
 }) {
   const ex = EXAMPLES[kind] || EXAMPLES.REGULAR;
   const words = PRICE_WORDS[kind] || PRICE_WORDS.REGULAR;
@@ -31,6 +32,7 @@ export default function BasicsStep({
     <>
       <Field label="Photos" required error={errors.images}>
         <PhotoPicker images={form.images} onChange={(imgs) => set('images', imgs)} />
+        <PhotoDesign value={form.imageOverlay} onChange={(v) => set('imageOverlay', v)} store={store} cover={form.images[0]} />
       </Field>
 
       <Field label={kind === 'LIVESTOCK' ? 'Name of the listing' : 'Name'} required error={errors.name}>

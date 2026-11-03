@@ -46,6 +46,8 @@ import useScreenshot from '../../../src/lib/useScreenshot';
 import useReviewViewer from '../../../src/components/reviews/useReviewViewer';
 import ShippingEstimate from '../../../src/components/product/ShippingEstimate';
 import ReportSheet from '../../../src/components/product/ReportSheet';
+import ImageOverlay from '../../../src/components/product/ImageOverlay';
+import { overlayOf } from '../../../src/lib/imageOverlays';
 import Product3dSheet, { Product3dChip } from '../../../src/components/product/Product3dSheet';
 import PhotoViewer from '../../../src/components/product/PhotoViewer';
 import { useCartSettings } from '../../../src/components/cart/cartSettings';
@@ -689,7 +691,16 @@ function ProductPage({ slug, via }) {
         <View ref={contentRef} collapsable={false}>
         {/* Gallery: one photo per screen width, swipe to change */}
         <View style={styles.gallery} onLayout={(e) => { setGalleryH(e.nativeEvent.layout.height); sectionY.current.overview = 0; }}>
-          <GalleryPager slides={slides} width={screenW} name={product.name} slug={slug} jump={jump} onOpen={setViewerAt} />
+          <GalleryPager
+            slides={slides}
+            width={screenW}
+            name={product.name}
+            slug={slug}
+            jump={jump}
+            onOpen={setViewerAt}
+            overlay={overlayOf(product)}
+            store={product.store}
+          />
           {product.status === 'PENDING' ? (
             <View style={styles.pending}><Text style={styles.pendingText}>PENDING REVIEW</Text></View>
           ) : null}
@@ -1214,7 +1225,7 @@ function ArrivingPhoto({
  * the main thread and keeps what it has decoded.
  */
 function GallerySlide({
-  src, width, label, first, slug, onShown, onPress,
+  src, width, label, first, slug, onShown, onPress, overlay, store,
 }) {
   const [step, setStep] = useState(0);
   // The first photo stands on the opened picture until it has loaded.
@@ -1250,6 +1261,7 @@ function GallerySlide({
           }}
         />
       </ArrivingPhoto>
+      {src ? <ImageOverlay design={overlay} store={store} /> : null}
     </Box>
   );
 }
@@ -1260,7 +1272,7 @@ function GallerySlide({
  * the ones beside it exist at a time, however many a product has.
  */
 const GalleryPager = memo(({
-  slides, width, name, slug, jump, onOpen,
+  slides, width, name, slug, jump, onOpen, overlay = null, store = null,
 }) => {
   const [active, setActive] = useState(0);
   const pager = useRef(null);
@@ -1292,6 +1304,8 @@ const GalleryPager = memo(({
             label={i === 0 ? name : `${name} ${i + 1}`}
             onShown={i === 0 ? () => heroImageReady(slug) : undefined}
             onPress={img ? () => onOpen(i) : undefined}
+            overlay={overlay}
+            store={store}
           />
         )))}
       </ScrollView>
@@ -1300,7 +1314,8 @@ const GalleryPager = memo(({
       ) : null}
     </>
   );
-}, (a, b) => a.width === b.width && a.jump === b.jump && a.name === b.name && a.slides.join() === b.slides.join());
+}, (a, b) => a.width === b.width && a.jump === b.jump && a.name === b.name && a.slides.join() === b.slides.join()
+  && a.overlay === b.overlay && a.store === b.store);
 
 function StoreAvatar({ uri, name }) {
   const [failed, setFailed] = useState(false);

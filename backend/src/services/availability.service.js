@@ -823,7 +823,7 @@ const listPublic = async (query = {}) => {
           product: { select: availabilityRepository.PRODUCT_SELECT },
           store: {
             select: {
-              id: true, name: true, slug: true, logo: true, fulfillmentMode: true, acceptsCod: true,
+              id: true, name: true, slug: true, logo: true, primaryColor: true, fulfillmentMode: true, acceptsCod: true,
               municipality: { select: { id: true, name: true } },
             },
           },

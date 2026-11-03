@@ -5,6 +5,7 @@ import { resolveImg } from '../../../lib/media';
 import { kindFacts, priceUnit } from '../productKinds';
 import { peso } from './formState';
 import { PF } from './parts';
+import ImageOverlay from '../../product/ImageOverlay';
 
 const BADGES = {
   READY_TO_EAT: 'Available today',
@@ -13,7 +14,9 @@ const BADGES = {
 };
 
 /** What buyers will see: the product's card with its key facts (web ReviewStep.jsx PreviewCard, phones). */
-export function PreviewCard({ draft, kind, way, todayQty }) {
+export function PreviewCard({
+  draft, kind, way, todayQty, store,
+}) {
   const cover = draft.images[0];
   const facts = kind ? kindFacts(draft) : [];
   const unit = priceUnit(draft);
@@ -29,6 +32,7 @@ export function PreviewCard({ draft, kind, way, todayQty }) {
             <Text style={styles.noImgText}>No photo yet</Text>
           </View>
         )}
+        {cover ? <ImageOverlay product={draft} store={store} /> : null}
         {BADGES[kind] ? <Text style={styles.badge}>{BADGES[kind]}</Text> : null}
       </View>
       <View style={styles.body}>
@@ -60,10 +64,12 @@ export function PreviewCard({ draft, kind, way, todayQty }) {
  * short sum-up of each step with a way back to change it.
  * sections: [{ step, title, lines }]
  */
-export default function ReviewStep({ draft, kind, way, todayQty, sections, onEdit }) {
+export default function ReviewStep({
+  draft, kind, way, todayQty, sections, onEdit, store,
+}) {
   return (
     <>
-      <PreviewCard draft={draft} kind={kind} way={way} todayQty={todayQty} />
+      <PreviewCard draft={draft} kind={kind} way={way} todayQty={todayQty} store={store} />
       {sections ? (
         <View style={styles.sumup}>
           {sections.map((sec, i) => (
