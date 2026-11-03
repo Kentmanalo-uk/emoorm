@@ -84,9 +84,9 @@ const recordDownload = async (fileName, ip = '') => {
 };
 
 /**
- * The download count everyone sees on the /app page, rounded the way app
- * stores do ("100+"). Below 10 there is nothing to show yet. Kept for ten
- * minutes; a new download starts it afresh.
+ * The download count everyone sees on the /app page: the exact total, and
+ * the same rounded the way app stores do ("100+", null below 10). Kept for
+ * ten minutes; a new download starts it afresh.
  */
 const BUCKETS = [1e6, 5e5, 1e5, 5e4, 1e4, 5e3, 1e3, 500, 100, 50, 10];
 let publicCount = null;
@@ -99,7 +99,7 @@ const getPublicDownloads = async () => {
   if (publicCount && publicCount.at > Date.now() - 10 * 60 * 1000) return publicCount.value;
   const sum = await prisma.appDownload.aggregate({ _sum: { downloads: true } });
   const total = sum._sum.downloads || 0;
-  const value = { label: downloadsLabel(total) };
+  const value = { total, label: downloadsLabel(total) };
   publicCount = { value, at: Date.now() };
   return value;
 };

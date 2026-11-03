@@ -89,4 +89,5 @@ test('a phone downloading again the same day counts once; the page shows a round
   const page = await h.api('GET', '/app/downloads');
   assert.equal(page.status, 200);
   assert.ok('label' in page.body.data);
+  assert.equal(typeof page.body.data.total, 'number');
 });

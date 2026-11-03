@@ -557,11 +557,14 @@ export default function AppDownload() {
     return () => { live = false; };
   }, [platform.kind]);
 
-  // "100+ downloads", once there are enough to show.
+  // "1,234 downloads", the exact count, once there is one.
   useEffect(() => {
     let live = true;
     axios.get('/app/downloads', { quiet: true })
-      .then((res) => { if (live) setDownloads(res.data?.label || null); })
+      .then((res) => {
+        const total = Number(res.data?.total) || 0;
+        if (live && total > 0) setDownloads(`${total.toLocaleString('en-PH')} download${total === 1 ? '' : 's'}`);
+      })
       .catch(() => {});
     return () => { live = false; };
   }, []);
@@ -598,8 +601,7 @@ export default function AppDownload() {
                 Emoorm <span className="appdl-beta" title="The app is still being tested: tell us if something doesn't work">Beta</span>
               </h1>
               <p className="appdl-tagline">The Mindoreño marketplace</p>
-              {downloads && <p className="appdl-count">{`${downloads} downloads`}</p>}
-              <p className="appdl-beta-note">Early version: some things may still change. Found a problem? Tell us in Help &amp; Support.</p>
+              {downloads && <p className="appdl-count">{downloads}</p>}
             </div>
             <div className="appdl-hero-actions">
               <GetButton platform={platform} onGet={onGet} onIphone={onIphone} buttonRef={heroGet} />
