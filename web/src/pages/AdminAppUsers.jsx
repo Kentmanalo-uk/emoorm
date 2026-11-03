@@ -7,6 +7,7 @@ import KpiCard from '../components/analytics/KpiCard';
 import EmptyArt from '../components/ui/EmptyArt';
 import LoadFailed from '../components/ui/LoadFailed';
 import { AdminDate, AdminSearch, CountTag } from '../components/admin/AdminBits';
+import PlayTestersCard from '../components/admin/PlayTestersCard';
 import { roleLabel } from '../lib/labels';
 import { num, toCSV, downloadCSV } from '../components/analytics/format';
 import release from '../data/androidApp.json';
@@ -15,9 +16,10 @@ import '../components/admin/AdminLayout.css';
 import './AdminAppUsers.css';
 
 /*
- * Super admin: the Android app (apk/). APK downloads from the /app page,
- * installs per version (reported by the site when it runs inside the app),
- * and the signed-in people using it, with their phone and version.
+ * Super admin: the Android app (apk/). Who asked for the early version on
+ * Google Play, APK downloads from the /app page, installs per version
+ * (reported by the site when it runs inside the app), and the signed-in
+ * people using it, with their phone and version.
  */
 
 const LATEST = release.version;
@@ -99,6 +101,8 @@ export default function AdminAppUsers() {
         </div>
 
         {error && !data && <div className="admin-card"><LoadFailed onRetry={load} what="the app numbers" compact /></div>}
+
+        <PlayTestersCard />
 
         <section className="aau-group" aria-labelledby="aau-reach">
           <h2 id="aau-reach" className="aau-group-title">Reach</h2>

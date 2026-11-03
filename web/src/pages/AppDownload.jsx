@@ -18,6 +18,8 @@ import {
   appInstalledHere, downloadedVersion, isOlder, openInAppUrl, release, rememberDownload,
 } from '../lib/appRelease';
 import axios from '../lib/axios';
+import PlayEarlyAccess, { PlayMark } from '../components/app/PlayEarlyAccess';
+import { shouldInvite } from '../lib/playEarly';
 import './AppDownload.css';
 
 /**
@@ -465,6 +467,7 @@ export default function AppDownload() {
   const [atEnd, setAtEnd] = useState(false);
   const [aboutOpen, setAboutOpen] = useState(false);
   const [aboutHeight, setAboutHeight] = useState(0);
+  const [early, setEarly] = useState(false);
   const heroGet = useRef(null);
   const end = useRef(null);
   const aboutText = useRef(null);
@@ -527,6 +530,17 @@ export default function AppDownload() {
 
   const closeSheet = useCallback(() => setSheet(null), []);
   const closeViewer = useCallback(() => setViewer(null), []);
+  const closeEarly = useCallback(() => setEarly(false), []);
+  // Google Play is for Android: no invitation on iPhones, nor in the app.
+  const playInvite = !ios && platform.kind !== 'app';
+
+  // The early version on Google Play: asked once a moment after the page
+  // opens (until joined, or a week after "Not now").
+  useEffect(() => {
+    if (!playInvite || !shouldInvite()) return undefined;
+    const timer = setTimeout(() => setEarly(true), 1200);
+    return () => clearTimeout(timer);
+  }, [playInvite]);
   // The link itself downloads the file; this only shows what comes next.
   const onGet = () => {
     rememberDownload();
@@ -601,6 +615,19 @@ export default function AppDownload() {
             )}
           </div>
         </section>
+
+        {playInvite && (
+          <div className="appdl-wrap">
+            <button type="button" className="appdl-early-banner" onClick={() => setEarly(true)}>
+              <span className="appdl-early-banner-mark"><PlayMark size={22} /></span>
+              <span className="appdl-early-banner-text">
+                <strong>Early version on Google Play</strong>
+                <small>Leave your Gmail and be one of the first testers</small>
+              </span>
+              <span className="appdl-early-banner-go">Join</span>
+            </button>
+          </div>
+        )}
 
         <section className="appdl-wrap appdl-about" aria-labelledby="appdl-about-title">
           <h2 id="appdl-about-title" className="appdl-h2">
@@ -767,6 +794,7 @@ export default function AppDownload() {
           </div>
         </Sheet>
 
+        <PlayEarlyAccess open={early} onClose={closeEarly} />
         {viewer !== null && <PreviewViewer start={viewer} onClose={closeViewer} />}
         {shareSheet}
       </div>

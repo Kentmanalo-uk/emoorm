@@ -1217,3 +1217,262 @@ p+.appdl-sheet-steps {
     font-size: 12px;
   }
 }
+
+/* ── The early version on Google Play ────────────────────────────────── */
+
+/* Under the hero: opens the invitation any time. */
+.appdl-early-banner {
+  display: flex;
+  align-items: center;
+  gap: 14px;
+  width: 100%;
+  max-width: 620px;
+  margin: 0 0 48px;
+  padding: 12px 12px 12px 14px;
+  border: 1px solid var(--appdl-line);
+  border-radius: 18px;
+  background: var(--appdl-mint);
+  color: var(--appdl-ink);
+  font: inherit;
+  text-align: left;
+  cursor: pointer;
+  transition: border-color 0.15s ease;
+  -webkit-tap-highlight-color: transparent;
+}
+
+.appdl-early-banner:hover {
+  border-color: var(--t-primary-200, #a7f3d0);
+}
+
+.appdl-early-banner:focus-visible {
+  outline: 3px solid rgba(5, 150, 105, 0.35);
+  outline-offset: 3px;
+}
+
+.appdl-early-banner-mark {
+  display: grid;
+  flex: none;
+  place-items: center;
+  width: 42px;
+  height: 42px;
+  border-radius: 12px;
+  background: #ffffff;
+}
+
+.appdl-early-banner-text {
+  flex: 1;
+  min-width: 0;
+}
+
+.appdl-early-banner-text strong {
+  display: block;
+  font-size: 15px;
+  font-weight: 700;
+}
+
+.appdl-early-banner-text small {
+  display: block;
+  margin-top: 1px;
+  font-size: 13px;
+  color: var(--appdl-text);
+}
+
+.appdl-early-banner-go {
+  flex: none;
+  padding: 8px 18px;
+  border-radius: 999px;
+  background: var(--appdl-green);
+  color: #ffffff;
+  font-size: 14px;
+  font-weight: 700;
+}
+
+/* The invitation itself. */
+.appdl-early {
+  position: relative;
+  padding-top: 28px;
+  text-align: center;
+}
+
+.appdl-early-close {
+  position: absolute;
+  top: 16px;
+  right: 16px;
+}
+
+.appdl-early-art {
+  position: relative;
+  width: 76px;
+  height: 76px;
+  margin: 0 auto 16px;
+}
+
+.appdl-early-art img {
+  width: 76px;
+  height: 76px;
+  border-radius: 20px;
+  box-shadow: 0 8px 22px rgba(5, 93, 7, 0.22);
+}
+
+.appdl-early-play {
+  position: absolute;
+  right: -10px;
+  bottom: -8px;
+  display: grid;
+  place-items: center;
+  width: 38px;
+  height: 38px;
+  border-radius: 50%;
+  background: #ffffff;
+  box-shadow: 0 2px 10px rgba(0, 0, 0, 0.16);
+}
+
+.appdl-early-kicker {
+  display: inline-block;
+  margin-bottom: 8px;
+  padding: 3px 10px;
+  border-radius: 999px;
+  background: var(--t-accent-500, #ec4899);
+  color: #ffffff;
+  font-size: 11px;
+  font-weight: 700;
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+}
+
+.appdl-early-title {
+  margin: 0 0 8px;
+  font-size: 22px;
+  font-weight: 700;
+  line-height: 1.2;
+  letter-spacing: -0.015em;
+  color: var(--appdl-ink);
+}
+
+.appdl-early-text {
+  margin: 0 0 18px;
+  font-size: 15px;
+  line-height: 1.55;
+  color: var(--appdl-text);
+}
+
+.appdl-early-label {
+  display: block;
+  margin-bottom: 6px;
+  font-size: 13px;
+  font-weight: 600;
+  text-align: left;
+  color: var(--appdl-ink);
+}
+
+.appdl-early-field {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  height: 50px;
+  padding: 0 14px;
+  border: 1.5px solid var(--t-neutral-300, #d1d5db);
+  border-radius: 14px;
+  background: #ffffff;
+  color: var(--t-neutral-500, #6b7280);
+  transition: border-color 0.15s ease, box-shadow 0.15s ease;
+}
+
+.appdl-early-field:focus-within {
+  border-color: var(--appdl-green);
+  box-shadow: 0 0 0 4px rgba(5, 150, 105, 0.14);
+}
+
+.appdl-early-field.has-error {
+  border-color: #dc2626;
+}
+
+.appdl-early-field input {
+  flex: 1;
+  min-width: 0;
+  height: 100%;
+  border: 0;
+  outline: none;
+  background: none;
+  color: var(--appdl-ink);
+  font: inherit;
+  font-size: 16px;
+}
+
+.appdl-early-hint {
+  margin: 6px 0 0;
+  font-size: 12.5px;
+  text-align: left;
+  color: var(--t-neutral-500, #6b7280);
+}
+
+.appdl-early-hint.is-error {
+  color: #dc2626;
+}
+
+.appdl-early-actions {
+  display: grid;
+  gap: 8px;
+  margin-top: 20px;
+}
+
+.appdl-early-yes {
+  width: 100%;
+  height: 50px;
+  font-size: 16px;
+}
+
+.appdl-early-yes:disabled {
+  opacity: 0.7;
+  cursor: progress;
+}
+
+.appdl-early-later,
+.appdl-early-change {
+  height: 44px;
+  border: 0;
+  border-radius: 14px;
+  background: none;
+  color: var(--t-neutral-600, #4b5563);
+  font: inherit;
+  font-size: 15px;
+  font-weight: 600;
+  cursor: pointer;
+}
+
+.appdl-early-later:hover,
+.appdl-early-change:hover {
+  background: var(--t-neutral-100, #f3f4f6);
+}
+
+.appdl-early-change {
+  height: auto;
+  margin-top: 4px;
+  padding: 6px 10px;
+  font-size: 13.5px;
+  font-weight: 500;
+  color: var(--appdl-green-deep);
+}
+
+@media (max-width: 768px) {
+  .appdl-early-banner {
+    margin-bottom: 32px;
+    border-radius: 16px;
+  }
+
+  .appdl-early-banner-text strong {
+    font-size: 14px;
+  }
+
+  .appdl-early-banner-text small {
+    font-size: 12.5px;
+  }
+
+  .appdl-early {
+    padding-top: 8px;
+  }
+
+  .appdl-early-close {
+    top: 22px;
+  }
+}

@@ -514,6 +514,7 @@ model User {
   vouchersCreated Voucher[]       @relation("VoucherCreator")
   voucherRedemptions VoucherRedemption[]
   appInstalls   AppInstall[]
+  playTesters   PlayTester[]
   identityVerification IdentityVerification?
   priceOffers   PriceOffer[]   @relation("OfferBuyer")
   teamMessagesSent     TeamMessage[]  @relation("TeamMessageSender")
@@ -2214,6 +2215,22 @@ model AppDownload {
 
   @@id([version, day])
   @@map("app_downloads")
+}
+
+// People who asked on the /app page to try the early version on Google Play.
+// A super admin adds the emails to the Play Console tester list, then marks
+// them added (addedAt), which emails each the link to join.
+model PlayTester {
+  id        String    @id @default(uuid())
+  email     String    @unique @db.VarChar(191)
+  userId    String?   @map("user_id")
+  user      User?     @relation(fields: [userId], references: [id], onDelete: SetNull)
+  addedAt   DateTime? @map("added_at")
+  createdAt DateTime  @default(now()) @map("created_at")
+
+  @@index([userId], map: "play_testers_user_idx")
+  @@index([createdAt], map: "play_testers_created_idx")
+  @@map("play_testers")
 }
 
 // ============================================

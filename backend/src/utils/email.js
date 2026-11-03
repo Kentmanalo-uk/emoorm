@@ -649,6 +649,41 @@ const sendSellerRejectedEmail = async ({ user, reason }) => {
   return sendMail({ to: user.email, subject, html, text });
 };
 
+/**
+ * Added to the Google Play tester list: the link that lets this Google
+ * account join the early version, then install it from Play.
+ */
+const sendPlayTesterAddedEmail = async ({ email, name = null, joinUrl, storeUrl }) => {
+  const hello = name || 'there';
+  const subject = "You're in: the early version of Emoorm on Google Play";
+  const text = [
+    `Hi ${hello},`,
+    '',
+    'You asked to try the early version of the Emoorm app, and your Google account is now on our tester list.',
+    '',
+    `1. Open this link on your Android phone and tap "Become a tester": ${joinUrl}`,
+    `2. Then install Emoorm from Google Play: ${storeUrl}`,
+    '',
+    `Use the same Google account as this email (${email}). If the link says the app isn't available, give it an hour and try again.`,
+    '',
+    'Found a problem? Tell us in Help & Support in the app. Salamat for helping us test!',
+    '— The Emoorm team',
+  ].join('\n');
+  const html = layout(`
+    ${heading("You're in!")}
+    ${para(`Hi ${escapeHtml(hello)}, you asked to try the early version of the Emoorm app, and your Google account is now on our tester list.`)}
+    <ol style="margin:0 0 16px;padding-left:20px;color:#374151;">
+      <li style="margin-bottom:6px;">Open the link below on your Android phone and tap <strong>Become a tester</strong>.</li>
+      <li>Then <a href="${escapeHtml(storeUrl)}" style="color:#059669;">install Emoorm from Google Play</a>.</li>
+    </ol>
+    ${button(joinUrl, 'Join the early version')}
+    ${para(`Use the same Google account as this email (<strong>${escapeHtml(email)}</strong>). If the link says the app isn't available, give it an hour and try again.`)}
+    ${para('Found a problem? Tell us in Help &amp; Support in the app. Salamat for helping us test!')}
+    ${footer}
+  `);
+  return sendMail({ to: email, subject, html, text });
+};
+
 /* ── Order emails ─────────────────────────────────────────────────────── */
 
 const money = (n) => `₱${Number(n || 0).toLocaleString('en-PH', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}`;
@@ -817,6 +852,7 @@ module.exports = {
   sendSellerApprovedEmail,
   sendSellerRejectedEmail,
   sendAdminTeamEmail,
+  sendPlayTesterAddedEmail,
   isSmtpConfigured,
   isResendConfigured,
 };
