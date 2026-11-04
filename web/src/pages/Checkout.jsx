@@ -658,6 +658,8 @@ const Checkout = () => {
   const quoted = storeInfo[storeIds[0]];
   // Delivered by the seller, priced by distance: waiting for the buyer's pin.
   const sellerFeePending = Boolean(quoted?.checked && quoted.covered && quoted.fee == null);
+  // When the order can't go ahead without a pin (otherwise it is optional).
+  const pinNeeded = fulfillmentMethod === 'DELIVERY' && !chosenCourier && (riderChosen || sellerFeePending);
   const deliveryFee = quoted?.checked && quoted.covered && quoted.fee != null
     ? Number(quoted.fee)
     : storeDeliveryFee(checkoutStore, settings, 'DELIVERY');
@@ -782,7 +784,13 @@ const Checkout = () => {
       if (!deliveryForm.street.trim()) errs.street = 'Street / house address is required.';
       if (!deliveryForm.barangay.trim()) errs.barangay = 'Barangay is required.';
       if (!deliveryForm.municipality.trim()) errs.municipality = 'Municipality is required.';
-      if (!deliveryPin || !validPin(deliveryPin.latitude, deliveryPin.longitude)) errs.pin = 'Pin your delivery spot on the map so the rider can find you.';
+      // The pin is optional, except for a MoorMove rider (who needs a spot to
+      // go to) and a shop that prices delivery by distance (no pin, no fee).
+      if (pinNeeded && (!deliveryPin || !validPin(deliveryPin.latitude, deliveryPin.longitude))) {
+        errs.pin = riderChosen
+          ? 'Pin your delivery spot on the map so the rider can find you.'
+          : 'Pin your delivery spot on the map so the shop can work out the delivery fee.';
+      }
     }
     setDeliveryErrors(errs);
     return Object.keys(errs).length === 0;
@@ -824,7 +832,7 @@ const Checkout = () => {
       return;
     }
     if (!validateDelivery()) {
-      const pinOnly = fulfillmentMethod === 'DELIVERY' && (!deliveryPin || !validPin(deliveryPin.latitude, deliveryPin.longitude))
+      const pinOnly = fulfillmentMethod === 'DELIVERY' && pinNeeded && (!deliveryPin || !validPin(deliveryPin.latitude, deliveryPin.longitude))
         && deliveryForm.street.trim() && deliveryForm.barangay.trim() && deliveryForm.municipality.trim();
       toast.error(pinOnly ? 'Pin your delivery spot on the map.' : fulfillmentMethod === 'DELIVERY' ? 'Please complete your delivery address.' : 'Please complete your contact details.');
       scrollToSection(pinOnly ? 'co-pin' : 'co-address');
@@ -1222,11 +1230,15 @@ const Checkout = () => {
 
                       {fulfillmentMethod === 'DELIVERY' && (
                         <div className={`form-group checkout-pin${deliveryErrors.pin ? ' has-error' : ''}`} id="co-pin">
-                          <label className="form-label">Pin your delivery spot</label>
+                          <label className="form-label">
+                            Pin your delivery spot{!pinNeeded && <span className="form-optional"> (optional)</span>}
+                          </label>
                           <p className="checkout-pin-help">
                             {pinnedAddress && deliveryPin && validPin(pinnedAddress.latitude, pinnedAddress.longitude)
                               ? 'From your saved address. Drag the pin if the spot has moved.'
-                              : 'Tap the map at your house (or use your location). The rider follows this pin.'}
+                              : pinNeeded
+                                ? `Tap the map at your house (or use your location). ${riderChosen ? 'The rider follows this pin.' : 'The shop prices delivery by distance from it.'}`
+                                : 'Tap the map at your house (or use your location) to help the delivery find you.'}
                           </p>
                           <StoreLocationMap
                             value={deliveryPin}

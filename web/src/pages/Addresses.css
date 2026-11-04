@@ -493,7 +493,8 @@
   align-items: center;
   gap: 5px;
   margin: 4px 0 0;
-  color: var(--t-accent-600, #db2777);
+  /* Optional, so a quiet note rather than a warning. */
+  color: var(--t-neutral-500, #6b7280);
   font-size: 12.5px;
 }
 

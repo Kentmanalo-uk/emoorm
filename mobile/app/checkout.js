@@ -541,6 +541,10 @@ export default function Checkout() {
   // One store per checkout: its fee for this address, or its standard fee until the quote is in.
   const checkoutStore = storeInfo[storeIds[0]]?.store || null;
   const quoted = storeInfo[storeIds[0]];
+  // Delivered by the seller, priced by distance: waiting for the buyer's pin.
+  const sellerFeePending = Boolean(quoted?.checked && quoted.covered && quoted.fee == null);
+  // When the order can't go ahead without a pin (otherwise it is optional).
+  const pinNeeded = fulfillmentMethod === 'DELIVERY' && !chosenCourier && (riderChosen || sellerFeePending);
   const deliveryFee = quoted?.checked && quoted.covered && quoted.fee != null
     ? Number(quoted.fee)
     : storeDeliveryFee(checkoutStore, settings, 'DELIVERY');
@@ -620,7 +624,13 @@ export default function Checkout() {
       if (!deliveryForm.street.trim()) errs.street = 'Street / house address is required.';
       if (!deliveryForm.barangay.trim()) errs.barangay = 'Barangay is required.';
       if (!deliveryForm.municipality.trim()) errs.municipality = 'Municipality is required.';
-      if (!deliveryPin || !validPin(deliveryPin.latitude, deliveryPin.longitude)) errs.pin = 'Pin your delivery spot on the map so the rider can find you.';
+      // The pin is optional, except for a MoorMove rider (who needs a spot to
+      // go to) and a shop that prices delivery by distance (no pin, no fee).
+      if (pinNeeded && (!deliveryPin || !validPin(deliveryPin.latitude, deliveryPin.longitude))) {
+        errs.pin = riderChosen
+          ? 'Pin your delivery spot on the map so the rider can find you.'
+          : 'Pin your delivery spot on the map so the shop can work out the delivery fee.';
+      }
     }
     setDeliveryErrors(errs);
     return Object.keys(errs).length === 0;
@@ -649,7 +659,7 @@ export default function Checkout() {
       return;
     }
     if (!validateDelivery()) {
-      const pinOnly = fulfillmentMethod === 'DELIVERY' && (!deliveryPin || !validPin(deliveryPin.latitude, deliveryPin.longitude))
+      const pinOnly = fulfillmentMethod === 'DELIVERY' && pinNeeded && (!deliveryPin || !validPin(deliveryPin.latitude, deliveryPin.longitude))
         && deliveryForm.street.trim() && deliveryForm.barangay.trim() && deliveryForm.municipality.trim();
       toast.error(pinOnly ? 'Pin your delivery spot on the map.' : fulfillmentMethod === 'DELIVERY' ? 'Please complete your delivery address.' : 'Please complete your contact details.');
       if (pinOnly) {
@@ -931,11 +941,15 @@ export default function Checkout() {
 
                   {!pickup ? (
                     <View style={styles.pin} onLayout={(e) => { pinSpot.current.pin = e.nativeEvent.layout.y; }}>
-                      <Text style={styles.pinLabel}>Pin your delivery spot</Text>
+                      <Text style={styles.pinLabel}>
+                        Pin your delivery spot{!pinNeeded ? <Text style={styles.pinOptional}> (optional)</Text> : null}
+                      </Text>
                       <Text style={styles.pinHelp}>
                         {pinnedAddress && deliveryPin && validPin(pinnedAddress.latitude, pinnedAddress.longitude)
                           ? 'From your saved address. Drag the pin if the spot has moved.'
-                          : 'Tap the map at your house (or use your location). The rider follows this pin.'}
+                          : pinNeeded
+                            ? `Tap the map at your house (or use your location). ${riderChosen ? 'The rider follows this pin.' : 'The shop prices delivery by distance from it.'}`
+                            : 'Tap the map at your house (or use your location) to help the delivery find you.'}
                       </Text>
                       <LocationPicker
                         value={deliveryPin}
@@ -1208,6 +1222,8 @@ const styles = themed(() => StyleSheet.create({
   // The delivery spot on the map (.checkout-pin, a .form-group: margin 4px 0 14px).
   pin: { marginTop: 4, marginBottom: 14, gap: 6 },
   pinLabel: { fontSize: 12.5, lineHeight: 20, ...font(600), color: t.neutral[700] },
+  // "(optional)" beside it, quieter (.form-optional).
+  pinOptional: { ...font(400), color: t.neutral[500] },
   // .checkout-pin-help: margin 2px 0 8px, on top of the group's 6px gap.
   pinHelp: { marginTop: 2, marginBottom: 8, fontSize: 13, lineHeight: 20.8, ...font(400), color: t.neutral[500] },
   pinError: { fontSize: 12, lineHeight: 19.2, ...font(400), color: t.danger[600] },

@@ -28,7 +28,8 @@ const emptyForm = {
   barangay: '',
   barangayCode: '',
   street: '',
-  // The pin for the rider: every address has one.
+  // The pin for the rider: optional (checkout asks for one only when a
+  // rider or a fee by distance needs it).
   latitude: null,
   longitude: null,
 };
@@ -136,7 +137,6 @@ const Addresses = () => {
     if (!formData.municipalityId) errs.municipalityId = 'City / Municipality is required.';
     if (!formData.barangay.trim()) errs.barangay = 'Barangay is required.';
     if (!formData.street.trim()) errs.street = 'Street / house address is required.';
-    if (formData.latitude == null || formData.longitude == null) errs.pin = 'Pin the house on the map so the rider can find it.';
     setFormErrors(errs);
     return Object.keys(errs).length === 0;
   };
@@ -301,7 +301,7 @@ const Addresses = () => {
                     <p>{addr.barangay || '—'}</p>
                     {addr.latitude != null
                     ? <p className="address-pinned"><MapPin size={13} weight="fill" /> Pinned on the map</p>
-                    : <p className="address-unpinned"><MapPin size={13} /> Not pinned yet: edit to pin it on the map</p>}
+                    : <p className="address-unpinned"><MapPin size={13} /> No map pin (optional): edit to add one for riders</p>}
                     <p>{addr.municipality?.name || '—'}, {addr.province || 'Oriental Mindoro'}</p>
                   </div>
                 </div>
@@ -378,8 +378,8 @@ const Addresses = () => {
 
           {/* The pin comes first: pinning fills in the town, barangay and street below it. */}
           <div className={`form-group address-pin${formErrors.pin ? ' has-error' : ''}`}>
-            <label className="form-label">Pin the house on the map</label>
-            <p className="address-pin-help">Tap where the house is, or use your location. We fill in the address from the pin, and the rider follows it to your door.</p>
+            <label className="form-label">Pin the house on the map <span className="form-optional">(optional)</span></label>
+            <p className="address-pin-help">Tap where the house is, or use your location. We fill in the address from the pin, and a rider can follow it to your door.</p>
             <StoreLocationMap
               value={{ latitude: formData.latitude, longitude: formData.longitude }}
               onChange={({ latitude, longitude }) => {

@@ -54,14 +54,16 @@ const addressValidation = [
     .isLength({ max: 500 })
     .withMessage('Address is too long'),
 
-  // Every saved address carries its spot on the map, for the rider (the
-  // service checks it is inside the Philippines).
-  body('latitude')
-    .exists({ values: 'null' })
-    .withMessage('Pin the house on the map so the rider can find it'),
-  body('longitude')
-    .exists({ values: 'null' })
-    .withMessage('Pin the house on the map so the rider can find it'),
+  // The spot on the map, for a rider: optional (checkout asks for one when
+  // a MoorMove rider or a fee by distance needs it), but both or neither --
+  // half a pin is no pin. The service checks it is inside the Philippines.
+  body('latitude').custom((value, { req }) => {
+    const has = (v) => v !== undefined && v !== null && v !== '';
+    if (has(value) !== has(req.body.longitude)) {
+      throw new Error('Pin the house on the map, or leave the map without a pin');
+    }
+    return true;
+  }),
 
   body('isDefault')
     .optional()

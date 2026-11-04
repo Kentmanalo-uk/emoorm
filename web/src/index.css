@@ -860,3 +860,9 @@ input[type="radio"] {
   position: relative;
   z-index: 0;
 }
+
+/* "(optional)" beside a field's name: quieter than the name. */
+.form-optional {
+  color: var(--t-neutral-500, #6b7280);
+  font-weight: 400;
+}

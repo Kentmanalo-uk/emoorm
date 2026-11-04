@@ -4,13 +4,15 @@ const h = require('./helpers');
 
 after(h.cleanup);
 
-test('every new address carries a map pin in the Philippines', async () => {
+test('a new address may have a map pin, and a pin must be in the Philippines', async () => {
   const buyer = await h.user('BUYER');
   const { municipality } = await h.reference();
   const base = { fullName: 'Ci Buyer', contactNumber: '09171234567', municipalityId: municipality.id, barangay: 'Poblacion', street: 'Purok 1' };
   const token = h.token(buyer);
-  // No pin at all: refused.
-  assert.equal((await h.api('POST', '/addresses', { token, body: base })).status, 422);
+  // No pin at all: fine (it is optional).
+  const none = await h.api('POST', '/addresses', { token, body: base });
+  assert.equal(none.status, 201, none.body?.message);
+  assert.equal(none.body.data.latitude, null);
   assert.equal((await h.api('POST', '/addresses', { token, body: { ...base, latitude: 51.5, longitude: -0.12 } })).status, 400);
   assert.equal((await h.api('POST', '/addresses', { token, body: { ...base, latitude: 13 } })).status, 422);
   const ok = await h.api('POST', '/addresses', { token, body: { ...base, latitude: 13.1234567, longitude: 121.3 } });

@@ -34,7 +34,8 @@ const emptyForm = {
   barangay: '',
   barangayCode: '',
   street: '',
-  // The pin for the rider: every address has one.
+  // The pin for the rider: optional (checkout asks for one only when a
+  // rider or a fee by distance needs it).
   latitude: null,
   longitude: null,
 };
@@ -139,7 +140,6 @@ export default function Addresses() {
     if (!formData.municipalityId) errs.municipalityId = 'City / Municipality is required.';
     if (!formData.barangay.trim()) errs.barangay = 'Barangay is required.';
     if (!formData.street.trim()) errs.street = 'Street / house address is required.';
-    if (formData.latitude == null || formData.longitude == null) errs.pin = 'Pin the house on the map so the rider can find it.';
     setFormErrors(errs);
     return Object.keys(errs).length === 0;
   };
@@ -266,8 +266,8 @@ export default function Addresses() {
         </FormField>
 
         <View style={styles.pinGroup}>
-          <Text style={styles.formLabel}>Pin the house on the map</Text>
-          <Text style={styles.pinHelp}>Tap where the house is, or use your location. We fill in the address from the pin, and the rider follows it to your door.</Text>
+          <Text style={styles.formLabel}>Pin the house on the map <Text style={styles.optional}>(optional)</Text></Text>
+          <Text style={styles.pinHelp}>Tap where the house is, or use your location. We fill in the address from the pin, and a rider can follow it to your door.</Text>
           <LocationPicker
             value={{ latitude: formData.latitude, longitude: formData.longitude }}
             onChange={({ latitude, longitude }) => {
@@ -344,8 +344,8 @@ export default function Addresses() {
                         </View>
                       ) : (
                         <View style={styles.unpinned}>
-                          <MapPinIcon size={13} color={t.accent[600]} />
-                          <Text style={styles.unpinnedText}>Not pinned yet: edit to pin it on the map</Text>
+                          <MapPinIcon size={13} color={t.neutral[500]} />
+                          <Text style={styles.unpinnedText}>No map pin (optional): edit to add one for riders</Text>
                         </View>
                       )}
                       <Text style={styles.locationLine}>{addr.municipality?.name || '—'}, {addr.province || 'Oriental Mindoro'}</Text>
@@ -481,6 +481,8 @@ const styles = themed(() => StyleSheet.create({
   form: { gap: 14 },
   formGroup: { gap: 6 },
   formLabel: { fontSize: 12.5, lineHeight: 20, color: t.neutral[700], ...font(600) },
+  // "(optional)" beside a label, quieter (.form-optional).
+  optional: { color: t.neutral[500], ...font(400) },
   formInput: {
     minHeight: 46, paddingVertical: 10, paddingHorizontal: 12, borderWidth: 1, borderColor: t.neutral[200], borderRadius: 10,
     backgroundColor: t.neutral[0], color: t.neutral[900], fontSize: 16, lineHeight: 24, ...font(400),
@@ -490,10 +492,10 @@ const styles = themed(() => StyleSheet.create({
   pinHelp: { marginBottom: 8, fontSize: 13, lineHeight: 20.8, color: t.neutral[500], ...font(400) },
   pinNote: { flexDirection: 'row', alignItems: 'flex-start', gap: 8, marginTop: 4, paddingVertical: 9, paddingHorizontal: 12, borderRadius: 12 },
   pinNoteText: { flex: 1, fontSize: 13, lineHeight: 18.5, ...font(500) },
-  // An address saved before pins were required (.address-unpinned; the card's
+  // An address with no map pin (.address-unpinned; the card's
   // `.address-location p { margin: 0 }` wins over its own 4px top margin).
   unpinned: { flexDirection: 'row', alignItems: 'center', gap: 5 },
-  unpinnedText: { flexShrink: 1, fontSize: 12.5, lineHeight: 18.75, color: t.accent[600], ...font(400) },
+  unpinnedText: { flexShrink: 1, fontSize: 12.5, lineHeight: 18.75, color: t.neutral[500], ...font(400) },
   formActions: { flexDirection: 'row', gap: 8, paddingTop: 4 },
   formBtn: { flex: 1, flexDirection: 'row', alignItems: 'center', justifyContent: 'center', minHeight: 46, paddingVertical: 10, paddingHorizontal: 20, borderRadius: 10 },
   formCancel: { borderWidth: 1, borderColor: t.neutral[300], backgroundColor: t.neutral[0] },
