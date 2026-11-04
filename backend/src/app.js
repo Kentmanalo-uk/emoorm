@@ -69,11 +69,40 @@ const canonicalHost = (() => {
 // same www address, and Google must list it as an authorized redirect URI.
 const googleAppCallbackPath = `${config.apiPrefix}/auth/google/app/callback`;
 
+// www answers /.well-known/assetlinks.json itself (Android does not follow a
+// redirect there), for Google's credential sharing: the app may use the
+// passwords saved for www too. It is the site's own file with only
+// get_login_creds kept — handle_all_urls would verify www as an App Link,
+// and the app (before 2.3) would then catch the Google callback above.
+const wwwAssetLinks = (() => {
+  let kept;
+  return () => {
+    if (kept === undefined) {
+      try {
+        const file = path.join(config.site.webDir, '.well-known', 'assetlinks.json');
+        const statements = JSON.parse(require('fs').readFileSync(file, 'utf8'));
+        kept = statements
+          .map((s) => ({ ...s, relation: (s.relation || []).filter((r) => r === 'delegate_permission/common.get_login_creds') }))
+          .filter((s) => s.relation.length);
+      } catch {
+        kept = null;
+      }
+    }
+    return kept;
+  };
+})();
+
 if (config.nodeEnv === 'production' && canonicalHost && !canonicalHost.startsWith('www.')) {
   app.use((req, res, next) => {
     const host = String(req.get('host') || '').toLowerCase();
     if (host !== `www.${canonicalHost}`) return next();
     if (req.path === googleAppCallbackPath) return next();
+    if (req.path === '/.well-known/assetlinks.json' && ['GET', 'HEAD'].includes(req.method)) {
+      const links = wwwAssetLinks();
+      if (!links) return res.status(404).json([]);
+      res.set('Cache-Control', 'public, max-age=3600');
+      return res.json(links);
+    }
     const target = `${new URL(config.site.url).protocol}//${canonicalHost}${req.originalUrl}`;
     return res.redirect(['GET', 'HEAD'].includes(req.method) ? 301 : 308, target);
   });
