@@ -1,11 +1,17 @@
 [
   {
-    "relation": ["delegate_permission/common.handle_all_urls"],
+    "relation": [
+      "delegate_permission/common.handle_all_urls",
+      "delegate_permission/common.get_login_creds"
+    ],
     "target": {
       "namespace": "android_app",
       "package_name": "shop.emoorm.app",
       "sha256_cert_fingerprints": [
-        "9F:60:02:EF:10:02:55:0F:51:DA:63:3E:B5:CF:3B:0D:37:28:2C:B8:08:6C:AF:0F:57:0C:C4:AD:8F:A0:AB:22"
+        "9F:60:02:EF:10:02:55:0F:51:DA:63:3E:B5:CF:3B:0D:37:28:2C:B8:08:6C:AF:0F:57:0C:C4:AD:8F:A0:AB:22",
+        "DA:4E:64:62:6E:2B:83:35:CB:D7:06:C6:E1:73:C3:FF:86:F7:C0:0F:4A:9F:3C:6C:74:2E:45:CD:15:33:29:DF",
+        "05:20:19:22:79:9A:9F:8A:2B:3F:FE:76:48:C0:82:AB:1B:97:06:41:AB:3F:2A:C6:50:4B:FA:AD:36:13:4E:40",
+        "5A:40:79:54:4C:57:6E:BA:21:64:50:33:01:1B:A4:8F:D0:D4:52:FE:F0:FC:62:F7:72:59:D8:CC:19:92:5C:2E"
       ]
     }
   }
