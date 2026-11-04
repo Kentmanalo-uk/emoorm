@@ -147,7 +147,7 @@ export default function AdminJuniorAdmins() {
           <LoadFailed onRetry={load} what="the admins" compact />
         ) : shown.length === 0 ? (
           <div className="admin-empty">
-            <EmptyArt name="users" size={104} />
+            <EmptyArt name="team" size={104} />
             <p>{search ? 'No admin matches that search.' : 'No municipal admins yet. Assign one to each town.'}</p>
           </div>
         ) : (

@@ -145,7 +145,7 @@ export default function AdminInvites() {
           <LoadFailed what="the invites" onRetry={() => setReloadTick((t) => t + 1)} compact />
         ) : rows.length === 0 ? (
           <div className="admin-empty">
-            <EmptyArt name="users" size={104} />
+            <EmptyArt name="invites" size={104} />
             <p>{status === 'HELD' ? 'No invites are waiting for a decision' : 'No invites match these filters'}</p>
           </div>
         ) : (

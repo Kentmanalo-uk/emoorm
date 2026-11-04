@@ -280,7 +280,7 @@ function ExtendBackup({ member, onClose, onSaved }) {
 function AloneCard({ canAdd, onAdd }) {
   return (
     <div className="at-alone-card">
-      <EmptyArt name="users" size={88} />
+      <EmptyArt name="team" size={88} />
       <h2>Add a backup so someone can cover for you</h2>
       <p>
         When you are on leave or busy, a teammate keeps seller applications, reports and buyer
@@ -421,7 +421,7 @@ export default function AdminTeam() {
         ) : error && !team ? (
           <LoadFailed onRetry={load} what="the team" compact />
         ) : members.length === 0 ? (
-          <div className="admin-empty"><EmptyArt name="users" size={96} /><p>No admins yet.</p></div>
+          <div className="admin-empty"><EmptyArt name="team" size={96} /><p>No admins yet.</p></div>
         ) : (
           <ul className="at-list">
             {members.map((m) => (

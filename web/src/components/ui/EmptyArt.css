@@ -41,3 +41,12 @@
   background: none !important;
   overflow: visible;
 }
+
+/* Computers: where it is a page's main picture (callers asking for 80 or
+   more), it fills more of the room around it. Phones have their own rule
+   above. */
+@media (min-width: 769px) {
+  .empty-art.is-roomy {
+    height: clamp(190px, calc(var(--ea-h, 120px) * 1.45), 280px);
+  }
+}

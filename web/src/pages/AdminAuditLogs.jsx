@@ -266,7 +266,7 @@ export default function AdminAuditLogs() {
         ) : failed ? (
           <LoadFailed what="the audit log" onRetry={load} compact />
         ) : logs.length === 0 ? (
-          <div className="admin-empty"><EmptyArt name="activity" size={104} /><p>No entries match these filters.</p></div>
+          <div className="admin-empty"><EmptyArt name="audit" size={104} /><p>No entries match these filters.</p></div>
         ) : (
           <>
             <div className="admin-table-wrap">

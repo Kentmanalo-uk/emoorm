@@ -43,7 +43,7 @@ export default function InviteLanding() {
   if (!invite.enabled || !invite.valid) {
     return (
       <Layout>
-        <EmptyState page art="search" title="This invite link isn't active" text="You can still look around and sign up." actions={[{ label: 'Go to Emoorm', to: '/' }]} />
+        <EmptyState page art="invites" title="This invite link isn't active" text="You can still look around and sign up." actions={[{ label: 'Go to Emoorm', to: '/' }]} />
       </Layout>
     );
   }

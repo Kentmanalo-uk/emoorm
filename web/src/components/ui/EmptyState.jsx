@@ -19,10 +19,12 @@ import './EmptyState.css';
  * compact:  inside a card or section: a smaller picture, less room, no card
  * inset:    the older name for compact (so is the `ui-empty--inset` class)
  * artSize:  the EmptyArt size (default 112, compact 72)
+ * roomy:    the whole page's or panel's empty state, however small its
+ *           size: computers draw its picture large (EmptyArt.css)
  */
 export default function EmptyState({
   art, icon: Icon, title, text, message, actions, actionLabel, actionTo, onAction,
-  page = false, compact = false, inset = false, artSize, className = '', children,
+  page = false, compact = false, inset = false, artSize, roomy, className = '', children,
 }) {
   const small = compact || inset || /(^|\s)ui-empty--inset(\s|$)/.test(className);
   const body = text ?? message;
@@ -33,7 +35,7 @@ export default function EmptyState({
 
   return (
     <div className={classes}>
-      {art && <EmptyArt name={art} size={artSize ?? (small ? 72 : 112)} className="ui-empty-art" />}
+      {art && <EmptyArt name={art} size={artSize ?? (small ? 72 : 112)} roomy={roomy} className="ui-empty-art" />}
       {!art && Icon && (
         <span className="ui-empty-icon" aria-hidden="true">
           <Icon size={small ? 56 : 80} weight="fill" />

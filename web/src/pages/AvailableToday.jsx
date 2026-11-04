@@ -213,7 +213,7 @@ export default function AvailableToday() {
   ) : items.length === 0 ? (
     <EmptyState
       className="avt-empty"
-      art="calendar"
+      art="today"
       title={state.enabled ? 'Nothing available right now' : 'Available Today is off for now'}
       text={state.enabled
         ? (filtered ? 'Try other filters, or check back later today.' : 'Shops post fresh food and produce here during the day. Check back soon.')

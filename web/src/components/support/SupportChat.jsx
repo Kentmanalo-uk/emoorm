@@ -749,6 +749,7 @@ export default function SupportChat({ mode = 'user', initialConversationId = nul
         ) : visibleConversations.length === 0 ? (
           <EmptyState
             className="ui-empty--inset"
+            roomy
             art="support"
             title={!isAdmin
               ? 'No support cases yet'

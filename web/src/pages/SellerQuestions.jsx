@@ -80,7 +80,8 @@ export default function SellerQuestions() {
       <div className="seller-card sq-empty">
         <EmptyState
           className="ui-empty--inset"
-          art="messages"
+          roomy
+          art="questions"
           title={tab === 'open' ? 'No questions waiting' : 'No questions yet'}
           text={tab === 'open'
             ? 'New questions from buyers show up here.'

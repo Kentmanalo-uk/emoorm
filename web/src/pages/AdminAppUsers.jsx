@@ -127,7 +127,7 @@ export default function AdminAppUsers() {
             <h2 className="admin-card-title">By version</h2>
           </div>
           {versions.length === 0 ? (
-            <div className="admin-empty"><EmptyArt name="activity" size={96} /><p>No downloads or installs yet.</p></div>
+            <div className="admin-empty"><EmptyArt name="testers" size={96} /><p>No downloads or installs yet.</p></div>
           ) : (
             <div className="admin-table-wrap">
               <table className="admin-table">
@@ -171,7 +171,7 @@ export default function AdminAppUsers() {
             <div className="admin-empty"><p>Loading…</p></div>
           ) : people.length === 0 ? (
             <div className="admin-empty">
-              <EmptyArt name="activity" size={96} />
+              <EmptyArt name="testers" size={96} />
               <p>{query || oldOnly ? 'Nobody matches this search.' : 'Nobody has used the app signed in yet. People show here once they open the app and sign in.'}</p>
             </div>
           ) : (

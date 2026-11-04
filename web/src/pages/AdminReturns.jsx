@@ -211,6 +211,7 @@ export default function AdminReturns() {
           <div className="admin-empty">
             <EmptyState
               className="ui-empty--inset"
+              roomy
               art="returns"
               title={status === 'DISPUTED'
                 ? 'No disputes to decide'

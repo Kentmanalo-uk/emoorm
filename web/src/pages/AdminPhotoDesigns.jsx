@@ -111,7 +111,7 @@ export default function AdminPhotoDesigns() {
           <LoadFailed what="the designs" onRetry={() => setReloadTick((t) => t + 1)} compact />
         ) : rows.length === 0 ? (
           <div className="admin-empty">
-            <EmptyArt name="activity" size={104} />
+            <EmptyArt name="designs" size={104} />
             <p>{search ? 'No designs match this search' : 'No shop has made its own design yet'}</p>
           </div>
         ) : (

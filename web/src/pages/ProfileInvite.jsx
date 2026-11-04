@@ -47,7 +47,7 @@ export default function ProfileInvite() {
   if (!data.enabled) {
     return (
       <div className="profile-page-wrap invite-page">
-        <EmptyState page art="vouchers" title="Invites aren't open yet" text="When they are, you'll find your invite code here." actions={[{ label: 'Go shopping', to: '/products' }]} />
+        <EmptyState page art="invites" title="Invites aren't open yet" text="When they are, you'll find your invite code here." actions={[{ label: 'Go shopping', to: '/products' }]} />
       </div>
     );
   }

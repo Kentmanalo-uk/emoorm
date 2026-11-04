@@ -244,6 +244,7 @@ export default function SellerReviews() {
       <div className="seller-empty">
         <EmptyState
           className="ui-empty--inset"
+          roomy
           art="reviews"
           title={unansweredOnly ? 'All caught up' : ratingFilter ? `No ${ratingFilter}-star reviews` : 'No reviews yet'}
           text={unansweredOnly

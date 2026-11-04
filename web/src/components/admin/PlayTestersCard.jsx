@@ -112,7 +112,7 @@ export default function PlayTestersCard() {
         <div className="admin-empty"><p>Loading…</p></div>
       ) : testers.length === 0 ? (
         <div className="admin-empty">
-          <EmptyArt name="activity" size={96} />
+          <EmptyArt name="testers" size={96} />
           <p>Nobody has asked yet. People leave their Gmail on the download page.</p>
         </div>
       ) : (

@@ -561,7 +561,8 @@ export default function SellerToday() {
             <div className="stw-empty">
               <EmptyState
                 className="ui-empty--inset"
-                art="calendar"
+                roomy
+                art="today"
                 title="No Available today items yet"
                 text="Add what you sell fresh, day by day: cooked food, fish, vegetables, baked goods. Buyers see it as 'Not taking orders yet' until you post it."
                 actions={enabled ? [{ label: 'Add from My products', onClick: openPicker, icon: Plus }] : []}
@@ -590,7 +591,8 @@ export default function SellerToday() {
             {noItems ? (
               <EmptyState
                 className="ui-empty--inset"
-                art="calendar"
+                roomy
+                art="today"
                 title="Nothing to post yet"
                 text="Add items to Your items first, then post them."
                 actions={[{ label: 'Go to Your items', onClick: () => pickTab('menu'), icon: Plus }]}
@@ -598,7 +600,8 @@ export default function SellerToday() {
             ) : (
               <EmptyState
                 className="ui-empty--inset"
-                art="calendar"
+                roomy
+                art="today"
                 title={ended ? 'Nothing ended yet' : 'Nothing posted'}
                 text={ended ? 'Posts that ended show here, so you can post them again.' : 'Post what you have today.'}
                 actions={ended || !enabled ? [] : [{ label: 'Post an item', onClick: () => goPost('/seller/today/new'), icon: Plus }]}
