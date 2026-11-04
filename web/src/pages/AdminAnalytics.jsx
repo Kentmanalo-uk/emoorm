@@ -139,7 +139,7 @@ function PlatformAnalytics() {
             <h2 className="an-card-title">Sales by municipality</h2>
             <span className="an-card-sub">Share of this period's sales</span>
           </div>
-          <table className="admin-table an-table">
+          <table className="admin-table an-table an-muni-table">
             <thead>
               <tr>
                 <th>Municipality</th>

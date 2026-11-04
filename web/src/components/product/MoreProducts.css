@@ -9,12 +9,15 @@
   background: var(--t-neutral-100, #f3f4f6);
 }
 
-/* Phones: two across, 4px apart and from the screen's edges, as the app. */
+/* Phones: two across, 4px apart and from the screen's edges, as the app.
+   The page's side padding (Profile) is stepped out of, so the cards meet
+   the edges as under Messages; body clips any overflow. */
 @media (max-width: 768px) {
   .more-products {
     grid-template-columns: repeat(2, minmax(0, 1fr));
     gap: 4px;
     margin-top: 12px;
+    margin-inline: calc(50% - 50vw);
     padding: 4px;
     border-radius: 0;
   }

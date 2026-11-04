@@ -102,6 +102,10 @@ export default function Notifications({ bare = false, mode = 'BUYER', shell } = 
   // header names the page, and the list is the buyer's list.
   const isPhone = usePhoneLayout();
   const sellerLook = isSeller && !isPhone;
+  // Computers: picture rows grouped by day (as the Seller Center and admin),
+  // and on the page of its own a column of groups and filters beside them.
+  const deskRows = !isPhone;
+  const deskPage = !isPhone && !bare && !isSeller;
   const navigate = useNavigate();
   const peekNotif = useNotificationPeek();
   const { isAuthenticated } = useAuthStore();
@@ -333,9 +337,39 @@ export default function Notifications({ bare = false, mode = 'BUYER', shell } = 
     </label>
   );
 
+  const filtersRow = !sellerLook && (
+    <div className="notif-filters">
+      <button
+        className={`notif-filter-btn ${filter === 'all' ? 'active' : ''}`}
+        onClick={() => { setFilter('all'); setPage(1); }}
+      >
+        All
+      </button>
+      <button
+        className={`notif-filter-btn ${filter === 'unread' ? 'active' : ''}`}
+        onClick={() => { setFilter('unread'); setPage(1); }}
+      >
+        Unread
+        {unreadCount > 0 && <span className="notif-filter-count">{unreadCount}</span>}
+      </button>
+      {isSeller && isPhone && (notifications.length > 0 || unreadCount > 0) && (
+        <MoreMenu
+          className="notif-more notif-more--chips"
+          buttonClassName="notif-tool-btn"
+          label="Notification options"
+          iconSize={22}
+          items={[
+            unreadCount > 0 && { key: 'read', icon: <CheckCheck size={17} />, label: 'Mark all as read', onClick: handleMarkAllRead },
+            notifications.length > 0 && { key: 'clear', icon: <Trash2 size={17} />, label: 'Clear all', danger: true, onClick: handleDeleteAll },
+          ]}
+        />
+      )}
+    </div>
+  );
+
   const inner = (
     <div className={isSeller ? 'seller-dashboard' : (bare ? 'profile-page-wrap' : 'notif-page')}>
-      <div className={isSeller ? 'seller-container' : (bare ? '' : 'notif-container')}>
+      <div className={isSeller ? 'seller-container' : (bare ? '' : `notif-container${deskPage ? ' is-desk' : ''}`)}>
 
         {!bare && (
           <div className="notif-breadcrumbs">
@@ -391,37 +425,8 @@ export default function Notifications({ bare = false, mode = 'BUYER', shell } = 
         {!isSeller && searchRow}
 
         {/* Filters */}
-        <div className={`notif-body${sellerLook ? ' is-seller' : ''}`}>
-        {categoriesBar}
-        {!sellerLook && (
-        <div className="notif-filters">
-          <button
-            className={`notif-filter-btn ${filter === 'all' ? 'active' : ''}`}
-            onClick={() => { setFilter('all'); setPage(1); }}
-          >
-            All
-          </button>
-          <button
-            className={`notif-filter-btn ${filter === 'unread' ? 'active' : ''}`}
-            onClick={() => { setFilter('unread'); setPage(1); }}
-          >
-            Unread
-            {unreadCount > 0 && <span className="notif-filter-count">{unreadCount}</span>}
-          </button>
-          {isSeller && isPhone && (notifications.length > 0 || unreadCount > 0) && (
-            <MoreMenu
-              className="notif-more notif-more--chips"
-              buttonClassName="notif-tool-btn"
-              label="Notification options"
-              iconSize={22}
-              items={[
-                unreadCount > 0 && { key: 'read', icon: <CheckCheck size={17} />, label: 'Mark all as read', onClick: handleMarkAllRead },
-                notifications.length > 0 && { key: 'clear', icon: <Trash2 size={17} />, label: 'Clear all', danger: true, onClick: handleDeleteAll },
-              ]}
-            />
-          )}
-        </div>
-        )}
+        <div className={`notif-body${sellerLook ? ' is-seller' : ''}${deskPage ? ' is-desk' : ''}`}>
+        {deskPage ? <aside className="notif-side">{categoriesBar}{filtersRow}</aside> : <>{categoriesBar}{filtersRow}</>}
 
         {/* List */}
         {isLoading ? (
@@ -467,7 +472,7 @@ export default function Notifications({ bare = false, mode = 'BUYER', shell } = 
               </button>
             )}
           </div>
-        ) : sellerLook ? (
+        ) : deskRows ? (
           /* Computers: picture rows grouped by day, as on the admin side. */
           <div className="anl">
             {groupByDay(notifications).map((g) => (

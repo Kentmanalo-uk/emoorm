@@ -212,14 +212,15 @@
   margin-bottom: 6px;
 }
 
-.rv-name {
+/* Scoped: the buyer's My Reviews page has its own .rv-name (dark text). */
+.rv .rv-name {
   color: #fff;
   font-size: 14px;
   font-weight: 600;
   text-decoration: none;
 }
 
-.rv-name:hover { text-decoration: underline; }
+.rv .rv-name:hover { text-decoration: underline; }
 
 .rv-words {
   margin: 0;

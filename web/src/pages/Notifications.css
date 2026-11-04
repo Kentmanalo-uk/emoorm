@@ -1169,3 +1169,76 @@
     --ncat-bg: var(--t-neutral-100, #f3f4f6);
   }
 }
+
+/* Computers, the page of its own (/notifications): as wide as Messages, the
+   groups and filters in a column on the left, the rows beside them. */
+@media (min-width: 1024px) {
+  .notif-container.is-desk {
+    max-width: 1140px;
+  }
+
+  .notif-body.is-desk {
+    display: grid;
+    grid-template-columns: 264px minmax(0, 1fr);
+    column-gap: 24px;
+    align-items: start;
+  }
+
+  .notif-body.is-desk > .notif-side {
+    position: sticky;
+    top: 24px;
+    grid-column: 1;
+    grid-row: 1 / span 2;
+    padding: 10px;
+    border-radius: 14px;
+    background: var(--t-neutral-0, #fff);
+    box-shadow: inset 0 0 0 1px rgba(15, 23, 42, 0.06);
+  }
+
+  .notif-body.is-desk > :not(.notif-side) {
+    grid-column: 2;
+  }
+
+  .notif-side .ncat {
+    flex-direction: column;
+    align-items: stretch;
+    gap: 2px;
+    margin: 0;
+    padding: 0;
+    background: transparent;
+  }
+
+  .notif-side .ncat-cell + .ncat-cell::before {
+    display: none;
+  }
+
+  .notif-side .ncat-item {
+    justify-content: flex-start;
+    gap: 12px;
+    min-height: 44px;
+    margin: 0;
+    padding: 0 12px;
+  }
+
+  .notif-side .ncat-item.is-on {
+    background: var(--t-primary-50, #ecfdf5);
+    box-shadow: none;
+  }
+
+  .notif-side .ncat-label {
+    font-size: 14px;
+  }
+
+  .notif-side .notif-filters {
+    margin: 8px 0 0;
+    padding: 10px 2px 0;
+    border-top: 1px solid var(--t-neutral-100, #f1f2f4);
+    border-bottom: 0;
+  }
+
+  .notif-body.is-desk .notif-empty-state {
+    margin-top: 0;
+    border-radius: 14px;
+    background: var(--t-neutral-0, #fff);
+  }
+}

@@ -2286,3 +2286,20 @@
     box-shadow: none;
   }
 }
+
+/* Phones: "You may also like" edge to edge, 4px apart and from the
+   screen's edges, as the suggestions under Messages and Notifications. */
+@media (max-width: 768px) {
+  .cart-page .cart-suggestions {
+    margin-inline: calc(50% - 50vw);
+    padding: 12px 4px 4px;
+  }
+
+  .cart-page .cart-suggestions-head {
+    padding: 0 8px;
+  }
+
+  .cart-page .cart-suggestions-grid {
+    gap: 4px;
+  }
+}

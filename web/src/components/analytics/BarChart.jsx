@@ -1,6 +1,17 @@
 import EmptyState from './EmptyState';
 import './analytics.css';
 
+const MONTHS = ['Jan', 'Feb', 'Mar', 'Apr', 'May', 'Jun', 'Jul', 'Aug', 'Sep', 'Oct', 'Nov', 'Dec'];
+
+// A bucket's name under its bar: "Nov 4" for a day, "Nov" for a month,
+// "2026" for a year (the API sends YYYY-MM-DD, YYYY-MM or YYYY).
+const tickOf = (value) => {
+  const m = /^(\d{4})-(\d{2})(?:-(\d{2}))?$/.exec(String(value));
+  if (!m) return String(value);
+  const month = MONTHS[Number(m[2]) - 1] || m[2];
+  return m[3] ? `${month} ${Number(m[3])}` : month;
+};
+
 const BarChart = ({
   data = [],
   valueKey = 'total',
@@ -44,7 +55,7 @@ const BarChart = ({
             >
               <span className="an-bar-value">{value > 0 ? formatValue(value) : ''}</span>
               <div className="an-bar-fill" style={{ height: `${Math.max(pct, 2)}%` }} />
-              {shouldLabel && <span className="an-bar-label">{String(d[labelKey]).slice(5)}</span>}
+              {shouldLabel && <span className="an-bar-label">{tickOf(d[labelKey])}</span>}
             </div>
           );
         })}
