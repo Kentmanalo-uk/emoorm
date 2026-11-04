@@ -135,6 +135,9 @@ const flatCategories = (list) => {
 function RowRestock({ product, busy, onSave }) {
   const [mode, setMode] = useState('add');
   const [amount, setAmount] = useState('');
+  const inputRef = useRef(null);
+  // It opens from "Change": the typing starts at once.
+  useEffect(() => { inputRef.current?.focus(); }, []);
   const delta = String(amount).trim() === '' ? null : stockDelta(mode, amount, product.stock);
   const label = STOCK_MODES.find((m) => m.key === mode)?.label || 'Add';
   const submit = async (e) => {
@@ -159,6 +162,7 @@ function RowRestock({ product, busy, onSave }) {
         {STOCK_MODES.map((m) => <option key={m.key} value={m.key}>{m.label}</option>)}
       </Select>
       <input
+        ref={inputRef}
         type="number"
         step="1"
         min="0"
@@ -174,6 +178,47 @@ function RowRestock({ product, busy, onSave }) {
         {busy ? <Loader2 size={13} className="spin" /> : `${label}${String(amount).trim() !== '' ? ` ${amount}` : ''}`}
       </button>
     </form>
+  );
+}
+
+/**
+ * Computers: the stock on a row is a number with "Change" under it, like the
+ * price beside it, so a row stays one line tall; "Change" opens the stock
+ * box, which closes again once the change is saved (or on Cancel, Escape).
+ */
+function RowStockChange({ product, busy, onSave }) {
+  const [open, setOpen] = useState(false);
+  if (!open) {
+    return (
+      <button
+        type="button"
+        className="sp-price-change"
+        onClick={() => setOpen(true)}
+        title={`Add, remove or set the stock of ${product.name}`}
+        aria-label={`Change the stock of ${product.name}`}
+      >
+        <Edit2 size={12} /> Change
+      </button>
+    );
+  }
+  return (
+    <div
+      className="sp-restock-open"
+      onKeyDown={(e) => { if (e.key === 'Escape') { e.stopPropagation(); setOpen(false); } }}
+    >
+      <RowRestock
+        product={product}
+        busy={busy}
+        onSave={async (delta, meta) => {
+          const ok = await onSave(delta, meta);
+          if (ok) setOpen(false);
+          return ok;
+        }}
+      />
+      <button type="button" className="sp-price-cancel" onClick={() => setOpen(false)} disabled={busy}>
+        Cancel
+      </button>
+    </div>
   );
 }
 
@@ -1082,11 +1127,11 @@ export default function SellerProducts() {
                               )}
                             </span>
                             {isPhone ? null : hasStockPerChoice(product) ? (
-                              <button type="button" className="btn-seller-outline product-restock-btn" onClick={() => openEdit(product)}>
-                                Edit stock per choice
+                              <button type="button" className="sp-price-change" onClick={() => openEdit(product)}>
+                                <Edit2 size={12} /> Per choice
                               </button>
                             ) : (
-                              <RowRestock
+                              <RowStockChange
                                 product={product}
                                 busy={rowBusy}
                                 onSave={(delta, meta) => changeStock(product, delta, meta)}
@@ -1139,32 +1184,19 @@ export default function SellerProducts() {
                             >
                               <Edit2 size={15} aria-hidden="true" /><span>Edit</span>
                             </button>
-                            {(product.status === 'APPROVED' || product.status === 'HIDDEN') && (
-                              <button
-                                type="button"
-                                className="seller-icon-btn product-action"
-                                title={product.status === 'HIDDEN'
-                                  ? 'Show to buyers again'
-                                  : 'Hide from buyers (you can show it again)'}
-                                onClick={() => handleToggleVisibility(product)}
-                                disabled={bulkLoading}
-                              >
-                                {product.status === 'HIDDEN' ? <Eye size={15} aria-hidden="true" /> : <EyeOff size={15} aria-hidden="true" />}
-                                <span>{product.status === 'HIDDEN' ? 'Show' : 'Hide'}</span>
-                              </button>
-                            )}
-                            <a
-                              href={`/product/${product.slug}`}
-                              target="_blank"
-                              rel="noreferrer"
-                              className="seller-icon-btn product-action"
-                              title="See it as a buyer (opens a new tab)"
-                            >
-                              <ArrowSquareOut size={15} aria-hidden="true" /><span>View</span>
-                            </a>
                             <RowMenu
                               label={`More for ${product.name}`}
                               items={[
+                                (product.status === 'APPROVED' || product.status === 'HIDDEN') && !bulkLoading && {
+                                  label: product.status === 'HIDDEN' ? 'Show to buyers' : 'Hide from buyers',
+                                  icon: product.status === 'HIDDEN' ? Eye : EyeOff,
+                                  onClick: () => handleToggleVisibility(product),
+                                },
+                                {
+                                  label: 'View as a buyer',
+                                  icon: ArrowSquareOut,
+                                  onClick: () => window.open(`/product/${product.slug}`, '_blank', 'noopener'),
+                                },
                                 takes3d(product) && {
                                   label: product.model3d ? 'Change 3D view' : 'Add a 3D view',
                                   icon: Cube,

@@ -9,6 +9,7 @@ import {
   ArrowCounterClockwise, PaintBrush, Megaphone, ShareNetwork, Check, ExclamationMark,
   Sparkle, Palette, Heart, UsersThree, LinkSimple, ChatCircleDots,
   GraduationCap, BookOpen, Lightbulb, ArrowClockwise, Handshake, Question, QrCode, ListChecks,
+  ArrowSquareOut,
 } from '../lib/icons';
 import { countLabel } from '../lib/orderLines';
 import { useShare } from '../components/ShareSheet';
@@ -225,9 +226,6 @@ export default function SellerDashboard() {
 
   const shopName = store?.name || (user?.fullName ? `${user.fullName}'s Shop` : 'Your Shop');
   const recentSales = salesByDay.reduce((sum, day) => sum + Number(day.total || 0), 0);
-  const todayLabel = new Intl.DateTimeFormat('en-PH', {
-    weekday: 'long', month: 'long', day: 'numeric', year: 'numeric',
-  }).format(new Date());
 
   // What is waiting on the seller (the sidebar's badges, GET
   // /stores/my/attention): the "Needs your action" numbers on both layouts.
@@ -268,296 +266,319 @@ export default function SellerDashboard() {
   return (
     <div className="seller-dashboard">
       <div className="seller-container">
-        <div className="seller-header">
-          <div>
-            <h1>Hi, {user?.fullName?.split(' ')[0] || 'Seller'}</h1>
-            <p className="seller-welcome">Here is an overview of {shopName} as of {todayLabel}.</p>
+        {/* The welcome banner, kept plain: the shop, the day, and the two
+            things done most from here. */}
+        <section className="sd-hero" aria-label="Your shop today">
+          <span className="sd-hero-logo">
+            {store?.logo ? <img src={resolveImg(store.logo)} alt="" /> : <ShopLogoArt name={shopName} />}
+          </span>
+          <div className="sd-hero-text">
+            <p className="sd-hero-hi">Hi, {user?.fullName?.split(' ')[0] || 'Seller'}</p>
+            <h1>{shopName}</h1>
           </div>
-          <div className="seller-header-actions">
-            <Link to="/seller/products/new" className="btn-seller-primary" data-tour="add-product">
-              <Plus size={16} /> Add Product
+          <div className="sd-hero-actions">
+            <Link to="/seller/products/new" className="sd-hero-btn" data-tour="add-product">
+              <Plus size={16} weight="bold" /> Add Product
             </Link>
-          </div>
-        </div>
-
-        {/* The one thing to finish first (SE-6: one card, not three). */}
-        {lead && <LeadCard lead={lead} onHide={lead.hideable ? () => completeGuide('setup-card', setStore) : null} />}
-
-        {/* The shop stopped selling (Settings › Take a break or close). */}
-        {store && store.isActive === false && store.isApproved !== false && (
-          <div className="sd-review-banner">
-            <Clock size={16} />
-            <span>
-              You stopped selling for now: buyers can&apos;t order from your shop.{' '}
-              <Link to="/seller/settings#shop-status">Start selling again</Link>
-            </span>
-          </div>
-        )}
-
-        {loadError && (
-          <div className="sd-review-banner sd-error-banner" role="alert">
-            <WarningCircle size={16} />
-            <span>Some dashboard numbers couldn&apos;t be loaded.</span>
-            <button type="button" className="sd-retry" onClick={retryLoad}>
-              <ArrowClockwise size={14} weight="bold" /> Try again
-            </button>
-          </div>
-        )}
-
-        {/* What is waiting on the seller, each opening its own list. */}
-        <ActionRow tiles={actions} />
-
-        <PrepList prep={prep} />
-
-        {/* Seller Academy: free lessons, one click away (can be hidden). */}
-        {showAcademy && (
-          <section className="sd-idv is-academy" aria-label="Seller Academy">
-            <span className="sd-idv-icon"><GraduationCap size={24} weight="fill" /></span>
-            <div className="sd-idv-body">
-              <strong>Seller Academy</strong>
-              <p>Free, simple lessons: better photos, faster orders, more buyers.</p>
-            </div>
-            <Link to="/sell/academy" className="sd-card-btn">
-              Start learning <ArrowRight size={15} weight="bold" />
-            </Link>
-            {store?.id && (
-              <button
-                type="button"
-                className="sd-card-hide"
-                aria-label="Hide Seller Academy from the dashboard"
-                title="Hide (Seller Academy stays in the sidebar)"
-                onClick={() => completeGuide(ACADEMY_CARD, setStore)}
-              >
-                <X size={16} weight="bold" />
-              </button>
+            {store?.slug && (
+              <a href={`/store/${store.slug}`} target="_blank" rel="noopener noreferrer" className="sd-hero-btn is-ghost">
+                <ArrowSquareOut size={16} /> View shop
+              </a>
             )}
-          </section>
-        )}
-
-        <div className="sd">
-
-          {/* Overview: the shop's numbers as one strip, and the sales of the
-              last 14 days under them on the same surface. */}
-          <section className="sd-panel sd-overview" data-tour="store-overview" aria-label="Overview">
-            <div className="sd-ov-stats">
-              {isLoading ? (
-                Array.from({ length: 4 }).map((_, i) => (
-                  <div className="sd-ov-stat" key={i}>
-                    <Skeleton width="50%" height={26} radius={4} />
-                    <Skeleton width="70%" height={12} />
-                  </div>
-                ))
-              ) : (
-                <>
-                  <OverviewStat
-                    label="Total sales"
-                    value={analyticsAvailable ? `₱${formatNumber(stats.lifetimeSales)}` : '—'}
-                    sub={analyticsAvailable ? `₱${formatNumber(recentSales)} in the last 14 days` : 'Unavailable right now'}
-                  />
-                  <OverviewStat
-                    label="Completed orders"
-                    value={analyticsAvailable ? formatNumber(stats.completedOrders) : '—'}
-                    sub="Received by the buyer"
-                  />
-                  <OverviewStat
-                    label="Active products"
-                    value={formatNumber(liveProducts(stats))}
-                    sub={lowStock.length ? `${formatNumber(lowStock.length)} low on stock` : 'Live in your shop'}
-                    warn={lowStock.length > 0}
-                  />
-                  <OverviewStat
-                    label="Average order"
-                    value={analyticsAvailable ? `₱${formatNumber(stats.avgOrderValue)}` : '—'}
-                    sub={analyticsAvailable && topProducts[0]?.name ? `Top product: ${topProducts[0].name}` : 'Per completed order'}
-                  />
-                </>
-              )}
-            </div>
-              <section className="sd-card sd-sales-trend">
-                <header className="sd-card-header">
-                  <h2>Sales, last 14 days</h2>
-                  <TrendingUp size={15} className="sd-header-icon" />
-                </header>
-                {isLoading ? (
-                  <div className="sd-pad">
-                    <Skeleton height={120} radius={8} />
-                  </div>
-                ) : salesByDay.length === 0 ? (
-                  <div className="sd-empty sd-empty--sm">
-                    <EmptyArt name="analytics" size={56} />
-                    <p>No sales data yet.</p>
-                  </div>
-                ) : (
-                  <div className="sd-chart">
-                    {salesByDay.map((day) => {
-                      const max = Math.max(1, ...salesByDay.map((d) => Number(d.total || 0)));
-                      const pct = Math.max(2, (Number(day.total || 0) / max) * 100);
-                      return (
-                        <div key={day.date} className="sd-chart-col" title={`₱${formatNumber(day.total)} on ${new Date(day.date).toLocaleDateString()}`}>
-                          <div className="sd-chart-bar-wrap">
-                            <div className="sd-chart-bar" style={{ height: `${pct}%` }} />
-                          </div>
-                          <span className="sd-chart-label">{new Date(day.date).getDate()}</span>
-                        </div>
-                      );
-                    })}
-                  </div>
-                )}
-              </section>
-          </section>
-
-          {/* Orders and the people following the shop, side by side. */}
-          <p className="sd-panel-label">Orders and followers</p>
-          <div className="sd-panel sd-panel-row is-2">
-              <section className="sd-card sd-orders" data-tour="recent-orders">
-                <header className="sd-card-header">
-                  <h2>Recent orders</h2>
-                  <Link to="/seller/orders" className="sd-view-all">See all</Link>
-                </header>
-
-                {isLoading ? (
-                  <Skeleton.OrderList rows={4} />
-                ) : recentOrders.length === 0 ? (
-                  <div className="sd-empty">
-                    <EmptyArt name="orders" size={84} />
-                    <p>No orders yet.</p>
-                  </div>
-                ) : (
-                  <ul className="sd-order-list">
-                    {recentOrders.map((o) => (
-                      <OrderRow
-                        key={o.id}
-                        order={o}
-                        onClick={() => navigate(`/seller/orders?id=${o.id}`)}
-                      />
-                    ))}
-                  </ul>
-                )}
-              </section>
-              <section className="sd-card sd-followers">
-                <header className="sd-card-header">
-                  <h2>Followers</h2>
-                  <Users size={15} className="sd-header-icon" />
-                </header>
-                {followerStatsLoading ? (
-                  <div className="sd-empty sd-empty--sm">
-                    <Skeleton.Text lines={3} height={12} />
-                  </div>
-                ) : followerStatsError ? (
-                  <div className="sd-empty sd-empty--sm">
-                    <Users size={22} weight="fill" />
-                    <p>Couldn't load follower stats.</p>
-                  </div>
-                ) : !followerStats ? (
-                  <div className="sd-empty sd-empty--sm">
-                    <EmptyArt name="followers" size={56} />
-                    <p>No follower data yet.</p>
-                  </div>
-                ) : (
-                  <div className="sd-followers-body">
-                    <div className="sd-followers-hero">
-                      <span className="sd-followers-total">{followerStats.total}</span>
-                      <span className="sd-followers-label">total followers</span>
-                    </div>
-                    <div className="sd-followers-metrics">
-                      <div>
-                        <span className="sd-followers-metric-value">+{followerStats.last7Days}</span>
-                        <span className="sd-followers-metric-label">last 7 days</span>
-                      </div>
-                      <div>
-                        <span className="sd-followers-metric-value">+{followerStats.last30Days}</span>
-                        <span className="sd-followers-metric-label">last 30 days</span>
-                      </div>
-                      <div>
-                        <span
-                          className={`sd-followers-metric-value ${followerStats.growthPct >= 0 ? 'is-up' : 'is-down'}`}
-                        >
-                          {followerStats.growthPct >= 0 ? '+' : ''}{followerStats.growthPct}%
-                        </span>
-                        <span className="sd-followers-metric-label">growth</span>
-                      </div>
-                    </div>
-                    {followerStats.recent?.length > 0 && (
-                      <div className="sd-followers-recent">
-                        <span className="sd-followers-recent-label">Recent followers</span>
-                        <div className="sd-followers-avatars">
-                          {followerStats.recent.slice(0, 6).map((r) => (
-                            <div
-                              key={r.buyer.id}
-                              className="sd-followers-avatar"
-                              title={r.buyer.fullName}
-                            >
-                              <UserAvatar src={r.buyer.profilePhoto} person={r.buyer} name={r.buyer.fullName} alt={r.buyer.fullName} />
-                            </div>
-                          ))}
-                          {followerStats.recent.length > 6 && (
-                            <span className="sd-followers-more">+{followerStats.recent.length - 6}</span>
-                          )}
-                        </div>
-                      </div>
-                    )}
-                  </div>
-                )}
-              </section>
           </div>
+        </section>
 
-          {/* What sells, and what is running out. */}
-          <p className="sd-panel-label">Products</p>
-          <div className={`sd-panel sd-panel-row ${lowStock.length > 0 ? 'is-2' : 'is-1'}`}>
-              <section className="sd-card sd-topprod">
-                <header className="sd-card-header">
-                  <h2>Top products</h2>
-                  <TrendingUp size={15} className="sd-header-icon" />
-                </header>
-                {topProducts.length === 0 ? (
-                  <div className="sd-empty sd-empty--sm">
-                    <EmptyArt name="products" size={56} />
-                    <p>No sales yet. Your best sellers show here.</p>
-                  </div>
-                ) : (
-                  <ol className="sd-top-list">
-                    {topProducts.map((p, i) => (
-                      <li key={p.id} className="sd-top-item">
-                        <span className="sd-top-rank">{i + 1}</span>
-                        <div className="sd-top-info">
-                          <strong>{p.name}</strong>
-                          <span className="sd-top-meta">
-                            ₱{formatNumber(p.price)} · Stock: {p.stock ?? 0}
-                          </span>
-                          <span className="sd-top-rating">
-                            <Star size={11} weight="fill" color="var(--t-warning-500, #f59e0b)" />
-                            {p.averageRating != null ? Number(p.averageRating).toFixed(1) : '—'}
-                          </span>
-                        </div>
-                      </li>
-                    ))}
-                  </ol>
-                )}
-              </section>
-              {lowStock.length > 0 && (
-                <section className="sd-card sd-lowstock">
+        {/* Two columns, as Lazada's Seller Center home: the work on the
+            left (what is waiting, the numbers, today's prep, the latest
+            orders, what sells), the shop's standing on the right (the one
+            thing to finish, followers, what is running low, lessons). */}
+        <div className="sd-home">
+          <div className="sd-home-main">
+            {/* The shop stopped selling (Settings › Take a break or close). */}
+            {store && store.isActive === false && store.isApproved !== false && (
+              <div className="sd-review-banner">
+                <Clock size={16} />
+                <span>
+                  You stopped selling for now: buyers can&apos;t order from your shop.{' '}
+                  <Link to="/seller/settings#shop-status">Start selling again</Link>
+                </span>
+              </div>
+            )}
+
+            {loadError && (
+              <div className="sd-review-banner sd-error-banner" role="alert">
+                <WarningCircle size={16} />
+                <span>Some dashboard numbers couldn&apos;t be loaded.</span>
+                <button type="button" className="sd-retry" onClick={retryLoad}>
+                  <ArrowClockwise size={14} weight="bold" /> Try again
+                </button>
+              </div>
+            )}
+
+            {/* What is waiting on the seller, each opening its own list. */}
+            <ActionRow tiles={actions} />
+
+
+            <div className="sd">
+              {/* Overview: the shop's numbers as one strip, and the sales of
+                  the last 14 days under them on the same surface. */}
+              <section className="sd-panel sd-overview" data-tour="store-overview" aria-label="Overview">
+                <div className="sd-ov-stats">
+                  {isLoading ? (
+                    Array.from({ length: 4 }).map((_, i) => (
+                      <div className="sd-ov-stat" key={i}>
+                        <Skeleton width="50%" height={26} radius={4} />
+                        <Skeleton width="70%" height={12} />
+                      </div>
+                    ))
+                  ) : (
+                    <>
+                      <OverviewStat
+                        label="Total sales"
+                        value={analyticsAvailable ? `₱${formatNumber(stats.lifetimeSales)}` : '—'}
+                        sub={analyticsAvailable ? `₱${formatNumber(recentSales)} in the last 14 days` : 'Unavailable right now'}
+                      />
+                      <OverviewStat
+                        label="Completed orders"
+                        value={analyticsAvailable ? formatNumber(stats.completedOrders) : '—'}
+                        sub="Received by the buyer"
+                      />
+                      <OverviewStat
+                        label="Active products"
+                        value={formatNumber(liveProducts(stats))}
+                        sub={lowStock.length ? `${formatNumber(lowStock.length)} low on stock` : 'Live in your shop'}
+                        warn={lowStock.length > 0}
+                      />
+                      <OverviewStat
+                        label="Average order"
+                        value={analyticsAvailable ? `₱${formatNumber(stats.avgOrderValue)}` : '—'}
+                        sub={analyticsAvailable && topProducts[0]?.name ? `Top product: ${topProducts[0].name}` : 'Per completed order'}
+                      />
+                    </>
+                  )}
+                </div>
+                <section className="sd-card sd-sales-trend">
                   <header className="sd-card-header">
-                    <h2>Running low</h2>
-                    <Link to="/seller/products?stock=low" className="sd-view-all">See all</Link>
+                    <h2>Sales, last 14 days</h2>
+                    <TrendingUp size={15} className="sd-header-icon" />
                   </header>
-                  {/* Each row opens a quick restock for that product. */}
-                  <ul className="sd-top-list">
-                    {lowStock.map((p) => (
-                      <li key={p.id}>
-                        <Link to={`/seller/products?restock=${p.id}`} className="sd-top-item sd-top-item--link" title={`Restock ${p.name}`}>
-                          <span className="sd-top-rank sd-top-rank--warn"><WarningCircle size={13} /></span>
+                  {isLoading ? (
+                    <div className="sd-pad">
+                      <Skeleton height={120} radius={8} />
+                    </div>
+                  ) : salesByDay.length === 0 ? (
+                    <div className="sd-empty sd-empty--sm">
+                      <EmptyArt name="analytics" size={56} />
+                      <p>No sales data yet.</p>
+                    </div>
+                  ) : (
+                    <div className="sd-chart">
+                      {salesByDay.map((day) => {
+                        const max = Math.max(1, ...salesByDay.map((d) => Number(d.total || 0)));
+                        const pct = Math.max(2, (Number(day.total || 0) / max) * 100);
+                        return (
+                          <div key={day.date} className="sd-chart-col" title={`₱${formatNumber(day.total)} on ${new Date(day.date).toLocaleDateString()}`}>
+                            <div className="sd-chart-bar-wrap">
+                              <div className="sd-chart-bar" style={{ height: `${pct}%` }} />
+                            </div>
+                            <span className="sd-chart-label">{new Date(day.date).getDate()}</span>
+                          </div>
+                        );
+                      })}
+                    </div>
+                  )}
+                </section>
+              </section>
+            </div>
+
+            <PrepList prep={prep} />
+
+            <div className="sd">
+              <div className="sd-panel sd-panel-row is-2">
+                <section className="sd-card sd-orders" data-tour="recent-orders">
+                  <header className="sd-card-header">
+                    <h2>Recent orders</h2>
+                    <Link to="/seller/orders" className="sd-view-all">See all</Link>
+                  </header>
+
+                  {isLoading ? (
+                    <Skeleton.OrderList rows={4} />
+                  ) : recentOrders.length === 0 ? (
+                    <div className="sd-empty">
+                      <EmptyArt name="orders" size={84} />
+                      <p>No orders yet.</p>
+                    </div>
+                  ) : (
+                    <ul className="sd-order-list">
+                      {recentOrders.map((o) => (
+                        <OrderRow
+                          key={o.id}
+                          order={o}
+                          onClick={() => navigate(`/seller/orders?id=${o.id}`)}
+                        />
+                      ))}
+                    </ul>
+                  )}
+                </section>
+                <section className="sd-card sd-topprod">
+                  <header className="sd-card-header">
+                    <h2>Top products</h2>
+                    <TrendingUp size={15} className="sd-header-icon" />
+                  </header>
+                  {topProducts.length === 0 ? (
+                    <div className="sd-empty sd-empty--sm">
+                      <EmptyArt name="products" size={56} />
+                      <p>No sales yet. Your best sellers show here.</p>
+                    </div>
+                  ) : (
+                    <ol className="sd-top-list">
+                      {topProducts.map((p, i) => (
+                        <li key={p.id} className="sd-top-item">
+                          <span className="sd-top-rank">{i + 1}</span>
                           <div className="sd-top-info">
                             <strong>{p.name}</strong>
-                            <span className="sd-top-meta">{Number(p.stock) === 0 ? 'Out of stock' : `${p.stock} left in stock`}</span>
+                            <span className="sd-top-meta">
+                              ₱{formatNumber(p.price)} · Stock: {p.stock ?? 0}
+                            </span>
+                            <span className="sd-top-rating">
+                              <Star size={11} weight="fill" color="var(--t-warning-500, #f59e0b)" />
+                              {p.averageRating != null ? Number(p.averageRating).toFixed(1) : '—'}
+                            </span>
                           </div>
-                          <span className="sd-restock">Restock <CaretRight size={13} weight="bold" /></span>
-                        </Link>
-                      </li>
-                    ))}
-                  </ul>
+                        </li>
+                      ))}
+                    </ol>
+                  )}
                 </section>
-              )}
+              </div>
+            </div>
           </div>
+
+          <aside className="sd-home-side" aria-label="Your shop">
+            {/* The one thing to finish first (SE-6: one card, not three). */}
+            {lead && <LeadCard lead={lead} onHide={lead.hideable ? () => completeGuide('setup-card', setStore) : null} />}
+
+            <div className="sd">
+              <div className="sd-panel">
+                <section className="sd-card sd-followers">
+                  <header className="sd-card-header">
+                    <h2>Followers</h2>
+                    <Users size={15} className="sd-header-icon" />
+                  </header>
+                  {followerStatsLoading ? (
+                    <div className="sd-empty sd-empty--sm">
+                      <Skeleton.Text lines={3} height={12} />
+                    </div>
+                  ) : followerStatsError ? (
+                    <div className="sd-empty sd-empty--sm">
+                      <Users size={22} weight="fill" />
+                      <p>Couldn't load follower stats.</p>
+                    </div>
+                  ) : !followerStats ? (
+                    <div className="sd-empty sd-empty--sm">
+                      <EmptyArt name="followers" size={56} />
+                      <p>No follower data yet.</p>
+                    </div>
+                  ) : (
+                    <div className="sd-followers-body">
+                      <div className="sd-followers-hero">
+                        <span className="sd-followers-total">{followerStats.total}</span>
+                        <span className="sd-followers-label">total followers</span>
+                      </div>
+                      <div className="sd-followers-metrics">
+                        <div>
+                          <span className="sd-followers-metric-value">+{followerStats.last7Days}</span>
+                          <span className="sd-followers-metric-label">last 7 days</span>
+                        </div>
+                        <div>
+                          <span className="sd-followers-metric-value">+{followerStats.last30Days}</span>
+                          <span className="sd-followers-metric-label">last 30 days</span>
+                        </div>
+                        <div>
+                          <span
+                            className={`sd-followers-metric-value ${followerStats.growthPct >= 0 ? 'is-up' : 'is-down'}`}
+                          >
+                            {followerStats.growthPct >= 0 ? '+' : ''}{followerStats.growthPct}%
+                          </span>
+                          <span className="sd-followers-metric-label">growth</span>
+                        </div>
+                      </div>
+                      {followerStats.recent?.length > 0 && (
+                        <div className="sd-followers-recent">
+                          <span className="sd-followers-recent-label">Recent followers</span>
+                          <div className="sd-followers-avatars">
+                            {followerStats.recent.slice(0, 6).map((r) => (
+                              <div
+                                key={r.buyer.id}
+                                className="sd-followers-avatar"
+                                title={r.buyer.fullName}
+                              >
+                                <UserAvatar src={r.buyer.profilePhoto} person={r.buyer} name={r.buyer.fullName} alt={r.buyer.fullName} />
+                              </div>
+                            ))}
+                            {followerStats.recent.length > 6 && (
+                              <span className="sd-followers-more">+{followerStats.recent.length - 6}</span>
+                            )}
+                          </div>
+                        </div>
+                      )}
+                    </div>
+                  )}
+                </section>
+              </div>
+
+              {lowStock.length > 0 && (
+                <div className="sd-panel">
+                  <section className="sd-card sd-lowstock">
+                    <header className="sd-card-header">
+                      <h2>Running low</h2>
+                      <Link to="/seller/products?stock=low" className="sd-view-all">See all</Link>
+                    </header>
+                    {/* Each row opens a quick restock for that product. */}
+                    <ul className="sd-top-list">
+                      {lowStock.map((p) => (
+                        <li key={p.id}>
+                          <Link to={`/seller/products?restock=${p.id}`} className="sd-top-item sd-top-item--link" title={`Restock ${p.name}`}>
+                            <span className="sd-top-rank sd-top-rank--warn"><WarningCircle size={13} /></span>
+                            <div className="sd-top-info">
+                              <strong>{p.name}</strong>
+                              <span className="sd-top-meta">{Number(p.stock) === 0 ? 'Out of stock' : `${p.stock} left in stock`}</span>
+                            </div>
+                            <span className="sd-restock">Restock <CaretRight size={13} weight="bold" /></span>
+                          </Link>
+                        </li>
+                      ))}
+                    </ul>
+                  </section>
+                </div>
+              )}
+            </div>
+
+            {/* Seller Academy: free lessons, one click away (can be hidden). */}
+            {showAcademy && (
+              <section className="sd-idv is-academy" aria-label="Seller Academy">
+                <span className="sd-idv-icon"><GraduationCap size={24} weight="fill" /></span>
+                <div className="sd-idv-body">
+                  <strong>Seller Academy</strong>
+                  <p>Free, simple lessons: better photos, faster orders, more buyers.</p>
+                </div>
+                <Link to="/sell/academy" className="sd-card-btn">
+                  Start learning <ArrowRight size={15} weight="bold" />
+                </Link>
+                {store?.id && (
+                  <button
+                    type="button"
+                    className="sd-card-hide"
+                    aria-label="Hide Seller Academy from the dashboard"
+                    title="Hide (Seller Academy stays in the sidebar)"
+                    onClick={() => completeGuide(ACADEMY_CARD, setStore)}
+                  >
+                    <X size={16} weight="bold" />
+                  </button>
+                )}
+              </section>
+            )}
+          </aside>
         </div>
       </div>
       {showTour && (
@@ -671,20 +692,25 @@ const actionTiles = (waiting, sellsLivestock) => {
   ];
 };
 
-/** Computers: the "Needs your action" row; a zero is quiet, a count stands out. */
+/**
+ * Computers: "Needs your action", a summary of what is waiting: only the
+ * kinds with something in them, and nothing at all when all is done.
+ */
 function ActionRow({ tiles }) {
-  const due = tiles.reduce((n, t) => n + (t.value || 0), 0);
+  const waitingTiles = tiles.filter((t) => t.value > 0);
+  const due = waitingTiles.reduce((n, t) => n + t.value, 0);
+  if (!waitingTiles.length) return null;
   return (
     <section className="sd-actions" aria-labelledby="sd-actions-title">
       <div className="sd-actions-head">
         <h2 id="sd-actions-title">Needs your action</h2>
-        <span>{due > 0 ? `${due} waiting` : 'All caught up'}</span>
+        <span>{due} waiting</span>
       </div>
       <div className="sd-actions-row">
-        {tiles.map(({ key, label, value, to, Icon }) => (
-          <Link key={key} to={to} className={`sd-action${value > 0 ? ' is-due' : ''}`}>
-            <Icon size={18} weight={value > 0 ? 'fill' : 'regular'} />
-            <strong>{value == null ? '–' : value}</strong>
+        {waitingTiles.map(({ key, label, value, to, Icon }) => (
+          <Link key={key} to={to} className={`sd-action is-${key}`}>
+            <span className="sd-action-icon"><Icon size={17} weight="fill" /></span>
+            <strong>{value}</strong>
             <span>{label}</span>
           </Link>
         ))}
@@ -1147,7 +1173,7 @@ function PhoneHome({
         <section className="sh-card sh-numbers" aria-label="Needs your action">
           {numbers.map(({ label, value, to }) => (
             <Link key={label} to={to} className={value > 0 ? 'is-due' : undefined}>
-              <strong>{value == null ? '–' : value}</strong>
+              <strong>{value}</strong>
               <span>{label}</span>
             </Link>
           ))}

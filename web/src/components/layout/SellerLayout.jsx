@@ -1,11 +1,14 @@
-import { useState, useEffect, useRef, useCallback } from 'react';
+import {
+  Fragment, useState, useEffect, useRef, useCallback,
+} from 'react';
 import { NavLink, Link, Outlet, Navigate, useLocation, useNavigate } from 'react-router-dom';
 import {
-  SquaresFour as LayoutGrid, ShoppingBag, ChatText as MessageSquare, Package, Star, ChartPie as PieChart,
-  Wallet, Storefront as StoreIcon, CaretDown as ChevronDown, CaretRight as ChevronRight, CaretLeft as ChevronLeft, Bell, SignOut as LogOut,
-  ArrowCounterClockwise as ReturnsIcon, Headset, ArrowsLeftRight, List, X,
+  SquaresFour as LayoutGrid, ShoppingBag, Package, ChartPie as PieChart,
+  Storefront as StoreIcon, CaretDown as ChevronDown, CaretRight as ChevronRight, CaretLeft as ChevronLeft, Bell, SignOut as LogOut,
+  Headset, ArrowsLeftRight, List, X,
   CaretLeft, Plus, LockSimple, House, ChatCircleDots, Megaphone, User as UserIcon, Check, Sparkle,
-  NotePencil, Question, Handshake, GraduationCap, Receipt,
+  NotePencil, Receipt, UsersThree, Lifebuoy, Gift, CalendarCheck,
+  ArrowSquareOut,
 } from '../../lib/icons';
 import { SHOP_TEMPLATES } from '../../lib/shopTemplates';
 import axios from '../../lib/axios';
@@ -25,9 +28,9 @@ import AppLogo from '../AppLogo';
 import SellerCenterGuide from '../seller/SellerCenterGuide';
 import SetupReturnPill from '../seller/SetupReturnPill';
 import SellerPageBoundary from '../seller/SellerPageBoundary';
+import MoormyDock from '../moormy/MoormyDock';
 import ConfirmDialog from '../ui/ConfirmDialog';
 import AppRail from './AppRail';
-import ToolStrip from './ToolStrip';
 import './SellerLayout.css';
 import './SellerShellMobile.css';
 import './SellerPhoneFit.css';
@@ -53,6 +56,8 @@ import { afterSignOutPath } from '../../lib/afterSignOut';
 import { ShopLogoArt } from '../shop/ShopArt';
 // The business-suite look shared with the admin panel, last so it wins.
 import './suite.css';
+// Lazada-clean on computers: flat page, one header, the menu in groups.
+import './SellerDesk.css';
 
 /**
  * Persistent shell for /seller/* routes.
@@ -72,18 +77,20 @@ export default function SellerLayout() {
   // The drawer on small screens always shows full labels.
   const collapsed = storedCollapsed && !isCompact;
   const mobileNav = useMobileNav(location.pathname);
-  const [productsOpen, setProductsOpen] = useState(
-    location.pathname.startsWith('/seller/products') || location.pathname.startsWith('/seller/today')
-    || location.pathname.startsWith('/seller/photo-designs')
-  );
-  const [shopOpen, setShopOpen] = useState(
-    location.pathname.startsWith('/seller/store')
-    || location.pathname.startsWith('/seller/settings')
-    || location.pathname.startsWith('/seller/fulfillment')
-    || location.pathname.startsWith('/seller/decorate')
-    || location.pathname === '/seller/shop-profile'
-    || location.pathname.startsWith('/seller/shop-qr')
-  );
+  const [openGroups, setOpenGroups] = useState(() => new Set([groupOf(location.pathname)].filter(Boolean)));
+  const toggleGroup = useCallback((id) => setOpenGroups((open) => {
+    const next = new Set(open);
+    if (next.has(id)) next.delete(id);
+    else next.add(id);
+    return next;
+  }), []);
+  // Arriving on a page (a link, the search) opens its group.
+  const [groupPath, setGroupPath] = useState(location.pathname);
+  if (groupPath !== location.pathname) {
+    setGroupPath(location.pathname);
+    const here = groupOf(location.pathname);
+    if (here && !openGroups.has(here)) setOpenGroups(new Set(openGroups).add(here));
+  }
   // The bell's count, from the site's one poller (lib/unreadCounts); the
   // number last seen shows until its first answer.
   const [cachedUnread] = useState(() => readCache('seller:unread') ?? 0);
@@ -239,6 +246,84 @@ export default function SellerLayout() {
   );
 
   const crumbs = buildCrumbs(location.pathname);
+  const group = { openGroups, toggleGroup, collapsed, path: location.pathname };
+
+  // The shop's account menu: switch to the personal account, open the
+  // storefront, sign out. In the header on computers (opening downwards),
+  // at the foot of the drawer on smaller screens (opening upwards).
+  const accountHead = !isCompact;
+  const account = (
+    <div className={`sc-account${accountHead ? ' sc-account--head' : ''}${accountOpen ? ' is-open' : ''}`} ref={accountRef}>
+      <div className="sc-account-menu" role="menu" aria-label="Account" aria-hidden={!accountOpen}>
+        <div className="sc-account-menu-head">
+          {shopAvatar}
+          <span className="sc-account-menu-meta">
+            <strong>{shopName}</strong>
+            <span>Seller account</span>
+          </span>
+        </div>
+        <button
+          type="button"
+          role="menuitem"
+          className="sc-account-switch"
+          tabIndex={accountOpen ? 0 : -1}
+          onClick={switchToPersonal}
+        >
+          <UserAvatar
+            src={user?.profilePhoto}
+            person={user}
+            name={personalInitial}
+            alt=""
+            imgClassName="sc-account-switch-avatar"
+            fallbackClassName="sc-account-switch-avatar sc-account-switch-avatar--fallback"
+          />
+          <span className="sc-account-menu-meta">
+            <strong className="sc-account-switch-label">Switch to Personal Account</strong>
+            <span>{personalName}</span>
+          </span>
+          <ArrowsLeftRight size={15} weight="bold" className="sc-account-switch-icon" />
+        </button>
+        {store?.slug && (
+          <a
+            href={`/store/${store.slug}`}
+            target="_blank"
+            rel="noopener noreferrer"
+            role="menuitem"
+            tabIndex={accountOpen ? 0 : -1}
+            className="sc-account-item"
+            onClick={() => setAccountOpen(false)}
+          >
+            <ArrowSquareOut size={16} /> View storefront
+          </a>
+        )}
+        <button
+          type="button"
+          role="menuitem"
+          tabIndex={accountOpen ? 0 : -1}
+          className="sc-account-item sc-account-item--out"
+          onClick={() => { setAccountOpen(false); setLogoutOpen(true); }}
+        >
+          <LogOut size={16} /> Sign out
+        </button>
+      </div>
+
+      <button
+        type="button"
+        className="sc-user-card"
+        title={shopName}
+        aria-haspopup="menu"
+        aria-expanded={accountOpen}
+        onClick={() => setAccountOpen((open) => !open)}
+      >
+        {shopAvatar}
+        <span className="sc-user-meta">
+          <strong>{shopName}</strong>
+          <span>Seller account</span>
+        </span>
+        {accountHead ? <ChevronDown size={14} className="sc-user-caret" /> : <ChevronRight size={14} className="sc-user-caret" />}
+      </button>
+    </div>
+  );
 
   // Phones work like a seller app: five tabs (Home, My products, Orders,
   // Chat, Me) on the bottom bar, Home and Me drawing their own shop
@@ -301,182 +386,74 @@ export default function SellerLayout() {
             </button>
           </div>
 
+          {/* The menu, in groups the way Lazada's Seller Center keeps it:
+              eight rows closed, each group's pages a click away. */}
           <nav className="sc-nav">
             <NavLink to="/seller" end className={navCls} title="Dashboard">
               <LayoutGrid size={17} weight="fill" /> <span>Dashboard</span>
             </NavLink>
-            <NavLink to="/seller/orders" className={navCls} title="My Orders">
-              <ShoppingBag size={17} weight="fill" /> <span>My Orders</span><NavBadge {...ordersWaiting} />
-            </NavLink>
-            <NavLink to="/seller/returns" className={navCls} title="Returns & refunds">
-              <ReturnsIcon size={17} weight="fill" /> <span>Returns & refunds</span>{badge('/seller/returns')}
-            </NavLink>
-            <NavLink to="/seller/messages" className={navCls} title="Messages">
-              <MessageSquare size={17} weight="fill" /> <span>Messages</span>{badge('/seller/messages')}
-            </NavLink>
-            <NavLink to="/seller/assistant" className={navCls} title="Ate Moormy, your AI assistant">
-              <Sparkle size={17} weight="fill" /> <span>Ate Moormy</span>
-            </NavLink>
-            <NavLink to="/seller/support" className={navCls} title="Message the admin">
-              <Headset size={17} weight="fill" /> <span>Message the admin</span>{badge('/seller/support')}
-            </NavLink>
 
-            {/* Products group */}
-            <button
-              type="button"
-              className={`sc-nav-item sc-nav-group ${productsOpen && !collapsed ? 'is-open' : ''}`}
-              onClick={() => collapsed ? navigate('/seller/products') : setProductsOpen((v) => !v)}
-              aria-expanded={productsOpen && !collapsed}
-              title="My Products"
+            <NavGroup id="orders" icon={ShoppingBag} label="Orders" {...group} badge={mergeWaiting(ordersWaiting, waiting['/seller/returns'])}>
+              <NavLink to="/seller/orders" className={subNavCls}>My Orders<NavBadge {...ordersWaiting} /></NavLink>
+              <NavLink to="/seller/returns" className={subNavCls}>Returns & refunds{badge('/seller/returns')}</NavLink>
+            </NavGroup>
+
+            <NavGroup id="products" icon={Package} label="Products" {...group} badge={waiting['/seller/products']}>
+              <NavLink to="/seller/products" end className={subNavCls}>All Products{badge('/seller/products')}</NavLink>
+              <NavLink to="/seller/products/new" className={subNavCls}>Add New</NavLink>
+              <NavLink to="/seller/today" className={subNavCls}>Available today</NavLink>
+              <NavLink to="/seller/photo-designs" className={subNavCls}>Photo designs</NavLink>
+            </NavGroup>
+
+            <NavGroup
+              id="buyers"
+              icon={UsersThree}
+              label="Buyers"
+              {...group}
+              badge={['/seller/messages', '/seller/reviews', '/seller/questions', '/seller/offers'].map((p) => waiting[p]).reduce(mergeWaiting, { count: 0 })}
             >
-              <Package size={17} weight="fill" />
-              <span>My Products</span>
-              <ChevronDown size={15} className="sc-nav-chevron" />
-            </button>
-            <div className={`sc-subnav-wrap${productsOpen ? ' is-open' : ''}`}>
-              <div className="sc-subnav">
-                <NavLink to="/seller/products" end className={subNavCls}>
-                  All Products{badge('/seller/products')}
-                </NavLink>
-                <NavLink to="/seller/products/new" className={subNavCls}>
-                  Add New
-                </NavLink>
-                <NavLink to="/seller/today" className={subNavCls}>
-                  Available today
-                </NavLink>
-                <NavLink to="/seller/photo-designs" className={subNavCls}>
-                  Photo designs
-                </NavLink>
-              </div>
-            </div>
+              <NavLink to="/seller/messages" className={subNavCls}>Messages{badge('/seller/messages')}</NavLink>
+              <NavLink to="/seller/reviews" className={subNavCls}>Reviews{badge('/seller/reviews')}</NavLink>
+              <NavLink to="/seller/questions" className={subNavCls}>Questions{badge('/seller/questions')}</NavLink>
+              {/* Price offers are for livestock: only shops that sell animals
+                  (or still have offers from when they did). */}
+              {(store?.sellsLivestock || waiting['/seller/offers']?.count > 0) && (
+                <NavLink to="/seller/offers" className={subNavCls}>Offers{badge('/seller/offers')}</NavLink>
+              )}
+            </NavGroup>
 
-            <NavLink to="/seller/notifications" className={navCls} title="Notifications">
-              <Bell size={17} weight="fill" /> <span>Notifications</span>
-              <NavBadge count={unreadCount} label="unread" />
-            </NavLink>
-            <NavLink to="/seller/reviews" className={navCls} title="Reviews">
-              <Star size={17} weight="fill" /> <span>Reviews</span>{badge('/seller/reviews')}
-            </NavLink>
-            <NavLink to="/seller/questions" className={navCls} title="Buyer questions">
-              <Question size={17} weight="fill" /> <span>Questions</span>{badge('/seller/questions')}
-            </NavLink>
-            {/* Price offers are for livestock: only shops that sell animals
-                (or still have offers from when they did). */}
-            {(store?.sellsLivestock || waiting['/seller/offers']?.count > 0) && (
-              <NavLink to="/seller/offers" className={navCls} title="Offers">
-                <Handshake size={17} weight="fill" /> <span>Offers</span>
-                {badge('/seller/offers')}
-              </NavLink>
-            )}
-            <NavLink to="/seller/analytics" className={navCls} title="Analytics">
-              <PieChart size={17} weight="fill" /> <span>Analytics</span>
-            </NavLink>
-            <NavLink to="/seller/finance" className={navCls} title="Earnings">
-              <Wallet size={17} weight="fill" /> <span>Earnings</span>
-            </NavLink>
             <NavLink to="/seller/marketing" className={navCls} title="Marketing">
               <Megaphone size={17} weight="fill" /> <span>Marketing</span>
             </NavLink>
 
-            {/* Shop group */}
-            <button
-              type="button"
-              className={`sc-nav-item sc-nav-group ${shopOpen && !collapsed ? 'is-open' : ''}`}
-              onClick={() => collapsed ? navigate('/seller/store') : setShopOpen((v) => !v)}
-              aria-expanded={shopOpen && !collapsed}
-              title="My Shop"
-            >
-              <StoreIcon size={17} weight="fill" />
-              <span>My Shop</span>
-              <ChevronDown size={15} className="sc-nav-chevron" />
-            </button>
-            <div className={`sc-subnav-wrap${shopOpen ? ' is-open' : ''}`}>
-              <div className="sc-subnav">
-                <NavLink to="/seller/store" className={subNavCls}>
-                  Shop Profile
-                </NavLink>
-                <NavLink to="/seller/fulfillment" className={subNavCls}>
-                  Delivery & payment
-                </NavLink>
-                <NavLink to="/seller/decorate" className={subNavCls}>
-                  Decorate my shop
-                </NavLink>
-                <NavLink to="/seller/settings" className={subNavCls}>
-                  Settings
-                </NavLink>
-                {/* The printable QR poster once the shop has a public address
-                    (a sample until the shop is approved). */}
-                {store?.slug && (
-                  <NavLink to="/seller/shop-qr" className={subNavCls}>
-                    Shop QR
-                  </NavLink>
-                )}
-                {store?.slug && (
-                  <a
-                    href={`/store/${store.slug}`}
-                    target="_blank"
-                    rel="noopener noreferrer"
-                    className="sc-subnav-link"
-                  >
-                    View Storefront
-                  </a>
-                )}
-              </div>
-            </div>
+            <NavGroup id="business" icon={PieChart} label="Business" {...group}>
+              <NavLink to="/seller/analytics" className={subNavCls}>Analytics</NavLink>
+              <NavLink to="/seller/finance" className={subNavCls}>Earnings</NavLink>
+            </NavGroup>
 
-            <NavLink to="/sell/academy" className={navCls} title="Seller Academy">
-              <GraduationCap size={17} weight="fill" /> <span>Seller Academy</span>
-            </NavLink>
+            <NavGroup id="shop" icon={StoreIcon} label="My Shop" {...group}>
+              <NavLink to="/seller/store" className={subNavCls}>Shop Profile</NavLink>
+              <NavLink to="/seller/fulfillment" className={subNavCls}>Delivery & payment</NavLink>
+              <NavLink to="/seller/decorate" className={subNavCls}>Decorate my shop</NavLink>
+              <NavLink to="/seller/settings" className={subNavCls}>Settings</NavLink>
+              {/* The printable QR poster once the shop has a public address
+                  (a sample until the shop is approved). */}
+              {store?.slug && <NavLink to="/seller/shop-qr" className={subNavCls}>Shop QR</NavLink>}
+              {store?.slug && (
+                <a href={`/store/${store.slug}`} target="_blank" rel="noopener noreferrer" className="sc-subnav-link">
+                  View Storefront
+                </a>
+              )}
+            </NavGroup>
+
+            <NavGroup id="help" icon={Lifebuoy} label="Help" {...group} badge={waiting['/seller/support']}>
+              <NavLink to="/sell/academy" className={subNavCls}>Seller Academy</NavLink>
+              <NavLink to="/seller/assistant" className={subNavCls}>Ate Moormy (AI)</NavLink>
+              <NavLink to="/seller/support" className={subNavCls}>Message the admin{badge('/seller/support')}</NavLink>
+            </NavGroup>
           </nav>
 
-          <div className={`sc-account${accountOpen ? ' is-open' : ''}`} ref={accountRef}>
-            <div className="sc-account-menu" role="menu" aria-label="Account" aria-hidden={!accountOpen}>
-              <div className="sc-account-menu-head">
-                {shopAvatar}
-                <span className="sc-account-menu-meta">
-                  <strong>{shopName}</strong>
-                  <span>Seller account</span>
-                </span>
-              </div>
-              <button
-                type="button"
-                role="menuitem"
-                className="sc-account-switch"
-                tabIndex={accountOpen ? 0 : -1}
-                onClick={switchToPersonal}
-              >
-                <UserAvatar
-                  src={user?.profilePhoto}
-                  person={user}
-                  name={personalInitial}
-                  alt=""
-                  imgClassName="sc-account-switch-avatar"
-                  fallbackClassName="sc-account-switch-avatar sc-account-switch-avatar--fallback"
-                />
-                <span className="sc-account-menu-meta">
-                  <strong className="sc-account-switch-label">Switch to Personal Account</strong>
-                  <span>{personalName}</span>
-                </span>
-                <ArrowsLeftRight size={15} weight="bold" className="sc-account-switch-icon" />
-              </button>
-            </div>
-
-            <button
-              type="button"
-              className="sc-user-card"
-              title={shopName}
-              aria-haspopup="menu"
-              aria-expanded={accountOpen}
-              onClick={() => setAccountOpen((open) => !open)}
-            >
-              {shopAvatar}
-              <span className="sc-user-meta">
-                <strong>{shopName}</strong>
-                <span>Seller account</span>
-              </span>
-              <ChevronRight size={14} className="sc-user-caret" />
-            </button>
-          </div>
+          {isCompact && account}
         </div>
       </aside>
 
@@ -581,7 +558,31 @@ export default function SellerLayout() {
             scope="seller"
           />
 
-          {/* Shown on small screens; the right rail takes over on desktop. */}
+          {/* Computers: everything else lives here, in one bar, as on
+              Lazada's: make something, chat, notifications, language, help
+              and the shop's account. */}
+          {!isCompact && (
+            <div className="sc-head-actions">
+              <CreateMenu />
+              <Link
+                to="/seller/messages"
+                className="sc-head-btn"
+                title="Chat with buyers"
+                aria-label={chatUnread > 0 ? `Chat, ${chatUnread} unread` : 'Chat'}
+              >
+                <ChatCircleDots size={21} />
+                {chatUnread > 0 && <span className="sc-head-badge" aria-hidden="true">{chatUnread > 9 ? '9+' : chatUnread}</span>}
+              </Link>
+              <AppRail placement="bar" unreadCount={unreadCount} onLogout={handleLogout} />
+              <Link to="/sell/academy" className="sc-head-btn" title="Seller Academy and help" aria-label="Help">
+                <Lifebuoy size={21} />
+              </Link>
+              <span className="sc-head-rule" aria-hidden="true" />
+              {account}
+            </div>
+          )}
+
+          {/* Shown on small screens; the header above takes over on desktop. */}
           <div className="sc-topbar-actions">
             <LanguageSwitcher variant="shell" />
             <Link
@@ -607,9 +608,21 @@ export default function SellerLayout() {
           </div>
         </header>
 
-        {!isPhone && <ToolStrip area="seller" role="SELLER" />}
-
         <main className="sc-content">
+          {/* Computers: where you are, over the title, as on Lazada's (the
+              Dashboard is home, so it has none). */}
+          {!isPhone && cleanPath !== '/seller' && crumbs.length > 1 && (
+            <nav className="sc-crumbs-bar" aria-label="You are here">
+              {crumbs.map((c, i) => (
+                <Fragment key={c.to}>
+                  {i > 0 && <ChevronRight size={12} weight="bold" aria-hidden="true" />}
+                  {i === crumbs.length - 1
+                    ? <span aria-current="page">{c.label}</span>
+                    : <Link to={c.to}>{i === 0 ? 'Home' : c.label}</Link>}
+                </Fragment>
+              ))}
+            </nav>
+          )}
           {!isPhone && DESKTOP_HIDDEN_TITLES.includes(cleanPath) && (
             <h1 className="sr-only">{phoneTitle}</h1>
           )}
@@ -650,10 +663,10 @@ export default function SellerLayout() {
           </SellerPageBoundary>
         </main>
         <SellerCenterGuide store={store} setStore={setStore} />
+        {/* Ate Moormy, a click away on every page but her own (computers). */}
+        {!isPhone && cleanPath !== '/seller/assistant' && <MoormyDock />}
         <SetupReturnPill />
       </div>
-
-      <AppRail unreadCount={unreadCount} onLogout={handleLogout} />
 
       {/* Phone tab bar */}
       <nav className={`sc-tabbar sc-tabbar--app${isPhone && !isTabRoot ? ' is-hidden' : ''}`} aria-label="Seller sections">
@@ -715,6 +728,96 @@ function subNavCls({ isActive }) {
 
 function tabCls({ isActive }) {
   return `sc-tab${isActive ? ' is-active' : ''}`;
+}
+
+/** The menu's groups and the pages each one holds (for opening the right one). */
+const NAV_GROUPS = {
+  orders: ['/seller/orders', '/seller/returns'],
+  products: ['/seller/products', '/seller/today', '/seller/photo-designs'],
+  buyers: ['/seller/messages', '/seller/reviews', '/seller/questions', '/seller/offers'],
+  business: ['/seller/analytics', '/seller/finance'],
+  shop: ['/seller/store', '/seller/settings', '/seller/fulfillment', '/seller/decorate', '/seller/shop-profile', '/seller/shop-qr'],
+  help: ['/seller/assistant', '/seller/support'],
+};
+
+function groupOf(pathname) {
+  return Object.keys(NAV_GROUPS).find((id) => NAV_GROUPS[id].some((p) => pathname === p || pathname.startsWith(`${p}/`)));
+}
+
+/**
+ * A group in the menu: its row opens and closes its pages (with the sidebar
+ * collapsed to icons, it goes to the first of them). While closed, the row
+ * carries its pages' waiting count.
+ */
+function NavGroup({
+  id, icon: Icon, label, openGroups, toggleGroup, collapsed, path, badge: waiting, children,
+}) {
+  const navigate = useNavigate();
+  const open = openGroups.has(id) && !collapsed;
+  const here = groupOf(path) === id;
+  return (
+    <>
+      <button
+        type="button"
+        className={`sc-nav-item sc-nav-group${open ? ' is-open' : ''}${here ? ' is-here' : ''}`}
+        onClick={() => (collapsed ? navigate(NAV_GROUPS[id][0]) : toggleGroup(id))}
+        aria-expanded={open}
+        title={label}
+      >
+        <Icon size={17} weight="fill" />
+        <span>{label}</span>
+        {!open && waiting?.count > 0 && <NavBadge {...waiting} />}
+        <ChevronDown size={15} className="sc-nav-chevron" />
+      </button>
+      <div className={`sc-subnav-wrap${openGroups.has(id) ? ' is-open' : ''}`}>
+        <div className="sc-subnav">{children}</div>
+      </div>
+    </>
+  );
+}
+
+/** Things made most often, from the header's "+ Create". */
+const CREATE = [
+  { label: 'Product', note: 'Something to sell', to: '/seller/products/new', icon: Package },
+  { label: 'Package', note: 'Products sold together', to: '/seller/products/new?type=package', icon: Gift },
+  { label: 'Available today', note: 'A post on today’s menu', to: '/seller/today/new', icon: CalendarCheck },
+  { label: 'Announcement', note: 'News for your followers', to: '/seller/marketing', icon: Megaphone },
+];
+
+function CreateMenu() {
+  const [open, setOpen] = useState(false);
+  const ref = useRef(null);
+  useEffect(() => {
+    if (!open) return undefined;
+    const away = (e) => { if (!ref.current?.contains(e.target)) setOpen(false); };
+    const key = (e) => { if (e.key === 'Escape') setOpen(false); };
+    document.addEventListener('pointerdown', away);
+    document.addEventListener('keydown', key);
+    return () => {
+      document.removeEventListener('pointerdown', away);
+      document.removeEventListener('keydown', key);
+    };
+  }, [open]);
+  return (
+    <div className={`sc-create${open ? ' is-open' : ''}`} ref={ref}>
+      <button type="button" className="sc-create-btn" aria-haspopup="menu" aria-expanded={open} onClick={() => setOpen((v) => !v)}>
+        <Plus size={16} weight="bold" /> Create <ChevronDown size={13} weight="bold" />
+      </button>
+      {open && (
+        <div className="sc-create-menu" role="menu">
+          {CREATE.map(({ label, note, to, icon: Icon }) => (
+            <Link key={label} to={to} role="menuitem" className="sc-create-item" onClick={() => setOpen(false)}>
+              <span className="sc-create-icon"><Icon size={18} weight="fill" /></span>
+              <span>
+                <strong>{label}</strong>
+                <small>{note}</small>
+              </span>
+            </Link>
+          ))}
+        </div>
+      )}
+    </div>
+  );
 }
 
 const SEVERITY_RANK = { none: 0, low: 1, medium: 2, high: 3 };

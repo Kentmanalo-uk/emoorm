@@ -1239,6 +1239,31 @@ a.pm-btn {
   flex-wrap: wrap;
 }
 
+/* Opened from "Change": the box on one line, Cancel after it. */
+.sp-restock-open {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+
+.sp-restock-open .sp-restock {
+  display: flex;
+  flex-wrap: nowrap;
+  align-items: center;
+  gap: 6px;
+}
+
+.sp-restock-open .product-restock-input {
+  width: 100px;
+  min-height: 32px;
+  padding: 4px 8px;
+}
+
+.sp-restock-open .product-restock-btn {
+  min-height: 32px;
+  white-space: nowrap;
+}
+
 .sp-restock .sp-restock-mode {
   width: 96px;
   min-height: 30px;

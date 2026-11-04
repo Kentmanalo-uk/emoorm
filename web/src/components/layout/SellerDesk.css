@@ -1,0 +1,1560 @@
+/* ═══════════════════════════════════════════════════════════════════════
+   The Seller Center on a computer, kept as plain as Lazada's: a flat pale
+   grey page with white surfaces on it, one white header (search, Create,
+   chat, notifications, language, help, the shop's account), a white menu
+   in groups, and colour only where something can be done.
+
+   Loaded after suite.css (the admin panel's look, which the Seller Center
+   shared) and a class more specific than its rules where they meet. Phones
+   are untouched: everything is behind 769px or wider, and the header's
+   right side only exists from 1025px (SellerLayout.jsx).
+   ═══════════════════════════════════════════════════════════════════════ */
+
+/* The account menu's own rows (also in the drawer on smaller screens). */
+.sc-account-item {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  width: 100%;
+  padding: 9px 10px;
+  border: 0;
+  border-radius: 8px;
+  background: none;
+  color: var(--t-neutral-700, #374151);
+  font: inherit;
+  font-size: 13.5px;
+  font-weight: 500;
+  text-align: left;
+  text-decoration: none;
+  cursor: pointer;
+}
+
+.sc-account-item:hover {
+  background: var(--t-neutral-50, #f9fafb);
+  color: var(--t-neutral-900, #111827);
+}
+
+.sc-account-item svg {
+  color: var(--t-neutral-500, #6b7280);
+}
+
+.sc-account-item--out,
+.sc-account-item--out svg {
+  color: var(--t-danger-600, #dc2626);
+}
+
+.sc-account-item--out:hover {
+  background: var(--t-danger-50, #fef2f2);
+  color: var(--t-danger-700, #b91c1c);
+}
+
+@media (min-width: 769px) {
+  .sc-shell.sc-shell:not(.is-phone) {
+    --sc-page: #f2f3f7;
+    --sc-line: #e7e8ee;
+    background: var(--sc-page);
+  }
+
+  /* ── The menu ─────────────────────────────────────────────────────── */
+
+  .sc-shell:not(.is-phone) .sc-sidebar.sc-sidebar {
+    border-right: 1px solid var(--sc-line);
+  }
+
+  .sc-shell:not(.is-phone) .sc-nav {
+    gap: 1px;
+  }
+
+  .sc-shell:not(.is-phone) .sc-nav-item {
+    padding: 10px 12px;
+    color: var(--t-neutral-700, #374151);
+    font-size: 14px;
+  }
+
+  .sc-shell:not(.is-phone) .sc-nav-item > svg:not(.sc-nav-chevron) {
+    color: var(--t-neutral-400, #9ca3af);
+  }
+
+  .sc-shell:not(.is-phone) .sc-nav-item:hover {
+    background: var(--sc-page);
+  }
+
+  .sc-shell:not(.is-phone) .sc-nav-item--active,
+  .sc-shell:not(.is-phone) .sc-nav-item--active:hover {
+    background: var(--t-primary-50, #ecfdf5);
+    color: var(--t-primary-700, #047857);
+    font-weight: 600;
+  }
+
+  /* A group holding the open page: its name and icon in green. */
+  .sc-shell:not(.is-phone) .sc-nav-item--active > svg:not(.sc-nav-chevron),
+  .sc-shell:not(.is-phone) .sc-nav-group.is-here,
+  .sc-shell:not(.is-phone) .sc-nav-group.is-here > svg:not(.sc-nav-chevron) {
+    color: var(--t-primary-700, #047857);
+  }
+
+  .sc-shell:not(.is-phone) .sc-nav-group.is-here {
+    font-weight: 600;
+  }
+
+  .sc-shell:not(.is-phone) .sc-nav-chevron {
+    color: var(--t-neutral-400, #9ca3af);
+  }
+
+  .sc-shell:not(.is-phone) .sc-subnav {
+    padding-left: 39px;
+  }
+
+  .sc-shell:not(.is-phone) .sc-subnav-link {
+    display: flex;
+    align-items: center;
+    gap: 6px;
+    padding: 8px 12px;
+    color: var(--t-neutral-600, #4b5563);
+    font-size: 13.5px;
+  }
+
+  .sc-shell:not(.is-phone) .sc-subnav-link:hover {
+    background: var(--sc-page);
+  }
+
+  .sc-shell:not(.is-phone) .sc-subnav-link--active,
+  .sc-shell:not(.is-phone) .sc-subnav-link--active:hover {
+    background: var(--t-primary-50, #ecfdf5);
+    color: var(--t-primary-700, #047857);
+    font-weight: 600;
+  }
+
+  .sc-shell:not(.is-phone) .sc-subnav-link .nav-badge {
+    margin-left: auto;
+  }
+}
+
+@media (min-width: 1025px) {
+  /* ── The header ───────────────────────────────────────────────────── */
+
+  .sc-shell:not(.is-phone) .sc-main > .sc-topbar {
+    gap: 16px;
+    height: 60px;
+    background: var(--t-neutral-0, #fff);
+    border-bottom: 1px solid var(--sc-line);
+    backdrop-filter: none;
+    -webkit-backdrop-filter: none;
+  }
+
+  /* Search on the left, like Lazada's, in its grey field. */
+  .sc-shell:not(.is-phone) .sc-topbar .shell-search {
+    max-width: 520px;
+    margin: 0;
+  }
+
+  .sc-shell:not(.is-phone) .sc-topbar .shell-search-field {
+    height: 38px;
+    background: #eff0f5;
+    border-color: transparent;
+    border-radius: 8px;
+  }
+
+  .sc-shell:not(.is-phone) .sc-topbar .shell-search-field:hover {
+    border-color: transparent;
+  }
+
+  .sc-shell:not(.is-phone) .sc-topbar .shell-search-field:focus-within {
+    background: var(--t-neutral-0, #fff);
+    border-color: #d5d8e1;
+  }
+
+  .sc-head-actions {
+    display: flex;
+    align-items: center;
+    gap: 2px;
+    margin-left: auto;
+    flex-shrink: 0;
+  }
+
+  .sc-head-btn {
+    position: relative;
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    width: 38px;
+    height: 38px;
+    border-radius: 8px;
+    color: var(--t-neutral-600, #4b5563);
+    text-decoration: none;
+    transition: background-color .12s, color .12s;
+  }
+
+  .sc-head-btn:hover {
+    background: var(--sc-page);
+    color: var(--t-neutral-900, #111827);
+  }
+
+  .sc-head-badge {
+    position: absolute;
+    top: 2px;
+    right: 1px;
+    min-width: 16px;
+    height: 16px;
+    padding: 0 4px;
+    border: 2px solid var(--t-neutral-0, #fff);
+    border-radius: 999px;
+    background: var(--t-danger-500, #ef4444);
+    color: #fff;
+    font-size: 10px;
+    font-weight: 700;
+    line-height: 16px;
+    text-align: center;
+    box-sizing: content-box;
+  }
+
+  .sc-head-rule {
+    width: 1px;
+    height: 24px;
+    margin: 0 8px;
+    background: var(--sc-line);
+  }
+
+  /* The rail's notifications and language buttons, grey like the rest of
+     the bar (suite.css paints the rail's icons pink and blue). */
+  .sc-shell:not(.is-phone) .sc-topbar .sr-rail.sr-rail--bar .sr-btn > svg:not([data-variant="outline"]) :is(path, circle, rect, line, polyline, polygon):not([fill="none"]) {
+    fill: currentColor;
+  }
+
+  .sc-shell:not(.is-phone) .sc-topbar .sr-rail.sr-rail--bar :is(.sr-btn--notif, .sr-btn--lang),
+  .sc-shell:not(.is-phone) .sc-topbar .sr-rail.sr-rail--bar .sr-item:hover :is(.sr-btn--notif, .sr-btn--lang),
+  .sc-shell:not(.is-phone) .sc-topbar .sr-rail.sr-rail--bar .sr-item.is-open :is(.sr-btn--notif, .sr-btn--lang) {
+    color: var(--t-neutral-600, #4b5563);
+  }
+
+  .sc-shell:not(.is-phone) .sc-topbar .sr-rail.sr-rail--bar .sr-item:hover .sr-btn,
+  .sc-shell:not(.is-phone) .sc-topbar .sr-rail.sr-rail--bar .sr-item:focus-within .sr-btn,
+  .sc-shell:not(.is-phone) .sc-topbar .sr-rail.sr-rail--bar .sr-item.is-open .sr-btn {
+    background: var(--sc-page);
+  }
+
+  /* "+ Create": the one coloured thing in the bar. */
+  .sc-create {
+    position: relative;
+    margin-right: 10px;
+  }
+
+  .sc-create-btn {
+    display: inline-flex;
+    align-items: center;
+    gap: 6px;
+    height: 36px;
+    padding: 0 12px 0 14px;
+    border: 0;
+    border-radius: 8px;
+    background: var(--t-primary-600, #047857);
+    color: #fff;
+    font: inherit;
+    font-size: 13.5px;
+    font-weight: 600;
+    cursor: pointer;
+    transition: background-color .12s;
+  }
+
+  .sc-create-btn:hover,
+  .sc-create.is-open .sc-create-btn {
+    background: var(--t-primary-700, #065f46);
+  }
+
+  .sc-create-menu {
+    position: absolute;
+    top: calc(100% + 8px);
+    right: 0;
+    z-index: 40;
+    width: 270px;
+    padding: 6px;
+    border-radius: 12px;
+    background: var(--t-neutral-0, #fff);
+    box-shadow: 0 12px 32px rgba(15, 23, 42, 0.14), 0 2px 6px rgba(15, 23, 42, 0.06);
+  }
+
+  .sc-create-item {
+    display: flex;
+    align-items: center;
+    gap: 12px;
+    padding: 9px 10px;
+    border-radius: 8px;
+    color: var(--t-neutral-800, #1f2937);
+    text-decoration: none;
+  }
+
+  .sc-create-item:hover,
+  .sc-create-item:focus-visible {
+    background: var(--sc-page);
+  }
+
+  .sc-create-icon {
+    display: grid;
+    place-items: center;
+    flex-shrink: 0;
+    width: 34px;
+    height: 34px;
+    border-radius: 8px;
+    background: var(--t-primary-50, #ecfdf5);
+    color: var(--t-primary-600, #047857);
+  }
+
+  .sc-create-item strong {
+    display: block;
+    font-size: 13.5px;
+    font-weight: 600;
+  }
+
+  .sc-create-item small {
+    display: block;
+    color: var(--t-neutral-500, #6b7280);
+    font-size: 12px;
+  }
+
+  /* The shop's account, at the bar's right end, its menu dropping down. */
+  .sc-account.sc-account--head {
+    margin-top: 0;
+  }
+
+  .sc-account--head .sc-user-card {
+    gap: 8px;
+    padding: 4px 8px 4px 4px;
+    border-top: 0;
+    border-radius: 8px;
+  }
+
+  .sc-account--head .sc-user-card .sc-user-avatar {
+    width: 32px;
+    height: 32px;
+  }
+
+  .sc-account--head .sc-user-meta strong {
+    max-width: 150px;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    font-size: 13.5px;
+  }
+
+  .sc-account--head .sc-user-meta span {
+    display: none;
+  }
+
+  .sc-account--head.is-open .sc-user-caret {
+    transform: rotate(180deg);
+  }
+
+  .sc-account--head .sc-account-menu {
+    top: calc(100% + 8px);
+    right: 0;
+    bottom: auto;
+    left: auto;
+    width: 290px;
+    transform-origin: calc(100% - 24px) -12px;
+  }
+}
+
+/* ═══════════════════════════════════════════════════════════════════════
+   Inside the pages, measured from Lazada's own Seller Center (signed in,
+   November 2026; it is built on Alibaba's Fusion "next" components):
+
+     page         #f2f3f7; text 14px at 65% black
+     title        24px / 600, a grey "Home › page" trail over it
+     panels       white, 16px corners, no line, a faint blue-grey shadow
+                  (0 1px 12px 1px rgba(132,152,208,.07)), 16px apart: the
+                  filters, the list's toolbar and the list are separate
+     tabs         on the page itself, 16px words, #4f5669, the open one
+                  600 in the brand colour and underlined, 12px 16px each
+     fields       white, 32px, 8px corners, a #c4c6cf line
+     buttons      32px, 8px corners, 14px; outlined ones the field's line
+     list header  white, the row text's size and weight, not a grey band
+     chips        #f2f3f7, 8px corners, 28px
+
+   Only the look changes: every page keeps its words, fields and buttons.
+   Computers only, a class more specific than suite.css where both style
+   the same thing.
+   ═══════════════════════════════════════════════════════════════════════ */
+@media (min-width: 769px) {
+  .sc-shell.sc-shell:not(.is-phone) {
+    --sc-field: #c4c6cf;
+    --sc-row: #eef0f4;
+    --sc-ink: rgba(0, 0, 0, 0.75);
+    --sc-ink-soft: #4f5669;
+    --sc-ink-mute: #858b9c;
+    --sc-panel-shadow: 0 1px 12px 1px rgba(132, 152, 208, 0.07);
+  }
+
+  /* ── The trail over the title (SellerLayout.jsx) ───────────────────── */
+  .sc-crumbs-bar {
+    display: flex;
+    flex-wrap: wrap;
+    align-items: center;
+    gap: 6px;
+    margin: 0 0 8px;
+    color: var(--sc-ink-mute);
+    font-size: 13.5px;
+  }
+
+  .sc-crumbs-bar a {
+    color: var(--sc-ink-mute);
+    text-decoration: none;
+  }
+
+  .sc-crumbs-bar a:hover {
+    color: var(--t-primary-700, #047857);
+  }
+
+  .sc-crumbs-bar [aria-current] {
+    color: var(--sc-ink);
+    font-weight: 600;
+  }
+
+  .sc-crumbs-bar svg {
+    color: #b4b8c4;
+  }
+
+  /* ── Page title ───────────────────────────────────────────────────── */
+  .sc-shell.sc-shell:not(.is-phone) .sc-content .seller-header {
+    align-items: center;
+    margin-bottom: 16px;
+  }
+
+  .sc-shell.sc-shell:not(.is-phone) .sc-content :is(.seller-header, .sd-header) h1 {
+    color: var(--sc-ink);
+    font-size: 24px;
+    font-weight: 600;
+    line-height: 1.25;
+    letter-spacing: -0.01em;
+  }
+
+  .sc-shell.sc-shell:not(.is-phone) .sc-content .seller-welcome {
+    margin-top: 4px;
+    color: var(--sc-ink-mute);
+    font-size: 14px;
+  }
+
+  /* ── Panels ───────────────────────────────────────────────────────── */
+  .sc-shell.sc-shell:not(.is-phone) .sc-content :is(.seller-card, .sd-card, .an-card, .sa-card, .sd-header-card, .so-filters, .of-empty, .order-detail-panel) {
+    border: 0;
+    border-radius: 16px;
+    background: var(--t-neutral-0, #fff);
+    box-shadow: var(--sc-panel-shadow);
+  }
+
+  /* Number tiles that sit inside a panel stay flat. */
+  .sc-shell.sc-shell:not(.is-phone) .sc-content :is(.seller-card, .sd-card) :is(.sd-stat, .sd-stat--compact) {
+    box-shadow: none;
+  }
+
+  .sc-shell.sc-shell:not(.is-phone) .sc-content .seller-card-header {
+    padding: 16px 20px;
+    border-bottom: 1px solid var(--sc-row);
+  }
+
+  .sc-shell.sc-shell:not(.is-phone) .sc-content .seller-card-header h2 {
+    color: var(--sc-ink);
+    font-size: 16px;
+    font-weight: 600;
+  }
+
+  /* Products: the filters and the list as two panels, 16px apart. */
+  .sc-shell.sc-shell:not(.is-phone) .sc-content :is(.sp-toolbar, .so-filters) {
+    margin: 0 0 16px;
+    padding: 16px 20px;
+  }
+
+  /* Orders: the filters stay joined to the list under them, as before. */
+  .sc-shell.sc-shell:not(.is-phone) .sc-content .so-filters:has(+ .orders-layout.is-single) {
+    margin-bottom: 0;
+    border-bottom: 1px solid var(--sc-row);
+    border-radius: 16px 16px 0 0;
+  }
+
+  .sc-shell.sc-shell:not(.is-phone) .sc-content .so-filters + .orders-layout.is-single > .orders-list-card {
+    border-radius: 0 0 16px 16px;
+  }
+
+  /* Lists keep their rows inside the panel's round corners. */
+  .sc-shell.sc-shell:not(.is-phone) .sc-content :is(.sp-list-card, .orders-list-card) {
+    overflow: hidden;
+  }
+
+  /* ── Tabs: words on the page, the open one underlined ─────────────── */
+  .sc-shell.sc-shell:not(.is-phone) .sc-content :is(.seller-tabs, .seller-return-tabs, .sq-tabs, .stw-tabs, .of-tabs) {
+    display: flex;
+    flex-wrap: nowrap;
+    gap: 0;
+    width: 100%;
+    max-width: none;
+    margin: 0 0 12px;
+    padding: 0;
+    overflow-x: auto;
+    border: 0;
+    border-radius: 0;
+    background: none;
+    box-shadow: none;
+    scrollbar-width: none;
+  }
+
+  .sc-shell.sc-shell:not(.is-phone) .sc-content :is(.seller-tabs .seller-tab, :is(.seller-return-tabs, .sq-tabs, .stw-tabs, .of-tabs) > button) {
+    position: relative;
+    display: inline-flex;
+    align-items: center;
+    gap: 6px;
+    height: 45px;
+    padding: 0 16px;
+    border: 0;
+    border-radius: 0;
+    background: transparent;
+    box-shadow: none;
+    color: var(--sc-ink-soft);
+    font-size: 15px;
+    font-weight: 400;
+    white-space: nowrap;
+  }
+
+  .sc-shell.sc-shell:not(.is-phone) .sc-content :is(.seller-tabs .seller-tab, :is(.seller-return-tabs, .sq-tabs, .stw-tabs, .of-tabs) > button):first-child {
+    padding-left: 0;
+  }
+
+  .sc-shell.sc-shell:not(.is-phone) .sc-content :is(.seller-tabs .seller-tab, :is(.seller-return-tabs, .sq-tabs, .stw-tabs, .of-tabs) > button):hover {
+    background: transparent;
+    color: var(--t-primary-700, #047857);
+  }
+
+  .sc-shell.sc-shell:not(.is-phone) .sc-content :is(.seller-tabs .seller-tab--active, :is(.seller-return-tabs, .sq-tabs, .stw-tabs, .of-tabs) > button:is(.is-active, .is-on)),
+  .sc-shell.sc-shell:not(.is-phone) .sc-content :is(.seller-tabs .seller-tab--active, :is(.seller-return-tabs, .sq-tabs, .stw-tabs, .of-tabs) > button:is(.is-active, .is-on)):hover {
+    background: transparent;
+    box-shadow: none;
+    color: var(--t-primary-700, #047857);
+    font-weight: 600;
+  }
+
+  .sc-shell.sc-shell:not(.is-phone) .sc-content :is(.seller-tabs .seller-tab--active, :is(.seller-return-tabs, .sq-tabs, .stw-tabs, .of-tabs) > button:is(.is-active, .is-on))::after {
+    content: "";
+    position: absolute;
+    right: 16px;
+    bottom: 2px;
+    left: 16px;
+    display: block;
+    height: 3px;
+    border-radius: 3px;
+    background: var(--t-primary-600, #047857);
+  }
+
+  .sc-shell.sc-shell:not(.is-phone) .sc-content :is(.seller-tabs .seller-tab--active, :is(.seller-return-tabs, .sq-tabs, .stw-tabs, .of-tabs) > button:is(.is-active, .is-on)):first-child::after {
+    left: 0;
+  }
+
+  /* A tab's count: plain grey figures beside the word. */
+  .sc-shell.sc-shell:not(.is-phone) .sc-content :is(.seller-return-tabs, .of-tabs) > button b,
+  .sc-shell.sc-shell:not(.is-phone) .sc-content .seller-tab :is(.so-tab-count, .sp-tab-count, .products-tab-count),
+  .sc-shell.sc-shell:not(.is-phone) .sc-content .seller-tab--active .products-tab-count {
+    min-width: 0;
+    padding: 0;
+    background: none;
+    color: var(--sc-ink-mute);
+    font-size: 14px;
+    font-weight: 400;
+  }
+
+  /* ── Fields: white, 32px, a grey line, green when in use ───────────── */
+  .sc-shell.sc-shell:not(.is-phone) .sc-content :is(.seller-card, .an-card, .sa-card, .so-filters) :is(input[type="text"], input[type="search"], input[type="number"], input[type="tel"], input[type="email"], input[type="url"], input[type="date"], input:not([type]), textarea, select),
+  .sc-shell.sc-shell:not(.is-phone) .sc-content :is(.seller-search, .products-search-input) {
+    min-height: 34px;
+    border: 1px solid var(--sc-field);
+    border-radius: 8px;
+    background-color: var(--t-neutral-0, #fff);
+    box-shadow: none;
+    font-size: 14px;
+  }
+
+  .sc-shell.sc-shell:not(.is-phone) .sc-content :is(.seller-card, .an-card, .sa-card, .so-filters) :is(input[type="text"], input[type="search"], input[type="number"], input[type="tel"], input[type="email"], input[type="url"], input[type="date"], input:not([type]), textarea, select):hover:not(:focus):not(:disabled),
+  .sc-shell.sc-shell:not(.is-phone) .sc-content .seller-search:hover:not(:focus-within) {
+    border-color: #9fa3ae;
+    background-color: var(--t-neutral-0, #fff);
+  }
+
+  .sc-shell.sc-shell:not(.is-phone) .sc-content :is(.seller-card, .an-card, .sa-card, .so-filters) :is(input[type="text"], input[type="search"], input[type="number"], input[type="tel"], input[type="email"], input[type="url"], input[type="date"], input:not([type]), textarea, select):focus,
+  .sc-shell.sc-shell:not(.is-phone) .sc-content .seller-search:focus-within {
+    border-color: var(--t-primary-600, #047857);
+    background-color: var(--t-neutral-0, #fff);
+    box-shadow: 0 0 0 3px rgba(4, 120, 87, 0.1);
+    outline: none;
+  }
+
+  /* The field inside a search box draws no second line. */
+  .sc-shell.sc-shell:not(.is-phone) .sc-content .seller-search.seller-search :is(input, input:hover, input:focus) {
+    min-height: 0;
+    border: 0;
+    box-shadow: none;
+  }
+
+  /* A field's name beside it, in grey (Sort, Category, From, Payment). */
+  .sc-shell.sc-shell:not(.is-phone) .sc-content :is(.sp-filter, .so-filter) > span {
+    color: var(--sc-ink-soft);
+    font-size: 14px;
+    font-weight: 400;
+  }
+
+  /* ── Buttons: 32px, 8px corners ───────────────────────────────────── */
+  .sc-shell.sc-shell:not(.is-phone) .sc-content :is(.btn-seller-primary, .btn-seller-outline, .products-search-btn, .so-next-btn) {
+    min-height: 34px;
+    padding-top: 0;
+    padding-bottom: 0;
+    border-radius: 8px;
+    font-size: 14px;
+    justify-content: center;
+  }
+
+  .sc-shell.sc-shell:not(.is-phone) .sc-content .btn-seller-outline {
+    border-color: var(--sc-field);
+    color: var(--sc-ink);
+    font-weight: 500;
+  }
+
+  .sc-shell.sc-shell:not(.is-phone) .sc-content .btn-seller-outline:hover:not(:disabled) {
+    border-color: var(--t-primary-600, #047857);
+    color: var(--t-primary-700, #047857);
+  }
+
+  .sc-shell.sc-shell:not(.is-phone) .sc-content .seller-icon-btn {
+    border-color: var(--sc-field);
+    border-radius: 8px;
+  }
+
+  /* ── Lists: a white header in the rows' own size ──────────────────── */
+  .sc-shell.sc-shell:not(.is-phone) .sc-content :is(.seller-table, .products-table, .so-orders-table) th {
+    padding-top: 14px;
+    padding-bottom: 14px;
+    border-bottom: 1px solid var(--sc-row);
+    background: var(--t-neutral-0, #fff);
+    color: var(--sc-ink-soft);
+    font-size: 14px;
+    font-weight: 500;
+    letter-spacing: 0;
+    text-transform: none;
+  }
+
+  .sc-shell.sc-shell:not(.is-phone) .sc-content :is(.seller-table, .products-table, .so-orders-table) td {
+    border-bottom: 1px solid var(--sc-row);
+    font-size: 14px;
+  }
+
+  .sc-shell.sc-shell:not(.is-phone) .sc-content :is(.seller-table, .products-table, .so-orders-table) tbody tr:last-child td {
+    border-bottom: 0;
+  }
+
+  .sc-shell.sc-shell:not(.is-phone) .sc-content :is(.seller-table, .products-table, .so-orders-table) tbody tr:hover td {
+    background: #f9fafc;
+  }
+
+  /* ── Tags and chips: 8px corners ──────────────────────────────────── */
+  .sc-shell.sc-shell:not(.is-phone) .sc-content .seller-badge,
+  .sc-shell.sc-shell:not(.is-phone) .sc-content :is(.so-orders-table, .order-detail-panel) .seller-badge.seller-badge--solid {
+    padding: 3px 8px;
+    border-radius: 6px;
+    font-size: 12.5px;
+    font-weight: 500;
+  }
+
+  .sc-shell.sc-shell:not(.is-phone) .sc-content .seller-badge svg {
+    width: 12px;
+    height: 12px;
+  }
+
+  .sc-shell.sc-shell:not(.is-phone) .sc-content :is(.scm-chip, .rv-chip, .sq-chip) {
+    border-radius: 8px;
+  }
+}
+
+/* ═══════════════════════════════════════════════════════════════════════
+   The Dashboard, laid out like Lazada's Seller Center home: the work in a
+   wide column (to-do, numbers and sales, today's prep, recent orders and
+   top products), the shop's standing in a 340px column beside it (the one
+   thing to finish, followers, running low, Seller Academy). Every card is
+   a white panel with Lazada's 16px corners and faint shadow. Below 1200px
+   the two columns stack. Computers only (phones have their own home).
+   ═══════════════════════════════════════════════════════════════════════ */
+@media (min-width: 769px) {
+  .sc-shell.sc-shell:not(.is-phone) .sc-content .sd-home {
+    display: grid;
+    grid-template-columns: minmax(0, 1fr) 340px;
+    gap: 16px;
+    align-items: start;
+  }
+
+  .sc-shell.sc-shell:not(.is-phone) .sc-content :is(.sd-home-main, .sd-home-side) {
+    display: flex;
+    flex-direction: column;
+    gap: 16px;
+    min-width: 0;
+  }
+
+  .sc-shell.sc-shell:not(.is-phone) .sc-content .sd-home .sd {
+    display: flex;
+    flex-direction: column;
+    gap: 16px;
+    margin: 0;
+  }
+
+  .sc-shell.sc-shell:not(.is-phone) .sc-content .sd-home :is(.sd-actions, .sd-prep, .sd-lead, .sd-idv, .sd-review-banner) {
+    margin: 0;
+  }
+
+  .sc-shell.sc-shell:not(.is-phone) .sc-content .sd-home :is(.sd-panel, .sd-actions, .sd-prep, .sd-lead, .sd-idv) {
+    border: 0;
+    border-radius: 16px;
+    background: var(--t-neutral-0, #fff);
+    box-shadow: var(--sc-panel-shadow);
+  }
+
+  /* Card titles, one size everywhere on the page. */
+  .sc-shell.sc-shell:not(.is-phone) .sc-content .sd-home :is(.sd-actions-head h2, .sd-prep-head h2, .sd-card-header h2) {
+    color: var(--sc-ink);
+    font-size: 16px;
+    font-weight: 600;
+  }
+
+  .sc-shell.sc-shell:not(.is-phone) .sc-content .sd-home .sd-card-header {
+    padding: 16px 20px 8px;
+    border-bottom: 0;
+  }
+
+  /* ── To-do: Lazada's row of counts, the label over the number ─────── */
+  .sc-shell.sc-shell:not(.is-phone) .sc-content .sd-home .sd-actions {
+    padding: 16px 20px 18px;
+  }
+
+  /* Only what is waiting, side by side (the card is gone when nothing is). */
+  .sc-shell.sc-shell:not(.is-phone) .sc-content .sd-home .sd-actions-row {
+    grid-template-columns: repeat(auto-fill, minmax(170px, 1fr));
+    gap: 12px;
+  }
+
+  .sc-shell.sc-shell:not(.is-phone) .sc-content .sd-home .sd-action {
+    grid-template-columns: auto 1fr;
+    grid-template-areas: "icon label" "num num";
+    row-gap: 8px;
+    padding: 14px 16px;
+    border: 0;
+    border-radius: 12px;
+    background: var(--sd-soft, #f7f8fa);
+    color: var(--sc-ink-soft);
+    transition: transform 0.15s ease, box-shadow 0.15s ease;
+  }
+
+  .sc-shell.sc-shell:not(.is-phone) .sc-content .sd-home .sd-action span {
+    white-space: nowrap;
+    overflow: hidden;
+    text-overflow: ellipsis;
+  }
+
+  .sc-shell.sc-shell:not(.is-phone) .sc-content .sd-home .sd-action svg {
+    grid-area: icon;
+    grid-row: auto;
+    width: 15px;
+    height: 15px;
+  }
+
+  .sc-shell.sc-shell:not(.is-phone) .sc-content .sd-home .sd-action span {
+    grid-area: label;
+    font-size: 13.5px;
+  }
+
+  .sc-shell.sc-shell:not(.is-phone) .sc-content .sd-home .sd-action strong {
+    grid-area: num;
+    color: var(--sd-ink, var(--sc-ink));
+    font-size: 32px;
+    font-weight: 700;
+    line-height: 1;
+    letter-spacing: -0.02em;
+  }
+
+  .sc-shell.sc-shell:not(.is-phone) .sc-content .sd-home .sd-action:hover {
+    background: var(--sd-soft, #f7f8fa);
+    box-shadow: 0 6px 16px rgba(132, 152, 208, 0.18);
+    transform: translateY(-2px);
+  }
+
+  /* ── Numbers and the chart ────────────────────────────────────────── */
+  .sc-shell.sc-shell:not(.is-phone) .sc-content .sd-home .sd-ov-stats {
+    border-bottom: 1px solid var(--sc-row);
+  }
+
+  .sc-shell.sc-shell:not(.is-phone) .sc-content .sd-home .sd-ov-stat {
+    padding: 18px 20px 16px;
+  }
+
+  .sc-shell.sc-shell:not(.is-phone) .sc-content .sd-home .sd-ov-stat + .sd-ov-stat {
+    border-left: 1px solid var(--sc-row);
+  }
+
+  .sc-shell.sc-shell:not(.is-phone) .sc-content .sd-home .sd-ov-value {
+    color: var(--sc-ink);
+    font-size: 36px;
+    font-weight: 700;
+    line-height: 1.1;
+    letter-spacing: -0.02em;
+  }
+
+  .sc-shell.sc-shell:not(.is-phone) .sc-content .sd-home .sd-ov-label {
+    color: var(--sc-ink-soft);
+    font-weight: 400;
+  }
+
+  .sc-shell.sc-shell:not(.is-phone) .sc-content .sd-home .sd-chart-bar {
+    border-radius: 4px 4px 0 0;
+  }
+
+  /* ── Today's prep: one line a product ─────────────────────────────── */
+  .sc-shell.sc-shell:not(.is-phone) .sc-content .sd-home .sd-prep {
+    padding: 16px 20px 10px;
+  }
+
+  .sc-shell.sc-shell:not(.is-phone) .sc-content .sd-home .sd-prep-list li {
+    padding: 10px 0;
+    border-top-color: var(--sc-row);
+  }
+
+  .sc-shell.sc-shell:not(.is-phone) .sc-content .sd-home .sd-prep-qty {
+    flex-direction: row-reverse;
+    align-items: baseline;
+    gap: 12px;
+  }
+
+  .sc-shell.sc-shell:not(.is-phone) .sc-content .sd-home .sd-prep-qty strong {
+    min-width: 32px;
+    font-weight: 600;
+  }
+
+  /* ── The side column ──────────────────────────────────────────────── */
+  .sc-shell.sc-shell:not(.is-phone) .sc-content .sd-home-side :is(.sd-lead, .sd-idv) {
+    position: relative;
+    flex-direction: column;
+    align-items: flex-start;
+    gap: 12px;
+    padding: 20px;
+  }
+
+  .sc-shell.sc-shell:not(.is-phone) .sc-content .sd-home-side :is(.sd-lead-actions, .sd-card-btn) {
+    align-self: stretch;
+  }
+
+  .sc-shell.sc-shell:not(.is-phone) .sc-content .sd-home-side .sd-lead-actions > * {
+    flex: 1;
+    justify-content: center;
+  }
+
+  .sc-shell.sc-shell:not(.is-phone) .sc-content .sd-home :is(.sd-card-btn, .sd-lead-actions .btn-seller-outline) {
+    justify-content: center;
+    min-height: 36px;
+    border-radius: 8px;
+  }
+
+  .sc-shell.sc-shell:not(.is-phone) .sc-content .sd-home-side .sd-card-hide {
+    position: absolute;
+    top: 14px;
+    right: 14px;
+  }
+
+  .sc-shell.sc-shell:not(.is-phone) .sc-content .sd-home-side :is(.sd-lead-body, .sd-idv-body) {
+    flex: none;
+    align-self: stretch;
+  }
+
+  /* Narrower computers: one column, the shop's standing first. */
+  @media (max-width: 1199px) {
+    .sc-shell.sc-shell:not(.is-phone) .sc-content .sd-home {
+      grid-template-columns: minmax(0, 1fr);
+    }
+
+    .sc-shell.sc-shell:not(.is-phone) .sc-content .sd-home-side {
+      order: -1;
+    }
+  }
+}
+
+/* ═══════════════════════════════════════════════════════════════════════
+   The other pages, on the same measured patterns. Lazada's Settings is the
+   model for any page that is a list of things to open: the shop's own card
+   on top, then groups of soft grey tiles, each a round icon, a bold name
+   and one grey line (Shop Settings, Shop tools, Marketing's tools). Date
+   choices are a row of chips, the open one in green. Emoorm's own colours,
+   words and icons throughout. Computers only.
+   ═══════════════════════════════════════════════════════════════════════ */
+@media (min-width: 769px) {
+  .sc-shell.sc-shell:not(.is-phone) {
+    --sc-tile: #f6f7fa;
+    --sc-tile-hover: #edf7f2;
+  }
+
+  /* ── Shop Settings: the hub ───────────────────────────────────────── */
+  .sc-shell.sc-shell:not(.is-phone) .sc-content .sst-body {
+    display: flex;
+    flex-direction: column;
+    gap: 16px;
+    max-width: none;
+  }
+
+  .sst-hub {
+    padding: 24px 24px 28px;
+    border-radius: 16px;
+    background: var(--t-neutral-0, #fff);
+    box-shadow: var(--sc-panel-shadow);
+  }
+
+  .sst-hub-id {
+    display: flex;
+    align-items: center;
+    gap: 20px;
+    padding-bottom: 22px;
+    border-bottom: 1px solid var(--sc-row);
+  }
+
+  .sst-hub-logo {
+    display: grid;
+    place-items: center;
+    flex-shrink: 0;
+    width: 76px;
+    height: 76px;
+    overflow: hidden;
+    border-radius: 50%;
+    background: var(--sc-tile);
+  }
+
+  .sst-hub-logo :is(img, svg) {
+    width: 100%;
+    height: 100%;
+    object-fit: cover;
+  }
+
+  .sst-hub-meta {
+    display: flex;
+    flex-direction: column;
+    gap: 6px;
+    min-width: 0;
+  }
+
+  .sst-hub-meta h2 {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    margin: 0;
+    color: var(--sc-ink);
+    font-size: 20px;
+    font-weight: 600;
+  }
+
+  .sst-hub-edit {
+    display: inline-grid;
+    place-items: center;
+    width: 28px;
+    height: 28px;
+    border-radius: 8px;
+    color: var(--sc-ink-mute);
+  }
+
+  .sst-hub-edit:hover {
+    background: var(--sc-tile);
+    color: var(--t-primary-700, #047857);
+  }
+
+  .sst-hub-meta p {
+    display: flex;
+    flex-wrap: wrap;
+    align-items: center;
+    gap: 6px 12px;
+    margin: 0;
+    color: var(--sc-ink-soft);
+    font-size: 14px;
+  }
+
+  .sst-hub-status {
+    padding: 2px 8px;
+    border-radius: 6px;
+    font-size: 12.5px;
+    font-weight: 500;
+  }
+
+  .sst-hub-status.is-green { background: var(--t-primary-50, #ecfdf5); color: var(--t-primary-700, #047857); }
+  .sst-hub-status.is-amber { background: #fef3c7; color: #b45309; }
+  .sst-hub-status.is-red { background: #fee2e2; color: #b91c1c; }
+
+  .sst-hub-link a {
+    overflow: hidden;
+    color: var(--sc-ink-soft);
+    text-decoration: none;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+  }
+
+  .sst-hub-link a:hover {
+    color: var(--t-primary-700, #047857);
+    text-decoration: underline;
+  }
+
+  .sst-hub-link button {
+    display: inline-grid;
+    place-items: center;
+    width: 26px;
+    height: 26px;
+    margin-left: -6px;
+    border: 0;
+    border-radius: 6px;
+    background: none;
+    color: var(--t-primary-700, #047857);
+    cursor: pointer;
+  }
+
+  .sst-hub-link button:hover {
+    background: var(--sc-tile-hover);
+  }
+
+  .sst-hub-group h3 {
+    margin: 24px 0 14px;
+    color: var(--sc-ink);
+    font-size: 18px;
+    font-weight: 600;
+  }
+
+  .sst-hub-tiles {
+    display: grid;
+    grid-template-columns: repeat(3, minmax(0, 1fr));
+    gap: 14px;
+  }
+
+  /* A tile: a round icon on white, the name, one grey line. */
+  .sst-hub-tile,
+  .sc-shell.sc-shell:not(.is-phone) .sc-content .sh-tool {
+    display: flex;
+    flex-direction: row;
+    align-items: center;
+    justify-content: flex-start;
+    gap: 14px;
+    min-height: 68px;
+    padding: 12px 16px;
+    border: 0;
+    border-radius: 12px;
+    background: var(--sc-tile);
+    color: var(--sc-ink);
+    font: inherit;
+    text-align: left;
+    text-decoration: none;
+    cursor: pointer;
+    transition: background-color .15s;
+  }
+
+  .sst-hub-tile:hover,
+  .sc-shell.sc-shell:not(.is-phone) .sc-content .sh-tool:hover {
+    background: var(--sc-tile-hover);
+  }
+
+  .sst-hub-tile:focus-visible,
+  .sc-shell.sc-shell:not(.is-phone) .sc-content .sh-tool:focus-visible {
+    outline: 2px solid var(--t-primary-600, #047857);
+    outline-offset: 2px;
+  }
+
+  .sst-hub-icon,
+  .sc-shell.sc-shell:not(.is-phone) .sc-content .sh-tool-icon {
+    display: grid;
+    place-items: center;
+    flex-shrink: 0;
+    width: 42px;
+    height: 42px;
+    border-radius: 50%;
+    background: var(--t-neutral-0, #fff);
+    box-shadow: 0 2px 6px rgba(132, 152, 208, 0.18);
+  }
+
+  .sst-hub-icon.is-green { color: #059669; }
+  .sst-hub-icon.is-pink { color: #db2777; }
+  .sst-hub-icon.is-blue { color: #2563eb; }
+  .sst-hub-icon.is-violet { color: #7c3aed; }
+  .sst-hub-icon.is-amber { color: #d97706; }
+
+  .sst-hub-text {
+    display: flex;
+    flex-direction: column;
+    gap: 2px;
+    min-width: 0;
+  }
+
+  .sst-hub-text strong {
+    font-size: 15px;
+    font-weight: 600;
+  }
+
+  .sst-hub-text small {
+    overflow: hidden;
+    color: var(--sc-ink-mute);
+    font-size: 12.5px;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+  }
+
+  /* The settings that are switched here, as panels under the hub. */
+  .sc-shell.sc-shell:not(.is-phone) .sc-content .sst .sst-group {
+    border: 0;
+    border-radius: 16px;
+    box-shadow: var(--sc-panel-shadow);
+  }
+
+  .sc-shell.sc-shell:not(.is-phone) .sc-content .sst .sst-group > h2 {
+    padding: 20px 24px 8px;
+    color: var(--sc-ink);
+    font-size: 18px;
+    font-weight: 600;
+  }
+
+  .sc-shell.sc-shell:not(.is-phone) .sc-content .sst-status-grid {
+    gap: 14px;
+    padding: 8px 24px 24px;
+  }
+
+  .sc-shell.sc-shell:not(.is-phone) .sc-content .sst-option {
+    border: 0;
+    border-radius: 12px;
+    background: var(--sc-tile);
+  }
+
+  .sc-shell.sc-shell:not(.is-phone) .sc-content .sst-option.is-on {
+    background: #fffbeb;
+  }
+
+  /* ── Shop tools and Marketing's tools: the same tiles ─────────────── */
+  .sc-shell.sc-shell:not(.is-phone) .sc-content .sh-card {
+    border: 0;
+    border-radius: 16px;
+    box-shadow: var(--sc-panel-shadow);
+  }
+
+  .sc-shell.sc-shell:not(.is-phone) .sc-content .sh-card-head h2 {
+    color: var(--sc-ink);
+    font-size: 18px;
+    font-weight: 600;
+  }
+
+  .sc-shell.sc-shell:not(.is-phone) .sc-content .sh-tools {
+    display: grid;
+    grid-template-columns: repeat(4, minmax(0, 1fr));
+    gap: 14px;
+    padding: 6px 24px 24px;
+  }
+
+  .sc-shell.sc-shell:not(.is-phone) .sc-content .sh-tool > span:last-child {
+    font-size: 14.5px;
+    font-weight: 600;
+  }
+
+  .sc-shell.sc-shell:not(.is-phone) .sc-content .sh-tool-icon svg {
+    width: 26px;
+    height: 26px;
+  }
+
+  /* ── Date choices: chips, the open one in green ───────────────────── */
+  .sc-shell.sc-shell:not(.is-phone) .sc-content .an-daterange {
+    gap: 8px;
+    padding: 0;
+    border-radius: 0;
+    background: none;
+  }
+
+  .sc-shell.sc-shell:not(.is-phone) .sc-content .an-daterange-btn {
+    height: 32px;
+    padding: 0 14px;
+    border: 1px solid var(--sc-field);
+    border-radius: 8px;
+    background: var(--t-neutral-0, #fff);
+    box-shadow: none;
+    color: var(--sc-ink-soft);
+    font-size: 14px;
+    font-weight: 400;
+  }
+
+  .sc-shell.sc-shell:not(.is-phone) .sc-content .an-daterange-btn:hover {
+    border-color: var(--t-primary-600, #047857);
+    background: var(--t-neutral-0, #fff);
+    color: var(--t-primary-700, #047857);
+  }
+
+  .sc-shell.sc-shell:not(.is-phone) .sc-content .an-daterange-btn.is-active,
+  .sc-shell.sc-shell:not(.is-phone) .sc-content .an-daterange-btn.is-active:hover {
+    border-color: var(--t-primary-600, #047857);
+    background: var(--t-primary-50, #ecfdf5);
+    box-shadow: none;
+    color: var(--t-primary-700, #047857);
+    font-weight: 500;
+  }
+
+  @media (max-width: 1180px) {
+    .sst-hub-tiles,
+    .sc-shell.sc-shell:not(.is-phone) .sc-content .sh-tools {
+      grid-template-columns: repeat(2, minmax(0, 1fr));
+    }
+  }
+}
+
+/* ═══════════════════════════════════════════════════════════════════════
+   Dashboard: the things that catch the eye, as Lazada's home has them. A
+   plain green welcome banner (the shop, the day, Add Product and View
+   shop), a summary of what is waiting
+   (each kind on a tint of its own colour, shown only when something is),
+   large numbers, and tinted cards beside them.
+   Computers only (phones have their own home).
+   ═══════════════════════════════════════════════════════════════════════ */
+@media (min-width: 769px) {
+  /* ── The welcome banner ───────────────────────────────────────────── */
+  .sc-shell.sc-shell:not(.is-phone) .sc-content .sd-hero {
+    position: relative;
+    display: flex;
+    align-items: center;
+    gap: 18px;
+    margin: 0 0 16px;
+    padding: 22px 24px;
+    border-radius: 16px;
+    background: linear-gradient(100deg, #046c4e 0%, #047857 60%, #078a63 100%);
+    color: #fff;
+  }
+
+  .sd-hero-logo {
+    display: grid;
+    place-items: center;
+    flex-shrink: 0;
+    width: 56px;
+    height: 56px;
+    overflow: hidden;
+    border: 2px solid #fff;
+    border-radius: 50%;
+    background: #fff;
+  }
+
+  .sd-hero-logo :is(img, svg) {
+    width: 100%;
+    height: 100%;
+    object-fit: cover;
+  }
+
+  .sd-hero-text {
+    display: flex;
+    flex-direction: column;
+    align-items: flex-start;
+    gap: 4px;
+    min-width: 0;
+  }
+
+  .sc-shell.sc-shell:not(.is-phone) .sc-content .sd-hero h1 {
+    margin: 0;
+    color: #fff;
+    font-size: 24px;
+    font-weight: 700;
+    letter-spacing: -0.01em;
+  }
+
+  .sd-hero-hi {
+    margin: 0;
+    color: rgba(255, 255, 255, 0.85);
+    font-size: 14px;
+    font-weight: 500;
+  }
+
+  .sc-shell.sc-shell:not(.is-phone) .sc-content .sd-hero .seller-welcome {
+    margin: 0;
+    color: rgba(255, 255, 255, 0.85);
+    font-size: 14px;
+  }
+
+  .sd-hero-actions {
+    position: relative;
+    z-index: 1;
+    display: flex;
+    flex-wrap: wrap;
+    gap: 10px;
+    margin-left: auto;
+  }
+
+  .sd-hero-btn {
+    display: inline-flex;
+    align-items: center;
+    gap: 7px;
+    height: 40px;
+    padding: 0 16px;
+    border: 1px solid #fff;
+    border-radius: 10px;
+    background: #fff;
+    color: var(--t-primary-700, #047857);
+    font-size: 14px;
+    font-weight: 600;
+    text-decoration: none;
+    white-space: nowrap;
+    transition: transform 0.15s ease, background-color 0.15s ease;
+  }
+
+  .sd-hero-btn:hover {
+    transform: translateY(-1px);
+  }
+
+  .sd-hero-btn.is-ghost {
+    border-color: rgba(255, 255, 255, 0.6);
+    background: rgba(255, 255, 255, 0.08);
+    color: #fff;
+  }
+
+  .sd-hero-btn.is-ghost:hover {
+    background: rgba(255, 255, 255, 0.18);
+  }
+
+  /* ── To-do counts: each kind its own colour ───────────────────────── */
+  .sc-shell.sc-shell:not(.is-phone) .sc-content .sd-home .sd-action > .sd-action-icon {
+    grid-area: icon;
+    overflow: visible;
+    display: grid;
+    place-items: center;
+    width: 30px;
+    height: 30px;
+    border-radius: 50%;
+    background: var(--sd-tint, #eef0f5);
+    color: var(--sd-ink, #4f5669);
+  }
+
+  .sc-shell.sc-shell:not(.is-phone) .sc-content .sd-home .sd-action {
+    column-gap: 10px;
+    align-items: center;
+  }
+
+  .sc-shell.sc-shell:not(.is-phone) .sc-content .sd-home .sd-action > .sd-action-icon svg {
+    color: var(--sd-ink, #4f5669);
+  }
+
+  .sd-home .sd-action.is-confirm { --sd-soft: #fffbeb; --sd-tint: #fef3c7; --sd-ink: #d97706; }
+  .sd-home .sd-action.is-payments { --sd-soft: #eff6ff; --sd-tint: #dbeafe; --sd-ink: #2563eb; }
+  .sd-home .sd-action.is-pack { --sd-soft: #f5f3ff; --sd-tint: #ede9fe; --sd-ink: #7c3aed; }
+  .sd-home .sd-action.is-returns { --sd-soft: #fff1f2; --sd-tint: #ffe4e6; --sd-ink: #e11d48; }
+  .sd-home .sd-action.is-offers { --sd-soft: #fffbeb; --sd-tint: #fef3c7; --sd-ink: #b45309; }
+  .sd-home .sd-action.is-questions { --sd-soft: #f0fdfa; --sd-tint: #ccfbf1; --sd-ink: #0d9488; }
+  .sd-home .sd-action.is-reviews { --sd-soft: #fefce8; --sd-tint: #fef9c3; --sd-ink: #ca8a04; }
+
+  /* ── The side column's cards, tinted ──────────────────────────────── */
+  .sc-shell.sc-shell:not(.is-phone) .sc-content .sd-home-side .sd-lead.is-amber {
+    background: linear-gradient(165deg, #fff7e0 0%, #fff 55%);
+  }
+
+  .sc-shell.sc-shell:not(.is-phone) .sc-content .sd-home-side .sd-lead.is-green {
+    background: linear-gradient(165deg, #e3f8ef 0%, #fff 55%);
+  }
+
+  .sc-shell.sc-shell:not(.is-phone) .sc-content .sd-home-side .sd-lead.is-blue {
+    background: linear-gradient(165deg, #e5efff 0%, #fff 55%);
+  }
+
+  .sc-shell.sc-shell:not(.is-phone) .sc-content .sd-home-side .sd-lead.is-red {
+    background: linear-gradient(165deg, #ffe8e8 0%, #fff 55%);
+  }
+
+  .sc-shell.sc-shell:not(.is-phone) .sc-content .sd-home-side .sd-idv.is-academy {
+    background:
+      radial-gradient(circle at 100% 0%, rgba(244, 114, 182, 0.22), rgba(244, 114, 182, 0) 45%),
+      linear-gradient(165deg, #e3f8ef 0%, #fff 60%);
+  }
+
+}
+
+/* ═══════════════════════════════════════════════════════════════════════
+   Shop Profile, the way Lazada lays out a seller's profile: links to its
+   parts along the top, each field's name beside it (not over it), one save
+   bar at the foot that stays in reach, and what buyers will see beside the
+   form as it is edited (with the shop's link to copy). Computers only.
+   ═══════════════════════════════════════════════════════════════════════ */
+@media (min-width: 769px) {
+  .store-jump {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 8px;
+    margin: 0 0 16px;
+  }
+
+  .store-jump-link {
+    display: inline-flex;
+    align-items: center;
+    height: 34px;
+    padding: 0 14px;
+    border: 1px solid var(--sc-field, #c4c6cf);
+    border-radius: 8px;
+    background: var(--t-neutral-0, #fff);
+    color: var(--sc-ink-soft, #4f5669);
+    font-size: 14px;
+    text-decoration: none;
+    transition: border-color 0.15s ease, color 0.15s ease;
+  }
+
+  .store-jump-link:hover {
+    border-color: var(--t-primary-600, #047857);
+    color: var(--t-primary-700, #047857);
+  }
+
+  /* Each field's name on the left, the field on the right. */
+  .sc-shell.sc-shell:not(.is-phone) .sc-content .store-settings-main .store-form {
+    gap: 0;
+    padding: 24px 28px 8px;
+  }
+
+  .sc-shell.sc-shell:not(.is-phone) .sc-content .store-settings-main .store-form > .form-group {
+    display: grid;
+    grid-template-columns: 170px minmax(0, 1fr);
+    column-gap: 24px;
+    row-gap: 6px;
+    align-items: start;
+    margin: 0 0 22px;
+  }
+
+  .sc-shell.sc-shell:not(.is-phone) .sc-content .store-settings-main .store-form > .form-group > label {
+    grid-column: 1;
+    grid-row: 1 / span 4;
+    display: flex;
+    align-items: center;
+    gap: 6px;
+    margin: 0;
+    padding-top: 8px;
+    color: var(--sc-ink-soft, #4f5669);
+    font-size: 14px;
+    font-weight: 500;
+  }
+
+  .sc-shell.sc-shell:not(.is-phone) .sc-content .store-settings-main .store-form > .form-group > :not(label) {
+    grid-column: 2;
+  }
+
+  .sc-shell.sc-shell:not(.is-phone) .sc-content .store-settings-main .store-char-count {
+    justify-self: end;
+  }
+
+  .store-form-section {
+    margin: 4px 0 20px;
+    padding-top: 22px;
+    border-top: 1px solid var(--sc-row, #eef0f4);
+    color: var(--sc-ink, rgba(0, 0, 0, 0.75));
+    font-size: 16px;
+    font-weight: 600;
+  }
+
+  /* Logo and banner: the same name-beside rows. */
+  .sc-shell.sc-shell:not(.is-phone) .sc-content .store-settings-main .branding-row {
+    grid-template-columns: 170px minmax(0, 1fr);
+    gap: 24px;
+  }
+
+  .sc-shell.sc-shell:not(.is-phone) .sc-content .store-settings-main .store-branding-body {
+    padding: 20px 28px 24px;
+  }
+
+  .sc-shell.sc-shell:not(.is-phone) .sc-content .store-settings-main .store-theme-body {
+    padding: 20px 28px 24px;
+  }
+
+  /* One save for the whole profile, at the foot of the page while scrolling. */
+  .store-savebar {
+    position: sticky;
+    bottom: 16px;
+    z-index: 5;
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: 16px;
+    padding: 12px 14px 12px 20px;
+    border-radius: 14px;
+    background: var(--t-neutral-0, #fff);
+    box-shadow: 0 8px 26px rgba(15, 23, 42, 0.12), 0 0 0 1px rgba(15, 23, 42, 0.04);
+    color: var(--t-primary-700, #047857);
+    font-size: 14px;
+  }
+
+  .store-savebar > span {
+    display: inline-flex;
+    align-items: center;
+    gap: 8px;
+  }
+
+  .store-savebar.is-dirty {
+    color: #b45309;
+  }
+
+  /* What buyers see, kept in view beside the form. */
+  .sc-shell.sc-shell:not(.is-phone) .sc-content .store-settings-side {
+    position: sticky;
+    top: 76px;
+    align-self: start;
+  }
+
+  .store-preview-body {
+    display: flex;
+    flex-direction: column;
+    gap: 14px;
+    padding: 16px 20px 20px;
+  }
+
+  .store-preview-desc {
+    display: -webkit-box;
+    margin: 0;
+    overflow: hidden;
+    color: var(--sc-ink-soft, #4f5669);
+    font-size: 13.5px;
+    line-height: 1.5;
+    -webkit-box-orient: vertical;
+    -webkit-line-clamp: 3;
+  }
+
+  .sc-shell.sc-shell:not(.is-phone) .sc-content .store-preview-body .store-slug-info {
+    padding: 14px 0 0;
+    border-top: 1px solid var(--sc-row, #eef0f4);
+  }
+
+  .sc-shell.sc-shell:not(.is-phone) .sc-content .store-preview-body .store-slug-label {
+    margin: 0 0 6px;
+    color: var(--sc-ink-mute, #858b9c);
+    font-size: 13px;
+  }
+
+  .store-slug-row {
+    display: flex;
+    align-items: center;
+    gap: 6px;
+    padding: 6px 6px 6px 12px;
+    border: 1px solid var(--sc-field, #c4c6cf);
+    border-radius: 8px;
+    background: #fafbfc;
+  }
+
+  .store-slug-text {
+    flex: 1;
+    min-width: 0;
+    overflow: hidden;
+    color: var(--sc-ink, rgba(0, 0, 0, 0.75));
+    font-size: 13px;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+  }
+
+  .store-slug-copy {
+    display: grid;
+    place-items: center;
+    flex-shrink: 0;
+    width: 28px;
+    height: 28px;
+    padding: 0;
+    border: 0;
+    border-radius: 6px;
+    background: none;
+    color: var(--t-primary-700, #047857);
+    cursor: pointer;
+  }
+
+  .store-slug-copy:hover {
+    background: var(--t-primary-50, #ecfdf5);
+  }
+
+  .sc-shell.sc-shell:not(.is-phone) .sc-content .store-slug-open {
+    width: 100%;
+    margin-top: 10px;
+    text-decoration: none;
+  }
+}

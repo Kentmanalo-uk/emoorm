@@ -512,7 +512,9 @@ a.ss-step-link:hover {
   min-height: 42px;
   padding: 0 18px;
   border-radius: 999px;
-  background: var(--ss-green);
+  /* The green is defined on .sd-idv; the dashboard's lead card is not one,
+     so without a fallback its button was white text on nothing. */
+  background: var(--ss-green, var(--t-primary-600, #059669));
   color: #fff;
   font-size: 14px;
   font-weight: 600;
@@ -521,7 +523,7 @@ a.ss-step-link:hover {
 }
 
 .sd-card-btn:hover {
-  background: var(--ss-green-dark);
+  background: var(--ss-green-dark, var(--t-primary-700, #047857));
 }
 
 .sd-card-hide {

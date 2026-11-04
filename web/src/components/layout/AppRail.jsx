@@ -15,6 +15,10 @@ const formatTime = timeAgo;
  * notifications and sign out as icon-only buttons. Language and notifications
  * open on hover; sign out asks for confirmation.
  *
+ * `placement="bar"`: the same buttons in a row inside a top bar (the Seller
+ * Center on computers), their panels dropping down, and no sign out (the
+ * account menu beside them has it).
+ *
  * `notifications`: the newest notifications, when the shell already has them
  * (the admin shell keeps them between pages); without it the rail asks for
  * its own. `onRead` hears when a row opened here has been marked read.
@@ -27,7 +31,9 @@ export default function AppRail({
   notificationsTo = '/seller/notifications',
   audience = 'SELLER',
   signOutMessage = 'You will need to sign in again to manage your shop.',
+  placement = 'rail',
 }) {
+  const bar = placement === 'bar';
   const [current] = useState(() => getCurrentLanguage());
   const ownList = given === undefined;
   const [fetched, setNotifications] = useState(null);
@@ -93,7 +99,7 @@ export default function AppRail({
   }, [langOpen]);
 
   return (
-    <aside className="sr-rail notranslate" translate="no" aria-label="Quick actions">
+    <aside className={`sr-rail notranslate${bar ? ' sr-rail--bar' : ''}`} translate="no" aria-label="Quick actions">
       {/* The pink the rail's icons are painted with on computers (suite.css):
           light pink at the top of each glyph into the brand pink below; the
           language button has the same in blue. */}
@@ -173,6 +179,7 @@ export default function AppRail({
         </div>
       </div>
 
+      {!bar && (
       <div className={`sr-item sr-item--end sr-item--click${confirmOpen ? ' is-open' : ''}`} ref={logoutRef}>
         <button
           type="button"
@@ -211,6 +218,7 @@ export default function AppRail({
           </div>
         </div>
       </div>
+      )}
     </aside>
   );
 }

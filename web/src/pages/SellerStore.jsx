@@ -2,7 +2,10 @@ import { useState, useEffect } from 'react';
 import {
   Link, Navigate, useLocation, useNavigate, useOutletContext, useParams,
 } from 'react-router-dom';
-import { Storefront as Store, FloppyDisk as Save, WarningCircle as AlertCircle, UploadSimple as Upload, Trash as Trash2, Palette, Image as ImageIcon, MapPin, PauseCircle } from '../lib/icons';
+import {
+  Storefront as Store, FloppyDisk as Save, WarningCircle as AlertCircle, UploadSimple as Upload, Trash as Trash2, Palette,
+  Image as ImageIcon, MapPin, PauseCircle, Copy, ArrowSquareOut, CheckCircle,
+} from '../lib/icons';
 import toast from 'react-hot-toast';
 import axios from '../lib/axios';
 import { uploadImage } from '../lib/upload';
@@ -26,6 +29,19 @@ import { BusyLabel } from '../components/ui/Spinner';
 
 const DEFAULT_PRIMARY = 'var(--t-primary-600, #059669)';
 const DEFAULT_SECONDARY = 'var(--t-warning-500, #f59e0b)';
+
+// The server takes a colour only as #rrggbb: one left at the theme's own
+// (a CSS variable above) is saved as none, which means the same thing.
+const savedColor = (value) => (/^#[0-9a-fA-F]{6}$/.test(value || '') ? value : null);
+const forServer = (data) => ({
+  ...data,
+  ...('primaryColor' in data ? { primaryColor: savedColor(data.primaryColor) } : {}),
+  ...('secondaryColor' in data ? { secondaryColor: savedColor(data.secondaryColor) } : {}),
+});
+// What a colour looks like, for the pickers (a variable shows its fallback).
+const shownColor = (value) => (/^#[0-9a-fA-F]{6}$/.test(value || '')
+  ? value
+  : (String(value || '').match(/#[0-9a-fA-F]{6}/) || ['#000000'])[0]);
 const DESCRIPTION_MAX = 500;
 const PH_MOBILE_REGEX = /^(09\d{9}|\+639\d{9})$/;
 
@@ -199,7 +215,7 @@ function SellerStore({ part }) {
     try {
       let saved;
       if (isNew) {
-        const res = await axios.post('/stores', form);
+        const res = await axios.post('/stores', forServer(form));
         saved = res.data;
         setStore(saved);
         layoutCtx?.setStore?.(saved);
@@ -210,7 +226,7 @@ function SellerStore({ part }) {
         const changes = scope === 'all'
           ? form
           : Object.fromEntries(PARTS[scope].fields.map((f) => [f, form[f]]));
-        const res = await axios.put(`/stores/${store.id}`, changes);
+        const res = await axios.put(`/stores/${store.id}`, forServer(changes));
         saved = res.data;
         setStore(saved);
         layoutCtx?.setStore?.((prev) => ({ ...prev, ...saved }));
@@ -222,6 +238,15 @@ function SellerStore({ part }) {
       toast.error(err.message || 'Failed to save store');
     } finally {
       setIsSaving(false);
+    }
+  };
+
+  const copyLink = async () => {
+    try {
+      await navigator.clipboard.writeText(`${window.location.origin}/store/${store.slug}`);
+      toast.success('Shop link copied');
+    } catch {
+      toast.error('Could not copy. Select the link and copy it instead.');
     }
   };
 
@@ -379,13 +404,15 @@ function SellerStore({ part }) {
                       />
                     </div>
 
-                    <ThemePreview
-                      name={form.name || 'Your Store'}
-                      logo={form.logo}
-                      banner={form.bannerImage || form.coverImage}
-                      primary={form.primaryColor}
-                      secondary={form.secondaryColor}
-                    />
+                    {isPhone && (
+                      <ThemePreview
+                        name={form.name || 'Your Store'}
+                        logo={form.logo}
+                        banner={form.bannerImage || form.coverImage}
+                        primary={form.primaryColor}
+                        secondary={form.secondaryColor}
+                      />
+                    )}
                   </div>
   );
 
@@ -541,12 +568,22 @@ function SellerStore({ part }) {
         <SellerPageHead
           title={isNew ? 'Create Your Shop' : 'Shop Profile'}
           subtitle="Your public storefront details"
-          actions={!isNew && isDirty && (
+          actions={!isNew && isDirty && isPhone && (
             <span className="store-unsaved-badge">
               <AlertCircle size={13} /> Unsaved changes
             </span>
           )}
         />
+
+        {/* Computers: the profile's parts, a click away (the layout scrolls
+            to the part and flashes it). */}
+        {!isNew && !isPhone && !isLoading && !loadFailed && (
+          <nav className="store-jump" aria-label="Parts of your shop profile">
+            {[['shop-info', 'Shop information'], ['shop-location', 'Location'], ['branding', 'Logo & banner'], ['theme', 'Shop colors']].map(([anchor, label]) => (
+              <Link key={anchor} to={{ hash: `#${anchor}` }} className="store-jump-link">{label}</Link>
+            ))}
+          </nav>
+        )}
 
         {isLoading ? (
           <div className="seller-card store-skeleton">
@@ -568,18 +605,23 @@ function SellerStore({ part }) {
 
                   {descriptionField}
 
+                  {contactField}
+
+                  <h3 className="store-form-section">Location</h3>
+
                   {addressField}
 
                   {mapField}
 
-                  {contactField}
-
-                  <div className="form-actions">
-                    <button type="submit" className="btn-seller-primary" disabled={isSaving}>
-                      <Save size={16} />
-                      {isSaving ? <BusyLabel>Saving…</BusyLabel> : isNew ? 'Create Store' : 'Save Changes'}
-                    </button>
-                  </div>
+                  {/* Computers save from the bar at the foot of the page. */}
+                  {(isNew || isPhone) && (
+                    <div className="form-actions">
+                      <button type="submit" className="btn-seller-primary" disabled={isSaving}>
+                        <Save size={16} />
+                        {isSaving ? <BusyLabel>Saving…</BusyLabel> : isNew ? 'Create Store' : 'Save Changes'}
+                      </button>
+                    </div>
+                  )}
                 </form>
               </div>
 
@@ -590,12 +632,6 @@ function SellerStore({ part }) {
                     <h2><ImageIcon size={16} /> Branding</h2>
                   </div>
                   {brandingBody}
-                  <div className="form-actions branding-actions">
-                    <button type="button" className="btn-seller-primary" onClick={handleSubmit} disabled={isSaving}>
-                      <Save size={16} />
-                      {isSaving ? <BusyLabel>Saving…</BusyLabel> : 'Save Branding'}
-                    </button>
-                  </div>
                 </div>
               )}
 
@@ -614,37 +650,57 @@ function SellerStore({ part }) {
                       </button>
                     )}
                   </div>
-                  {showTheme && (<>
-                  {themeBody}
-                  <div className="form-actions branding-actions">
-                    <button type="button" className="btn-seller-primary" onClick={handleSubmit} disabled={isSaving}>
-                      <Save size={16} />
-                      {isSaving ? <BusyLabel>Saving…</BusyLabel> : 'Save Theme'}
-                    </button>
-                  </div>
-                  </>)}
+                  {showTheme && themeBody}
+                </div>
+              )}
+
+              {/* One save for the whole profile, always in reach. */}
+              {!isNew && (
+                <div className={`store-savebar${isDirty ? ' is-dirty' : ''}`} role="status">
+                  <span>
+                    {isDirty
+                      ? <><AlertCircle size={16} weight="fill" /> You have unsaved changes</>
+                      : <><CheckCircle size={16} weight="fill" /> All changes saved</>}
+                  </span>
+                  <button type="button" className="btn-seller-primary" onClick={handleSubmit} disabled={isSaving || !isDirty || Boolean(uploadingField)}>
+                    <Save size={16} />
+                    {isSaving ? <BusyLabel>Saving…</BusyLabel> : 'Save changes'}
+                  </button>
                 </div>
               )}
             </div>
 
             <div className="store-settings-side">
               {pausedNote}
-              {/* Store slug / link */}
-              {store?.slug && (
+              {/* What buyers will see, as it is being edited, and the link. */}
+              {!isNew && (
                 <div className="seller-card store-preview-card">
                   <div className="seller-card-header">
-                    <h2>Public Store Link</h2>
+                    <h2>Shop preview</h2>
                   </div>
-                  <div className="store-slug-info">
-                    <p className="store-slug-label">Your store URL:</p>
-                    <a
-                      href={`/store/${store.slug}`}
-                      target="_blank"
-                      rel="noreferrer"
-                      className="store-slug-link"
-                    >
-                      {window.location.host}/store/{store.slug}
-                    </a>
+                  <div className="store-preview-body">
+                    <ThemePreview
+                      name={form.name || 'Your Store'}
+                      logo={form.logo}
+                      banner={form.bannerImage || form.coverImage}
+                      primary={form.primaryColor}
+                      secondary={form.secondaryColor}
+                    />
+                    {form.description && <p className="store-preview-desc">{form.description}</p>}
+                    {store?.slug && (
+                      <div className="store-slug-info">
+                        <p className="store-slug-label">Shop link</p>
+                        <div className="store-slug-row">
+                          <span className="store-slug-text">{window.location.host}/store/{store.slug}</span>
+                          <button type="button" className="store-slug-copy" onClick={copyLink} aria-label="Copy the shop link" title="Copy">
+                            <Copy size={15} />
+                          </button>
+                        </div>
+                        <a href={`/store/${store.slug}`} target="_blank" rel="noreferrer" className="btn-seller-outline store-slug-open">
+                          <ArrowSquareOut size={15} /> View storefront
+                        </a>
+                      </div>
+                    )}
                   </div>
                 </div>
               )}
@@ -705,7 +761,7 @@ function ImageUploader({ value, onChange, onFile, uploading, shape = 'circle' })
 }
 
 function ColorPicker({ label, hint, value, onChange }) {
-  const safe = /^#[0-9a-fA-F]{6}$/.test(value || '') ? value : '#000000';
+  const safe = shownColor(value);
   return (
     <div className="color-picker">
       <div className="color-picker-head">
@@ -729,9 +785,9 @@ function ColorPicker({ label, hint, value, onChange }) {
         />
         <input
           type="text"
-          value={value || ''}
+          value={/^var\(/.test(value || '') ? safe : value || ''}
           onChange={(e) => onChange(e.target.value)}
-          placeholder="var(--t-primary-600, #059669)"
+          placeholder="#059669"
           className="form-input color-hex"
           maxLength={7}
         />

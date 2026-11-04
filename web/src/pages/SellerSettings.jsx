@@ -3,7 +3,8 @@ import { Link, useOutletContext } from 'react-router-dom';
 import toast from 'react-hot-toast';
 import {
   CaretRight, AirplaneTilt, Clock, Moped, Money, Globe, Trash, PauseCircle, PlayCircle,
-  ArrowCounterClockwise as RotateCcw,
+  ArrowCounterClockwise as RotateCcw, Storefront, ImageSquare, MapPin, Palette, PaintBrush, QrCode,
+  Truck, Package, Wallet, IdentificationCard, ArrowsLeftRight, GraduationCap, Copy, PencilSimple,
 } from '../lib/icons';
 import axios from '../lib/axios';
 import EmptyArt from '../components/ui/EmptyArt';
@@ -18,6 +19,9 @@ import '../components/account/PushSetting.css';
 import { awayUntil, shortDate, weekLines } from '../lib/shopHours';
 import { confirmAction } from '../lib/confirm';
 import { useMoormove } from '../lib/moormove';
+import { usePhoneLayout } from '../hooks/useMobileNav';
+import { resolveImg } from '../lib/media';
+import { ShopLogoArt } from '../components/shop/ShopArt';
 import { LANGUAGES, getCurrentLanguage, setLanguage } from '../lib/googleTranslate';
 import './SellerDashboard.css';
 import './SellerSettings.css';
@@ -65,6 +69,118 @@ function StatusOption({ icon: Icon, title, text, state, tone = '', children }) {
   );
 }
 
+/**
+ * Computers: the top of Shop Settings is a hub, the way Lazada's Seller
+ * Center opens its settings. The shop itself first (logo, name, its link to
+ * copy, its town, whether buyers can see it), then every setting the shop
+ * has, in groups, each a tile that opens it: the Shop profile and Delivery
+ * & payment ones at their own card on that page (the layout flashes it).
+ * Phones reach these from Me, so they keep the plain list.
+ */
+const HUB = [
+  {
+    title: 'Shop profile',
+    tiles: [
+      { icon: Storefront, tone: 'green', label: 'Name & description', sub: 'What buyers read about your shop', to: '/seller/store#shop-info' },
+      { icon: ImageSquare, tone: 'pink', label: 'Logo & banner', sub: 'Your shop’s pictures', to: '/seller/store#branding' },
+      { icon: MapPin, tone: 'blue', label: 'Location', sub: 'Where your shop or stall is', to: '/seller/store#shop-location' },
+      { icon: Palette, tone: 'violet', label: 'Shop colors', sub: 'The colours of your shop page', to: '/seller/store#theme' },
+      { icon: PaintBrush, tone: 'amber', label: 'Decorate my shop', sub: 'Your shop’s home page', to: '/seller/decorate' },
+      { icon: QrCode, tone: 'green', label: 'Shop QR', sub: 'A poster for your stall', to: '/seller/shop-qr', needsLink: true },
+    ],
+  },
+  {
+    title: 'Delivery & payment',
+    tiles: [
+      { icon: Truck, tone: 'blue', label: 'Delivery & pickup', sub: 'How buyers get their orders', to: '/seller/fulfillment#method' },
+      { icon: Package, tone: 'amber', label: 'Pickup spot', sub: 'Where buyers collect', to: '/seller/fulfillment#pickup' },
+      { icon: MapPin, tone: 'green', label: 'Delivery areas', sub: 'Barangays you deliver to, and fees', to: '/seller/fulfillment#delivery-areas' },
+      { icon: Wallet, tone: 'pink', label: 'Payment options', sub: 'Cash on delivery, GCash or QR', to: '/seller/fulfillment#payment' },
+    ],
+  },
+  {
+    title: 'Account',
+    tiles: [
+      { icon: IdentificationCard, tone: 'violet', label: 'Verify identity', sub: 'Your valid ID, for buyers’ trust', to: '/seller/verification' },
+      { icon: ArrowsLeftRight, tone: 'blue', label: 'Personal account', sub: 'Shop and chat as a buyer', action: 'personal' },
+      { icon: GraduationCap, tone: 'green', label: 'Seller Academy', sub: 'Free lessons for selling', to: '/sell/academy' },
+    ],
+  },
+];
+
+function SettingsHub({ store, onPersonal }) {
+  const link = store.slug ? `${window.location.origin}/store/${store.slug}` : '';
+  const copyLink = async () => {
+    try {
+      await navigator.clipboard.writeText(link);
+      toast.success('Shop link copied');
+    } catch {
+      toast.error('Could not copy. Select the link and copy it instead.');
+    }
+  };
+  const status = store.deletionRequestedAt
+    ? { tone: 'red', label: 'Hidden: deletion scheduled' }
+    : store.isApproved === false
+      ? { tone: 'amber', label: 'Private until approved' }
+      : store.isActive === false
+        ? { tone: 'amber', label: 'Not selling for now' }
+        : { tone: 'green', label: 'Open to buyers' };
+  return (
+    <section className="sst-hub" aria-label="Your shop and its settings">
+      <div className="sst-hub-id">
+        <span className="sst-hub-logo">
+          {store.logo ? <img src={resolveImg(store.logo)} alt="" /> : <ShopLogoArt name={store.name} />}
+        </span>
+        <div className="sst-hub-meta">
+          <h2>
+            {store.name}
+            <Link to="/seller/store#shop-info" className="sst-hub-edit" aria-label="Edit the shop's name" title="Edit">
+              <PencilSimple size={15} />
+            </Link>
+          </h2>
+          <p><span className={`sst-hub-status is-${status.tone}`}>{status.label}</span>
+            {store.municipality?.name && <span>{store.municipality.name}, Oriental Mindoro</span>}
+          </p>
+          {link && (
+            <p className="sst-hub-link">
+              Shop link: <a href={link} target="_blank" rel="noopener noreferrer">{link.replace(/^https?:\/\//, '')}</a>
+              <button type="button" onClick={copyLink} aria-label="Copy the shop link" title="Copy">
+                <Copy size={15} />
+              </button>
+            </p>
+          )}
+        </div>
+      </div>
+
+      {HUB.map((group) => (
+        <div className="sst-hub-group" key={group.title}>
+          <h3>{group.title}</h3>
+          <div className="sst-hub-tiles">
+            {group.tiles.filter((t) => !t.needsLink || store.slug).map(({
+              icon: Icon, tone, label, sub, to, action,
+            }) => {
+              const body = (
+                <>
+                  <span className={`sst-hub-icon is-${tone}`}><Icon size={20} weight="fill" /></span>
+                  <span className="sst-hub-text">
+                    <strong>{label}</strong>
+                    <small>{sub}</small>
+                  </span>
+                </>
+              );
+              return action === 'personal' ? (
+                <button key={label} type="button" className="sst-hub-tile" onClick={onPersonal}>{body}</button>
+              ) : (
+                <Link key={label} to={to} className="sst-hub-tile">{body}</Link>
+              );
+            })}
+          </div>
+        </div>
+      ))}
+    </section>
+  );
+}
+
 export default function SellerSettings() {
   const layoutCtx = useOutletContext() || {};
   const [store, setStore] = useState(null);
@@ -80,6 +196,7 @@ export default function SellerSettings() {
   const [language, setLanguageState] = useState(() => getCurrentLanguage());
   const [reloadKey, setReloadKey] = useState(0);
   const { enabled: ridersOn } = useMoormove();
+  const isPhone = usePhoneLayout();
   const statusRef = useRef(null);
 
   useEffect(() => {
@@ -224,6 +341,8 @@ export default function SellerSettings() {
         {head}
 
         <div className="sh-body sst-body">
+          {!isPhone && <SettingsHub store={store} onPersonal={layoutCtx.switchToPersonal} />}
+
           {pendingDeletion && (
             <button
               type="button"
