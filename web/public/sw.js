@@ -26,6 +26,8 @@ const OFFLINE = '/offline.html';
 // The offline page's logo.
 const OFFLINE_LOGO = '/icon-192x192.png';
 const APP_PAGE = '/index.html';
+// A page slower than this opens from the kept app page (see 'navigate').
+const SLOW_PAGE_MS = 1500;
 const MAX_IMAGES = 300;
 const MAX_STATIC = 500;
 // What the build writes into /assets/: name-<8-character hash>.ext, nothing
@@ -84,16 +86,31 @@ self.addEventListener('fetch', (event) => {
   if (url.origin !== self.location.origin) return;
   const path = url.pathname;
 
-  // Pages: the network; offline, the kept app page (the app shows what it saved).
+  // Pages: the network. When it is slow (the host wakes a sleeping server,
+  // a weak signal), the kept app page after SLOW_PAGE_MS, so a return visit
+  // opens at once and the app shows what it saved; the page still arriving
+  // is kept for next time. Offline, the kept page too.
   if (request.mode === 'navigate') {
+    const network = (async () => {
+      const preloaded = await event.preloadResponse;
+      const response = preloaded || await fetch(request);
+      const keep = response.ok && (response.headers.get('content-type') || '').includes('text/html')
+        ? response.clone()
+        : null;
+      return { response, keep };
+    })();
+    event.waitUntil(network.then(({ keep }) => keep && put(SHELL, APP_PAGE, keep)).catch(() => {}));
+    // Only the app's own pages: a file opened as a page (the APK download,
+    // an upload, the API) must never be answered with the app page.
+    const appRoute = !/\.[a-z0-9]+$/i.test(path) && !/^\/(api|uploads|downloads|health)(\/|$)/.test(path);
     event.respondWith((async () => {
+      const slow = new Promise((resolve) => { setTimeout(() => resolve(null), appRoute ? SLOW_PAGE_MS : 2147483647); });
       try {
-        const preloaded = await event.preloadResponse;
-        const response = preloaded || await fetch(request);
-        if (response.ok && (response.headers.get('content-type') || '').includes('text/html')) {
-          event.waitUntil(put(SHELL, APP_PAGE, response.clone()));
-        }
-        return response;
+        const first = await Promise.race([network, slow]);
+        if (first) return first.response;
+        const kept = await caches.match(APP_PAGE);
+        if (kept) return kept;
+        return (await network).response;
       } catch {
         return (await caches.match(APP_PAGE)) || (await caches.match(OFFLINE)) || Response.error();
       }

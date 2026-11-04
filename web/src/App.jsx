@@ -1,6 +1,9 @@
 import { Suspense, lazy, useState } from 'react';
 import { BrowserRouter as Router, Routes, Route, Navigate, useLocation, useSearchParams } from 'react-router-dom';
 import { QueryClient, QueryClientProvider } from '@tanstack/react-query';
+import { bootData, freshBoot } from './lib/boot';
+import { queryKeys } from './lib/queryKeys';
+import { APP_SETTINGS_QUERY_KEY, DEFAULT_APP_SETTINGS } from './hooks/useAppSettings';
 import Home from './pages/Home';
 import ProductTransitions from './lib/productTransition';
 import ProtectedRoute from './components/ProtectedRoute';
@@ -207,6 +210,19 @@ const queryClient = new QueryClient({
     },
   },
 });
+
+// The first screen's shared data, sent inside the page (lib/boot): settings,
+// categories and banners start filled instead of each being asked for once
+// the page has loaded. Marked with the time the server made them, so they
+// are refreshed on the usual schedule.
+{
+  const at = Number(bootData()?.at) || Date.now();
+  const seed = (key, data) => { if (data !== undefined) queryClient.setQueryData(key, data, { updatedAt: at }); };
+  const settings = freshBoot('appSettings');
+  seed(APP_SETTINGS_QUERY_KEY, settings ? { ...DEFAULT_APP_SETTINGS, ...settings } : undefined);
+  seed(queryKeys.categories(true), freshBoot('categories'));
+  seed(queryKeys.banners, freshBoot('banners'));
+}
 
 // Signing in or out must drop every cached response: without this, the next
 // account could be shown the previous one's data from memory. Nothing is

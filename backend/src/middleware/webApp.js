@@ -103,6 +103,27 @@ const renderTags = (meta) => {
   return tags.join('\n    ');
 };
 
+// The first screen's shared data, sent inside the page (web/src/lib/boot.js):
+// app settings, categories and banners, the same for every visitor and
+// cached by their services, so the app does not ask for each in turn once
+// the page has loaded. Each waits at most BOOT_WAIT_MS; one that is slower
+// or fails is left out, and the app asks for it as before.
+const BOOT_WAIT_MS = 400;
+const bootPiece = (load) => Promise.race([
+  Promise.resolve().then(load).catch(() => undefined),
+  new Promise((resolve) => { setTimeout(resolve, BOOT_WAIT_MS).unref(); }),
+]);
+const firstScreenData = async () => {
+  const [appSettings, categories, banners] = await Promise.all([
+    bootPiece(() => require('../services/appSetting.service').get()),
+    bootPiece(() => require('../services/category.service').getAllCategories(true)),
+    bootPiece(() => require('../services/banner.service').listActive()),
+  ]);
+  return { at: Date.now(), appSettings, categories, banners };
+};
+// Inert JSON (never run as script); `<` escaped so no text in it can close the tag.
+const bootTag = (data) => `<script type="application/json" id="emoorm-boot">${JSON.stringify(data).replace(/</g, '\\u003c')}</script>`;
+
 /**
  * Wire the SPA onto an Express app. A no-op when WEB_DIST_DIR is unset, so a
  * pure-API deployment behaves exactly as before.
@@ -272,7 +293,7 @@ const mountWebApp = (app) => {
     if (!req.accepts('html') || path.extname(req.path)) return next();
 
     try {
-      const meta = await seoService.resolve(req.path);
+      const [meta, boot] = await Promise.all([seoService.resolve(req.path), firstScreenData()]);
       const head = renderTags(meta);
       const stripped = MANAGED.reduce((html, pattern) => html.replace(pattern, ''), readTemplate());
       // A function, not a string: in a replacement string `$&`, `$'` and `` $` ``
@@ -283,7 +304,7 @@ const mountWebApp = (app) => {
       const summary = `<noscript><h1>${escapeHtml(meta.title)}</h1><p>${escapeHtml(meta.description)}</p></noscript>`;
       const html = stripped
         .replace('</head>', () => `    ${head}\n  </head>`)
-        .replace('<div id="root"></div>', () => `${summary}<div id="root"></div>`);
+        .replace('<div id="root"></div>', () => `${summary}${bootTag(boot)}<div id="root"></div>`);
 
       res.set('Content-Type', 'text/html; charset=utf-8');
       // The shell is identical for everyone, but its tags depend on data that

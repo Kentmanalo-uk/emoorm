@@ -18,6 +18,7 @@ import Skeleton from '../components/ui/Skeleton';
 import ProductImage from '../components/ProductImage';
 import { BusyLabel } from '../components/ui/Spinner';
 import { readCache, writeCache } from '../lib/pageCache';
+import { takePrefetched } from '../lib/prefetch';
 import axios from '../lib/axios';
 import { resolveImg, parseImages, srcSetFor } from '../lib/media';
 
@@ -336,7 +337,12 @@ const ProductDetails = () => {
       setIsLoading(true);
     }
     try {
-      const res = await axios.get(`/products/slug/${slug}`);
+      // The request a touch on its link already started (lib/prefetch), if
+      // any; a failed one is asked again, so it fails as before if it must.
+      const early = takePrefetched(slug);
+      const res = await (early
+        ? early.catch(() => axios.get(`/products/slug/${slug}`))
+        : axios.get(`/products/slug/${slug}`));
       setProduct(res.data);
       setQuantity((q) => Math.max(q, minOrder(res.data)));
       writeCache(`product:${slug}`, res.data);

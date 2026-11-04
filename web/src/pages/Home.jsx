@@ -24,6 +24,7 @@ import { useMunicipalities, useCategories } from '../hooks/useReferenceData';
 import useAppSettings from '../hooks/useAppSettings';
 import useFocusTrap from '../hooks/useFocusTrap';
 import useNearScreen from '../hooks/useNearScreen';
+import { freshBoot } from '../lib/boot';
 import { POPULAR_SUGGESTIONS, loadRecent, saveRecent } from '../lib/buyerSearch';
 import CategoryIcon, { CategoryIconGradients } from '../components/CategoryIcon';
 import TodayRail from '../components/today/TodayRail';
@@ -73,7 +74,9 @@ const Home = () => {
     let cancelled = false;
     (async () => {
       try {
-        const res = await axios.get('/banners');
+        // The banners the page came with (lib/boot), or asked for.
+        const sent = freshBoot('banners');
+        const res = sent ? { data: sent } : await axios.get('/banners');
         const list = Array.isArray(res.data) ? res.data : [];
         if (!cancelled && list.length > 0) {
           const mapBanner = (b) => ({

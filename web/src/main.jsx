@@ -10,6 +10,7 @@ import { startCuratedTagalog } from './lib/tagalog';
 import { keepOriginalText } from './lib/noTranslate';
 import { bootTheme } from './hooks/useTheme';
 import { setupPwaInstall } from './lib/pwaInstall';
+import { watchProductLinks } from './lib/prefetch';
 import { startFreshnessWatch } from './lib/freshness';
 import { guardAgainstTranslate } from './lib/translateGuard';
 import ErrorBoundary from './components/ErrorBoundary';
@@ -49,6 +50,8 @@ if (!window.history.state?.key) {
 // Listen for the browser's offer to install the app (it can come early) and
 // register the service worker that makes the site installable.
 setupPwaInstall();
+// A product's data is fetched as soon as its link is touched (lib/prefetch).
+watchProductLinks();
 // A page open across a deploy (the Android app in the background) picks up
 // the new build when it is next looked at.
 startFreshnessWatch();

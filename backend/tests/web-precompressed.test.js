@@ -1,5 +1,7 @@
 const { test, before, after } = require('node:test');
 const assert = require('node:assert/strict');
+// First: it turns off Redis, email and the rest before the app loads.
+const h = require('./helpers');
 const fs = require('fs');
 const os = require('os');
 const path = require('path');
@@ -33,10 +35,13 @@ before(async () => {
   base = `http://127.0.0.1:${server.address().port}`;
 });
 
-after(() => {
+after(async () => {
   config.site.webDir = saved;
-  server?.close();
+  server?.closeAllConnections();
+  await new Promise((resolve) => { if (server) server.close(resolve); else resolve(); });
   fs.rmSync(dist, { recursive: true, force: true });
+  // Pages read settings, categories and banners from the database.
+  await h.cleanup();
 });
 
 const get = (p, encoding) => new Promise((resolve, reject) => {
@@ -76,4 +81,37 @@ test('built-in banners are kept a day and refreshed in the background', async ()
   const banner = await get('/assets/banners/hello.webp');
   assert.equal(banner.res.statusCode, 200);
   assert.match(banner.res.headers['cache-control'], /max-age=86400, stale-while-revalidate=604800/);
+});
+
+test('a page carries the first screen\'s settings, categories and banners as inert JSON', async () => {
+  const page = await get('/products');
+  assert.equal(page.res.statusCode, 200);
+  const html = page.body.toString();
+  const m = /<script type="application\/json" id="emoorm-boot">([^<]*)<\/script>/.exec(html);
+  assert.ok(m, 'the data block is in the page');
+  const boot = JSON.parse(m[1]);
+  assert.ok(Number(boot.at) > 0);
+  assert.ok(boot.appSettings && typeof boot.appSettings === 'object');
+  assert.ok(Array.isArray(boot.categories));
+  assert.ok(Array.isArray(boot.banners));
+  // Nothing in it can close the tag early: every < is escaped.
+  assert.ok(!m[1].includes('<'));
+});
+
+test('a banner title written to end the tag stays inside the data', async () => {
+  const prisma = require('../src/config/database');
+  const { invalidate, TAGS } = require('../src/lib/cachePolicy');
+  const title = '</script><script>alert(1)</script>';
+  const banner = await prisma.banner.create({ data: { title, imageUrl: '/uploads/ci-boot.webp', isActive: true, placement: 'HOME_CAROUSEL' } });
+  try {
+    await invalidate([TAGS.banners]);
+    const html = (await get('/another/page')).body.toString();
+    assert.equal(html.split('</script>').length - 1, html.split('<script').length - 1, 'every script tag closes once');
+    const m = /<script type="application\/json" id="emoorm-boot">([^<]*)<\/script>/.exec(html);
+    assert.ok(m, 'the data block is whole');
+    assert.ok(JSON.parse(m[1]).banners.some((b) => b.title === title), 'the title comes back as it was');
+  } finally {
+    await prisma.banner.delete({ where: { id: banner.id } });
+    await invalidate([TAGS.banners]);
+  }
 });
