@@ -1,611 +1,564 @@
-/* About Emoorm (About.jsx): a light grey page of white rounded cards under a
-   soft pink-to-mint hero. "ab-" names keep it clear of the phone layer's
-   page flattening (styles/phone-app.css). */
+/* About Emoorm (About.jsx). The page's centre is the wall of town names on
+   the brand green; after it each section has its own form: a large quote,
+   a line of words, a dark index, names, one closing line. Theme tokens
+   throughout, so a repainted palette carries the page. */
+
 .ab {
-  --ab-sweep: linear-gradient(135deg, var(--t-accent-500, #ec4899) 0%, var(--t-accent-500, #ec4899) 6%, var(--t-primary-600, #047857) 94%, var(--t-primary-600, #047857) 100%);
-  --ab-gutter: 32px;
+  --ab-green: var(--t-primary-600, #055d07);
+  --ab-pink: var(--t-accent-500, #ec4899);
+  --ab-pink-soft: var(--t-accent-300, #f9a8d4);
+  --ab-ink: var(--t-neutral-900, #111827);
+  --ab-muted: var(--t-neutral-600, #4b5563);
+  --ab-line: var(--t-neutral-200, #e5e7eb);
+  background: var(--t-neutral-0, #fff);
+  color: var(--ab-ink);
+  overflow-x: clip;
+}
+
+.ab-wrap {
   width: 100%;
-  padding-bottom: 8px;
-  background: var(--t-neutral-50, #f9fafb);
-  color: var(--t-neutral-900, #111827);
-}
-
-.ab-gradients {
-  position: absolute;
-  width: 0;
-  height: 0;
-  overflow: hidden;
-}
-
-/* ── Hero ─────────────────────────────────────────────────────────── */
-.ab-hero {
-  background: linear-gradient(135deg, var(--t-accent-50, #fdf2f8) 0%, var(--t-primary-50, #ecfdf5) 100%);
-}
-
-.ab-hero-inner {
-  display: flex;
-  flex-direction: column;
-  align-items: center;
-  max-width: 720px;
+  max-width: 1200px;
   margin: 0 auto;
-  padding: 56px var(--ab-gutter) 44px;
-  text-align: center;
+  padding: 0 40px;
 }
 
-.ab-logo-tile {
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  width: 84px;
-  height: 84px;
-  margin-bottom: 18px;
-  border-radius: 24px;
-  background: #fff;
-  box-shadow: 0 6px 18px rgba(4, 120, 87, 0.14);
+.ab-h2 {
+  margin: 0;
+  color: inherit;
+  font-size: clamp(30px, 3.2vw, 44px);
+  font-weight: 700;
+  line-height: 1.05;
+  letter-spacing: -0.035em;
 }
 
-.ab-logo {
-  width: 54px;
-  height: 54px;
-  object-fit: contain;
+.ab a:focus-visible {
+  outline: 3px solid var(--ab-pink-soft);
+  outline-offset: 4px;
 }
 
-.ab-eyebrow {
-  margin: 0 0 6px;
-  color: var(--t-primary-600, #047857);
-  font-size: 13px;
-  font-weight: 600;
-  line-height: 1.3;
+/* ─── Hero: the towns ─────────────────────────────────────────── */
+.ab-hero {
+  padding: 88px 0 96px;
+  background: var(--ab-green);
+  color: #fff;
 }
 
 .ab-title {
-  max-width: 640px;
-  margin: 0;
-  color: var(--t-neutral-900, #111827);
-  font-size: clamp(26px, 3.6vw, 36px);
+  max-width: 900px;
+  margin: 0 0 24px;
+  color: #fff;
+  font-size: clamp(44px, 6vw, 84px);
   font-weight: 700;
-  line-height: 1.22;
+  line-height: 0.98;
+  letter-spacing: -0.045em;
+}
+
+.ab-title span {
+  color: var(--ab-pink-soft);
 }
 
 .ab-lead {
   max-width: 600px;
-  margin: 12px 0 0;
-  color: var(--t-neutral-600, #4b5563);
-  font-size: 16px;
+  margin: 0 0 72px;
+  color: rgba(255, 255, 255, 0.82);
+  font-size: 18px;
   line-height: 1.6;
 }
 
-.ab-facts {
-  display: grid;
-  grid-template-columns: repeat(3, minmax(0, 1fr));
-  gap: 10px;
-  width: 100%;
-  max-width: 520px;
-  margin: 24px 0 0;
-  padding: 0;
-  list-style: none;
-}
-
-.ab-fact {
-  display: flex;
-  flex-direction: column;
-  align-items: center;
-  padding: 12px 6px;
-  border: 1px solid #fff;
-  border-radius: 14px;
-  background: rgba(255, 255, 255, 0.7);
-  -webkit-backdrop-filter: blur(8px);
-  backdrop-filter: blur(8px);
-}
-
-.ab-fact strong {
-  color: var(--t-primary-700, #03684c);
-  font-size: 19px;
-  font-weight: 700;
-  line-height: 1.2;
-}
-
-.ab-fact span {
-  margin-top: 2px;
-  color: var(--t-neutral-500, #6b7280);
-  font-size: 12.5px;
-  line-height: 1.25;
-}
-
-.ab-actions {
-  display: flex;
-  justify-content: center;
-  gap: 10px;
-  width: 100%;
-  max-width: 420px;
-  margin-top: 20px;
-}
-
-.ab-pill {
-  display: inline-flex;
-  flex: 1 1 0;
-  align-items: center;
-  justify-content: center;
-  min-height: 44px;
-  padding: 0 18px;
-  border: 1px solid var(--t-neutral-200, #e5e7eb);
-  border-radius: 999px;
-  background: #fff;
-  color: var(--t-neutral-800, #1f2937);
-  font-size: 14.5px;
-  font-weight: 500;
-  line-height: 1.2;
-  text-align: center;
-  text-decoration: none;
-  white-space: nowrap;
-  transition: background-color 0.15s ease, opacity 0.15s ease;
-}
-
-.ab-pill:hover {
-  background: var(--t-neutral-100, #f3f4f6);
-  color: var(--t-neutral-900, #111827);
-}
-
-.ab-pill--primary {
-  border-color: var(--t-primary-600, #047857);
-  background: var(--t-primary-600, #047857);
-  color: #fff;
-}
-
-.ab-pill--primary:hover {
-  background: var(--t-primary-700, #03684c);
-  color: #fff;
-}
-
-/* ── Body ─────────────────────────────────────────────────────────── */
-.ab-body {
-  max-width: 1040px;
-  margin: 0 auto;
-  padding: 0 var(--ab-gutter) 48px;
-}
-
-/* Wide screens: the mission and the timeline side by side. */
-.ab-pair {
-  display: grid;
-  grid-template-columns: minmax(0, 1fr) minmax(0, 1fr);
-  gap: 24px;
-  align-items: start;
-}
-
-.ab-section {
-  padding-top: 32px;
-}
-
-.ab-h2 {
-  margin: 0 0 12px;
-  color: var(--t-neutral-900, #111827);
-  font-size: 20px;
-  font-weight: 600;
-  line-height: 1.25;
-}
-
-.ab-sub {
-  margin: -4px 0 14px;
-  color: var(--t-neutral-500, #6b7280);
-  font-size: 14px;
-  line-height: 1.5;
-}
-
-.ab-card {
-  margin: 0;
-  padding: 18px;
-  border-radius: 16px;
-  background: #fff;
-  box-shadow: 0 1px 2px rgba(15, 23, 42, 0.04);
-  list-style: none;
-}
-
-.ab-mission p {
-  margin: 0;
-  color: var(--t-neutral-700, #374151);
-  font-size: 15px;
-  line-height: 1.6;
-}
-
-.ab-mission p + p {
-  margin-top: 12px;
-}
-
-.ab-item-title {
-  display: block;
-  margin: 0;
-  color: var(--t-neutral-900, #111827);
-  font-size: 15px;
-  font-weight: 500;
-  line-height: 1.35;
-}
-
-.ab-item-text {
-  display: block;
-  margin: 3px 0 0;
-  color: var(--t-neutral-500, #6b7280);
-  font-size: 13.5px;
-  line-height: 1.5;
-}
-
-/* How it works: gradient number dots joined by a thin line. */
-.ab-step {
-  position: relative;
-  display: flex;
-  gap: 14px;
-  padding-bottom: 18px;
-}
-
-.ab-step:last-child {
-  padding-bottom: 0;
-}
-
-.ab-step:not(:last-child)::before {
-  content: '';
-  position: absolute;
-  top: 32px;
-  bottom: 4px;
-  left: 13px;
-  width: 2px;
-  border-radius: 1px;
-  background: var(--t-primary-100, #d1fae5);
-}
-
-.ab-step-dot {
-  display: flex;
-  flex: 0 0 auto;
-  align-items: center;
-  justify-content: center;
-  width: 28px;
-  height: 28px;
-  border-radius: 50%;
-  background: var(--ab-sweep);
-  color: #fff;
-  font-size: 13px;
-  font-weight: 700;
-  line-height: 1;
-}
-
-.ab-step-body {
-  flex: 1;
-  min-width: 0;
-  padding-top: 3px;
-}
-
-.ab-note {
-  margin: 12px 0 0;
-  padding: 0 4px;
-  color: var(--t-neutral-600, #4b5563);
-  font-size: 13.5px;
-  line-height: 1.55;
-}
-
-.ab-note a {
-  color: var(--t-primary-700, #03684c);
-  font-weight: 500;
-}
-
-/* One card list: rows with a hairline between them. */
-.ab-list {
-  padding-top: 4px;
-  padding-bottom: 4px;
-}
-
-.ab-row {
-  display: flex;
-  align-items: flex-start;
-  gap: 14px;
-  padding: 14px 0;
-}
-
-.ab-row + .ab-row {
-  border-top: 1px solid var(--t-neutral-200, #e5e7eb);
-}
-
-.ab-row-body {
-  flex: 1;
-  min-width: 0;
-}
-
-.ab-feature-icon {
-  display: flex;
-  flex: 0 0 auto;
-  align-items: center;
-  justify-content: center;
-  width: 40px;
-  height: 40px;
-  border-radius: 12px;
-}
-
-/* Wide screens: the features in two columns inside the one card. */
-@media (min-width: 900px) {
-  .ab-features {
-    display: grid;
-    grid-template-columns: minmax(0, 1fr) minmax(0, 1fr);
-    column-gap: 32px;
-    padding-left: 20px;
-    padding-right: 20px;
-  }
-
-  .ab-features .ab-row + .ab-row {
-    border-top: 0;
-  }
-
-  .ab-features .ab-row:nth-child(n + 3) {
-    border-top: 1px solid var(--t-neutral-200, #e5e7eb);
-  }
-}
-
-/* Towns: white chips with a green dot. */
+/* Fifteen names, one wall: solid, outlined, the capital in pink. */
 .ab-towns {
   display: flex;
   flex-wrap: wrap;
-  gap: 8px;
+  align-items: baseline;
+  justify-content: center;
+  gap: 0 0.55em;
+  max-width: 1360px;
+  margin: 0 auto;
+  padding: 0 32px;
+  list-style: none;
+  font-size: clamp(34px, 5.2vw, 76px);
+  font-weight: 700;
+  line-height: 1.12;
+  letter-spacing: -0.035em;
+}
+
+/* Solid and outlined in turn: that, not a separator, tells one name from
+   the next, however the lines wrap. */
+.ab-towns li {
+  display: inline-flex;
+  align-items: baseline;
+}
+
+.ab-town {
+  color: #fff;
+  text-decoration: none;
+  transition: color 180ms ease, -webkit-text-stroke-color 180ms ease;
+}
+
+.ab-town.is-outline {
+  color: transparent;
+  -webkit-text-stroke: 1.5px rgba(255, 255, 255, 0.75);
+}
+
+.ab-town.is-capital {
+  color: var(--ab-pink-soft);
+}
+
+a.ab-town:hover {
+  color: var(--ab-pink-soft);
+  -webkit-text-stroke-color: transparent;
+}
+
+/* ─── Mission: one large sentence ─────────────────────────────── */
+.ab-mission {
+  padding: 120px 0 104px;
+}
+
+.ab-mission-grid {
+  display: grid;
+  grid-template-columns: minmax(0, 1.5fr) minmax(0, 1fr);
+  gap: 72px;
+  align-items: end;
+}
+
+.ab-quote {
+  margin: 0;
+  font-size: clamp(30px, 3.4vw, 48px);
+  font-weight: 600;
+  line-height: 1.15;
+  letter-spacing: -0.03em;
+}
+
+.ab-quote span {
+  color: var(--ab-green);
+}
+
+.ab-mission-text p {
+  margin: 0 0 16px;
+  color: var(--ab-muted);
+  font-size: 17px;
+  line-height: 1.65;
+}
+
+.ab-link {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  margin-top: 6px;
+  color: var(--ab-green);
+  font-size: 16px;
+  font-weight: 700;
+  text-decoration: none;
+}
+
+.ab-link:hover {
+  text-decoration: underline;
+}
+
+/* ─── How buying works: a line of words ───────────────────────── */
+.ab-flow {
+  padding: 96px 0;
+  border-top: 1px solid var(--ab-line);
+}
+
+.ab-flow-line {
+  display: grid;
+  grid-template-columns: repeat(4, minmax(0, 1fr));
+  gap: 32px;
+  margin: 48px 0 0;
+  padding: 0;
+  list-style: none;
+}
+
+/* Each step's picture (components/about/StepArt), in the avatars' style;
+   what it shows moves a little, each on its own beat. */
+.ab-flow-art {
+  display: block;
+  width: 120px;
+  height: 120px;
+  margin-bottom: 22px;
+  transition: transform 220ms ease;
+}
+
+.ab-flow li:hover .ab-flow-art {
+  transform: translateY(-4px) rotate(-3deg);
+}
+
+.ab-art :is(.ab-art-sway, .ab-art-hop, .ab-art-bounce, .ab-art-float, .ab-art-ripple, .ab-art-twinkle) {
+  transform-box: fill-box;
+  transform-origin: center;
+}
+
+.ab-art .ab-art-sway {
+  transform-origin: 75% 80%;
+  animation: ab-sway 3.2s ease-in-out infinite;
+}
+
+.ab-art .ab-art-twinkle {
+  animation: ab-twinkle 3.2s ease-in-out infinite;
+}
+
+.ab-art .ab-art-ripple {
+  animation: ab-ripple 2.4s ease-out 0.4s infinite;
+}
+
+.ab-art .ab-art-hop {
+  animation: ab-hop 2.6s cubic-bezier(0.34, 1.4, 0.64, 1) 0.8s infinite;
+}
+
+.ab-art .ab-art-bounce {
+  transform-origin: center bottom;
+  animation: ab-bounce 2.8s ease-in-out 1.2s infinite;
+}
+
+.ab-art .ab-art-float {
+  animation: ab-float 2.8s ease-out 1.2s infinite;
+}
+
+@keyframes ab-sway {
+  0%, 100% { transform: rotate(-7deg); }
+  50% { transform: rotate(6deg) translateX(-2px); }
+}
+
+@keyframes ab-twinkle {
+  0%, 100% { opacity: 0; transform: scale(0.4); }
+  50% { opacity: 1; transform: scale(1); }
+}
+
+@keyframes ab-ripple {
+  0% { opacity: 0.9; transform: scale(0.6); }
+  80%, 100% { opacity: 0; transform: scale(2.2); }
+}
+
+/* The coin flips as it hops (narrow at the top of the jump). */
+@keyframes ab-hop {
+  0%, 60%, 100% { transform: translateY(0) scaleX(1); }
+  25% { transform: translateY(-9px) scaleX(0.15); }
+  40% { transform: translateY(-3px) scaleX(1); }
+}
+
+@keyframes ab-bounce {
+  0%, 100% { transform: translateY(0) scale(1, 1); }
+  12% { transform: translateY(0) scale(1.05, 0.93); }
+  30% { transform: translateY(-7px) scale(0.97, 1.04); }
+  48% { transform: translateY(0) scale(1, 1); }
+}
+
+@keyframes ab-float {
+  0%, 15% { opacity: 0; transform: translateY(10px) scale(0.6); }
+  35% { opacity: 1; transform: translateY(0) scale(1); }
+  80%, 100% { opacity: 0; transform: translateY(-10px) scale(0.9); }
+}
+
+.ab-flow-word {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+  margin-bottom: 14px;
+  color: var(--ab-green);
+  font-size: clamp(26px, 2.6vw, 36px);
+  font-weight: 700;
+  letter-spacing: -0.03em;
+}
+
+.ab-flow li:last-child .ab-flow-word {
+  color: var(--ab-pink);
+}
+
+.ab-flow-arrow {
+  flex-shrink: 0;
+  color: var(--t-neutral-300, #d1d5db);
+}
+
+.ab-flow-text {
+  display: block;
+  color: var(--ab-muted);
+  font-size: 16px;
+  line-height: 1.55;
+}
+
+/* ─── What you can do: an index on dark ───────────────────────── */
+.ab-index {
+  padding: 104px 0;
+  background: #0f1a14;
+  color: #fff;
+}
+
+.ab-index-list {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  column-gap: 72px;
+  margin: 48px 0 0;
+}
+
+.ab-index-list > div {
+  display: grid;
+  grid-template-columns: minmax(0, 0.9fr) minmax(0, 1.1fr);
+  gap: 24px;
+  padding: 22px 0;
+  border-top: 1px solid rgba(255, 255, 255, 0.12);
+}
+
+.ab-index-list dt {
+  font-size: 18px;
+  font-weight: 600;
+  letter-spacing: -0.01em;
+}
+
+.ab-index-list dd {
+  margin: 0;
+  color: rgba(255, 255, 255, 0.62);
+  font-size: 15.5px;
+  line-height: 1.55;
+}
+
+/* ─── Team: names ─────────────────────────────────────────────── */
+.ab-team {
+  padding: 112px 0;
+}
+
+.ab-team-grid {
+  display: grid;
+  grid-template-columns: minmax(0, 0.9fr) minmax(0, 1.1fr);
+  gap: 72px;
+  align-items: start;
+}
+
+.ab-team-note {
+  max-width: 420px;
+  margin: 20px 0 0;
+  color: var(--ab-muted);
+  font-size: 17px;
+  line-height: 1.65;
+}
+
+.ab-names {
   margin: 0;
   padding: 0;
   list-style: none;
 }
 
-.ab-town {
-  display: inline-flex;
-  align-items: center;
-  gap: 6px;
-  padding: 7px 12px;
-  border-radius: 999px;
-  background: #fff;
-  box-shadow: 0 1px 2px rgba(15, 23, 42, 0.04);
-  color: var(--t-neutral-800, #1f2937);
-  font-size: 13.5px;
-  font-weight: 500;
-  line-height: 1.25;
-}
-
-.ab-town::before {
-  content: '';
-  width: 6px;
-  height: 6px;
-  border-radius: 50%;
-  background: var(--t-primary-500, #10b981);
-}
-
-/* Team: compact rows, gradient initials. */
-.ab-person {
-  align-items: center;
-}
-
-.ab-avatar {
+.ab-names li {
   display: flex;
-  flex: 0 0 auto;
-  align-items: center;
-  justify-content: center;
-  width: 44px;
-  height: 44px;
-  border-radius: 50%;
-  background: var(--ab-sweep);
-  color: #fff;
+  flex-wrap: wrap;
+  align-items: baseline;
+  justify-content: space-between;
+  gap: 4px 20px;
+  padding: 18px 0;
+  border-bottom: 1px solid var(--ab-line);
+}
+
+.ab-names li:first-child {
+  padding-top: 0;
+}
+
+.ab-names strong {
+  font-size: clamp(26px, 2.8vw, 38px);
+  font-weight: 700;
+  letter-spacing: -0.03em;
+}
+
+.ab-names span {
+  color: var(--ab-muted);
   font-size: 15px;
-  font-weight: 600;
-  line-height: 1;
 }
 
-.ab-avatar--adviser {
-  background: var(--t-neutral-700, #374151);
+.ab-names li.is-adviser strong {
+  color: var(--ab-green);
 }
 
-.ab-adviser {
-  align-items: flex-start;
+/* ─── Close: one line ─────────────────────────────────────────── */
+.ab-close {
+  padding: 0 0 112px;
 }
 
-.ab-eyebrow--row {
-  display: block;
-  margin-bottom: 2px;
-  font-size: 12px;
-}
-
-.ab-adviser-note {
-  margin-top: 6px;
-  color: var(--t-neutral-600, #4b5563);
-}
-
-/* Help: the brand's pink-to-green card. */
-.ab-cta {
+.ab-close-link {
   display: flex;
-  flex-direction: column;
-  align-items: center;
-  margin-top: 32px;
-  padding: 32px 24px;
-  border-radius: 18px;
-  background: var(--ab-sweep);
-  text-align: center;
+  flex-wrap: wrap;
+  align-items: baseline;
+  justify-content: space-between;
+  gap: 12px 32px;
+  padding: 40px 0;
+  border-top: 2px solid var(--ab-ink);
+  border-bottom: 2px solid var(--ab-ink);
+  color: var(--ab-ink);
+  font-size: clamp(26px, 3vw, 42px);
+  font-weight: 700;
+  letter-spacing: -0.03em;
+  text-decoration: none;
 }
 
-.ab-cta-icon {
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  width: 44px;
-  height: 44px;
-  margin-bottom: 12px;
-  border-radius: 50%;
-  background: #fff;
-  color: var(--t-accent-600, #db2777);
-}
-
-.ab-cta-title {
-  margin: 0;
-  color: #fff;
-  font-size: 21px;
-  font-weight: 600;
-  line-height: 1.25;
-}
-
-.ab-cta-text {
-  max-width: 420px;
-  margin: 6px 0 0;
-  color: rgba(255, 255, 255, 0.92);
-  font-size: 14.5px;
-  line-height: 1.5;
-}
-
-.ab-cta-btn {
+.ab-close-link span {
   display: inline-flex;
   align-items: center;
-  gap: 6px;
-  min-height: 42px;
-  margin-top: 18px;
-  padding: 0 22px;
-  border-radius: 999px;
-  background: #fff;
-  color: var(--t-primary-700, #03684c);
-  font-size: 14.5px;
-  font-weight: 600;
-  text-decoration: none;
-  transition: opacity 0.15s ease;
+  gap: 12px;
+  color: var(--ab-pink);
+  transition: gap 180ms ease;
 }
 
-.ab-cta-btn:hover {
-  opacity: 0.9;
-  color: var(--t-primary-700, #03684c);
+.ab-close-link:hover span {
+  gap: 20px;
 }
 
-.ab-pill:focus-visible,
-.ab-cta-btn:focus-visible,
-.ab-note a:focus-visible {
-  outline: 2px solid var(--t-primary-600, #047857);
-  outline-offset: 2px;
-}
-
-.ab-cta-btn:focus-visible {
-  outline-color: #fff;
-}
-
-@media (max-width: 1024px) {
-  .ab {
-    --ab-gutter: 24px;
-  }
-}
-
-/* ── Phones (≤768px): one column, the app's sizes ─────────────────── */
-@media (max-width: 768px) {
-  .ab {
-    --ab-gutter: 16px;
-    padding-bottom: 28px;
+/* ─── Narrower screens ────────────────────────────────────────── */
+@media (max-width: 960px) {
+  .ab-mission-grid,
+  .ab-team-grid {
+    grid-template-columns: minmax(0, 1fr);
+    gap: 32px;
   }
 
-  .ab-hero-inner {
-    padding: 28px 24px 24px;
+  .ab-flow-line {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+    row-gap: 40px;
   }
 
-  /* The back bar already says "About Emoorm". */
-  .ab-hero .ab-eyebrow {
+  .ab-flow li:nth-child(2) .ab-flow-arrow {
     display: none;
   }
 
-  .ab-logo-tile {
-    width: 76px;
-    height: 76px;
-    margin-bottom: 16px;
-    border-radius: 22px;
+  .ab-index-list {
+    grid-template-columns: minmax(0, 1fr);
+  }
+}
+
+@media (max-width: 640px) {
+  .ab-wrap {
+    padding: 0 20px;
   }
 
-  .ab-logo {
-    width: 48px;
-    height: 48px;
+  .ab-hero {
+    padding: 36px 0 48px;
   }
 
   .ab-title {
-    font-size: 23px;
-    font-weight: 600;
-    line-height: 1.24;
+    margin-bottom: 16px;
+    font-size: 40px;
   }
 
   .ab-lead {
-    max-width: 340px;
-    margin-top: 10px;
-    font-size: 14.5px;
-    line-height: 1.55;
+    margin-bottom: 40px;
+    font-size: 16px;
   }
 
-  .ab-facts {
-    gap: 8px;
-    max-width: none;
-    margin-top: 20px;
+  .ab-towns {
+    padding: 0 16px;
+    font-size: 30px;
+    line-height: 1.18;
   }
 
-  .ab-fact {
-    padding: 10px 4px;
+  .ab-town.is-outline {
+    -webkit-text-stroke-width: 1px;
   }
 
-  .ab-fact strong {
-    font-size: 17px;
+  .ab-mission {
+    padding: 64px 0;
   }
 
-  .ab-fact span {
-    font-size: 12px;
+  .ab-quote {
+    font-size: 27px;
   }
 
-  .ab-actions {
-    max-width: none;
-    margin-top: 18px;
+  .ab-mission-text p {
+    font-size: 16px;
   }
 
-  .ab-pill {
-    padding: 0 12px;
+  .ab-flow {
+    padding: 56px 0;
   }
 
-  .ab-body {
-    padding-bottom: 0;
-  }
-
-  .ab-pair {
-    display: block;
-  }
-
-  .ab-section {
-    padding-top: 28px;
-  }
-
-  .ab-h2 {
-    margin-bottom: 10px;
-    font-size: 18px;
-  }
-
-  .ab-card {
-    padding: 16px;
-  }
-
-  .ab-list {
-    padding-top: 4px;
-    padding-bottom: 4px;
-  }
-
-  .ab-mission p {
-    font-size: 14.5px;
-  }
-
-  .ab-cta {
+  /* The line becomes a column, the arrows pointing down it. */
+  .ab-flow-line {
+    grid-template-columns: minmax(0, 1fr);
+    gap: 24px;
     margin-top: 28px;
-    padding: 26px 20px;
   }
 
-  .ab-cta-title {
-    font-size: 19px;
+  /* Picture beside the words, not above them. */
+  .ab-flow-line li {
+    display: grid;
+    grid-template-columns: 84px minmax(0, 1fr);
+    column-gap: 16px;
+    align-items: center;
   }
 
-  .ab-cta-text {
-    max-width: 300px;
-    font-size: 14px;
+  .ab-flow-art {
+    grid-row: 1 / span 2;
+    width: 84px;
+    height: 84px;
+    margin: 0;
   }
 
-  /* The site footer closes this page on phones, right under the grey. */
-  .layout-main:has(.ab) + .footer {
-    margin-top: 0;
+  .ab-flow-word {
+    justify-content: flex-start;
+    margin-bottom: 6px;
+    font-size: 28px;
+  }
+
+  .ab-flow-arrow {
+    display: none;
+  }
+
+  .ab-index {
+    padding: 56px 0;
+  }
+
+  .ab-index-list {
+    margin-top: 28px;
+  }
+
+  .ab-index-list > div {
+    grid-template-columns: minmax(0, 1fr);
+    gap: 6px;
+    padding: 18px 0;
+  }
+
+  .ab-team {
+    padding: 64px 0;
+  }
+
+  .ab-team-note {
+    margin-top: 14px;
+    font-size: 16px;
+  }
+
+  .ab-names li {
+    flex-direction: column;
+    align-items: flex-start;
+  }
+
+  .ab-names strong {
+    font-size: 26px;
+  }
+
+  .ab-close {
+    padding-bottom: 64px;
+  }
+
+  .ab-close-link {
+    padding: 28px 0;
+    font-size: 26px;
   }
 }
 
 @media (prefers-reduced-motion: reduce) {
-  .ab-pill,
-  .ab-cta-btn {
+  .ab-town,
+  .ab-close-link span {
+    transition: none;
+  }
+
+  .ab-art :is(.ab-art-sway, .ab-art-hop, .ab-art-bounce, .ab-art-float, .ab-art-ripple, .ab-art-twinkle) {
+    animation: none;
+  }
+
+  .ab-art-float,
+  .ab-art-twinkle,
+  .ab-art-ripple {
+    opacity: 1;
+  }
+
+  .ab-flow-art {
     transition: none;
   }
 }

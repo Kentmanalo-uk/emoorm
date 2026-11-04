@@ -1,0 +1,84 @@
+/*
+ * The mascot's idle life (Mascot.jsx). Every origin is in the drawing's own
+ * 120 x 150 units, so it moves the same at any size.
+ */
+
+.mascot {
+  display: block;
+  overflow: visible;
+}
+
+.mascot * {
+  transform-box: view-box;
+}
+
+/* Now and then a small hop off the edge, squashing as it lands. */
+.mascot-hop {
+  transform-origin: 60px 124px;
+  animation: mascot-hop 4.2s ease-in-out infinite;
+}
+
+/* Breathing: the body widens a touch as it settles. */
+.mascot-breathe {
+  transform-origin: 60px 106px;
+  animation: mascot-breathe 2.1s ease-in-out infinite;
+}
+
+.mascot-eyes {
+  transform-origin: 60px 76px;
+  animation: mascot-blink 4.2s ease-in-out infinite;
+}
+
+/* Held out past the cap, so the hand shows. */
+.mascot-wave {
+  transform-origin: 88px 90px;
+  animation: mascot-wave 0.9s ease-in-out infinite alternate;
+}
+
+.mascot-leg {
+  transform-origin: 47px 96px;
+  animation: mascot-kick 1.3s ease-in-out infinite alternate;
+}
+
+.mascot-leg--b {
+  transform-origin: 73px 96px;
+  animation-delay: -0.65s;
+}
+
+@keyframes mascot-hop {
+  0%, 62%, 100% { transform: translateY(0) scale(1, 1); }
+  68% { transform: translateY(0) scale(1.06, 0.92); }
+  76% { transform: translateY(-14px) scale(0.96, 1.05); }
+  84% { transform: translateY(0) scale(1.08, 0.9); }
+  90% { transform: translateY(0) scale(1, 1); }
+}
+
+@keyframes mascot-breathe {
+  0%, 100% { transform: scale(1, 1); }
+  50% { transform: scale(1.025, 0.97); }
+}
+
+@keyframes mascot-blink {
+  0%, 40%, 44%, 88%, 91%, 94%, 100% { transform: scaleY(1); }
+  42%, 89.5%, 92.5% { transform: scaleY(0.1); }
+}
+
+@keyframes mascot-wave {
+  from { transform: rotate(28deg); }
+  to { transform: rotate(58deg); }
+}
+
+@keyframes mascot-kick {
+  from { transform: rotate(-16deg); }
+  to { transform: rotate(14deg); }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .mascot-hop,
+  .mascot-breathe,
+  .mascot-eyes,
+  .mascot-wave,
+  .mascot-leg {
+    animation: none;
+  }
+}

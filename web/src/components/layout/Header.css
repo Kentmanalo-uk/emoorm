@@ -891,15 +891,16 @@
   width: 100%;
   height: 50px;
 
-  /* White inside a thin green outline; the green search button sits inside it. */
-  background: var(--t-neutral-0, #fff);
-  border: 1px solid var(--t-primary-600, #047857);
+  /* Lazada's look: a light grey-lilac field with no outline, the green
+     search button at its end. */
+  background: #eff0f5;
+  border: 1px solid transparent;
   border-radius: 0;
   overflow: hidden;
 }
 
 .header-search:focus-within {
-  box-shadow: 0 0 0 1px var(--t-primary-600, #047857);
+  border-color: #dadce6;
 }
 
 .header-search-input-wrap {

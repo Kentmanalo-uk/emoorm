@@ -1,3055 +1,1326 @@
-﻿/* ── Sell Page — redesigned ────────────────────────────────────── */
+﻿/* /sell (Sell.jsx). Emoorm's mark is white on the brand green, so the page
+   opens and closes on that green, with the pink accent as the one warm spot.
+   In between: white, big type, and pictures of the things a seller sees.
+   Colours are theme tokens, so a repainted palette carries the page. */
 
-.sell-page {
+.sl {
+  --sl-green: var(--t-primary-600, #055d07);
+  --sl-green-deep: color-mix(in srgb, var(--sl-green) 80%, #000);
+  --sl-pink: var(--t-accent-500, #ec4899);
+  --sl-pink-soft: var(--t-accent-300, #f9a8d4);
+  --sl-ink: var(--t-neutral-900, #111827);
+  --sl-muted: var(--t-neutral-600, #4b5563);
+  --sl-line: var(--t-neutral-200, #e5e7eb);
   min-height: 100vh;
   background: var(--t-neutral-0, #fff);
+  color: var(--sl-ink);
   font-family: 'DM Sans', sans-serif;
-  color: var(--t-neutral-900, #111);
+  overflow-x: clip;
 }
 
-/* ─── Sticky header ─────────────────────────────────────────────── */
-.sell-sticky {
-  position: sticky;
-  top: 0;
-  z-index: 50;
-  will-change: transform;
-  transition: transform 260ms cubic-bezier(0.22, 1, 0.36, 1);
-}
-
-/* Topbar */
-.sell-topbar {
-  height: 40px;
-  background: var(--t-secondary-600, #178048);
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  gap: 8px;
-  font-size: 12px;
-  font-weight: 500;
-  color: var(--t-neutral-0, #fff);
-  letter-spacing: 0.01em;
-}
-
-/* Nav header */
-.sell-header {
-  background: var(--t-neutral-0, #fff);
-  border-bottom: 0;
-}
-
-.sell-header-inner {
-  height: 80px;
-  display: flex;
-  align-items: center;
-  gap: 32px;
-  padding: 0 32px;
-  max-width: 1280px;
+.sl-wrap {
+  width: 100%;
+  max-width: 1200px;
   margin: 0 auto;
+  padding: 0 40px;
 }
 
-/* Logo */
-.sell-logo {
-  display: flex;
-  align-items: center;
-  gap: 2px;
-  text-decoration: none;
-  flex-shrink: 0;
-}
-
-.sell-logo-img {
-  width: 36px;
-  height: 36px;
-  object-fit: contain;
-}
-
-.sell-logo-text {
-  font-size: 24px;
+.sl-h2 {
+  margin: 0;
+  font-size: clamp(34px, 3.6vw, 52px);
   font-weight: 700;
-  letter-spacing: -0.04em;
-  color: var(--t-success-700, #008341);
+  line-height: 1.05;
+  letter-spacing: -0.035em;
 }
 
-/* Nav links */
-.sell-nav-links {
-  display: flex;
-  align-items: center;
-  gap: 4px;
-  flex: 1;
-}
-
-.sell-nav-link {
+/* ─── Buttons ─────────────────────────────────────────────────── */
+.sl-btn {
   display: inline-flex;
   align-items: center;
-  gap: 4px;
-  padding: 8px 16px;
-  border-radius: 30px;
+  justify-content: center;
+  gap: 10px;
+  height: 56px;
+  padding: 0 30px;
+  border: 0;
+  border-radius: 999px;
+  font: inherit;
   font-size: 16px;
-  font-weight: 500;
-  color: var(--t-neutral-600, #555);
-  text-decoration: none;
-  transition: background 0.15s, color 0.15s;
+  font-weight: 700;
+  white-space: nowrap;
+  cursor: pointer;
+  transition: transform 160ms ease, box-shadow 160ms ease, filter 160ms ease;
 }
 
-.sell-nav-link:hover,
-.sell-nav-link--active {
-  background: var(--t-neutral-100, #f2f2f0);
-  color: var(--t-neutral-900, #111);
+.sl-btn:hover:not(:disabled) {
+  transform: translateY(-2px);
 }
 
-/* Header actions */
-.sell-header-actions {
+.sl-btn:disabled {
+  cursor: default;
+  opacity: 0.7;
+}
+
+.sl-btn--light {
+  background: var(--t-neutral-0, #fff);
+  color: var(--sl-green);
+  box-shadow: 0 8px 24px rgba(0, 0, 0, 0.18);
+}
+
+.sl-btn--brand {
+  background: linear-gradient(95deg, var(--sl-pink) 0%, var(--sl-pink) 6%, var(--sl-green) 94%, var(--sl-green) 100%);
+  color: #fff;
+}
+
+.sl-btn--small {
+  height: 40px;
+  padding: 0 20px;
+  font-size: 14px;
+  box-shadow: none;
+}
+
+.sl a:focus-visible,
+.sl button:focus-visible {
+  outline: 3px solid var(--sl-pink-soft);
+  outline-offset: 3px;
+}
+
+/* ─── Header: on the green, like the mark ─────────────────────── */
+.sl-header {
+  position: sticky;
+  top: 0;
+  z-index: 40;
+  background: var(--sl-green);
+  color: #fff;
+}
+
+.sl-header-inner {
   display: flex;
   align-items: center;
-  gap: 10px;
+  gap: 40px;
+  height: 68px;
+}
+
+.sl-logo {
+  display: inline-flex;
+  align-items: center;
+  gap: 9px;
+  color: #fff;
+  font-size: 22px;
+  font-weight: 700;
+  letter-spacing: -0.02em;
+  text-decoration: none;
+}
+
+.sl-logo-img {
+  width: 30px;
+  height: 30px;
+}
+
+.sl-logo em {
+  color: var(--sl-pink-soft);
+  font-size: 15px;
+  font-style: normal;
+  font-weight: 500;
+  letter-spacing: 0;
+}
+
+.sl-nav {
+  display: flex;
+  gap: 30px;
+}
+
+.sl-nav a,
+.sl-header-login {
+  color: rgba(255, 255, 255, 0.82);
+  font-size: 15px;
+  font-weight: 500;
+  text-decoration: none;
+}
+
+.sl-nav a:hover,
+.sl-header-login:hover {
+  color: #fff;
+}
+
+.sl-header-actions {
+  display: flex;
+  align-items: center;
+  gap: 22px;
   margin-left: auto;
 }
 
-.sell-nav-btn-ghost {
-  display: none;
-}
-
-@media (min-width: 640px) {
-  .sell-nav-btn-ghost {
-    display: inline-flex;
-    align-items: center;
-    height: 40px;
-    padding: 0 20px;
-    border-radius: 9999px;
-    border: 1px solid rgba(0, 0, 0, 0.12);
-    font-size: 14px;
-    font-weight: 600;
-    color: var(--t-neutral-900, #111);
-    background: var(--t-neutral-0, #fff);
-    cursor: pointer;
-    transition: background 0.15s;
-  }
-
-  .sell-nav-btn-ghost:hover {
-    background: var(--t-neutral-100, #f2f2f0);
-  }
-}
-
-.sell-nav-btn-primary {
-  display: inline-flex;
-  align-items: center;
-  height: 40px;
-  padding: 0 20px;
-  border-radius: 9999px;
-  font-size: 14px;
-  font-weight: 700;
-  color: var(--t-neutral-0, #fff);
-  background: var(--t-secondary-600, #178048);
-  border: none;
-  cursor: pointer;
-  transition: opacity 0.15s;
-}
-
-.sell-nav-btn-primary:hover {
-  opacity: 0.9;
-}
-
-.sell-nav-btn-primary:disabled {
-  opacity: 0.6;
-  cursor: default;
-}
-
-.sell-mobile-toggle {
-  display: none;
-  padding: 6px;
-  border-radius: 8px;
-  background: none;
-  border: none;
-  cursor: pointer;
-  color: var(--t-neutral-600, #555);
-  transition: background 0.15s;
-}
-
-.sell-mobile-toggle:hover {
-  background: var(--t-neutral-100, #f2f2f0);
-}
-
-/* ─── Auth hover dropdown ───────────────────────────────────────── */
-.sell-auth-wrap {
-  position: relative;
-  padding: 6px 4px;
-  margin: -6px -4px;
-}
-
-.sell-auth-drop {
-  position: absolute;
-  right: -12px;
-  top: 100%;
-  width: 320px;
-  padding-top: 10px;
-  z-index: 60;
-  opacity: 0;
-  visibility: hidden;
-  transform: translateY(-4px);
-  pointer-events: none;
-  transition: opacity .15s ease, transform .15s ease, visibility .15s;
-}
-
-.sell-auth-drop--open {
-  opacity: 1;
-  visibility: visible;
-  transform: translateY(0);
-  pointer-events: auto;
-}
-
-.sell-auth-drop-pointer {
-  position: absolute;
-  top: 4px;
-  right: 40px;
-  width: 14px;
-  height: 14px;
-  background: var(--t-neutral-0, #fff);
-  transform: rotate(45deg);
-  box-shadow: -1px -1px 0 rgba(0, 0, 0, .06);
-  z-index: 1;
-}
-
-.sell-auth-drop-inner {
-  position: relative;
-  z-index: 2;
-  padding: 16px 18px 14px;
-  border: 1px solid var(--t-neutral-200, #e5e7eb);
-  background: var(--t-neutral-0, #fff);
-  box-shadow: 0 8px 24px rgba(0, 0, 0, .12);
-}
-
-.sell-auth-drop-head {
-  display: flex;
-  flex-direction: column;
-  align-items: center;
-  gap: 6px;
-  padding-bottom: 12px;
-  margin-bottom: 12px;
-  border-bottom: 1px solid var(--t-neutral-150, #eef2f7);
-}
-
-.sell-auth-drop-title {
-  font-size: 13px;
-  font-weight: 500;
-  color: var(--t-neutral-700, #374151);
-  margin: 0;
-}
-
-.sell-auth-drop-sub {
-  font-size: 12px;
-  color: var(--t-neutral-600, #4b5563);
-  margin: 0;
-}
-
-.sell-auth-drop-links h4 {
-  margin: 0 0 6px;
-  font-size: 13px;
-  font-weight: 700;
-  color: var(--t-neutral-900, #111827);
-}
-
-.sell-auth-drop-links a {
-  display: block;
-  padding: 3px 0;
-  color: var(--t-neutral-700, #374151);
-  font-size: 12px;
-  line-height: 1.5;
-  text-decoration: none;
-}
-
-.sell-auth-drop-links a:hover {
-  color: var(--t-orange-700, #c2410c);
-  text-decoration: underline;
-}
-
-.sell-auth-drop-cta {
-  display: inline-block;
-  padding: 8px 42px;
-  border: none;
-  background: var(--t-primary-600, #059669);
-  color: var(--t-neutral-0, #fff);
-  font-size: 13px;
-  font-family: inherit;
-  font-weight: 600;
-  cursor: pointer;
-  transition: background .15s;
-}
-
-.sell-auth-drop-cta:hover {
-  background: var(--t-primary-700, #047857);
-}
-
-/* ─── Mega dropdown ─────────────────────────────────────────────── */
-.sell-mega-wrap {
-  display: grid;
-  transition: grid-template-rows 220ms ease;
-  border-top: 1px solid rgba(0, 0, 0, 0.05);
-}
-
-.sell-mega-inner {
-  overflow: hidden;
-}
-
-.sell-mega-content {
-  max-width: 1280px;
-  margin: 0 auto;
-  padding: 20px 32px;
-}
-
-.sell-mega-label {
-  font-size: 11px;
-  font-weight: 600;
-  color: var(--t-neutral-300, #bbb);
-  text-transform: uppercase;
-  letter-spacing: 0.06em;
-  margin: 0 0 12px 4px;
-}
-
-.sell-mega-how-grid {
-  display: grid;
-  grid-template-columns: repeat(4, 1fr);
-  gap: 8px;
-}
-
-.sell-mega-item {
-  display: flex;
-  align-items: flex-start;
-  gap: 12px;
-  padding: 10px 12px;
-  border-radius: 12px;
-  text-decoration: none;
-  transition: background 0.12s;
-}
-
-.sell-mega-item:hover {
-  background: var(--t-neutral-100, #f2f2f0);
-}
-
-.sell-mega-n {
-  font-size: 22px;
-  font-weight: 900;
-  line-height: 1;
-  color: var(--t-secondary-600, #178048);
-  opacity: 0.22;
-  width: 24px;
-  text-align: center;
-  flex-shrink: 0;
-  margin-top: 2px;
-}
-
-.sell-mega-item-title {
-  font-size: 13px;
-  font-weight: 600;
-  color: var(--t-neutral-900, #111);
-  margin: 0 0 2px;
-}
-
-.sell-mega-item-desc {
-  font-size: 11px;
-  color: var(--t-neutral-500, #888);
-  line-height: 1.4;
-  margin: 0;
-}
-
-.sell-mega-benefits-grid {
-  display: grid;
-  grid-template-columns: repeat(3, 1fr);
-  gap: 4px;
-}
-
-.sell-mega-item--plain {
-  align-items: flex-start;
-}
-
-.sell-mega-chips {
-  display: flex;
-  flex-wrap: wrap;
-  gap: 8px;
-}
-
-.sell-mega-chip {
-  display: inline-block;
-  background: var(--t-neutral-100, #f2f2f0);
-  padding: 6px 16px;
-  border-radius: 100px;
-  font-size: 13px;
-  font-weight: 500;
-  color: var(--t-neutral-600, #555);
-  text-decoration: none;
-  transition: background 0.12s, color 0.12s;
-}
-
-.sell-mega-chip:hover {
-  background: rgba(41, 163, 102, 0.1);
-  color: var(--t-secondary-600, #178048);
-}
-
-/* ─── Mobile menu ───────────────────────────────────────────────── */
-.sell-mobile-menu {
-  display: none;
-  background: var(--t-neutral-0, #fff);
-  border-bottom: 1px solid rgba(0, 0, 0, 0.06);
-  padding: 12px 16px;
-  flex-direction: column;
-  gap: 2px;
-  z-index: 40;
-}
-
-.sell-mobile-link {
-  display: block;
-  width: 100%;
-  text-align: left;
-  padding: 10px 12px;
-  border-radius: 10px;
-  font-size: 14px;
-  font-weight: 500;
-  color: var(--t-neutral-600, #555);
-  text-decoration: none;
-  background: none;
-  border: none;
-  cursor: pointer;
-  transition: background 0.12s;
-}
-
-.sell-mobile-link:hover {
-  background: var(--t-neutral-100, #f2f2f0);
-}
-
-/* ─── Shared container ──────────────────────────────────────────── */
-.sell-container {
-  max-width: 1280px;
-  margin: 0 auto;
-  padding: 0 32px;
-}
-
-.sell-container--narrow {
-  max-width: 1280px;
-}
-
-.sell-container--center {
-  text-align: center;
-}
-
-/* ─── Sections ──────────────────────────────────────────────────── */
-.sell-section {
-  padding: 56px 0;
-}
-
-/* A section that should read as roughly one screen. It is a minimum, not a
-   fixed height: content always wins, so a long section simply grows and a
-   short one still fills the view. Below the desktop breakpoint the whole
-   idea is dropped — a phone screen is not a canvas. */
-.sell-screen {
-  display: flex;
-  align-items: center;
-  min-height: min(1000px, calc(100svh - var(--sell-head)));
-  padding-top: clamp(48px, 7vh, 96px);
-  padding-bottom: clamp(48px, 7vh, 96px);
+/* ─── Hero ────────────────────────────────────────────────────── */
+.sl-hero {
   position: relative;
   overflow: hidden;
+  padding: 48px 0 0;
+  background:
+    radial-gradient(ellipse at 85% 15%, rgba(255, 255, 255, 0.08), transparent 55%),
+    var(--sl-green);
+  color: #fff;
 }
 
-.sell-screen > .sell-container {
-  width: 100%;
-}
-
-.sell-section--gray {
-  background: var(--t-neutral-50, #f9fafb);
-}
-
-.sell-section-head {
-  text-align: center;
-  margin-bottom: 36px;
-  letter-spacing: 0.001em;
-
-}
-
-.sell-section-head h2 {
-  font-size: clamp(24px, 4vw, 36px);
-  font-weight: 600;
-  color: var(--t-neutral-900, #111);
-  margin: 0 0 6px;
-}
-
-.sell-section-head p {
-  font-size: 13px;
-  color: var(--t-neutral-500, #636b78);
-  margin: 0;
-}
-
-/* ─── Hero ──────────────────────────────────────────────────────── */
-.sell-hero {
-  position: relative;
-  display: flex;
-  align-items: center;
-  /* The sticky topbar and header sit above it, so the hero takes what is
-     left. svh keeps it honest on mobile browsers whose toolbars come and go. */
-  min-height: calc(100svh - var(--sell-head));
-  padding: clamp(24px, 4vh, 56px) 0 clamp(32px, 5vh, 64px);
-  overflow: hidden;
-}
-
-/* A soft wash behind the collage so the right half is not a bare rectangle. */
-.sell-hero-glow {
-  position: absolute;
-  top: -12%;
-  right: -8%;
-  width: 780px;
-  height: 780px;
-  border-radius: 50%;
-  background: radial-gradient(
-    circle at 50% 50%,
-    var(--t-primary-50, #ecfdf5) 0%,
-    rgba(255, 255, 255, 0) 68%
-  );
-  pointer-events: none;
-}
-
-.sell-hero > .sell-container {
-  position: relative;
-  width: 100%;
-}
-
-/* Deliberately uneven: the copy keeps a readable measure and the collage
-   takes the wider share, pushed a little past the grid on large screens. */
-.sell-hero-layout {
+.sl-hero-grid {
   display: grid;
-  grid-template-columns: minmax(0, 0.92fr) minmax(0, 1.08fr);
+  grid-template-columns: minmax(0, 1.25fr) minmax(0, 0.75fr);
   align-items: center;
-  gap: clamp(32px, 5vw, 72px);
+  gap: 32px;
 }
 
-.sell-hero-copy {
-  min-width: 0;
+.sl-hero-copy {
+  padding-bottom: 56px;
 }
 
-.sell-hero-h1 {
-  font-size: clamp(40px, 6vw, 64px);
-  font-weight: 700;
-  line-height: 1.05;
-  letter-spacing: -0.03em;
-  color: var(--t-neutral-900, #111);
-  margin: 0 0 16px;
+/* Headings on the green are white (the site's heading colour would win). */
+.sl-h1,
+.sl-close h2 {
+  color: #fff;
 }
 
-.sell-hero-accent {
-  color: var(--t-secondary-600, #178048);
-}
-
-.sell-hero-sub {
-  font-size: 15px;
-  color: var(--t-neutral-600, #666);
-  line-height: 1.6;
+.sl-h1 {
   margin: 0 0 28px;
-  max-width: 400px;
-}
-
-.sell-hero-btns {
-  display: flex;
-  gap: 10px;
-  flex-wrap: wrap;
-}
-
-/* The seller tutorial and the Academy, under the hero buttons. */
-.sell-hero-learn {
-  display: flex;
-  flex-wrap: wrap;
-  gap: 4px 28px;
-}
-
-.sell-hero-watch {
-  display: inline-flex;
-  align-items: center;
-  gap: 8px;
-  margin-top: 16px;
-  color: var(--t-primary-700, #047857);
-  font-size: 15px;
-  font-weight: 600;
-  text-decoration: none;
-}
-
-.sell-hero-watch:hover {
-  text-decoration: underline;
-  text-underline-offset: 3px;
-}
-
-.sell-hero-watch span {
-  color: var(--t-neutral-500, #6b7280);
-  font-weight: 500;
-}
-
-.sell-hero-btn-primary {
-  display: inline-flex;
-  align-items: center;
-  gap: 8px;
-  height: 56px;
-  padding: 0 40px;
-  border-radius: 9999px;
-  background: var(--t-secondary-600, #178048);
-  color: var(--t-neutral-0, #fff);
-  font-size: 15px;
+  font-size: clamp(48px, 6.4vw, 92px);
   font-weight: 700;
-  border: none;
-  cursor: pointer;
-  transition: opacity 0.15s;
+  line-height: 0.98;
+  letter-spacing: -0.045em;
 }
 
-.sell-hero-btn-primary:hover {
-  opacity: 0.9;
+.sl-h1 span {
+  color: var(--sl-pink-soft);
 }
 
-.sell-hero-btn-primary:disabled {
-  opacity: 0.6;
-  cursor: default;
-}
-
-.sell-hero-btn-ghost {
-  display: inline-flex;
-  align-items: center;
-  height: 56px;
-  padding: 0 40px;
-  border-radius: 9999px;
-  border: 1px solid rgba(0, 0, 0, 0.12);
-  background: var(--t-neutral-0, #fff);
-  color: var(--t-neutral-600, #555);
-  font-size: 15px;
-  font-weight: 600;
-  cursor: pointer;
-  transition: background 0.15s;
-}
-
-.sell-hero-btn-ghost:hover {
-  background: var(--t-neutral-100, #f2f2f0);
-}
-
-.sell-hero-pending {
-  margin: 16px 0 0;
-  font-size: 13px;
-  color: var(--t-warning-500, #f59e0b);
-}
-
-/* Hero images */
-.sell-hero-imgs {
-  display: grid;
-  grid-template-columns: 3fr 2fr;
-  gap: 12px;
-  height: clamp(340px, 62vh, 620px);
-}
-
-.sell-hero-img-main,
-.sell-hero-img-side {
-  border-radius: 16px;
-  overflow: hidden;
-}
-
-.sell-hero-img-main img {
-  width: 100%;
-  height: 100%;
-  object-fit: cover;
-  display: block;
-}
-
-.sell-hero-img-side {
-  display: flex;
-  flex-direction: column;
-  gap: 10px;
-  border-radius: 0;
-  overflow: visible;
-}
-
-.sell-hero-img-side img {
-  width: 100%;
-  flex: 1;
-  object-fit: cover;
-  border-radius: 16px;
-  display: block;
-  min-height: 0;
-}
-
-/* ─── Benefits ──────────────────────────────────────────────────── */
-.sell-benefits-grid {
-  display: grid;
-  grid-template-columns: repeat(3, 1fr);
-  gap: 10px;
-}
-
-.sell-benefit-card {
-  background: var(--t-neutral-0, #fff);
-  border: 1px solid rgba(0, 0, 0, 0.05);
-  border-radius: 16px;
-  padding: 24px;
-  transition: transform 0.16s ease, box-shadow 0.16s ease, border-color 0.16s ease;
-}
-
-.sell-benefit-card:hover {
-  transform: translateY(-2px);
-  border-color: rgba(0, 0, 0, 0.09);
-  box-shadow: 0 10px 24px -14px rgba(0, 0, 0, 0.25);
-}
-
-.sell-benefit-icon {
-  display: inline-flex;
-  align-items: center;
-  justify-content: center;
-  width: 40px;
-  height: 40px;
-  margin-bottom: 14px;
-  border-radius: 12px;
-  background: var(--t-primary-50, #ecfdf5);
-  color: var(--t-secondary-600, #178048);
-}
-
-.sell-benefit-title {
-  font-size: 17px;
-  font-weight: 700;
-  color: var(--t-neutral-900, #111);
-  margin: 0 0 6px;
-  line-height: 1.3;
-}
-
-.sell-benefit-desc {
-  font-size: 13px;
-  color: var(--t-neutral-500, #888);
+.sl-hero-sub {
+  max-width: 520px;
+  /* Room above the button for the mascot sitting on it. */
+  margin: 0 0 84px;
+  color: rgba(255, 255, 255, 0.82);
+  font-size: 18px;
   line-height: 1.6;
-  margin: 0;
 }
 
-/* ─── How it works ──────────────────────────────────────────────── */
-.sell-steps {
-  display: grid;
-  grid-template-columns: repeat(4, 1fr);
-  gap: 24px;
-  list-style: none;
-  margin: 0;
-  padding: 0;
+.sl-hero-actions {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 18px 28px;
 }
 
-.sell-step-card {
+/* A creature from the avatars sitting on the button's top edge, legs
+   over its face, saying what the button does. Its seat line (y 104 of 150
+   in Mascot.jsx) is put on the edge: 72px wide draws it 90px tall, 62px
+   of it above the seat. */
+.sl-cta-wrap {
   position: relative;
-  padding: 26px 24px 28px;
-  border-radius: 18px;
-  background: var(--t-neutral-0, #fff);
-  border: 1px solid rgba(0, 0, 0, 0.05);
-  box-shadow: 0 20px 44px -34px rgba(0, 0, 0, 0.45);
-  transition: transform 0.16s ease, box-shadow 0.16s ease;
+  display: inline-flex;
 }
 
-.sell-step-card:hover {
-  box-shadow: 0 26px 52px -32px rgba(0, 0, 0, 0.5);
-}
-
-/* The line that carries the eye from one step to the next. It is angled to
-   follow the stagger, and nothing trails off the last number. */
-.sell-step-card:not(:last-child)::after {
-  content: '';
+.sl-mascot {
   position: absolute;
-  top: 46px;
-  left: calc(100% + 2px);
-  width: 22px;
-  height: 2px;
-  transform-origin: left center;
-  transform: rotate(2.2deg);
-  background: linear-gradient(
-    to right,
-    var(--t-primary-200, #a7f3d0),
-    var(--t-primary-100, #d1fae5) 62%,
-    transparent
-  );
+  top: -62px;
+  right: 4px;
+  display: flex;
+  align-items: flex-start;
+  gap: 2px;
+  pointer-events: none;
 }
 
-.sell-step-n {
+.sl-mascot svg {
+  flex-shrink: 0;
+  filter: drop-shadow(0 4px 6px rgba(0, 0, 0, 0.18));
+}
+
+/* Pointing at it makes the creature wave harder. */
+.sl-cta-wrap:hover .mascot-wave {
+  animation-duration: 0.35s;
+}
+
+/* A speech bubble, its tail towards the button. */
+.sl-mascot-say {
   position: relative;
-  z-index: 1;
+  margin-top: -2px;
+  padding: 6px 11px;
+  border-radius: 14px 14px 4px 14px;
+  background: #fff;
+  color: var(--sl-green);
+  font-size: 13px;
+  font-weight: 700;
+  white-space: nowrap;
+  box-shadow: 0 6px 16px rgba(0, 0, 0, 0.2);
+  transform-origin: bottom right;
+  animation: sl-say 3.4s ease-in-out infinite;
+}
+
+@keyframes sl-say {
+  0%, 100% { transform: scale(1); }
+  45% { transform: scale(1); }
+  55% { transform: scale(1.08) rotate(-2deg); }
+  65% { transform: scale(1); }
+}
+
+.sl-hero-watch {
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+  color: #fff;
+  font-size: 16px;
+  font-weight: 600;
+  text-decoration: none;
+}
+
+.sl-hero-watch:hover {
+  text-decoration: underline;
+}
+
+.sl-hero-watch small {
+  color: rgba(255, 255, 255, 0.65);
+  font-size: 14px;
+  font-weight: 400;
+}
+
+.sl-hero-note {
+  color: rgba(255, 255, 255, 0.85);
+  font-size: 15px;
+}
+
+/* The phone: a recent iPhone Pro, whole, beside the headline. A titanium
+   band (brushed: light and dark bands across it), a thin black border round
+   the screen, the Dynamic Island, the status bar, side buttons, a glass
+   sheen; a new order drops in as an iOS banner now and then. */
+.sl-scene {
+  position: relative;
   display: flex;
   align-items: center;
   justify-content: center;
-  width: 40px;
-  height: 40px;
-  margin-bottom: 16px;
-  border-radius: 9999px;
-  background: var(--t-secondary-600, #178048);
-  color: var(--t-neutral-0, #fff);
-  font-size: 16px;
-  font-weight: 700;
-  line-height: 1;
-  box-shadow: 0 0 0 5px var(--t-primary-50, #ecfdf5);
+  padding: 12px 0 76px;
 }
 
-.sell-step-title {
-  font-size: 17px;
-  font-weight: 700;
-  color: var(--t-neutral-900, #111);
-  margin: 0 0 4px;
-  line-height: 1.3;
+.sl-scene-mark {
+  position: absolute;
+  right: -140px;
+  bottom: -40px;
+  width: 540px;
+  opacity: 0.07;
+  pointer-events: none;
 }
 
-.sell-step-desc {
-  font-size: 13px;
-  color: var(--t-neutral-500, #888);
-  margin: 0;
-}
-
-/* ─── Categories ────────────────────────────────────────────────── */
-.sell-cat-chips {
-  display: flex;
-  flex-wrap: wrap;
-  justify-content: center;
-  gap: 8px;
-}
-
-.sell-cat-chip {
-  display: inline-block;
-  background: var(--t-neutral-0, #fff);
-  border: 1px solid rgba(0, 0, 0, 0.06);
-  border-radius: 9999px;
-  padding: 9px 20px;
-  font-size: 13px;
-  font-weight: 600;
-  color: var(--t-neutral-700, #444);
-  text-decoration: none;
-  transition: border-color 0.15s, color 0.15s, background 0.15s;
-}
-
-.sell-cat-chip:hover {
-  border-color: var(--t-secondary-600, #178048);
-  background: var(--t-primary-50, #ecfdf5);
-  color: var(--t-primary-700, #047857);
-}
-
-/* ─── Final CTA ─────────────────────────────────────────────────── */
-.sell-final-cta {
-  position: relative;
-  background: linear-gradient(135deg, var(--t-primary-900, #064e3b) 0%, var(--t-primary-800, #065f46) 100%);
-  padding: clamp(80px, 13vh, 140px) 0;
-  overflow: hidden;
-}
-
-/* Concentric rings, off-centre, so the closing band has somewhere to look. */
-.sell-final-rings {
+.sl-scene-sun {
   position: absolute;
   top: 50%;
   left: 50%;
-  width: 780px;
-  height: 780px;
-  transform: translate(-50%, -50%);
+  width: 400px;
+  height: 400px;
+  margin: -230px 0 0 -200px;
   border-radius: 50%;
-  border: 1px solid rgba(255, 255, 255, 0.10);
+  background: radial-gradient(circle at 35% 35%, var(--sl-pink-soft), var(--sl-pink) 70%);
+  opacity: 0.9;
+}
+
+/* Turned in space, as a product shot: the right edge toward you, leaning a
+   little, still. The frame's thickness is the stack of thin
+   shadows on its right (they follow the rounded corners, which a flat side
+   panel could not); graphite titanium, a thin black border round the screen. */
+.sl-iphone {
+  --phone-scale: 1;
+  --tilt: perspective(1800px) rotateY(-24deg) rotateX(7deg) rotateZ(6deg) scale(var(--phone-scale));
+  position: relative;
+  width: 300px;
+  height: 626px;
+  padding: 3px;
+  border-radius: 58px;
+  background: linear-gradient(135deg,
+    #6d7076 0%, #2a2b2f 18%, #7c7f85 34%, #303135 52%,
+    #5f6268 70%, #26272a 86%, #575a60 100%);
   box-shadow:
-    0 0 0 120px rgba(255, 255, 255, 0.045) inset,
-    0 0 0 1px rgba(255, 255, 255, 0.07);
+    inset 0 0 0 1px rgba(255, 255, 255, 0.22),
+    1px 0 0 #45474c, 2px 0 0 #3e4045, 3px 0 0 #383a3e, 4px 1px 0 #333438,
+    5px 1px 0 #2e2f33, 6px 1px 0 #292a2d, 7px 1px 0 #252628, 8px 2px 0 #212224,
+    9px 2px 0 #1d1e20, 10px 2px 0 #1a1b1c, 11px 2px 0 #18191a,
+    40px 50px 70px -16px rgba(0, 0, 0, 0.5),
+    80px 100px 140px -40px rgba(0, 0, 0, 0.4);
+  transform: var(--tilt);
+}
+
+/* The side button and Camera Control, on the edge that faces you; the
+   left side's buttons face away. */
+.sl-iphone-btn {
+  position: absolute;
+  right: -13px;
+  width: 3px;
+  border-radius: 0 3px 3px 0;
+  background: linear-gradient(90deg, #2c2d31, #7d8086 50%, #3a3c40);
+}
+
+.sl-iphone-btn--action,
+.sl-iphone-btn--vol-up,
+.sl-iphone-btn--vol-down {
+  display: none;
+}
+
+.sl-iphone-btn--side { top: 196px; height: 86px; }
+
+.sl-iphone-btn--camera {
+  top: 360px;
+  height: 46px;
+  background: linear-gradient(90deg, #1c1d20, #4d5056);
+}
+
+.sl-iphone-bezel {
+  height: 100%;
+  padding: 6px;
+  border-radius: 55px;
+  background: #050506;
+  box-shadow: inset 0 0 0 1px #1d1d1f;
+}
+
+.sl-phone-screen {
+  position: relative;
+  height: 100%;
+  overflow: hidden;
+  padding: 56px 15px 0;
+  border-radius: 49px;
+  background: #f4f5f7;
+  color: var(--sl-ink);
+}
+
+/* As on an iPhone: the time centred in the space left of the island, the
+   icons in the space right of it. */
+.sl-status {
+  position: absolute;
+  top: 0;
+  right: 0;
+  left: 0;
+  z-index: 2;
+  display: grid;
+  grid-template-columns: 1fr 92px 1fr;
+  align-items: center;
+  justify-items: center;
+  height: 50px;
+  padding: 4px 6px 0;
+  color: #000;
+}
+
+.sl-status-glyphs {
+  grid-column: 3;
+}
+
+.sl-status-time {
+  font-size: 15px;
+  font-weight: 600;
+  letter-spacing: -0.01em;
+}
+
+.sl-status-glyphs {
+  display: inline-flex;
+  align-items: center;
+  gap: 5px;
+}
+
+.sl-status-glyphs svg {
+  display: block;
+  fill: currentColor;
+}
+
+.sl-island {
+  position: absolute;
+  top: 11px;
+  left: 50%;
+  z-index: 3;
+  width: 92px;
+  height: 28px;
+  margin-left: -46px;
+  border-radius: 20px;
+  background: #000;
+}
+
+/* The front camera, a dark lens at the island's right end. */
+.sl-island i {
+  position: absolute;
+  top: 9px;
+  right: 11px;
+  width: 11px;
+  height: 11px;
+  border-radius: 50%;
+  background: radial-gradient(circle at 40% 40%, #2c3a5a, #0b0f1a 60%, #000);
+}
+
+/* A notification banner, the iOS shape: frosted, the app's icon. */
+.sl-toast {
+  position: absolute;
+  top: 50px;
+  right: 8px;
+  left: 8px;
+  z-index: 4;
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  padding: 10px 12px;
+  border-radius: 22px;
+  background: #fff;
+  box-shadow: 0 0 0 1px rgba(15, 23, 42, 0.06), 0 12px 30px rgba(15, 23, 42, 0.22);
+  font-size: 12.5px;
+  line-height: 1.35;
+  animation: sl-toast 6s cubic-bezier(0.22, 1, 0.36, 1) 1.2s infinite both;
+}
+
+.sl-toast-icon {
+  display: grid;
+  flex-shrink: 0;
+  place-items: center;
+  width: 34px;
+  height: 34px;
+  border-radius: 9px;
+  background: var(--sl-green);
+}
+
+.sl-toast-icon img {
+  width: 22px;
+  height: 22px;
+}
+
+.sl-toast-text {
+  display: flex;
+  flex: 1;
+  flex-direction: column;
+  min-width: 0;
+}
+
+.sl-toast-head {
+  display: flex;
+  justify-content: space-between;
+}
+
+.sl-toast-head b {
+  font-size: 11px;
+  font-weight: 600;
+  letter-spacing: 0.02em;
+}
+
+.sl-toast-head small {
+  color: var(--sl-muted);
+  font-size: 11px;
+}
+
+.sl-toast-text > span:last-child b {
+  color: var(--sl-green);
+}
+
+@keyframes sl-toast {
+  0% { opacity: 0; transform: translateY(-130%) scale(0.96); }
+  9%, 72% { opacity: 1; transform: translateY(0) scale(1); }
+  84%, 100% { opacity: 0; transform: translateY(-130%) scale(0.96); }
+}
+
+/* Light on the glass. */
+.sl-glass {
+  position: absolute;
+  inset: 0;
+  z-index: 5;
+  border-radius: inherit;
+  background: linear-gradient(118deg, rgba(255, 255, 255, 0.22) 0%, rgba(255, 255, 255, 0.04) 30%, rgba(255, 255, 255, 0) 45%);
   pointer-events: none;
 }
 
-.sell-final-inner {
-  position: relative;
+.sl-home-bar {
+  position: absolute;
+  bottom: 8px;
+  left: 50%;
+  z-index: 4;
+  width: 112px;
+  height: 5px;
+  margin-left: -56px;
+  border-radius: 3px;
+  background: #111;
 }
 
-.sell-final-inner {
+/* The Seller Center's tab bar, above the home indicator. */
+.sl-app-tabs {
+  position: absolute;
+  right: 0;
+  bottom: 0;
+  left: 0;
+  display: flex;
+  justify-content: space-around;
+  padding: 8px 6px 24px;
+  border-top: 1px solid rgba(15, 23, 42, 0.06);
+  background: rgba(255, 255, 255, 0.94);
+}
+
+.sl-app-tabs span {
   display: flex;
   flex-direction: column;
   align-items: center;
-  text-align: center;
-  gap: 10px;
+  gap: 2px;
+  color: #8a9099;
+  font-size: 9.5px;
+  font-weight: 500;
 }
 
-.sell-final-cta h2 {
-  font-size: clamp(24px, 4vw, 36px);
-  font-weight: 600;
-  color: var(--t-neutral-0, #fff);
-  margin: 0;
+.sl-app-tabs span.is-on {
+  color: var(--sl-green);
 }
 
-.sell-final-cta p {
-  font-size: 13px;
-  color: rgba(255, 255, 255, 0.7);
-  margin: 0 0 16px;
-}
-
-.sell-final-btns {
+.sl-app-top {
   display: flex;
-  gap: 12px;
+  align-items: center;
+  gap: 7px;
+  margin-bottom: 14px;
+  color: var(--sl-green);
+  font-size: 13px;
+  font-weight: 700;
+}
+
+.sl-app-logo {
+  width: 20px;
+  height: 20px;
+}
+
+.sl-app-hi {
+  margin: 0 0 12px;
+  font-size: 19px;
+  font-weight: 700;
+  letter-spacing: -0.02em;
+}
+
+.sl-app-today {
+  display: grid;
+  grid-template-columns: 1fr auto;
+  align-items: end;
+  margin-bottom: 18px;
+  padding: 14px;
+  border-radius: 16px;
+  background: var(--sl-green);
+  color: #fff;
+}
+
+.sl-app-label {
+  grid-column: 1;
+  font-size: 11.5px;
+  opacity: 0.8;
+}
+
+.sl-app-amount {
+  grid-column: 1;
+  font-size: 26px;
+  font-weight: 700;
+  letter-spacing: -0.02em;
+}
+
+.sl-app-bars {
+  grid-column: 2;
+  grid-row: 1 / span 2;
+  display: flex;
+  align-items: flex-end;
+  gap: 3px;
+  height: 40px;
+}
+
+.sl-app-bars i {
+  width: 6px;
+  border-radius: 3px;
+  background: rgba(255, 255, 255, 0.55);
+}
+
+.sl-app-bars i:last-child {
+  background: var(--sl-pink-soft);
+}
+
+.sl-app-section {
+  margin: 0 0 8px;
+  color: var(--sl-muted);
+  font-size: 11.5px;
+  font-weight: 600;
+  letter-spacing: 0.04em;
+  text-transform: uppercase;
+}
+
+.sl-app-row {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  margin-bottom: 8px;
+  padding: 9px;
+  border-radius: 14px;
+  background: #fff;
+}
+
+.sl-app-thumb {
+  flex-shrink: 0;
+  width: 38px;
+  height: 38px;
+  border-radius: 10px;
+  background-size: 260%;
+}
+
+.sl-app-name {
+  display: flex;
+  flex: 1;
+  flex-direction: column;
+  font-size: 13px;
+  font-weight: 600;
+}
+
+.sl-app-name small {
+  color: var(--sl-muted);
+  font-size: 11.5px;
+  font-weight: 400;
+}
+
+.sl-app-pack {
+  padding: 5px 11px;
+  border-radius: 999px;
+  background: var(--t-primary-50, #ecfdf5);
+  color: var(--sl-green);
+  font-size: 11.5px;
+  font-weight: 700;
+}
+
+/* ─── Numbers ─────────────────────────────────────────────────── */
+.sl-numbers {
+  position: relative;
+  z-index: 1;
+  padding: 88px 0 40px;
+  background: var(--t-neutral-0, #fff);
+}
+
+.sl-numbers-row {
+  display: grid;
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+}
+
+.sl-numbers p {
+  margin: 0;
+  padding: 0 32px;
+  border-left: 1px solid var(--sl-line);
+}
+
+.sl-numbers p:first-child {
+  padding-left: 0;
+  border-left: 0;
+}
+
+.sl-numbers strong {
+  display: block;
+  color: var(--sl-green);
+  font-size: clamp(64px, 8vw, 120px);
+  font-weight: 700;
+  line-height: 0.95;
+  letter-spacing: -0.05em;
+}
+
+.sl-numbers span {
+  display: block;
+  margin-top: 12px;
+  color: var(--sl-muted);
+  font-size: 17px;
+}
+
+/* ─── Why: alternating rows, each with its own picture ────────── */
+.sl-why {
+  padding: 56px 0 40px;
+}
+
+.sl-feature {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) minmax(0, 1fr);
+  align-items: center;
+  gap: 80px;
+  padding: 64px 0;
+}
+
+.sl-feature + .sl-feature {
+  border-top: 1px solid var(--sl-line);
+}
+
+.sl-feature--flip .sl-feature-copy {
+  order: 2;
+}
+
+.sl-feature-copy p {
+  max-width: 460px;
+  margin: 20px 0 0;
+  color: var(--sl-muted);
+  font-size: 18px;
+  line-height: 1.6;
+}
+
+.sl-feature-art {
+  display: flex;
+  justify-content: center;
+  padding: 40px;
+  border-radius: 32px;
+  background: var(--t-primary-50, #ecfdf5);
+}
+
+.sl-feature:nth-child(2) .sl-feature-art {
+  background: #fdf2f8;
+}
+
+/* A receipt, the fee line the point of it. */
+.sl-receipt {
+  width: 100%;
+  max-width: 340px;
+  padding: 24px 24px 20px;
+  border-radius: 6px;
+  background: #fff;
+  box-shadow: 0 18px 40px rgba(15, 23, 42, 0.12);
+  font-size: 15px;
+  transform: rotate(-2deg);
+}
+
+.sl-receipt p {
+  display: flex;
+  justify-content: space-between;
+  margin: 0;
+  padding: 9px 0;
+}
+
+.sl-receipt-head {
+  margin-bottom: 6px !important;
+  padding-bottom: 14px !important;
+  border-bottom: 2px dashed var(--sl-line);
+  font-weight: 700;
+}
+
+.sl-receipt-head span {
+  color: var(--sl-green);
+  font-size: 13px;
+  font-weight: 600;
+}
+
+.sl-receipt-fee {
+  color: var(--sl-pink);
+  font-weight: 700;
+}
+
+.sl-receipt-total {
+  margin-top: 8px !important;
+  padding-top: 14px !important;
+  border-top: 2px dashed var(--sl-line);
+  color: var(--sl-green);
+  font-size: 19px;
+  font-weight: 700;
+}
+
+/* Barangays, some served. */
+.sl-areas {
+  display: flex;
   flex-wrap: wrap;
   justify-content: center;
+  gap: 10px;
+  max-width: 400px;
 }
 
-.sell-final-btn {
+.sl-areas span {
   display: inline-flex;
   align-items: center;
   gap: 6px;
-  height: 48px;
-  padding: 0 32px;
-  border-radius: 30px;
-  background: var(--t-neutral-0, #fff);
-  color: var(--t-primary-800, #065f46);
-  font-size: 14px;
-  font-weight: 700;
-  border: none;
-  cursor: pointer;
+  padding: 10px 16px;
+  border: 1.5px solid var(--sl-line);
+  border-radius: 999px;
+  background: #fff;
+  color: var(--sl-muted);
+  font-size: 15px;
+  font-weight: 500;
 }
 
-.sell-final-btn:hover {
-  transform: translateY(-1px);
+.sl-areas span.is-on {
+  border-color: var(--sl-green);
+  background: var(--sl-green);
+  color: #fff;
 }
 
-.sell-final-btn:disabled {
-  opacity: 0.6;
-  cursor: default;
-  transform: none;
+.sl-areas .sl-areas-pickup {
+  width: 100%;
+  justify-content: center;
+  margin-top: 8px;
+  border-style: dashed;
+  color: var(--sl-ink);
 }
 
-.sell-final-btn-ghost {
-  display: inline-flex;
-  align-items: center;
-  gap: 6px;
-  height: 48px;
-  padding: 0 32px;
-  border-radius: 30px;
-  background: transparent;
-  color: var(--t-neutral-0, #fff);
-  font-size: 14px;
-  font-weight: 600;
-  border: 1px solid rgba(255, 255, 255, 0.35);
-  cursor: pointer;
-  transition: background 0.15s, border-color 0.15s;
+.sl-areas-pickup i {
+  position: relative;
+  width: 34px;
+  height: 20px;
+  border-radius: 999px;
+  background: var(--sl-pink);
 }
 
-.sell-final-btn-ghost:hover {
-  background: rgba(255, 255, 255, 0.1);
-  border-color: rgba(255, 255, 255, 0.6);
+.sl-areas-pickup i::after {
+  content: '';
+  position: absolute;
+  top: 3px;
+  right: 3px;
+  width: 14px;
+  height: 14px;
+  border-radius: 50%;
+  background: #fff;
 }
 
-.sell-final-login {
-  font-size: 12px;
-  color: rgba(255, 255, 255, 0.4);
-  margin: 8px 0 0;
-}
-
-.sell-final-login button {
-  background: none;
-  border: none;
-  color: rgba(255, 255, 255, 0.7);
-  font-size: 12px;
-  cursor: pointer;
-  text-decoration: underline;
-  text-underline-offset: 2px;
-  padding: 0;
-}
-
-.sell-final-login button:hover {
-  color: var(--t-neutral-0, #fff);
-}
-
-/* ─── Responsive ────────────────────────────────────────────────── */
-@media (max-width: 900px) {
-  .sell-benefits-grid {
-    grid-template-columns: repeat(2, 1fr);
-  }
-
-  .sell-hero-layout {
-    flex-direction: column;
-  }
-
-  .sell-hero-imgs {
-    width: 100%;
-    max-width: 480px;
-    height: 280px;
-  }
-
-  .sell-mega-how-grid {
-    grid-template-columns: repeat(2, 1fr);
-  }
-
-  .sell-mega-benefits-grid {
-    grid-template-columns: repeat(2, 1fr);
-  }
-}
-
-@media (max-width: 768px) {
-  .sell-header-inner {
-    padding: 0 16px;
-  }
-
-  .sell-nav-links {
-    display: none;
-  }
-
-  .sell-mobile-toggle {
-    display: flex;
-  }
-
-  .sell-mobile-menu {
-    display: flex;
-  }
-
-  .sell-container {
-    padding: 0 16px;
-  }
-
-  .sell-mega-content {
-    padding: 16px;
-  }
-}
-
-@media (max-width: 600px) {
-  .sell-benefits-grid {
-    grid-template-columns: 1fr;
-  }
-
-  .sell-hero-btns {
-    flex-direction: column;
-  }
-
-  .sell-hero-btn-primary,
-  .sell-hero-btn-ghost {
-    width: 100%;
-    justify-content: center;
-  }
-}
-
-/* ── Mobile (≤768px / ≤480px) ── */
-@media (max-width: 768px) {
-  .sell-topbar {
-    height: 36px;
-    padding: 0 16px;
-    font-size: 11.5px;
-    text-align: center;
-  }
-
-  .sell-header-inner {
-    height: 64px;
-    gap: 12px;
-  }
-
-  .sell-logo-img {
-    width: 32px;
-    height: 32px;
-  }
-
-  .sell-logo-text {
-    font-size: 22px;
-  }
-
-  .sell-header-actions {
-    gap: 6px;
-  }
-
-  .sell-nav-btn-primary {
-    min-height: 40px;
-    white-space: nowrap;
-  }
-
-  .sell-mobile-toggle {
-    width: 44px;
-    height: 44px;
-    align-items: center;
-    justify-content: center;
-  }
-
-  .sell-mobile-link {
-    min-height: 44px;
-  }
-
-  .sell-section {
-    padding: 40px 0;
-  }
-
-  .sell-section-head {
-    margin-bottom: 20px;
-  }
-
-  .sell-section-head h2 {
-    font-size: 24px;
-  }
-
-  /* Hero: copy uses the full width, images below. */
-  .sell-hero {
-    padding: 32px 0 36px;
-  }
-
-  .sell-hero-layout {
-    align-items: stretch;
-    gap: 28px;
-  }
-
-  .sell-hero-h1 {
-    font-size: 40px;
-    margin-bottom: 12px;
-  }
-
-  .sell-hero-sub {
-    margin-bottom: 20px;
-    max-width: none;
-  }
-
-  .sell-hero-imgs {
-    max-width: none;
-    height: 260px;
-    gap: 8px;
-  }
-
-  .sell-hero-img-side {
-    gap: 8px;
-  }
-
-  .sell-benefits-grid,
-  .sell-steps {
-    gap: 8px;
-  }
-
-  .sell-benefit-card {
-    padding: 16px;
-    border-radius: 12px;
-  }
-
-  .sell-benefit-title {
-    font-size: 16px;
-    margin-bottom: 4px;
-  }
-
-  .sell-step-card {
-    gap: 14px;
-    padding: 16px;
-    border: 0;
-    border-radius: 12px;
-    background: var(--t-neutral-50, #f9fafb);
-  }
-
-  .sell-section--gray .sell-step-card {
-    background: var(--t-neutral-0, #fff);
-  }
-
-  .sell-step-n {
-    width: 28px;
-    font-size: 32px;
-  }
-
-  .sell-cat-chips {
-    gap: 8px;
-  }
-
-  .sell-cat-chip {
-    padding: 8px 14px;
-  }
-
-  .sell-final-cta {
-    padding: 48px 0;
-  }
-
-  .sell-final-btns {
-    max-width: 360px;
-    width: 100%;
-    flex-direction: column;
-    gap: 10px;
-  }
-
-  .sell-final-btn,
-  .sell-final-btn-ghost {
-    width: 100%;
-    justify-content: center;
-  }
-}
-
-@media (max-width: 480px) {
-  .sell-header-inner,
-  .sell-container {
-    padding-left: 12px;
-    padding-right: 12px;
-  }
-
-  .sell-hero-h1 {
-    font-size: 36px;
-  }
-
-  .sell-hero-btn-primary,
-  .sell-hero-btn-ghost {
-    height: 52px;
-    padding: 0 20px;
-  }
-
-  .sell-hero-imgs {
-    height: 220px;
-  }
-
-  .sell-nav-btn-primary {
-    padding-left: 16px;
-    padding-right: 16px;
-  }
-}
-
-
-/* ─── Hero additions ────────────────────────────────────────────── */
-.sell-hero-points {
+/* A buyer's chat, in the language buyers write. */
+.sl-chat {
   display: flex;
-  flex-wrap: wrap;
-  gap: 10px 22px;
-  margin: 26px 0 0;
+  flex-direction: column;
+  gap: 10px;
+  width: 100%;
+  max-width: 360px;
+}
+
+.sl-chat p {
+  max-width: 82%;
+  margin: 0;
+  padding: 12px 16px;
+  border-radius: 20px;
+  font-size: 15px;
+  line-height: 1.45;
+}
+
+.sl-chat-in {
+  align-self: flex-start;
+  border-bottom-left-radius: 6px;
+  background: #fff;
+  box-shadow: 0 4px 14px rgba(15, 23, 42, 0.08);
+}
+
+.sl-chat-out {
+  align-self: flex-end;
+  border-bottom-right-radius: 6px;
+  background: var(--sl-green);
+  color: #fff;
+}
+
+/* ─── Steps: a timeline ───────────────────────────────────────── */
+.sl-steps {
+  padding: 96px 0;
+  background: var(--t-neutral-50, #f8fafc);
+}
+
+.sl-steps-sub {
+  max-width: 520px;
+  margin: 16px 0 56px;
+  color: var(--sl-muted);
+  font-size: 18px;
+  line-height: 1.6;
+}
+
+.sl-timeline {
+  --shot-h: 300px;
+  position: relative;
+  display: grid;
+  grid-template-columns: repeat(4, minmax(0, 1fr));
+  gap: 32px;
+  margin: 0 0 56px;
   padding: 0;
   list-style: none;
 }
 
-.sell-hero-points li {
-  display: inline-flex;
-  align-items: center;
-  gap: 7px;
-  font-size: 13.5px;
-  font-weight: 600;
-  color: var(--t-neutral-600, #555);
-}
-
-.sell-hero-points svg {
-  color: var(--t-secondary-600, #178048);
-  flex-shrink: 0;
-}
-
-.sell-hero-media {
+/* The top half of a phone with the step's screen on it, fading out
+   towards the step's number. The same graphite frame as the hero's,
+   seen straight on. */
+.sl-shot {
   position: relative;
-  flex-shrink: 0;
-}
-
-/* Sits over the corner of the photos so the hero shows the product and not
-   only produce. Decorative, and hidden from assistive technology. */
-.sell-hero-badge {
-  position: absolute;
-  left: -28px;
-  bottom: -22px;
-  display: flex;
-  align-items: center;
-  gap: 11px;
-  max-width: 260px;
-  padding: 12px 16px;
-  border-radius: 14px;
-  background: var(--t-neutral-0, #fff);
-  box-shadow: 0 14px 34px -16px rgba(0, 0, 0, 0.32);
-}
-
-.sell-hero-badge-icon {
-  display: inline-flex;
-  align-items: center;
-  justify-content: center;
-  width: 36px;
-  height: 36px;
-  flex-shrink: 0;
-  border-radius: 10px;
-  background: var(--t-primary-50, #ecfdf5);
-  color: var(--t-secondary-600, #178048);
-}
-
-.sell-hero-badge span:last-child {
-  display: flex;
-  flex-direction: column;
-  gap: 2px;
-  font-size: 12px;
-  line-height: 1.4;
-  color: var(--t-neutral-500, #888);
-}
-
-.sell-hero-badge strong {
-  font-size: 13.5px;
-  font-weight: 700;
-  color: var(--t-neutral-900, #111);
-}
-
-/* ─── Seller tools ──────────────────────────────────────────────── */
-.sell-tool-title {
-  display: block;
-  font-size: 16px;
-  font-weight: 700;
-  color: var(--t-neutral-900, #111);
-  margin: 0 0 4px;
-  line-height: 1.3;
-}
-
-.sell-tool-desc {
-  display: block;
-  font-size: 13px;
-  color: var(--t-neutral-500, #888);
-  line-height: 1.6;
-  margin: 0;
-}
-
-/* ─── Requirements ──────────────────────────────────────────────── */
-.sell-req-card {
-  position: relative;
-  display: flex;
-  align-items: flex-start;
-  gap: 14px;
-  padding: 22px 22px 22px 26px;
-  border-radius: 16px;
-  background: var(--t-neutral-0, #fff);
-  border: 1px solid rgba(0, 0, 0, 0.05);
-  box-shadow: 0 18px 40px -30px rgba(0, 0, 0, 0.45);
-}
-
-.sell-req-icon {
-  display: inline-flex;
-  align-items: center;
-  justify-content: center;
-  width: 44px;
-  height: 44px;
-  flex-shrink: 0;
-  border-radius: 12px;
-  background: var(--t-primary-50, #ecfdf5);
-  color: var(--t-secondary-600, #178048);
-}
-
-.sell-req-title {
-  font-size: 15px;
-  font-weight: 700;
-  color: var(--t-neutral-900, #111);
-  margin: 2px 0 5px;
-  line-height: 1.3;
-}
-
-.sell-req-desc {
-  font-size: 13px;
-  color: var(--t-neutral-500, #888);
-  line-height: 1.6;
-  margin: 0;
-}
-
-.sell-req-note {
-  display: flex;
-  align-items: flex-start;
-  gap: 8px;
-  margin: 22px 0 0;
-  font-size: 13px;
-  line-height: 1.55;
-  color: var(--t-neutral-600, #555);
-}
-
-.sell-req-note svg {
-  color: var(--t-secondary-600, #178048);
-  flex-shrink: 0;
-}
-
-/* ─── FAQ ───────────────────────────────────────────────────────── */
-.sell-faq {
-  max-width: 760px;
-  margin: 0 auto;
-  display: flex;
-  flex-direction: column;
-  gap: 10px;
-}
-
-.sell-faq-item {
-  border: 1px solid rgba(0, 0, 0, 0.06);
-  border-radius: 14px;
-  background: var(--t-neutral-0, #fff);
+  height: var(--shot-h);
   overflow: hidden;
-  transition: border-color 0.15s;
+  -webkit-mask-image: linear-gradient(#000 58%, transparent 96%);
+  mask-image: linear-gradient(#000 58%, transparent 96%);
 }
 
-.sell-faq-item.is-open {
-  border-color: var(--t-primary-200, #a7f3d0);
+/* A soft disc of the brand's tint behind each phone. */
+.sl-shot::before {
+  content: '';
+  position: absolute;
+  top: 34px;
+  left: 50%;
+  width: 250px;
+  height: 250px;
+  margin-left: -125px;
+  border-radius: 50%;
+  background: var(--t-primary-50, #ecfdf5);
 }
 
-.sell-faq-q {
+.sl-timeline li:nth-child(even) .sl-shot::before {
+  background: var(--t-accent-50, #fdf2f8);
+}
+
+.sl-shot-phone {
+  position: relative;
+  width: min(100%, 236px);
+  margin: 6px auto 0;
+  padding: 6px;
+  border-radius: 42px;
+  background: linear-gradient(160deg, #4a4a50, #1d1d21 45%, #2c2c31);
+  box-shadow: 0 0 0 1px rgba(0, 0, 0, 0.2), 0 24px 40px -18px rgba(15, 23, 42, 0.45);
+}
+
+.sl-shot-screen {
+  position: relative;
+  overflow: hidden;
+  padding-top: 40px;
+  border-radius: 36px;
+  background: #fff;
+}
+
+/* The hero phone's status bar and island, a size smaller. */
+.sl-shot-screen .sl-status {
+  grid-template-columns: 1fr 74px 1fr;
+  height: 40px;
+  padding-top: 2px;
+}
+
+.sl-shot-screen .sl-status-time {
+  font-size: 13px;
+}
+
+.sl-shot-screen .sl-status-glyphs {
+  transform: scale(0.82);
+}
+
+.sl-shot-screen .sl-island {
+  top: 9px;
+  width: 74px;
+  height: 22px;
+  margin-left: -37px;
+}
+
+.sl-shot-screen .sl-island i {
+  top: 6px;
+  right: 8px;
+  width: 10px;
+  height: 10px;
+}
+
+.sl-shot-screen img {
+  display: block;
+  width: 100%;
+  height: auto;
+}
+
+/* The line the steps sit on, from the first number to the last. It runs
+   through the numbers, which sit over the fade at each phone's foot. */
+.sl-timeline::before {
+  content: '';
+  position: absolute;
+  top: calc(var(--shot-h) - 1px);
+  right: calc((100% - 96px) / 4 - 28px);
+  left: 28px;
+  height: 2px;
+  background: linear-gradient(90deg, var(--sl-green), var(--sl-pink));
+  opacity: 0.35;
+}
+
+.sl-timeline-n {
+  position: relative;
+  display: grid;
+  place-items: center;
+  width: 56px;
+  z-index: 1;
+  height: 56px;
+  margin: -28px 0 22px;
+  border-radius: 50%;
+  background: var(--sl-green);
+  color: #fff;
+  font-size: 22px;
+  font-weight: 700;
+  box-shadow: 0 0 0 8px var(--t-neutral-50, #f8fafc);
+}
+
+.sl-timeline li:last-child .sl-timeline-n {
+  background: var(--sl-pink);
+}
+
+.sl-timeline-title {
+  margin: 0 0 6px;
+  font-size: 19px;
+  font-weight: 700;
+}
+
+.sl-timeline-desc {
+  margin: 0 0 10px;
+  color: var(--sl-muted);
+  font-size: 15.5px;
+  line-height: 1.55;
+}
+
+.sl-timeline-time {
+  margin: 0;
+  color: var(--sl-green);
+  font-size: 14px;
+  font-weight: 600;
+}
+
+/* ─── What: the moving ribbon ─────────────────────────────────── */
+.sl-sell {
+  padding: 104px 0 96px;
+  overflow: hidden;
+}
+
+.sl-sell .sl-h2 {
+  margin-bottom: 48px;
+}
+
+.sl-ribbon {
+  display: grid;
+  gap: 16px;
+}
+
+.sl-ribbon-row {
+  overflow: hidden;
+  mask-image: linear-gradient(90deg, transparent, #000 6%, #000 94%, transparent);
+}
+
+.sl-ribbon-track {
+  display: flex;
+  gap: 14px;
+  width: max-content;
+  animation: sl-ribbon 60s linear infinite;
+}
+
+.sl-ribbon-row.is-reverse .sl-ribbon-track {
+  animation-direction: reverse;
+  animation-duration: 70s;
+}
+
+.sl-ribbon:hover .sl-ribbon-track {
+  animation-play-state: paused;
+}
+
+@keyframes sl-ribbon {
+  to { transform: translateX(-50%); }
+}
+
+.sl-ribbon-item {
+  display: inline-flex;
+  align-items: center;
+  gap: 14px;
+  padding: 10px 26px 10px 10px;
+  border: 1.5px solid var(--sl-line);
+  border-radius: 999px;
+  background: #fff;
+  color: var(--sl-ink);
+  font-size: 22px;
+  font-weight: 600;
+  letter-spacing: -0.01em;
+  white-space: nowrap;
+  text-decoration: none;
+  transition: border-color 160ms ease, color 160ms ease;
+}
+
+.sl-ribbon-item:hover {
+  border-color: var(--sl-green);
+  color: var(--sl-green);
+}
+
+.sl-ribbon-art {
+  display: grid;
+  flex-shrink: 0;
+  place-items: center;
+  width: 52px;
+  height: 52px;
+  overflow: hidden;
+  border-radius: 50%;
+  background: var(--t-primary-50, #ecfdf5);
+}
+
+.sl-ribbon-art img {
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+}
+
+/* ─── Who ─────────────────────────────────────────────────────── */
+.sl-shops {
+  padding: 0 0 88px;
+}
+
+.sl-shops-inner {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 20px 40px;
+}
+
+.sl-shops-title {
+  margin: 0;
+  color: var(--sl-muted);
+  font-size: 17px;
+  font-weight: 500;
+}
+
+.sl-shops ul {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 14px;
+  margin: 0;
+  padding: 0;
+  list-style: none;
+}
+
+.sl-shops a {
+  display: block;
+  width: 60px;
+  height: 60px;
+  overflow: hidden;
+  border-radius: 50%;
+  box-shadow: 0 0 0 3px #fff, 0 6px 16px rgba(15, 23, 42, 0.12);
+  transition: transform 160ms ease;
+}
+
+.sl-shops a:hover {
+  transform: translateY(-3px);
+}
+
+.sl-shops img,
+.sl-shops svg {
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+}
+
+/* ─── Questions ───────────────────────────────────────────────── */
+.sl-faq {
+  padding: 96px 0;
+  border-top: 1px solid var(--sl-line);
+  scroll-margin-top: 68px;
+}
+
+.sl-faq-grid {
+  display: grid;
+  grid-template-columns: minmax(0, 0.85fr) minmax(0, 1.15fr);
+  gap: 80px;
+  align-items: start;
+}
+
+.sl-help {
+  display: grid;
+  gap: 4px;
+  margin: 36px 0 0;
+  padding: 0;
+  list-style: none;
+}
+
+.sl-help a {
+  display: flex;
+  align-items: center;
+  gap: 14px;
+  padding: 14px 0;
+  border-bottom: 1px solid var(--sl-line);
+  color: var(--sl-ink);
+  font-size: 17px;
+  font-weight: 600;
+  text-decoration: none;
+}
+
+.sl-help a > svg:first-child {
+  color: var(--sl-green);
+}
+
+.sl-help a > span {
+  display: flex;
+  flex: 1;
+  flex-direction: column;
+}
+
+.sl-help small {
+  color: var(--sl-muted);
+  font-size: 14px;
+  font-weight: 400;
+}
+
+.sl-help a:hover {
+  color: var(--sl-green);
+}
+
+.sl-faq-item {
+  border-bottom: 1px solid var(--sl-line);
+}
+
+.sl-faq-item button {
   display: flex;
   align-items: center;
   justify-content: space-between;
   gap: 16px;
   width: 100%;
-  padding: 18px 22px;
+  padding: 22px 0;
+  border: 0;
   background: none;
-  border: none;
+  color: var(--sl-ink);
   font: inherit;
-  font-size: 15px;
+  font-size: 18px;
   font-weight: 600;
-  color: var(--t-neutral-900, #111);
   text-align: left;
   cursor: pointer;
 }
 
-.sell-faq-q svg {
+.sl-faq-item button svg {
   flex-shrink: 0;
-  color: var(--t-secondary-600, #178048);
-  transition: transform 280ms cubic-bezier(0.22, 1, 0.36, 1);
+  color: var(--sl-green);
 }
 
-.sell-faq-item.is-open .sell-faq-q svg {
-  transform: rotate(180deg);
-}
-
-@media (prefers-reduced-motion: reduce) {
-  .sell-faq-a,
-  .sell-faq-q svg {
-    transition: none;
-  }
-}
-
-/* A grid row animates from nothing to content height, which plain
-   height: auto cannot do. The inner wrapper is what actually clips. */
-.sell-faq-a {
+.sl-faq-a {
   display: grid;
   grid-template-rows: 0fr;
-  opacity: 0;
-  transition:
-    grid-template-rows 280ms cubic-bezier(0.22, 1, 0.36, 1),
-    opacity 200ms ease;
+  transition: grid-template-rows 240ms ease;
 }
 
-.sell-faq-item.is-open .sell-faq-a {
+.sl-faq-item.is-open .sl-faq-a {
   grid-template-rows: 1fr;
-  opacity: 1;
 }
 
-.sell-faq-a-inner {
+.sl-faq-a > div {
   overflow: hidden;
-  min-height: 0;
-  padding: 0 22px;
 }
 
-.sell-faq-item.is-open .sell-faq-a-inner {
-  padding-bottom: 18px;
-}
-
-.sell-faq-a p {
+.sl-faq-a p {
   margin: 0;
-  font-size: 14px;
+  padding: 0 0 22px;
+  color: var(--sl-muted);
+  font-size: 16px;
   line-height: 1.65;
-  color: var(--t-neutral-600, #555);
-  max-width: 62ch;
 }
 
-/* ─── Responsive for the new sections ───────────────────────────── */
-@media (max-width: 1080px) {
-  .sell-tools-grid {
-    grid-template-columns: repeat(2, 1fr);
-  }
-}
-
-@media (max-width: 900px) {
-  .sell-steps {
-    grid-template-columns: repeat(2, 1fr);
-    gap: 28px 20px;
-  }
-
-  /* Only the first of each pair still has a neighbour to point at. */
-  .sell-step-card:nth-child(2n)::after {
-    display: none;
-  }
-
-  .sell-req-grid {
-    grid-template-columns: 1fr;
-  }
-
-  .sell-hero-badge {
-    left: 12px;
-    bottom: -18px;
-  }
-}
-
-@media (max-width: 600px) {
-  .sell-steps {
-    grid-template-columns: 1fr;
-    gap: 22px;
-  }
-
-  .sell-step-card::after {
-    display: none !important;
-  }
-
-  .sell-step-card {
-    display: grid;
-    grid-template-columns: 40px 1fr;
-    column-gap: 16px;
-    align-items: center;
-  }
-
-  .sell-step-n {
-    grid-row: span 2;
-    margin-bottom: 0;
-  }
-
-  .sell-tools-grid {
-    grid-template-columns: 1fr;
-  }
-
-  /* Art on the left, title and text stacked beside it. A plain flex row
-     would put the title in its own narrow column and break every word. */
-  .sell-tool-card {
-    display: grid;
-    grid-template-columns: 68px 1fr;
-    column-gap: 16px;
-    align-items: center;
-    padding: 18px;
-  }
-
-  .sell-tool-art {
-    grid-row: span 2;
-    width: 68px;
-    margin-bottom: 0;
-  }
-
-  /* EmptyArt sets its height inline, so the phone size has to win. */
-  .sell-tool-art .empty-art {
-    height: 60px !important;
-  }
-
-  .sell-hero-badge {
-    position: static;
-    max-width: none;
-    margin-top: 14px;
-    box-shadow: none;
-    border: 1px solid rgba(0, 0, 0, 0.06);
-  }
-
-  .sell-faq-q {
-    padding: 16px 18px;
-    font-size: 14.5px;
-  }
-
-  .sell-faq-a {
-    padding: 0 18px 16px;
-  }
-}
-
-
-/* ═══ Section compositions ══════════════════════════════════════════
-   Each section is laid out on purpose rather than repeating the same
-   centred heading. They share the type scale, colours and card
-   treatment; what differs is where things sit. */
-
-:root {
-  /* topbar 40 + header 80 + its hairline, rounded up so the hero never
-     spills a sub-pixel past the fold */
-  --sell-head: 122px;
-}
-
-/* A small label above a heading, used across the sections. */
-.sell-eyebrow {
-  display: inline-block;
-  margin-bottom: 14px;
-  font-size: 12px;
-  font-weight: 700;
-  letter-spacing: 0.08em;
-  text-transform: uppercase;
-  color: var(--t-secondary-600, #178048);
-}
-
-.sell-eyebrow--onDark {
-  color: var(--t-primary-200, #a7f3d0);
-}
-
-.sell-h2 {
-  font-size: clamp(28px, 3.4vw, 44px);
-  font-weight: 700;
-  letter-spacing: -0.02em;
-  line-height: 1.12;
-  color: var(--t-neutral-900, #111);
-  margin: 0 0 14px;
-}
-
-.sell-h2-muted {
-  color: var(--t-neutral-500, #636b78);
-  font-weight: 600;
-}
-
-.sell-lede {
-  font-size: 15px;
-  line-height: 1.65;
-  color: var(--t-neutral-600, #666);
-  margin: 0;
-  max-width: 44ch;
-}
-
-.sell-text-link {
-  display: inline-flex;
-  align-items: center;
-  gap: 7px;
-  margin-top: 22px;
-  padding: 0;
-  background: none;
-  border: none;
-  font: inherit;
-  font-size: 14px;
-  font-weight: 700;
-  color: var(--t-secondary-600, #178048);
-  text-decoration: none;
-  cursor: pointer;
-}
-
-.sell-text-link:hover {
-  color: var(--t-primary-700, #047857);
-}
-
-.sell-text-link:disabled {
-  opacity: 0.55;
-  cursor: default;
-}
-
-/* ─── Split: a column that stays put beside one that scrolls ─────── */
-.sell-split {
-  display: grid;
-  grid-template-columns: minmax(0, 0.82fr) minmax(0, 1.18fr);
-  gap: clamp(32px, 5vw, 80px);
-  align-items: center;
-}
-
-.sell-split--reverse .sell-tools-stack {
-  order: -1;
-}
-
-.sell-split-aside,
-.sell-split-main {
-  min-width: 0;
-}
-
-/* ─── Hero extras ───────────────────────────────────────────────── */
-.sell-hero-h1 {
-  font-size: clamp(38px, 5.2vw, 66px);
-}
-
-.sell-hero-sub {
-  max-width: 42ch;
-  font-size: clamp(14px, 1.15vw, 16px);
-}
-
-/* One reassurance, so it reads as a badge rather than a list. */
-.sell-hero-points li {
-  padding: 7px 14px 7px 11px;
-  border-radius: 9999px;
-  background: var(--t-primary-50, #ecfdf5);
-  color: var(--t-primary-800, #065f46);
-}
-
-/* The stacked pair rides higher than the tall frame. */
-.sell-hero-img-side {
-  padding-bottom: 34px;
-}
-
-.sell-hero-img-main {
-  margin-top: 26px;
-  box-shadow: 0 30px 60px -34px rgba(0, 0, 0, 0.5);
-}
-
-.sell-hero-chip {
-  position: absolute;
-  top: 44%;
-  right: -26px;
-  display: flex;
-  align-items: center;
-  gap: 10px;
-  padding: 11px 15px;
-  border-radius: 14px;
-  background: var(--t-neutral-0, #fff);
-  box-shadow: 0 16px 36px -18px rgba(0, 0, 0, 0.34);
-}
-
-.sell-hero-chip-icon {
-  display: inline-flex;
-  align-items: center;
-  justify-content: center;
-  width: 32px;
-  height: 32px;
-  flex-shrink: 0;
-  border-radius: 10px;
-  background: var(--t-primary-50, #ecfdf5);
-  color: var(--t-secondary-600, #178048);
-}
-
-.sell-hero-chip span:last-child {
-  display: flex;
-  flex-direction: column;
-  gap: 1px;
-  font-size: 11.5px;
-  line-height: 1.35;
-  color: var(--t-neutral-500, #888);
-}
-
-.sell-hero-chip strong {
-  font-size: 13px;
-  font-weight: 700;
-  color: var(--t-neutral-900, #111);
-}
-
-/* ─── Benefits: staggered cards beside a held heading ────────────── */
-.sell-benefits-grid {
-  grid-template-columns: repeat(2, 1fr);
-  gap: 16px;
-}
-
-/* The second column drops half a card, so the eye zigzags down the pair
-   instead of reading two flat rows. */
-.sell-benefits-grid > :nth-child(2n) {
-  transform: translateY(28px);
-}
-
-/* ─── How it works: a descending walk ───────────────────────────── */
-.sell-steps-head {
-  max-width: 560px;
-  margin-bottom: clamp(36px, 6vh, 64px);
-}
-
-.sell-steps-section > .sell-container {
+/* ─── Close: back on the green ────────────────────────────────── */
+.sl-close {
   position: relative;
-  z-index: 1;
+  overflow: hidden;
+  padding: 120px 0;
+  background: var(--sl-green);
+  color: #fff;
 }
 
-/* A quiet marker of where you are, set into the corner. */
-.sell-steps-ghost {
+.sl-close-mark {
   position: absolute;
-  right: clamp(16px, 4vw, 64px);
-  top: clamp(40px, 9vh, 96px);
-  font-size: clamp(56px, 8vw, 104px);
-  font-weight: 800;
-  letter-spacing: -0.04em;
+  top: 50%;
+  right: -80px;
+  width: 560px;
+  opacity: 0.08;
+  transform: translateY(-50%) rotate(-8deg);
+  pointer-events: none;
+}
+
+.sl-close h2 {
+  position: relative;
+  max-width: 760px;
+  margin: 0 0 40px;
+  font-size: clamp(44px, 6vw, 84px);
+  font-weight: 700;
   line-height: 1;
-  color: var(--t-neutral-900, #111);
-  opacity: 0.045;
-  pointer-events: none;
-  user-select: none;
+  letter-spacing: -0.045em;
 }
 
-/* Each step sits a little lower than the one before it. */
-.sell-steps > :nth-child(2) { transform: translateY(26px); }
-.sell-steps > :nth-child(3) { transform: translateY(52px); }
-.sell-steps > :nth-child(4) { transform: translateY(78px); }
-
-.sell-steps-section .sell-steps {
-  margin-bottom: 78px;
-}
-
-/* ─── Tools: a layered stack facing a list ──────────────────────── */
-.sell-tools-stack {
+.sl-close-actions {
   position: relative;
-  min-height: clamp(320px, 46vh, 420px);
-}
-
-.sell-stack-card {
-  position: absolute;
   display: flex;
+  flex-wrap: wrap;
   align-items: center;
-  justify-content: center;
-  border-radius: 20px;
-  background: var(--t-neutral-0, #fff);
-  border: 1px solid rgba(0, 0, 0, 0.05);
+  gap: 18px 28px;
 }
 
-.sell-stack-card--back {
-  top: 0;
-  left: 4%;
-  width: 54%;
-  height: 46%;
-  transform: rotate(-5deg);
-  box-shadow: 0 20px 40px -28px rgba(0, 0, 0, 0.4);
-}
-
-.sell-stack-card--mid {
-  right: 0;
-  top: 14%;
-  width: 52%;
-  height: 48%;
-  transform: rotate(4deg);
-  box-shadow: 0 24px 44px -28px rgba(0, 0, 0, 0.42);
-}
-
-.sell-stack-card--front {
-  left: 14%;
-  bottom: 0;
-  width: 68%;
-  height: 56%;
-  box-shadow: 0 34px 60px -32px rgba(0, 0, 0, 0.5);
-}
-
-.sell-tools-list {
-  list-style: none;
-  margin: 28px 0 0;
-  padding: 0;
-  display: flex;
-  flex-direction: column;
-  gap: 4px;
-}
-
-.sell-tool-row {
-  display: grid;
-  grid-template-columns: 56px 1fr;
-  gap: 16px;
-  align-items: center;
-  padding: 14px 16px;
-  border-radius: 14px;
-  transition: background 0.16s ease;
-}
-
-.sell-tool-row:hover {
-  background: var(--t-neutral-0, #fff);
-}
-
-.sell-tool-art {
-  display: flex;
-  align-items: center;
-  justify-content: center;
-}
-
-/* ─── Categories: heading anchored, catalogue drifting past ─────── */
-.sell-cats-layout {
-  display: grid;
-  grid-template-columns: minmax(0, 0.8fr) minmax(0, 1.2fr);
-  gap: clamp(32px, 5vw, 72px);
-  align-items: center;
-  position: relative;
-  z-index: 1;
-}
-
-.sell-cats-ring {
-  position: absolute;
-  left: -160px;
-  bottom: -220px;
-  width: 520px;
-  height: 520px;
-  border-radius: 50%;
-  border: 44px solid var(--t-primary-50, #ecfdf5);
-  opacity: 0.85;
-  pointer-events: none;
-}
-
-.sell-cats-head .sell-h2 {
-  font-size: clamp(30px, 4vw, 52px);
-}
-
-.sell-cat-chips {
-  justify-content: flex-start;
-  gap: 10px;
-}
-
-.sell-cat-chip {
-  padding: 11px 22px;
-  font-size: 14px;
-}
-
-/* A loose drift rather than a tidy row of pills. */
-.sell-cat-chips > :nth-child(3n + 2) { transform: translateY(12px); }
-.sell-cat-chips > :nth-child(4n + 3) { transform: translateY(-8px); }
-
-/* ─── Requirements: cards stepping down past a right-hand heading ── */
-.sell-req-layout {
-  display: grid;
-  grid-template-columns: minmax(0, 1.05fr) minmax(0, 0.95fr);
-  gap: clamp(32px, 5vw, 72px);
-  align-items: center;
-}
-
-.sell-req-cards {
-  display: flex;
-  flex-direction: column;
-  gap: 14px;
-}
-
-/* Each card is inset a little further, so the three read as a descent. */
-.sell-req-cards > :nth-child(2) { margin-left: clamp(16px, 3vw, 46px); }
-.sell-req-cards > :nth-child(3) { margin-left: clamp(32px, 6vw, 92px); }
-
-.sell-req-step {
-  position: absolute;
-  top: -10px;
-  left: -10px;
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  width: 26px;
-  height: 26px;
-  border-radius: 9999px;
-  background: var(--t-secondary-600, #178048);
-  color: var(--t-neutral-0, #fff);
-  font-size: 12px;
-  font-weight: 700;
-  box-shadow: 0 0 0 4px var(--t-neutral-50, #f9fafb);
-}
-
-/* ─── FAQ ───────────────────────────────────────────────────────── */
-.sell-faq-section .sell-faq {
-  max-width: none;
-  margin: 0;
-}
-
-/* ─── Final CTA ─────────────────────────────────────────────────── */
-.sell-final-cta h2 {
-  font-size: clamp(30px, 4vw, 48px);
-  font-weight: 700;
-  letter-spacing: -0.02em;
-}
-
-.sell-final-cta p {
-  font-size: 15px;
-}
-
-/* ═══ Responsive ════════════════════════════════════════════════════
-   Below 1024px the one-screen idea is dropped: sections take the height
-   their content needs and every split becomes a single column. */
-@media (max-width: 1024px) {
-  .sell-screen {
-    display: block;
-    min-height: 0;
-    overflow: visible;
-    padding-top: 56px;
-    padding-bottom: 56px;
-  }
-
-  .sell-hero {
-    min-height: 0;
-    overflow: visible;
-  }
-
-  .sell-split,
-  .sell-cats-layout,
-  .sell-req-layout,
-  .sell-hero-layout {
-    grid-template-columns: 1fr;
-  }
-
-  .sell-split-aside,
-  .sell-cats-head {
-    margin-bottom: 8px;
-  }
-
-  .sell-split--reverse .sell-tools-stack {
-    order: 0;
-  }
-
-  .sell-tools-stack {
-    display: none;
-  }
-
-  /* The staggers are a large-screen device; stacked, they only misalign. */
-  .sell-benefits-grid > :nth-child(2n),
-  .sell-steps > :nth-child(2),
-  .sell-steps > :nth-child(3),
-  .sell-steps > :nth-child(4),
-  .sell-cat-chips > :nth-child(3n + 2),
-  .sell-cat-chips > :nth-child(4n + 3) {
-    transform: none;
-  }
-
-  .sell-steps-section .sell-steps {
-    margin-bottom: 0;
-  }
-
-  .sell-req-cards > :nth-child(2),
-  .sell-req-cards > :nth-child(3) {
-    margin-left: 0;
-  }
-
-  /* Heading first on a narrow screen, whichever side it sits on wide. */
-  .sell-req-layout .sell-req-head {
-    order: -1;
-  }
-
-  .sell-hero-chip {
-    right: 0;
-  }
-
-  .sell-cats-ring {
-    display: none;
-  }
-
-  .sell-steps-ghost {
-    display: none;
-  }
-}
-
-@media (max-width: 720px) {
-  .sell-benefits-grid {
-    grid-template-columns: 1fr;
-  }
-
-  .sell-tool-row {
-    grid-template-columns: 44px 1fr;
-    gap: 12px;
-    padding: 12px 0;
-  }
-
-  .sell-hero-imgs {
-    height: 300px;
-  }
-
-  .sell-hero-img-main {
-    margin-top: 0;
-  }
-
-  .sell-hero-img-side {
-    padding-bottom: 0;
-  }
-}
-
-
-/* ═══ Filling the screen ════════════════════════════════════════════
-   A screen-sized section only works if its content is sized to match.
-   These grow the pieces that were floating in the middle of one. */
-
-/* ─── Categories as tiles ───────────────────────────────────────── */
-.sell-cat-grid {
-  display: grid;
-  grid-template-columns: repeat(3, minmax(0, 1fr));
-  gap: 12px;
-}
-
-.sell-cat-tile {
-  display: flex;
-  align-items: center;
-  gap: 14px;
-  padding: 14px 16px;
-  border-radius: 16px;
-  background: var(--t-neutral-0, #fff);
-  border: 1px solid rgba(0, 0, 0, 0.06);
-  color: var(--t-neutral-900, #111);
-  text-decoration: none;
-  transition: transform 0.16s ease, box-shadow 0.16s ease, border-color 0.16s ease;
-}
-
-.sell-cat-tile:hover {
-  transform: translateY(-2px);
-  border-color: var(--t-primary-200, #a7f3d0);
-  box-shadow: 0 16px 34px -22px rgba(0, 0, 0, 0.35);
-}
-
-.sell-cat-thumb {
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  width: 52px;
-  height: 52px;
-  flex-shrink: 0;
-  overflow: hidden;
-  border-radius: 12px;
-  background: var(--t-primary-50, #ecfdf5);
-  color: var(--t-secondary-600, #178048);
-}
-
-.sell-cat-thumb img {
-  width: 100%;
-  height: 100%;
-  object-fit: cover;
-  display: block;
-}
-
-.sell-cat-name {
-  flex: 1;
-  min-width: 0;
-  font-size: 14.5px;
+.sl-close-login {
+  color: #fff;
+  font-size: 16px;
   font-weight: 600;
-  line-height: 1.3;
 }
 
-.sell-cat-go {
-  flex-shrink: 0;
-  color: var(--t-neutral-300, #d1d5db);
-  transition: color 0.16s ease, transform 0.16s ease;
-}
-
-.sell-cat-tile:hover .sell-cat-go {
-  color: var(--t-secondary-600, #178048);
-  transform: translateX(2px);
-}
-
-/* The tile grid is the wide half now, so the ring moves out of its way. */
-.sell-cats-ring {
-  left: -220px;
-  bottom: -280px;
-}
-
-/* ─── Bigger bodies for the thinner sections ────────────────────── */
-.sell-benefit-card {
-  padding: 28px 26px;
-}
-
-.sell-benefit-icon {
-  width: 46px;
-  height: 46px;
-  margin-bottom: 18px;
-}
-
-.sell-benefit-title {
-  font-size: 17.5px;
-}
-
-.sell-req-card {
-  padding: 26px 26px 26px 30px;
-}
-
-.sell-req-icon {
-  width: 50px;
-  height: 50px;
-}
-
-.sell-tool-row {
-  padding: 16px;
-}
-
-.sell-faq-q {
-  padding: 22px 24px;
-}
-
-/* Padding belongs to the inner wrapper: on the collapsed container it
-   would leave every closed row carrying dead space. */
-.sell-faq-a-inner {
-  padding-left: 24px;
-  padding-right: 24px;
-}
-
-.sell-faq-item.is-open .sell-faq-a-inner {
-  padding-bottom: 22px;
-}
-
-/* ─── A closing band with some presence ─────────────────────────── */
-.sell-final-cta {
-  padding: clamp(96px, 16vh, 180px) 0;
-}
-
-@media (max-width: 1024px) {
-  .sell-cat-grid {
-    grid-template-columns: repeat(2, minmax(0, 1fr));
-  }
-}
-
-@media (max-width: 720px) {
-  /* Two across, so nine portrait tiles do not become a 1800px scroll. */
-  .sell-cat-grid {
-    grid-template-columns: repeat(2, minmax(0, 1fr));
-    gap: 10px;
-  }
-
-  .sell-cat-thumb {
-    height: 84px;
-  }
-
-  .sell-cat-foot {
-    padding: 10px 12px;
-  }
-
-  .sell-cat-name {
-    font-size: 13px;
-  }
-
-  .sell-step-card {
-    padding: 20px;
-  }
-}
-
-
-/* ═══ Later revisions ═══════════════════════════════════════════════ */
-
-/* The eyebrow labels and the hero reassurance badge were removed from the
-   markup; their rules are neutralised here rather than hunted down above. */
-.sell-eyebrow,
-.sell-hero-points {
-  display: none;
-}
-
-/* ─── Glass cards over the hero collage ─────────────────────────── */
-.sell-hero-badge,
-.sell-hero-chip {
-  background: rgba(255, 255, 255, 0.62);
-  /* Safari still wants the prefix for the blur behind the card. */
-  -webkit-backdrop-filter: blur(16px) saturate(150%);
-  backdrop-filter: blur(16px) saturate(150%);
-  border: 1px solid rgba(255, 255, 255, 0.55);
-  box-shadow:
-    0 18px 40px -22px rgba(0, 0, 0, 0.42),
-    inset 0 1px 0 rgba(255, 255, 255, 0.6);
-}
-
-.sell-hero-badge-icon,
-.sell-hero-chip-icon {
-  background: rgba(255, 255, 255, 0.55);
-  border: 1px solid rgba(255, 255, 255, 0.6);
-}
-
-/* Glass only reads as glass over something; keep the text legible. */
-.sell-hero-badge strong,
-.sell-hero-chip strong {
-  color: var(--t-neutral-900, #111);
-}
-
-.sell-hero-badge span:last-child,
-.sell-hero-chip span:last-child {
-  color: var(--t-neutral-700, #374151);
-}
-
-/* Where the browser cannot blur, fall back to something nearly opaque
-   so the card never turns into unreadable grey mush. */
-@supports not ((backdrop-filter: blur(1px)) or (-webkit-backdrop-filter: blur(1px))) {
-  .sell-hero-badge,
-  .sell-hero-chip {
-    background: rgba(255, 255, 255, 0.94);
-  }
-}
-
-/* ─── Category tiles, portrait ──────────────────────────────────── */
-.sell-cat-grid {
-  gap: 14px;
-}
-
-.sell-cat-tile {
-  flex-direction: column;
-  align-items: stretch;
-  gap: 0;
-  padding: 0;
-  overflow: hidden;
-}
-
-.sell-cat-thumb {
-  width: 100%;
-  height: clamp(96px, 13vh, 132px);
-  border-radius: 0;
-}
-
-.sell-cat-foot {
-  display: flex;
-  align-items: center;
-  justify-content: space-between;
-  gap: 10px;
-  padding: 13px 15px;
-}
-
-.sell-cat-name {
-  font-size: 14px;
-}
-
-/* ─── Requirements: something beside the heading ────────────────── */
-.sell-req-art {
-  display: flex;
-  justify-content: flex-start;
-  margin-top: 26px;
-  opacity: 0.95;
-}
-
-/* ─── A little more body in the thinner sections ────────────────── */
-.sell-step-card {
-  min-height: 210px;
-}
-
-.sell-steps > :nth-child(2) { transform: translateY(30px); }
-.sell-steps > :nth-child(3) { transform: translateY(60px); }
-.sell-steps > :nth-child(4) { transform: translateY(90px); }
-
-.sell-steps-section .sell-steps {
-  margin-bottom: 90px;
-}
-
-.sell-req-card {
-  padding: 28px 28px 28px 32px;
-}
-
-@media (max-width: 1024px) {
-  .sell-step-card {
-    min-height: 0;
-  }
-
-  .sell-steps-section .sell-steps {
-    margin-bottom: 0;
-  }
-
-  .sell-req-art {
-    display: none;
-  }
-}
-
-
-/* ═══ Later revisions, second round ═════════════════════════════════ */
-
-/* The hero's call to action runs from the accent pink into the brand
-   green. Both ends are theme tokens, so a repainted palette carries the
-   gradient with it rather than stranding a hardcoded pink. */
-.sell-hero-btn-primary {
-  /* The blend runs almost the whole width: each colour holds only at its
-     own end, so the sweep between them is the thing you notice. */
-  background: linear-gradient(
-    95deg,
-    var(--t-accent-500, #ec4899) 0%,
-    var(--t-accent-500, #ec4899) 6%,
-    var(--t-primary-600, #059669) 94%,
-    var(--t-primary-600, #059669) 100%
-  );
-  border: none;
-  box-shadow: none;
-  transition: transform 160ms ease, filter 200ms ease;
-}
-
-.sell-hero-btn-primary:hover:not(:disabled) {
-  opacity: 1;
-  filter: saturate(1.08) brightness(1.04);
-  transform: translateY(-1px);
-}
-
-/* ─── Benefit cards: no icon, the title carries the card ────────── */
-.sell-benefit-icon {
-  display: none;
-}
-
-.sell-benefit-card {
-  display: flex;
-  flex-direction: column;
-  justify-content: center;
-  padding: 30px 28px;
-}
-
-.sell-benefit-title {
-  font-size: clamp(19px, 1.5vw, 23px);
-  font-weight: 700;
-  letter-spacing: -0.015em;
-  line-height: 1.25;
-  margin: 0 0 9px;
-}
-
-.sell-benefit-desc {
-  font-size: 13.5px;
-}
-
-@media (max-width: 720px) {
-  .sell-benefit-card {
-    padding: 22px 20px;
-  }
-
-  .sell-benefit-title {
-    font-size: 18px;
-  }
-}
-
-
-/* ═══ Pink, used sparingly ══════════════════════════════════════════
-   Green still means "do this": buttons, links, the numbered walk.
-   Pink marks and decorates, so the page reads as two-tone rather than
-   one long wash of green. */
-
-/* ─── Hero cards: bare icons, no plate behind them ──────────────── */
-.sell-hero-badge-icon,
-.sell-hero-chip-icon {
-  width: auto;
-  height: auto;
-  background: none;
-  border: none;
-  border-radius: 0;
-}
-
-.sell-hero-badge-icon {
-  color: var(--t-secondary-600, #178048);
-}
-
-/* The payment card takes the accent, so the two cards are not a pair of
-   identical green chips sitting on the same photo. */
-.sell-hero-chip-icon {
-  color: var(--t-accent-500, #ec4899);
-}
-
-.sell-hero-badge,
-.sell-hero-chip {
-  gap: 13px;
-}
-
-/* ─── The headline sweep matches the button ─────────────────────── */
-@supports ((background-clip: text) or (-webkit-background-clip: text)) {
-  .sell-hero-accent {
-    /* Pink and green sit opposite each other, so a long blend between
-       them turns grey. The headline holds each colour and crosses fast;
-       only the button wants the long sweep. */
-    background: linear-gradient(
-      95deg,
-      var(--t-accent-500, #ec4899) 0%,
-      var(--t-accent-500, #ec4899) 34%,
-      var(--t-primary-600, #059669) 62%,
-      var(--t-primary-600, #059669) 100%
-    );
-    -webkit-background-clip: text;
-    background-clip: text;
-    color: transparent;
-    -webkit-text-fill-color: transparent;
-  }
-}
-
-/* ─── The application markers ───────────────────────────────────── */
-/* Numbered, but not the same track as "How it works" — these are things
-   to bring, not steps to walk. The colour says so. */
-.sell-req-step {
-  background: var(--t-accent-500, #ec4899);
-}
-
-.sell-req-icon {
-  background: var(--t-accent-50, #fdf2f8);
-  color: var(--t-accent-600, #db2777);
-}
-
-/* ─── Decorative ring behind the catalogue ──────────────────────── */
-.sell-cats-ring {
-  border-color: var(--t-accent-50, #fdf2f8);
-}
-
-/* ─── The open question ─────────────────────────────────────────── */
-.sell-faq-item.is-open {
-  border-color: var(--t-accent-200, #fbcfe8);
-}
-
-.sell-faq-item.is-open .sell-faq-q svg {
-  color: var(--t-accent-500, #ec4899);
-}
-
-/* ─── A warm edge on the closing band ───────────────────────────── */
-.sell-final-cta::before {
-  content: '';
-  position: absolute;
-  top: -45%;
-  right: -14%;
-  width: 780px;
-  height: 780px;
-  border-radius: 50%;
-  background: radial-gradient(
-    circle at 50% 50%,
-    rgba(236, 72, 153, 0.42) 0%,
-    rgba(236, 72, 153, 0.16) 45%,
-    rgba(236, 72, 153, 0) 72%
-  );
-  pointer-events: none;
-}
-
-/* The primary button in the closing band picks up the same sweep as the
-   hero's, so the two calls to action are obviously the same offer. */
-.sell-final-btn {
-  background: linear-gradient(
-    95deg,
-    var(--t-accent-500, #ec4899) 0%,
-    var(--t-accent-500, #ec4899) 6%,
-    var(--t-primary-500, #10b981) 94%,
-    var(--t-primary-500, #10b981) 100%
-  );
-  color: var(--t-neutral-0, #fff);
-  border: none;
-}
-
-.sell-final-btn:hover:not(:disabled) {
-  filter: saturate(1.08) brightness(1.06);
-}
-
-
-/* ─── Requirements: bare icons, a stronger title ────────────────── */
-/* The plate behind the icon added nothing here: the card already has an
-   edge, and three tinted squares in a column read as clutter. */
-.sell-req-icon {
-  width: auto;
-  height: auto;
-  background: none;
-  border-radius: 0;
-  color: var(--t-accent-500, #ec4899);
-}
-
-.sell-req-card {
-  gap: 18px;
-  align-items: center;
-}
-
-.sell-req-title {
-  font-size: 18px;
-  letter-spacing: -0.01em;
-  margin: 0 0 6px;
-}
-
-.sell-req-desc {
-  font-size: 13.5px;
-}
-
-/* Phone-only pieces stay hidden on wider screens. */
-.sell-benefit-icon,
-.sell-copy-short {
-  display: none;
-}
-
-/* ════════════════════════════════════════════════════════════════════
-   Phones (≤768px): a visual, low-text version of the landing page.
-   Photos lead the hero with the two glass cards over them; sections are
-   tiles and short lists instead of paragraphs. Tablet and desktop are
-   unchanged.
-   ════════════════════════════════════════════════════════════════════ */
-@media (max-width: 768px) {
-  /* Decorative glows and rings are wider than a phone; keep them inside. */
-  .sell-page {
-    overflow-x: clip;
-  }
-
-  .sell-page .sell-hero,
-  .sell-page .sell-final-cta,
-  .sell-page .sell-cats-section,
-  .sell-page .sell-steps-section {
-    overflow: hidden;
-  }
-
-  .sell-page .sell-container {
-    padding-left: 16px;
-    padding-right: 16px;
-  }
-
-  .sell-page .sell-section,
-  .sell-page .sell-screen {
-    min-height: 0;
-    padding-top: 32px;
-    padding-bottom: 32px;
-  }
-
-  /* ── header: logo and one button ── */
-  .sell-page .sell-topbar,
-  .sell-page .sell-mobile-toggle,
-  .sell-page .sell-mobile-menu {
-    display: none;
-  }
-
-  /* The header used to slide up by the topbar's height on scroll; with no
-     topbar it stays put. */
-  .sell-page .sell-sticky {
-    transform: none !important;
-  }
-
-  .sell-page .sell-nav-btn-primary {
-    height: 36px;
-    padding: 0 16px;
-    font-size: 13.5px;
-    font-weight: 500;
-  }
-
-  /* ── type: medium titles, short copy ── */
-  .sell-page .sell-hero-h1 {
-    margin-bottom: 8px;
-    font-size: 34px;
-    font-weight: 500;
-    line-height: 1.1;
-    letter-spacing: -0.02em;
-  }
-
-  .sell-page .sell-h2,
-  .sell-page .sell-cats-head .sell-h2 {
-    margin: 0 0 16px;
-    font-size: 22px;
-    font-weight: 500;
-    line-height: 1.2;
-    letter-spacing: -0.01em;
-  }
-
-  .sell-page .sell-h2 br,
-  .sell-page .sell-h2-muted,
-  .sell-page .sell-lede,
-  .sell-page .sell-copy-long {
-    display: none;
-  }
-
-  .sell-page .sell-copy-short {
-    display: inline;
-  }
-
-  /* ── hero: photos first, then the pitch ── */
-  .sell-page .sell-hero {
-    padding-top: 12px;
-    padding-bottom: 28px;
-  }
-
-  .sell-page .sell-hero-layout {
-    display: flex;
-    flex-direction: column;
-    gap: 22px;
-  }
-
-  .sell-page .sell-hero-media {
-    order: -1;
-    position: relative;
-    margin: 0;
-  }
-
-  .sell-page .sell-hero-imgs {
-    height: 340px;
-    margin: 0;
-  }
-
-  /* The two glass cards float over the photos, as on desktop. */
-  .sell-page .sell-hero-badge,
-  .sell-page .sell-hero-chip {
-    position: absolute;
-    display: flex;
-    align-items: center;
-    gap: 10px;
-    max-width: 210px;
-    margin: 0;
-    padding: 10px 12px;
-    border-radius: 14px;
-    font-size: 11.5px;
-    line-height: 1.3;
-  }
-
-  .sell-page .sell-hero-badge {
-    left: 10px;
-    right: auto;
-    top: auto;
-    bottom: 12px;
-  }
-
-  .sell-page .sell-hero-chip {
-    top: 14px;
-    right: 10px;
-    left: auto;
-    bottom: auto;
-  }
-
-  .sell-page .sell-hero-badge strong,
-  .sell-page .sell-hero-chip strong {
-    display: block;
-    font-size: 13px;
-    font-weight: 500;
-  }
-
-  .sell-page .sell-hero-badge-icon svg,
-  .sell-page .sell-hero-chip-icon svg {
-    width: 24px;
-    height: 24px;
-  }
-
-  .sell-page .sell-hero-copy {
-    text-align: left;
-  }
-
-  .sell-page .sell-hero-sub {
-    margin-bottom: 18px;
-    color: var(--t-neutral-600, #4b5563);
-    font-size: 15px;
-  }
-
-  .sell-page .sell-hero-btns {
-    gap: 10px;
-  }
-
-  .sell-page .sell-hero-btn-primary,
-  .sell-page .sell-hero-btn-ghost {
-    height: 50px;
-    font-size: 15px;
-    font-weight: 500;
-  }
-
-  /* ── benefits: a 2 × 3 grid of icon tiles ── */
-  .sell-page .sell-benefits-grid {
-    display: grid;
-    grid-template-columns: repeat(2, minmax(0, 1fr));
-    gap: 10px;
-  }
-
-  .sell-page .sell-benefits-grid > * {
-    transform: none;
-  }
-
-  .sell-page .sell-benefit-card {
-    display: flex;
-    flex-direction: column;
-    align-items: flex-start;
-    gap: 12px;
-    min-height: 118px;
-    margin: 0;
-    padding: 14px;
-    border: 1px solid var(--t-neutral-200, #e5e7eb);
-    border-radius: 16px;
-    background: #fff;
-    box-shadow: none;
-  }
-
-  .sell-page .sell-benefit-card:nth-child(4n + 2),
-  .sell-page .sell-benefit-card:nth-child(4n + 3) {
-    background: var(--t-primary-50, #ecfdf5);
-    border-color: transparent;
-  }
-
-  .sell-page .sell-benefit-icon {
-    display: grid;
-    place-items: center;
-    width: 40px;
-    height: 40px;
-    border-radius: 12px;
-    background: var(--t-primary-600, #059669);
-    color: #fff;
-  }
-
-  .sell-page .sell-benefit-card:nth-child(3n + 2) .sell-benefit-icon {
-    background: var(--t-accent-500, #ec4899);
-  }
-
-  .sell-page .sell-benefit-title {
-    margin: 0;
-    font-size: 14.5px;
-    font-weight: 500;
-    line-height: 1.3;
-  }
-
-  .sell-page .sell-benefit-desc {
-    display: none;
-  }
-
-  /* ── how it works: a numbered timeline ── */
-  .sell-page .sell-steps-ghost {
-    display: none;
-  }
-
-  .sell-page .sell-steps-head {
-    margin-bottom: 4px;
-  }
-
-  .sell-page .sell-steps {
-    display: block;
-    margin: 0;
-    padding: 0;
-  }
-
-  .sell-page .sell-steps > * {
-    transform: none;
-  }
-
-  .sell-page .sell-step-card {
-    position: relative;
-    display: grid;
-    grid-template-columns: 36px 1fr;
-    column-gap: 14px;
-    row-gap: 0;
-    align-content: start;
-    margin: 0;
-    padding: 0 0 20px;
-    border: none;
-    border-radius: 0;
-    background: none;
-    box-shadow: none;
-  }
-
-  .sell-page .sell-step-card:hover {
-    transform: none;
-    box-shadow: none;
-  }
-
-  /* The line joining the numbers. */
-  .sell-page .sell-step-card::after,
-  .sell-page .sell-step-card:nth-child(2n)::after {
-    content: '';
-    display: block;
-    position: absolute;
-    top: 38px;
-    bottom: 2px;
-    left: 17px;
-    width: 2px;
-    height: auto;
-    border: none;
-    border-radius: 2px;
-    background: var(--t-primary-100, #d1fae5);
-    transform: none;
-  }
-
-  .sell-page .sell-step-card:last-child {
-    padding-bottom: 0;
-  }
-
-  .sell-page .sell-step-card:last-child::after {
-    display: none;
-  }
-
-  .sell-page .sell-step-n {
-    display: grid;
-    place-items: center;
-    grid-row: span 2;
-    width: 36px;
-    height: 36px;
-    margin: 0;
-    border-radius: 50%;
-    background: var(--t-primary-600, #059669);
-    color: #fff;
-    font-size: 15px;
-    font-weight: 500;
-    line-height: 1;
-    -webkit-text-fill-color: #fff;
-    box-shadow: 0 0 0 4px var(--t-primary-50, #ecfdf5);
-  }
-
-  .sell-page .sell-step-title {
-    margin: 6px 0 2px;
-    font-size: 15px;
-    font-weight: 500;
-  }
-
-  .sell-page .sell-step-desc {
-    margin: 0;
-    color: var(--t-neutral-500, #6b7280);
-    font-size: 13px;
-  }
-
-  /* ── tools: a 2 × 2 grid of illustrated tiles ── */
-  .sell-page .sell-tools-stack {
-    display: none;
-  }
-
-  .sell-page .sell-tools-list {
-    display: grid;
-    grid-template-columns: repeat(2, minmax(0, 1fr));
-    gap: 10px;
-    margin: 0;
-    padding: 0;
-  }
-
-  .sell-page .sell-tool-row {
-    display: flex;
-    flex-direction: column;
-    align-items: flex-start;
-    gap: 10px;
-    padding: 14px;
-    border: 1px solid var(--t-neutral-200, #e5e7eb);
-    border-radius: 16px;
-    background: #fff;
-  }
-
-  .sell-page .sell-tool-art {
-    width: 56px;
-    height: 56px;
-    overflow: hidden;
-  }
-
-  .sell-page .sell-tool-art .empty-art,
-  .sell-page .sell-tool-art svg {
-    width: 56px !important;
-    height: 56px !important;
-  }
-
-  .sell-page .sell-tool-title {
-    display: block;
-    font-size: 14.5px;
-    font-weight: 500;
-    line-height: 1.3;
-  }
-
-  .sell-page .sell-tool-desc {
-    display: none;
-  }
-
-  /* ── categories: three across ── */
-  .sell-page .sell-cats-ring {
-    display: none;
-  }
-
-  .sell-page .sell-cats-layout {
-    display: block;
-  }
-
-  .sell-page .sell-cats-head {
-    display: flex;
-    align-items: baseline;
-    justify-content: space-between;
-    gap: 12px;
-    margin-bottom: 14px;
-  }
-
-  .sell-page .sell-cats-head .sell-h2 {
-    margin: 0;
-  }
-
-  .sell-page .sell-cats-head .sell-text-link {
-    flex-shrink: 0;
-    font-size: 13.5px;
-  }
-
-  .sell-page .sell-cat-grid {
-    display: grid;
-    grid-template-columns: repeat(3, minmax(0, 1fr));
-    gap: 12px 8px;
-  }
-
-  .sell-page .sell-cat-grid > * {
-    transform: none;
-  }
-
-  .sell-page .sell-cat-tile {
-    display: flex;
-    flex-direction: column;
-    gap: 6px;
-    padding: 0;
-    border: none;
-    border-radius: 0;
-    background: none;
-    box-shadow: none;
-  }
-
-  .sell-page .sell-cat-thumb {
-    width: 100%;
-    height: auto;
-    aspect-ratio: 1 / 1;
-    border-radius: 14px;
-  }
-
-  .sell-page .sell-cat-foot {
-    justify-content: center;
-    padding: 0;
-    border: none;
-  }
-
-  .sell-page .sell-cat-name {
-    overflow: hidden;
-    color: var(--t-neutral-800, #1f2937);
-    font-size: 12.5px;
-    font-weight: 400;
-    text-align: center;
-    white-space: nowrap;
-    text-overflow: ellipsis;
-  }
-
-  .sell-page .sell-cat-go {
-    display: none;
-  }
-
-  /* ── requirements: three tiles in a row ── */
-  .sell-page .sell-req-layout {
-    display: flex;
-    flex-direction: column;
-    gap: 0;
-  }
-
-  .sell-page .sell-req-head {
-    order: -1;
-  }
-
-  .sell-page .sell-req-art,
-  .sell-page .sell-req-step,
-  .sell-page .sell-req-desc {
-    display: none;
-  }
-
-  .sell-page .sell-req-cards {
-    display: grid;
-    grid-template-columns: repeat(3, minmax(0, 1fr));
-    gap: 8px;
-  }
-
-  .sell-page .sell-req-cards > * {
-    transform: none;
-  }
-
-  .sell-page .sell-req-card {
-    display: flex;
-    flex-direction: column;
-    align-items: center;
-    gap: 10px;
-    margin: 0;
-    padding: 16px 8px;
-    border: 1px solid var(--t-neutral-200, #e5e7eb);
-    border-radius: 16px;
-    background: #fff;
-    box-shadow: none;
-    text-align: center;
-  }
-
-  .sell-page .sell-req-icon {
-    display: grid;
-    place-items: center;
-    width: 44px;
-    height: 44px;
-    border-radius: 50%;
-  }
-
-  .sell-page .sell-req-icon svg {
-    width: 24px;
-    height: 24px;
-  }
-
-  .sell-page .sell-req-title {
-    margin: 0;
-    font-size: 13px;
-    font-weight: 500;
-    line-height: 1.3;
-  }
-
-  /* ── FAQ: one bordered list ── */
-  .sell-page .sell-split-aside .sell-text-link {
-    display: none;
-  }
-
-  .sell-page .sell-faq {
-    display: block;
-    overflow: hidden;
-    border: 1px solid var(--t-neutral-200, #e5e7eb);
-    border-radius: 16px;
-    background: #fff;
-  }
-
-  .sell-page .sell-faq-item {
-    margin: 0;
-    border: none;
-    border-bottom: 1px solid var(--t-neutral-150, #eef0f3);
-    border-radius: 0;
-    background: none;
-    box-shadow: none;
-  }
-
-  .sell-page .sell-faq-item:last-child {
-    border-bottom: none;
-  }
-
-  .sell-page .sell-faq-q {
-    gap: 12px;
-    padding: 15px 16px;
-    font-size: 14.5px;
-    font-weight: 500;
-    text-align: left;
-  }
-
-  .sell-page .sell-faq-q svg {
-    flex-shrink: 0;
-  }
-
-  .sell-page .sell-faq-a-inner {
-    padding-left: 16px;
-    padding-right: 16px;
-  }
-
-  .sell-page .sell-faq-item.is-open .sell-faq-a-inner {
-    padding-bottom: 15px;
-  }
-
-  .sell-page .sell-faq-a p {
-    margin: 0;
-    padding: 0;
-    font-size: 13.5px;
-    line-height: 1.55;
-  }
-
-  .sell-page .sell-text-link {
-    font-weight: 500;
-  }
-
-  /* ── closing call to action ── */
-  .sell-page .sell-final-cta {
-    padding: 40px 0;
-  }
-
-  .sell-page .sell-final-inner h2 {
-    font-size: 24px;
-    font-weight: 500;
-  }
-
-  .sell-page .sell-final-inner p {
-    font-size: 14px;
-  }
-
-  .sell-page .sell-final-btn,
-  .sell-page .sell-final-btn-ghost {
-    height: 50px;
-    font-size: 15px;
-    font-weight: 500;
-  }
-}
-
-@media (max-width: 768px) {
-  /* Heading over content, not beside it: no split-column gap. */
-  .sell-page .sell-split {
-    display: block;
-  }
-
-  .sell-page .sell-h2-comma {
-    display: none;
-  }
-
-  .sell-page .sell-req-head,
-  .sell-page .sell-req-head .sell-h2 {
-    text-align: left;
-  }
-
-  /* The answer's own padding indented it past its question. */
-  .sell-page .sell-faq-a {
-    padding: 0;
-  }
-}
-
-
-/* Phones: back to shopping, floating at the bottom right (Sell.jsx renders
-   it on phones only). Above the page, below the header's menus. */
+/* Phones: the way back to shopping (this page has no bottom bar). */
 .sell-home-fab {
   position: fixed;
   right: 16px;
@@ -3061,42 +1332,319 @@
   height: 48px;
   padding: 0 18px 0 16px;
   border-radius: 999px;
-  background: var(--t-secondary-600, #178048);
-  color: var(--t-neutral-0, #fff);
+  background: var(--sl-ink);
+  color: #fff;
   font-size: 15px;
   font-weight: 600;
   text-decoration: none;
-  box-shadow: 0 10px 24px rgba(15, 23, 42, 0.2), 0 2px 6px rgba(15, 23, 42, 0.12);
+  box-shadow: 0 10px 24px rgba(15, 23, 42, 0.25);
   -webkit-tap-highlight-color: transparent;
-  transition: transform 0.15s ease;
-  animation: sell-home-fab-in 0.45s cubic-bezier(0.34, 1.56, 0.64, 1) 0.3s both;
 }
 
-.sell-home-fab:active {
-  transform: scale(0.95);
-}
-
-@keyframes sell-home-fab-in {
-  from {
-    opacity: 0;
-    transform: translateY(16px) scale(0.9);
+/* ─── Narrower screens ────────────────────────────────────────── */
+@media (max-width: 1080px) {
+  .sl-nav {
+    display: none;
   }
 
-  to {
-    opacity: 1;
-    transform: none;
+  .sl-feature {
+    gap: 48px;
   }
 }
 
-/* Room under the footer so the button never covers its last line. */
-@media (max-width: 768px) {
-  .sell-page > .footer {
-    padding-bottom: calc(72px + env(safe-area-inset-bottom, 0px));
+@media (max-width: 900px) {
+  .sl-hero-grid {
+    grid-template-columns: minmax(0, 1fr);
+    gap: 8px;
+  }
+
+  .sl-hero-copy {
+    padding-bottom: 8px;
+  }
+
+  .sl-scene {
+    padding-bottom: 64px;
+  }
+
+  .sl-feature,
+  .sl-faq-grid {
+    grid-template-columns: minmax(0, 1fr);
+    gap: 32px;
+  }
+
+  .sl-feature--flip .sl-feature-copy {
+    order: 0;
+  }
+
+  .sl-timeline {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+  }
+
+  .sl-timeline::before {
+    display: none;
+  }
+}
+
+@media (max-width: 640px) {
+  .sl-wrap {
+    padding: 0 20px;
+  }
+
+  .sl-header-inner {
+    gap: 12px;
+    height: 58px;
+  }
+
+  .sl-logo {
+    font-size: 20px;
+  }
+
+  .sl-logo em,
+  .sl-header-login {
+    display: none;
+  }
+
+  .sl-hero {
+    padding-top: 32px;
+  }
+
+  .sl-h1 {
+    margin-bottom: 18px;
+    font-size: 44px;
+  }
+
+  .sl-hero-sub {
+    margin-bottom: 80px;
+    font-size: 16px;
+  }
+
+  .sl-hero-actions .sl-cta-wrap,
+  .sl-hero-actions .sl-btn {
+    width: 100%;
+  }
+
+  .sl-hero-watch {
+    width: 100%;
+    justify-content: center;
+  }
+
+  /* The whole phone, drawn smaller: scaled from its top, and the space it
+     no longer takes given back below it. */
+  .sl-scene {
+    margin-top: 20px;
+    padding-bottom: 44px;
+  }
+
+  .sl-iphone {
+    --phone-scale: 0.8;
+    margin-bottom: calc(626px * -0.2);
+    transform-origin: top center;
+  }
+
+  .sl-scene-sun {
+    width: 290px;
+    height: 290px;
+    margin: -190px 0 0 -145px;
+  }
+
+  .sl-numbers {
+    padding: 64px 0 16px;
+  }
+
+  .sl-numbers p {
+    padding: 0 12px;
+  }
+
+  .sl-numbers strong {
+    font-size: 46px;
+  }
+
+  .sl-numbers span {
+    margin-top: 8px;
+    font-size: 13.5px;
+    line-height: 1.35;
+  }
+
+  .sl-h2 {
+    font-size: 32px;
+  }
+
+  .sl-why {
+    padding: 24px 0 8px;
+  }
+
+  .sl-feature {
+    gap: 22px;
+    padding: 40px 0;
+  }
+
+  .sl-feature-copy p {
+    margin-top: 12px;
+    font-size: 16px;
+  }
+
+  .sl-feature-art {
+    padding: 28px 18px;
+    border-radius: 24px;
+  }
+
+  .sl-areas span {
+    padding: 8px 13px;
+    font-size: 14px;
+  }
+
+  .sl-steps {
+    padding: 64px 0;
+  }
+
+  .sl-steps-sub {
+    margin: 12px 0 32px;
+    font-size: 16px;
+  }
+
+  /* Steps: side by side in a row that is swiped, a phone each. */
+  .sl-timeline {
+    --shot-h: 270px;
+    display: flex;
+    gap: 16px;
+    margin: 0 -20px 32px;
+    padding: 0 20px 6px;
+    overflow-x: auto;
+    scroll-snap-type: x mandatory;
+    scroll-padding: 0 20px;
+    scrollbar-width: none;
+  }
+
+  .sl-timeline::-webkit-scrollbar {
+    display: none;
+  }
+
+  .sl-timeline li {
+    flex: 0 0 74%;
+    scroll-snap-align: start;
+  }
+
+  .sl-shot::before {
+    width: 220px;
+    height: 220px;
+    margin-left: -110px;
+  }
+
+  .sl-shot-phone {
+    width: 214px;
+  }
+
+  .sl-shot-screen .sl-status {
+    grid-template-columns: 1fr 62px 1fr;
+  }
+
+  .sl-shot-screen .sl-island {
+    width: 62px;
+    margin-left: -31px;
+  }
+
+  .sl-shot-screen .sl-status-glyphs {
+    transform: scale(0.74);
+  }
+
+  .sl-timeline-n {
+    width: 44px;
+    height: 44px;
+    margin: -22px 0 16px;
+    font-size: 18px;
+  }
+
+  .sl-timeline-title {
+    font-size: 17px;
+  }
+
+  .sl-steps .sl-btn {
+    width: 100%;
+  }
+
+  .sl-sell {
+    padding: 64px 0;
+  }
+
+  .sl-sell .sl-h2 {
+    margin-bottom: 28px;
+  }
+
+  .sl-ribbon-item {
+    gap: 10px;
+    padding: 7px 18px 7px 7px;
+    font-size: 17px;
+  }
+
+  .sl-ribbon-art {
+    width: 40px;
+    height: 40px;
+  }
+
+  .sl-shops {
+    padding-bottom: 56px;
+  }
+
+  .sl-faq {
+    padding: 64px 0;
+  }
+
+  .sl-faq-grid {
+    gap: 24px;
+  }
+
+  .sl-help {
+    margin-top: 20px;
+  }
+
+  .sl-faq-item button {
+    padding: 18px 0;
+    font-size: 16px;
+  }
+
+  .sl-close {
+    padding: 72px 0 104px;
+  }
+
+  .sl-close h2 {
+    margin-bottom: 28px;
+    font-size: 42px;
+  }
+
+  .sl-close-mark {
+    right: -140px;
+    width: 380px;
+  }
+
+  .sl-close-actions .sl-btn {
+    width: 100%;
+  }
+
+  .sl-close-login {
+    width: 100%;
+    text-align: center;
   }
 }
 
 @media (prefers-reduced-motion: reduce) {
-  .sell-home-fab {
+  .sl-toast,
+  .sl-mascot-say {
     animation: none;
+  }
+
+  .sl-ribbon-track {
+    flex-wrap: wrap;
+    width: auto;
+    animation: none;
+  }
+
+  .sl-ribbon-row.is-reverse {
+    display: none;
+  }
+
+  .sl-btn,
+  .sl-shops a,
+  .sl-faq-a {
+    transition: none;
   }
 }
