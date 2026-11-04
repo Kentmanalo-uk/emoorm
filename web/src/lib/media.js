@@ -54,6 +54,33 @@ export const srcSetFor = (path) => {
 };
 
 /**
+ * The same copies as AVIF (<name>-w320.avif…), about half the bytes of the
+ * WebP ones, for a <picture> <source type="image/avif">: a browser that can't
+ * show AVIF takes the WebP srcset instead. Undefined when srcSetFor is.
+ */
+export const avifSrcSetFor = (path) => {
+  const url = resolveImg(path);
+  if (!url || !url.startsWith(`${BACKEND_URL}/uploads/`)) return undefined;
+  const m = UPLOAD_PHOTO.exec(url.slice(BACKEND_URL.length));
+  if (!m || /-w\d+$/.test(m[2])) return undefined;
+  const base = `${BACKEND_URL}${m[1]}${m[2]}`;
+  return PHOTO_WIDTHS.map((w) => `${base}-w${w}.avif ${w}w`).join(', ');
+};
+
+/**
+ * One small copy of an uploaded photo (the -w320 one), for places that draw
+ * an image without a srcset: map pins built as HTML. Anything else is
+ * returned as it is.
+ */
+export const smallSrc = (path) => {
+  const url = resolveImg(path);
+  if (!url || !url.startsWith(`${BACKEND_URL}/uploads/`)) return url;
+  const m = UPLOAD_PHOTO.exec(url.slice(BACKEND_URL.length));
+  if (!m || /-w\d+$/.test(m[2])) return url;
+  return `${BACKEND_URL}${m[1]}${m[2]}-w${PHOTO_WIDTHS[0]}.webp`;
+};
+
+/**
  * A product's images as a list, whatever shape the API gave them in: a list,
  * a JSON list in a string (older rows), or one plain path.
  */

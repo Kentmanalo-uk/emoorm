@@ -1,5 +1,5 @@
 import { Image as ImageIcon } from '../../../lib/icons';
-import { resolveImg } from '../../../lib/media';
+import { resolveImg, srcSetFor } from '../../../lib/media';
 import { kindFacts, priceUnit } from '../../../lib/productKinds';
 import { peso } from './formState';
 import ImageOverlay from '../../product/ImageOverlay';
@@ -21,7 +21,7 @@ export default function PreviewCard({
   return (
     <div className="pf-preview">
       <div className="pf-preview-img">
-        {cover ? <img src={resolveImg(cover) || cover} alt="" /> : <span><ImageIcon size={32} /> No photo yet</span>}
+        {cover ? <img src={resolveImg(cover) || cover} srcSet={srcSetFor(cover)} sizes="(max-width: 768px) 50vw, 240px" alt="" /> : <span><ImageIcon size={32} /> No photo yet</span>}
         {cover && <ImageOverlay product={draft} store={store} />}
         {BADGES[kind] && <em className="pf-preview-badge">{BADGES[kind]}</em>}
       </div>

@@ -617,7 +617,7 @@ const ProductDetails = () => {
             {isPhone && previewImage && (
               <div className="pdp-m-gallery">
                 <div className="pdp-m-track">
-                  <div className="pdp-m-slide"><img src={previewImage} alt="" /></div>
+                  <div className="pdp-m-slide"><img src={previewImage} srcSet={srcSetFor(previewImage)} sizes="100vw" alt="" /></div>
                 </div>
               </div>
             )}
@@ -637,7 +637,7 @@ const ProductDetails = () => {
               <div className="pdp-hero-gallery">
                 {previewImage && !isPhone ? (
                   <div className="pdp-gallery-main">
-                    <img src={previewImage} alt="" className="pdp-gallery-image" />
+                    <img src={previewImage} srcSet={srcSetFor(previewImage)} sizes="(max-width: 768px) 100vw, 560px" alt="" className="pdp-gallery-image" />
                   </div>
                 ) : (
                   <Skeleton width="100%" height={460} radius={6} />
@@ -1072,6 +1072,8 @@ const ProductDetails = () => {
               >
                 <img
                   src={resolveImg(gallery[selectedImage]) || gallery[selectedImage]}
+                  srcSet={srcSetFor(gallery[selectedImage])}
+                  sizes="(max-width: 768px) 100vw, 560px"
                   alt={product.name}
                   className="pdp-gallery-image"
                   role="button"
@@ -1079,7 +1081,7 @@ const ProductDetails = () => {
                   aria-label="See this photo full screen"
                   onClick={() => { handleZoomLeave(); setViewerAt(selectedImage); }}
                   onKeyDown={(e) => { if (e.key === 'Enter' || e.key === ' ') { e.preventDefault(); setViewerAt(selectedImage); } }}
-                  onError={(e) => { e.currentTarget.src = '/placeholder-product.png'; }}
+                  onError={(e) => { e.currentTarget.removeAttribute('srcset'); e.currentTarget.src = '/placeholder-product.png'; }}
                 />
                 <ImageOverlay product={product} />
                 {gallery.length > 1 && (
@@ -1381,7 +1383,7 @@ const ProductDetails = () => {
                                   onClick={() => pickOption(variation.name, option)}
                                   key={option}
                                 >
-                                  {thumb && <img className="pdp-option-thumb" src={resolveImg(thumb) || thumb} alt="" loading="lazy" />}
+                                  {thumb && <img className="pdp-option-thumb" src={resolveImg(thumb) || thumb} srcSet={srcSetFor(thumb)} sizes="48px" alt="" loading="lazy" />}
                                   <span className="pdp-option-label">
                                     {option}
                                     {stockedVariation(product.variations)?.name === variation.name
@@ -1528,7 +1530,7 @@ const ProductDetails = () => {
               <div className="pdp-store-left">
                 <div className="pdp-store-avatar">
                   {product.store.logoUrl || product.store.logo
-                    ? <img src={resolveImg(product.store.logoUrl || product.store.logo)} alt={product.store.name} onError={(e) => { e.currentTarget.style.display = 'none'; }} />
+                    ? <img src={resolveImg(product.store.logoUrl || product.store.logo)} srcSet={srcSetFor(product.store.logoUrl || product.store.logo)} sizes="64px" alt={product.store.name} loading="lazy" onError={(e) => { e.currentTarget.style.display = 'none'; }} />
                     : <ShopLogoArt name={product.store.name} />}
                 </div>
                 <div>
@@ -1746,7 +1748,7 @@ const ProductDetails = () => {
         <div className="pdp-m-actionbar">
           <Link to={product.store ? `/store/${product.store.slug}` : '/stores'} className="pdp-m-action">
             {shopLogo && failedLogo !== shopLogo
-              ? <img className="pdp-m-shoplogo" src={shopLogo} alt="" onError={() => setFailedLogo(shopLogo)} />
+              ? <img className="pdp-m-shoplogo" src={shopLogo} srcSet={srcSetFor(shopLogo)} sizes="48px" alt="" loading="lazy" onError={() => setFailedLogo(shopLogo)} />
               : <Store size={21} />}
             <span>Shop</span>
           </Link>

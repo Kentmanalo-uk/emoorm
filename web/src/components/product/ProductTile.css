@@ -23,7 +23,8 @@
   overflow: hidden;
 }
 
-.product-card .product-image > img {
+.product-card .product-image > img,
+.product-card .product-image > picture > img {
   position: absolute;
   top: 0;
   left: 0;

@@ -6,7 +6,7 @@ import {
 } from '../lib/icons';
 import toast from 'react-hot-toast';
 import axios from '../lib/axios';
-import { resolveImg } from '../lib/media';
+import { resolveImg, srcSetFor } from '../lib/media';
 import { getSellerFollowerStats } from '../lib/follow';
 import { useShare } from '../components/ShareSheet';
 import PhoneSheet from '../components/seller/PhoneSheet';
@@ -320,7 +320,7 @@ export default function SellerMarketing() {
                   <li key={a.id} className="smk-item">
                     <span className={`smk-item-art${a.product ? '' : ' is-note'}`}>
                       {a.product
-                        ? (img ? <img src={resolveImg(img)} alt="" /> : <Package size={20} />)
+                        ? (img ? <img src={resolveImg(img)} srcSet={srcSetFor(img)} sizes="56px" alt="" /> : <Package size={20} />)
                         : <Megaphone size={20} weight="fill" />}
                     </span>
                     <span className="smk-item-text">

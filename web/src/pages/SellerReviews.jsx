@@ -8,7 +8,7 @@ import toast from 'react-hot-toast';
 import { Link, useOutletContext, useSearchParams } from 'react-router-dom';
 import ReviewPostSheet from '../components/seller/ReviewPostSheet';
 import axios from '../lib/axios';
-import { resolveImg, parseImages } from '../lib/media';
+import { resolveImg, parseImages, srcSetFor } from '../lib/media';
 import Skeleton from '../components/ui/Skeleton';
 import SellerPageHead from '../components/seller/SellerPageHead';
 import { usePhoneLayout } from '../hooks/useMobileNav';
@@ -89,7 +89,7 @@ function ReviewMedia({ review }) {
     <div className="rv-media">
       {photos.map((p, i) => (
         <a key={p} href={resolveImg(p)} target="_blank" rel="noopener noreferrer" aria-label={`Open photo ${i + 1}`}>
-          <img src={resolveImg(p)} alt={`Buyer photo ${i + 1}`} loading="lazy" />
+          <img src={resolveImg(p)} srcSet={srcSetFor(p)} sizes="96px" alt={`Buyer photo ${i + 1}`} loading="lazy" />
         </a>
       ))}
       {review.videoUrl && (

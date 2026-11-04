@@ -339,7 +339,8 @@
   overflow: hidden;
 }
 
-.product-image > img {
+.product-image > img,
+.product-image > picture > img {
   position: absolute;
   top: 0;
   left: 0;

@@ -21,6 +21,9 @@ const SERVABLE_UPLOAD_TYPES = {
   '.png': 'image/png',
   '.webp': 'image/webp',
   '.gif': 'image/gif',
+  // The smaller copies made here (lib/imageSizes), and an AVIF upload kept as
+  // it came when WebP was no smaller (utils/imageOptimizer).
+  '.avif': 'image/avif',
   // 3D product views (POST /upload/model3d checks the bytes). iPhone AR
   // Quick Look opens a USDZ only when it is served as model/vnd.usdz+zip.
   '.glb': 'model/gltf-binary',

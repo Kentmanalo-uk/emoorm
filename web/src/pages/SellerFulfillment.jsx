@@ -21,7 +21,7 @@ import toast from 'react-hot-toast';
 import axios from '../lib/axios';
 import { uploadImage } from '../lib/upload';
 import { IMAGE_ACCEPT } from '../lib/uploadableImage';
-import { resolveImg } from '../lib/media';
+import { resolveImg, srcSetFor } from '../lib/media';
 import { QR_METHODS, qrMethod, checkAccountNumber } from '../lib/qrPayment';
 import './SellerDashboard.css';
 import './SellerStore.css';
@@ -1300,7 +1300,7 @@ function WeightFixer({ products, total, onSaved }) {
       <ul className="sf-weigh-list">
         {products.map((p) => (
           <li key={p.id}>
-            {p.image ? <img src={resolveImg(p.image)} alt="" /> : <span className="sf-weigh-noimg" aria-hidden="true" />}
+            {p.image ? <img src={resolveImg(p.image)} srcSet={srcSetFor(p.image)} sizes="56px" alt="" /> : <span className="sf-weigh-noimg" aria-hidden="true" />}
             <span className="sf-weigh-name">{p.name}</span>
             <label className="sf-weigh-input">
               <input

@@ -14,7 +14,7 @@ import { countLabel } from '../lib/orderLines';
 import { useShare } from '../components/ShareSheet';
 import { usePhoneLayout } from '../hooks/useMobileNav';
 import axios from '../lib/axios';
-import { resolveImg } from '../lib/media';
+import { resolveImg, srcSetFor } from '../lib/media';
 import { lineImage } from '../lib/variationImage';
 import useAuthStore from '../store/authStore';
 import Skeleton from '../components/ui/Skeleton';
@@ -1104,7 +1104,7 @@ function PhoneHome({
       <header className="sh-head">
         <Link to="/seller/menu" className="sh-shop" aria-label="Your shop">
           <span className="sh-avatar">
-            {store?.logo ? <img src={resolveImg(store.logo)} alt="" /> : <ShopLogoArt name={name} />}
+            {store?.logo ? <img src={resolveImg(store.logo)} srcSet={srcSetFor(store.logo)} sizes="56px" alt="" /> : <ShopLogoArt name={name} />}
           </span>
           <span className="sh-shop-text">
             <small>{firstName ? `Hi, ${firstName}` : 'Seller Center'}</small>
@@ -1289,7 +1289,7 @@ function PhoneOrderRow({ order, onClick }) {
       tabIndex={0}
     >
       <span className="sh-order-img">
-        {photo ? <img src={resolveImg(photo)} alt="" /> : <Package size={22} weight="fill" />}
+        {photo ? <img src={resolveImg(photo)} srcSet={srcSetFor(photo)} sizes="64px" alt="" /> : <Package size={22} weight="fill" />}
       </span>
       <span className="sh-order-body">
         <strong>

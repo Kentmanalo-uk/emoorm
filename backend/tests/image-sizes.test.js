@@ -18,7 +18,7 @@ const photo = (width, height) => sharp({ create: { width, height, channels: 3, b
 const site = async () => (await h.startApp()).replace(/\/api$/, '');
 const track = (name) => {
   made.push(path.join(dir, name));
-  imageSizes.SIZES.forEach((w) => made.push(path.join(dir, imageSizes.sizedName(name, w))));
+  imageSizes.FORMATS.forEach((format) => imageSizes.SIZES.forEach((w) => made.push(path.join(dir, imageSizes.sizedName(name, w, format)))));
 };
 const until = async (check, ms = 10000) => {
   const end = Date.now() + ms;
@@ -44,6 +44,12 @@ test('an uploaded photo gets its smaller copies, each no wider than asked', asyn
   assert.ok(await until(() => copies.every((p) => fs.existsSync(p))), 'all copies made after the upload');
   const widths = await Promise.all(copies.map(async (p) => (await sharp(await fs.promises.readFile(p)).metadata()).width));
   assert.deepEqual(widths, [320, 640, 960]);
+  // And as AVIF, the same widths.
+  const avifs = imageSizes.SIZES.map((w) => path.join(dir, imageSizes.sizedName(name, w, 'avif')));
+  assert.ok(await until(() => avifs.every((p) => fs.existsSync(p))), 'AVIF copies made too');
+  const meta = await Promise.all(avifs.map(async (p) => sharp(await fs.promises.readFile(p)).metadata()));
+  assert.deepEqual(meta.map((m) => m.width), [320, 640, 960]);
+  assert.ok(meta.every((m) => m.format === 'heif'), 'AVIF (sharp reports it as heif)');
 });
 
 test('a missing copy of an older photo is made when asked for; nothing else is', async () => {
@@ -58,6 +64,12 @@ test('a missing copy of an older photo is made when asked for; nothing else is',
   // Never enlarged: the 960 copy of a 500px photo stays 500px.
   const big = await fetch(`${web}/uploads/${imageSizes.sizedName(name, 960)}`);
   assert.equal((await sharp(Buffer.from(await big.arrayBuffer())).metadata()).width, 500);
+  // The AVIF copy, made when asked for and shown as an image (not a download).
+  const avif = await fetch(`${web}/uploads/${imageSizes.sizedName(name, 320, 'avif')}`);
+  assert.equal(avif.status, 200);
+  assert.equal(avif.headers.get('content-type'), 'image/avif');
+  assert.equal(avif.headers.get('content-disposition'), null);
+  assert.equal((await sharp(Buffer.from(await avif.arrayBuffer())).metadata()).width, 320);
   // Other widths, and copies of photos that don't exist, are not made.
   assert.equal((await fetch(`${web}/uploads/${name.replace('.jpg', '')}-w123.webp`)).status, 404);
   assert.equal(fs.existsSync(path.join(dir, `${name.replace('.jpg', '')}-w123.webp`)), false);
@@ -71,8 +83,8 @@ test('the background pass makes what is missing, and copies go with their photo'
   const name = 'backfill.png';
   const file = path.join(own, name);
   await fs.promises.writeFile(file, await sharp({ create: { width: 700, height: 400, channels: 3, background: '#fff' } }).png().toBuffer());
-  assert.deepEqual(await imageSizes.makeMissingSizes({ pauseMs: 0, dir: own }), { photos: 1, made: 3 });
-  const copies = imageSizes.SIZES.map((w) => path.join(own, imageSizes.sizedName(name, w)));
+  assert.deepEqual(await imageSizes.makeMissingSizes({ pauseMs: 0, dir: own }), { photos: 1, made: 6 });
+  const copies = imageSizes.FORMATS.flatMap((format) => imageSizes.SIZES.map((w) => path.join(own, imageSizes.sizedName(name, w, format))));
   assert.ok(copies.every((p) => fs.existsSync(p)));
   // A copy is never taken for a photo of its own: a second pass finds nothing to do.
   assert.deepEqual(await imageSizes.makeMissingSizes({ pauseMs: 0, dir: own }), { photos: 1, made: 0 });

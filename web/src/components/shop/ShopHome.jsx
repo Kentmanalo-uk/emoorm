@@ -1,7 +1,7 @@
 import { useEffect, useRef, useState } from 'react';
 import { Link } from 'react-router-dom';
 import { Star, ShoppingCart, Quotes, Storefront } from '../../lib/icons';
-import { resolveImg } from '../../lib/media';
+import { resolveImg, srcSetFor } from '../../lib/media';
 import { saleInfo } from '../../lib/variantPricing';
 import { SaleWas } from '../ui/SaleTag';
 import ImageOverlay from '../product/ImageOverlay';
@@ -88,7 +88,7 @@ function Section({
         <div className="shh-gallery-list">
           {images.map((img, i) => (
             <figure key={`${img.url}-${i}`} className="shh-gallery-item">
-              <img src={resolveImg(img.url)} alt={img.caption || ''} loading="lazy" />
+              <img src={resolveImg(img.url)} srcSet={srcSetFor(img.url)} sizes="(max-width: 768px) 100vw, 900px" alt={img.caption || ''} loading="lazy" decoding="async" />
               {img.caption && <figcaption>{img.caption}</figcaption>}
             </figure>
           ))}
@@ -117,7 +117,7 @@ function Section({
 
 /** A banner photo, linked to its product when it has one. */
 function Photo({ img, preview, className }) {
-  const pic = <img src={resolveImg(img.url)} alt="" loading="lazy" />;
+  const pic = <img src={resolveImg(img.url)} srcSet={srcSetFor(img.url)} sizes="(max-width: 768px) 100vw, 600px" alt="" loading="lazy" decoding="async" />;
   if (img.productSlug && !preview) {
     return <Link to={`/product/${img.productSlug}`} className={className}>{pic}</Link>;
   }

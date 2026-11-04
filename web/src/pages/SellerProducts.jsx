@@ -17,7 +17,7 @@ import Skeleton from '../components/ui/Skeleton';
 import ConfirmDialog from '../components/ui/ConfirmDialog';
 import LoadFailed from '../components/ui/LoadFailed';
 import Select from '../components/ui/Select';
-import { resolveImg } from '../lib/media';
+import { resolveImg, srcSetFor } from '../lib/media';
 import { peso } from '../lib/format';
 import './SellerDashboard.css';
 import './SellerStore.css';
@@ -992,7 +992,7 @@ export default function SellerProducts() {
                         <td>
                           <div className="product-cell">
                             {thumb ? (
-                              <img src={resolveImg(thumb) || thumb} alt={product.name} className="product-thumb" />
+                              <img src={resolveImg(thumb) || thumb} srcSet={srcSetFor(thumb)} sizes="72px" alt={product.name} className="product-thumb" />
                             ) : (
                               <div className="product-thumb product-thumb--placeholder">
                                 <Package size={16} />

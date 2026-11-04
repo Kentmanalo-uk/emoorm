@@ -12,6 +12,10 @@ const config = require('../config/env');
  * the web app lists them in `srcset` so the browser picks the one it needs
  * (web/src/lib/media.js srcSetFor).
  *
+ * Each width also comes as AVIF (`-w320.avif`…), about half the size of the
+ * WebP at the same look; the web app offers it first where the browser takes
+ * it (web/src/components/ProductImage.jsx), the WebP otherwise.
+ *
  * They are made right after an upload, and for older photos by a slow
  * background pass (makeMissingSizes); one that is still missing when asked
  * for is made then (serveSized), so a srcset never points at nothing.
@@ -19,11 +23,15 @@ const config = require('../config/env');
 
 const SIZES = [320, 640, 960];
 const QUALITY = 78;
+// AVIF at effort 2: half the WebP's bytes in about 0.1-0.3 s a copy; the
+// default effort (4) took 1-2 s for the same size, too much for this server.
+const AVIF = { quality: 50, effort: 2 };
+const FORMATS = ['webp', 'avif'];
 const SOURCE_EXTS = ['.webp', '.jpg', '.jpeg', '.png'];
-const SIZED = /^(.+)-w(\d+)\.webp$/;
+const SIZED = /^(.+)-w(\d+)\.(webp|avif)$/;
 
-/** `abc.jpg` → `abc-w320.webp`. */
-const sizedName = (filename, width) => `${path.basename(filename, path.extname(filename))}-w${width}.webp`;
+/** `abc.jpg` → `abc-w320.webp` (or `.avif`). */
+const sizedName = (filename, width, format = 'webp') => `${path.basename(filename, path.extname(filename))}-w${width}.${format}`;
 
 /** True for a copy made here (not an upload of its own). */
 const isSized = (filename) => {
@@ -40,10 +48,8 @@ const makeOne = (sourcePath, targetPath, width) => {
   const job = (async () => {
     const input = await fs.promises.readFile(sourcePath);
     const tmp = `${targetPath}.${process.pid}.tmp`;
-    await sharp(input, { limitInputPixels: 70e6 })
-      .resize({ width, withoutEnlargement: true })
-      .webp({ quality: QUALITY })
-      .toFile(tmp);
+    const resized = sharp(input, { limitInputPixels: 70e6 }).resize({ width, withoutEnlargement: true });
+    await (targetPath.endsWith('.avif') ? resized.avif(AVIF) : resized.webp({ quality: QUALITY })).toFile(tmp);
     // Written aside then renamed: a half-written copy is never served.
     await fs.promises.rename(tmp, targetPath);
   })().finally(() => making.delete(targetPath));
@@ -59,20 +65,22 @@ const makeOne = (sourcePath, targetPath, width) => {
 const makeSizes = async (filePath) => {
   const ext = path.extname(filePath).toLowerCase();
   if (!SOURCE_EXTS.includes(ext) || isSized(path.basename(filePath))) return;
-  for (const width of SIZES) {
-    const target = path.join(path.dirname(filePath), sizedName(filePath, width));
-    // eslint-disable-next-line no-await-in-loop
-    if (fs.existsSync(target)) continue;
-    // eslint-disable-next-line no-await-in-loop
-    await makeOne(filePath, target, width).catch(() => {});
+  for (const format of FORMATS) {
+    for (const width of SIZES) {
+      const target = path.join(path.dirname(filePath), sizedName(filePath, width, format));
+      // eslint-disable-next-line no-await-in-loop
+      if (fs.existsSync(target)) continue;
+      // eslint-disable-next-line no-await-in-loop
+      await makeOne(filePath, target, width).catch(() => {});
+    }
   }
 };
 
 /** Removes the smaller copies of a photo that is being removed. */
 const removeSizes = async (filePath) => {
-  await Promise.all(SIZES.map((width) => fs.promises
-    .unlink(path.join(path.dirname(filePath), sizedName(filePath, width)))
-    .catch(() => {})));
+  await Promise.all(FORMATS.flatMap((format) => SIZES.map((width) => fs.promises
+    .unlink(path.join(path.dirname(filePath), sizedName(filePath, width, format)))
+    .catch(() => {}))));
 };
 
 /** The stored photo a copy is made from, or null. */
@@ -121,7 +129,7 @@ const makeMissingSizes = async ({ pauseMs = 250, dir = config.upload.uploadDir }
   for (const name of names) {
     if (!SOURCE_EXTS.includes(path.extname(name).toLowerCase()) || isSized(name)) continue;
     photos += 1;
-    const missing = SIZES.filter((width) => !have.has(sizedName(name, width)));
+    const missing = FORMATS.flatMap((format) => SIZES.filter((width) => !have.has(sizedName(name, width, format))));
     if (!missing.length) continue;
     // eslint-disable-next-line no-await-in-loop
     await makeSizes(path.join(dir, name));
@@ -133,5 +141,5 @@ const makeMissingSizes = async ({ pauseMs = 250, dir = config.upload.uploadDir }
 };
 
 module.exports = {
-  SIZES, sizedName, isSized, makeSizes, removeSizes, serveSized, makeMissingSizes,
+  SIZES, FORMATS, sizedName, isSized, makeSizes, removeSizes, serveSized, makeMissingSizes,
 };

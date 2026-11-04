@@ -27,6 +27,7 @@
 }
 
 .today-card-image > img,
+.today-card-image > picture > img,
 .today-card-image > .product-image-fallback {
   position: absolute;
   inset: 0;

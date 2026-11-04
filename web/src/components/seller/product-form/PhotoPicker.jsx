@@ -3,7 +3,7 @@ import toast from 'react-hot-toast';
 import { Camera, X, CircleNotch, Plus } from '../../../lib/icons';
 import { uploadImage } from '../../../lib/upload';
 import { IMAGE_ACCEPT } from '../../../lib/uploadableImage';
-import { resolveImg } from '../../../lib/media';
+import { resolveImg, srcSetFor } from '../../../lib/media';
 import { MAX_IMAGES } from './formState';
 
 /**
@@ -73,7 +73,7 @@ export default function PhotoPicker({ images, onChange, invalid = false }) {
         <div className="pf-photos">
           {list.map((src, idx) => (
             <div key={`${src}-${idx}`} className={`pf-photo${idx === 0 ? ' is-cover' : ''}`}>
-              <img src={resolveImg(src) || src} alt={idx === 0 ? 'First photo' : `Photo ${idx + 1}`} />
+              <img src={resolveImg(src) || src} srcSet={srcSetFor(src)} sizes="120px" alt={idx === 0 ? 'First photo' : `Photo ${idx + 1}`} />
               <button type="button" className="pf-photo-remove" onClick={() => removeAt(idx)} aria-label={`Remove photo ${idx + 1}`}>
                 <X size={15} weight="bold" />
               </button>

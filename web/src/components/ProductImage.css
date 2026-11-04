@@ -29,3 +29,10 @@
     opacity: 0.12;
   }
 }
+
+/* AVIF/WebP choice (ProductImage.jsx): the <picture> takes no box, so its img
+   is laid out as the direct child it used to be. Rules written for
+   `.product-image > img` also name `> picture > img`. */
+.product-picture {
+  display: contents;
+}

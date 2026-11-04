@@ -5,7 +5,7 @@ import {
   ArrowLeft, ArrowRight, ArrowUp, ArrowUpLeft, ArrowUpRight, ArrowUUpLeft, ArrowsClockwise,
   CaretDown, Clock, Crosshair, FlagCheckered, ListBullets, MapPin, NavigationArrow, Path,
 } from '../../lib/icons';
-import { resolveImg } from '../../lib/media';
+import { smallSrc } from '../../lib/media';
 import 'leaflet/dist/leaflet.css';
 import './PickupRoute.css';
 import { validPin } from '../../lib/pins';
@@ -45,7 +45,7 @@ const haversine = ([lat1, lng1], [lat2, lng2]) => {
 };
 
 const shopIcon = (store) => {
-  const logo = resolveImg(store.logo);
+  const logo = smallSrc(store.logo);
   const initial = (store.name || '?').charAt(0).toUpperCase();
   return L.divIcon({
     className: 'pr-marker-shell',

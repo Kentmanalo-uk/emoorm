@@ -7,7 +7,7 @@ import {
 } from '../lib/icons';
 import toast from 'react-hot-toast';
 import axios from '../lib/axios';
-import { resolveImg } from '../lib/media';
+import { resolveImg, smallSrc } from '../lib/media';
 import { readCache, writeCache } from '../lib/pageCache';
 import { awayLabel, openNow } from '../lib/shopHours';
 import useSeo from '../lib/seo';
@@ -68,7 +68,7 @@ const escapeHtml = (value) => String(value ?? '').replace(/[&<>"']/g, (ch) => ({
 // (a class set on the pin, so the change animates).
 const pinIcons = new Map();
 const pinIcon = (store) => {
-  const logo = resolveImg(store.logo);
+  const logo = smallSrc(store.logo);
   const approx = store.pinned === false;
   const key = `${store.id}:${logo || ''}:${approx ? 'a' : 'p'}`;
   if (!pinIcons.has(key)) {
@@ -651,7 +651,7 @@ function StoreCard({ store, selected = false, onSelect }) {
     >
       <Link to={href} className="sm-who" aria-label={`Visit ${store.name}`}>
         <span className="sm-logo">
-          {logo ? <img src={logo} alt="" loading="lazy" /> : <Storefront size={22} weight="fill" />}
+          {logo ? <img src={smallSrc(logo)} alt="" loading="lazy" /> : <Storefront size={22} weight="fill" />}
         </span>
         <span className="sm-name-box">
           <span className="sm-name">{store.name}</span>
@@ -677,7 +677,7 @@ function StoreCard({ store, selected = false, onSelect }) {
             const img = resolveImg(p.image);
             return (
               <Link key={p.id} to={`/product/${p.slug}`} className="sm-thumb" aria-label={p.name} title={p.name}>
-                {img ? <img src={img} alt="" loading="lazy" /> : <Package size={18} />}
+                {img ? <img src={smallSrc(img)} alt="" loading="lazy" /> : <Package size={18} />}
               </Link>
             );
           })}

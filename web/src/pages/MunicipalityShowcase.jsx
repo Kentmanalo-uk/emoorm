@@ -4,7 +4,7 @@ import { Link, useParams } from 'react-router-dom';
 import { ArrowRight, MapPin } from '../lib/icons';
 import Layout from '../components/layout/Layout';
 import axios from '../lib/axios';
-import { resolveImg } from '../lib/media';
+import { resolveImg, srcSetFor } from '../lib/media';
 import './MunicipalityShowcase.css';
 import ProductTile from '../components/product/ProductTile';
 import { HighlightCardsSkeleton } from '../components/ui/PageSkeletons';
@@ -48,7 +48,7 @@ export default function MunicipalityShowcase() {
         <section className="municipality-hero" style={logo ? { '--municipality-logo': `url(${logo})` } : undefined}>
           <div className="municipality-hero-content">
             <div className="municipality-hero-logo">
-              {logo ? <img src={logo} alt={`${municipality?.name || 'Municipality'} logo`} /> : <span>{municipality?.name?.charAt(0) || '?'}</span>}
+              {logo ? <img src={logo} srcSet={srcSetFor(logo)} sizes="96px" alt={`${municipality?.name || 'Municipality'} logo`} /> : <span>{municipality?.name?.charAt(0) || '?'}</span>}
             </div>
             <div>
               <h1>{municipality?.name || 'Municipality'}</h1>
@@ -103,7 +103,7 @@ export default function MunicipalityShowcase() {
                   <div className="municipality-store-grid">
                     {stores.slice(0, 6).map((store) => (
                       <Link key={store.id} to={`/store/${store.slug}`} className="municipality-store-card">
-                        <div className="municipality-store-logo">{store.logo ? <img src={resolveImg(store.logo)} alt={`${store.name} logo`} /> : <ShopLogoArt name={store.name} />}</div>
+                        <div className="municipality-store-logo">{store.logo ? <img src={resolveImg(store.logo)} srcSet={srcSetFor(store.logo)} sizes="56px" alt={`${store.name} logo`} loading="lazy" decoding="async" /> : <ShopLogoArt name={store.name} />}</div>
                         <div><strong>{store.name}</strong><span>{store.pickupAddress || municipality?.name}</span></div><ArrowRight size={16} />
                       </Link>
                     ))}
@@ -126,7 +126,7 @@ function MunicipalityGalleryStack({ municipality, id }) {
   return (
     <div className="municipality-gallery-stack-card">
       <Link to={`/municipality/${id}/gallery`} className="municipality-gallery-stack" aria-label={`View ${municipality.name} gallery`}>
-        {images.map((image, index) => <img key={`${image}-${index}`} src={resolveImg(image)} alt={`${municipality.name} gallery ${index + 1}`} style={{ '--stack-index': index }} />)}
+        {images.map((image, index) => <img key={`${image}-${index}`} src={resolveImg(image)} srcSet={srcSetFor(image)} sizes="(max-width: 768px) 80vw, 420px" alt={`${municipality.name} gallery ${index + 1}`} style={{ '--stack-index': index }} loading="lazy" decoding="async" />)}
       </Link>
       <Link to={`/municipality/${id}/gallery`} className="municipality-gallery-stack-link">View gallery <ArrowRight size={15} /></Link>
     </div>

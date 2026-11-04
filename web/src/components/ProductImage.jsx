@@ -1,6 +1,6 @@
 import { useState } from 'react';
 import useAppSettings, { resolveAppSettingImage } from '../hooks/useAppSettings';
-import { resolveImg, srcSetFor } from '../lib/media';
+import { resolveImg, srcSetFor, avifSrcSetFor } from '../lib/media';
 import './ProductImage.css';
 
 // Product photos load as they come near the screen (lists can hold dozens);
@@ -40,7 +40,7 @@ export default function ProductImage({
     );
   }
 
-  return (
+  const image = (
     <img
       src={imageSrc}
       srcSet={srcSet}
@@ -52,5 +52,17 @@ export default function ProductImage({
       onError={() => (srcSet ? setPlain(true) : setFailed(true))}
       {...props}
     />
+  );
+  // AVIF first where the browser takes it (about half the bytes), the WebP
+  // copies otherwise. The <picture> takes no box of its own (display:
+  // contents), so the img sits in the layout as before. A copy that fails
+  // drops both sets (plain) and shows the photo itself.
+  const avif = srcSet ? avifSrcSetFor(src) : undefined;
+  if (!avif) return image;
+  return (
+    <picture className="product-picture">
+      <source type="image/avif" srcSet={avif} sizes={sizes} />
+      {image}
+    </picture>
   );
 }

@@ -1,7 +1,7 @@
 import { useEffect, useMemo } from 'react';
 import L from 'leaflet';
 import { MapContainer, Marker, TileLayer, useMap } from 'react-leaflet';
-import { resolveImg } from '../../lib/media';
+import { smallSrc } from '../../lib/media';
 import 'leaflet/dist/leaflet.css';
 import '../maps/StoreLocationMap.css';
 import './HomeStoresMap.css';
@@ -25,7 +25,7 @@ const escapeHtml = (value) => String(value ?? '').replace(/[&<>"']/g, (ch) => ({
 
 const iconCache = new Map();
 const pinIcon = (store) => {
-  const logo = resolveImg(store.logo);
+  const logo = smallSrc(store.logo);
   const approx = store.pinned === false;
   const key = `${store.id}:${logo || ''}:${approx ? 1 : 0}`;
   if (!iconCache.has(key)) {

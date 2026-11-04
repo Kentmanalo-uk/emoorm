@@ -5,7 +5,7 @@ import {
 } from '../lib/icons';
 import toast from 'react-hot-toast';
 import axios from '../lib/axios';
-import { resolveImg, firstImage } from '../lib/media';
+import { resolveImg, firstImage, srcSetFor } from '../lib/media';
 import { returnStatus, returnReason } from '../lib/labels';
 import { peso } from '../lib/format';
 import { confirmAction } from '../lib/confirm';
@@ -332,7 +332,7 @@ function ReturnRow({ item, isSelected, onOpen }) {
   return (
     <button type="button" className={`seller-return-row${isSelected ? ' is-selected' : ''}`} onClick={onOpen} aria-pressed={isSelected}>
       <span className="seller-return-thumb">
-        {thumb ? <img src={resolveImg(thumb)} alt="" loading="lazy" /> : <Package size={20} />}
+        {thumb ? <img src={resolveImg(thumb)} srcSet={srcSetFor(thumb)} sizes="56px" alt="" loading="lazy" /> : <Package size={20} />}
         {photos.length > 0 && (
           <em className="seller-return-photo-count" title={`${photos.length} photo${photos.length === 1 ? '' : 's'} from the buyer`}>
             <ImageIcon size={11} weight="fill" />{photos.length}
@@ -421,7 +421,7 @@ function ReturnDetail({
           <div>
             {photos.map((p, i) => (
               <a key={p} href={resolveImg(p)} target="_blank" rel="noopener noreferrer" aria-label={`Open photo ${i + 1} of ${photos.length}`}>
-                <img src={resolveImg(p)} alt={`Return photo ${i + 1}`} loading="lazy" />
+                <img src={resolveImg(p)} srcSet={srcSetFor(p)} sizes="120px" alt={`Return photo ${i + 1}`} loading="lazy" />
               </a>
             ))}
           </div>

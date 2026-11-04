@@ -8,7 +8,7 @@ import {
 import Layout from '../components/layout/Layout';
 import ProductImage from '../components/ProductImage';
 import axios from '../lib/axios';
-import { resolveImg } from '../lib/media';
+import { resolveImg, srcSetFor } from '../lib/media';
 import { readCache, writeCache } from '../lib/pageCache';
 import { usePhoneLayout } from '../hooks/useMobileNav';
 import useEntryState from '../hooks/useEntryState';
@@ -311,7 +311,7 @@ function StoreLogo({ store, className }) {
   return (
     <div className={className}>
       {src && !failed ? (
-        <img src={src} alt="" onError={() => setFailed(true)} />
+        <img src={src} srcSet={srcSetFor(src)} sizes="64px" alt="" loading="lazy" decoding="async" onError={() => setFailed(true)} />
       ) : (
         <ShopLogoArt name={store.name} />
       )}

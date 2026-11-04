@@ -15,7 +15,7 @@ import toast from 'react-hot-toast';
 import axios from '../lib/axios';
 import Skeleton from '../components/ui/Skeleton';
 import ConfirmDialog from '../components/ui/ConfirmDialog';
-import { resolveImg } from '../lib/media';
+import { resolveImg, srcSetFor } from '../lib/media';
 import { lineImage } from '../lib/variationImage';
 import EmptyArt from '../components/ui/EmptyArt';
 import SellerPageHead from '../components/seller/SellerPageHead';
@@ -390,7 +390,7 @@ function PhoneOrderCard({ order, selected, moved, updating, ridersOn, onOpen, on
         <div className="soc-goods">
           <span className="soc-pic">
             {picture
-              ? <img src={picture} alt="" onError={(e) => { e.currentTarget.hidden = true; }} />
+              ? <img src={picture} srcSet={srcSetFor(picture)} sizes="64px" alt="" onError={(e) => { e.currentTarget.hidden = true; }} />
               : <Package size={26} className="soc-pic-none" />}
             {items.length > 1 && <b className="soc-pic-more">+{items.length - 1}</b>}
           </span>
@@ -1340,7 +1340,7 @@ export default function SellerOrders() {
                       <div key={item.id} className="detail-item">
                         <span className="detail-item-pic">
                           {resolveImg(lineImage(item.product, item.selectedVariations))
-                            ? <img src={resolveImg(lineImage(item.product, item.selectedVariations))} alt="" onError={(e) => { e.currentTarget.hidden = true; }} />
+                            ? <img src={resolveImg(lineImage(item.product, item.selectedVariations))} srcSet={srcSetFor(lineImage(item.product, item.selectedVariations))} sizes="64px" alt="" onError={(e) => { e.currentTarget.hidden = true; }} />
                             : <Package size={18} />}
                         </span>
                         <span>

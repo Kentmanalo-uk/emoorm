@@ -2,7 +2,7 @@ import { Link } from 'react-router-dom';
 import { CaretRight, ChatText, Star, Storefront, ThumbsUp } from '../../lib/icons';
 import UserAvatar from '../ui/UserAvatar';
 import { peso } from '../../lib/format';
-import { resolveImg } from '../../lib/media';
+import { resolveImg, srcSetFor } from '../../lib/media';
 import { lineImage } from '../../lib/variationImage';
 
 /** Five stars, filled up to the (rounded) rating. */
@@ -37,8 +37,11 @@ function OrderedStrip({ review, onOpen }) {
     >
       <img
         src={resolveImg(lineImage(product, null, ordered.image)) || '/placeholder-product.png'}
+        srcSet={srcSetFor(lineImage(product, null, ordered.image))}
+        sizes="48px"
         alt=""
-        onError={(e) => { e.currentTarget.src = '/placeholder-product.png'; }}
+        loading="lazy"
+        onError={(e) => { e.currentTarget.removeAttribute('srcset'); e.currentTarget.src = '/placeholder-product.png'; }}
       />
       <span className="pdp-review-ordered-text">
         <span className="pdp-review-ordered-name">{product.name}</span>
@@ -103,11 +106,11 @@ export default function ReviewItem({ review, showReply = false, onOpenMedia, onO
               onClick={() => onOpenMedia(review, i)}
               aria-label={`Open photo ${i + 1} of this review`}
             >
-              <img src={resolveImg(src) || src} alt={`review media ${i + 1}`} />
+              <img src={resolveImg(src) || src} srcSet={srcSetFor(src)} sizes="96px" alt={`review media ${i + 1}`} loading="lazy" decoding="async" />
             </button>
           ) : (
             <a key={i} href={resolveImg(src) || src} target="_blank" rel="noopener noreferrer" className="pdp-review-media-item">
-              <img src={resolveImg(src) || src} alt={`review media ${i + 1}`} />
+              <img src={resolveImg(src) || src} srcSet={srcSetFor(src)} sizes="96px" alt={`review media ${i + 1}`} loading="lazy" decoding="async" />
             </a>
           )))}
           {review.videoUrl && (onOpenMedia ? (

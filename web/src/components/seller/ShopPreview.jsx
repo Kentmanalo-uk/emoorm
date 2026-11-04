@@ -3,7 +3,7 @@ import {
   CaretLeft, CaretRight, MagnifyingGlass, ShareNetwork, ShoppingCart, DotsThree,
   Storefront, Star, MapPin, SquaresFour, Package,
 } from '../../lib/icons';
-import { resolveImg } from '../../lib/media';
+import { resolveImg, srcSetFor } from '../../lib/media';
 import { ShopLogoArt } from '../shop/ShopArt';
 
 /** The phone width the preview is drawn at; it is then scaled to its box. */
@@ -82,7 +82,7 @@ export default function ShopPreview({
             </div>
             <div className="spv-main">
               <span className="spv-logo">
-                {store?.logo ? <img src={resolveImg(store.logo)} alt="" /> : <ShopLogoArt name={store?.name} />}
+                {store?.logo ? <img src={resolveImg(store.logo)} srcSet={srcSetFor(store.logo)} sizes="72px" alt="" /> : <ShopLogoArt name={store?.name} />}
               </span>
               <span className="spv-id">
                 <span className="spv-name"><strong>{name}</strong><CaretRight size={15} weight="bold" /></span>
@@ -128,7 +128,7 @@ export default function ShopPreview({
               const img = p.images?.[0];
               return (
                 <div key={p.id} className="spv-prod">
-                  <span className="spv-prod-img">{img ? <img src={resolveImg(img)} alt="" /> : <Package size={28} />}</span>
+                  <span className="spv-prod-img">{img ? <img src={resolveImg(img)} srcSet={srcSetFor(img)} sizes="(max-width: 768px) 50vw, 200px" alt="" /> : <Package size={28} />}</span>
                   <span className="spv-prod-name">{p.name}</span>
                   <span className="spv-prod-price">₱{Number(p.price || 0).toFixed(2)}</span>
                   <span className="spv-prod-meta">

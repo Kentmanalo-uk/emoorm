@@ -191,6 +191,48 @@ const mountWebApp = (app) => {
   // year).
   const assetsDir = path.join(root, 'assets');
   const HASHED = /-[A-Za-z0-9_-]{8}\.(?:js|css|woff2?|png|jpe?g|svg|webp|gif|glb|wasm)$/;
+
+  // The build leaves a brotli (.br) and a gzip (.gz) copy beside each built
+  // script and stylesheet (web/scripts/precompress.mjs): those are sent as
+  // they are, so nothing is compressed again on each request (the
+  // compression middleware leaves an encoded answer alone). Only the
+  // fingerprinted files: their content never changes, so a copy can never
+  // be older than its file. A browser that takes neither, or a file without
+  // a copy, falls through to the plain file below.
+  const PRECOMPRESSED_TYPES = {
+    '.js': 'text/javascript; charset=utf-8',
+    '.css': 'text/css; charset=utf-8',
+    '.svg': 'image/svg+xml',
+    '.json': 'application/json; charset=utf-8',
+    '.wasm': 'application/wasm',
+  };
+  const copies = new Map(); // a copy's path -> whether it exists
+  const hasCopy = (file) => {
+    if (!copies.has(file)) copies.set(file, fs.existsSync(file));
+    return copies.get(file);
+  };
+  app.use('/assets', (req, res, next) => {
+    if (req.method !== 'GET' && req.method !== 'HEAD') return next();
+    const name = path.basename(req.path);
+    const type = PRECOMPRESSED_TYPES[path.extname(name).toLowerCase()];
+    if (req.path !== `/${name}` || !type || !HASHED.test(name)) return next();
+    const file = path.join(assetsDir, name);
+    const encoding = ['br', 'gzip'].find((enc) => req.acceptsEncodings(enc) === enc && hasCopy(`${file}.${enc === 'br' ? 'br' : 'gz'}`));
+    if (!encoding) return next();
+    res.set({
+      'Content-Encoding': encoding,
+      'Content-Type': type,
+      'Cache-Control': 'public, max-age=31536000, immutable',
+    });
+    res.vary('Accept-Encoding');
+    return res.sendFile(`${file}.${encoding === 'br' ? 'br' : 'gz'}`, { acceptRanges: false, etag: true, lastModified: true }, (err) => {
+      if (err && !res.headersSent) {
+        res.removeHeader('Content-Encoding');
+        next();
+      }
+    });
+  });
+
   app.use(express.static(root, {
     index: false,
     etag: true,

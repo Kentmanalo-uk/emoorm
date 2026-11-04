@@ -10,7 +10,7 @@ import ConfirmDialog from '../ui/ConfirmDialog';
 import {
   canUnsend, unsendMessage, withoutMessage,
 } from '../../lib/unsend';
-import { resolveImg } from '../../lib/media';
+import { resolveImg, srcSetFor } from '../../lib/media';
 import { CASE_STATUS_LABELS } from '../../lib/supportCategories';
 import useAuthStore from '../../store/authStore';
 import SafetyNotice from '../common/SafetyNotice';
@@ -79,7 +79,7 @@ function Avatar({ src, name, shopName, icon: Icon }) {
   return (
     <span className="cd-avatar">
       {src
-        ? <img src={resolveImg(src)} alt="" />
+        ? <img src={resolveImg(src)} srcSet={srcSetFor(src)} sizes="48px" alt="" />
         : Icon ? <Icon size={18} weight="fill" /> : (name || '?').charAt(0).toUpperCase()}
     </span>
   );
@@ -355,7 +355,7 @@ export default function ChatDock() {
             return (
               <div key={m.id} className={`cd-msg${mine ? ' is-mine' : ''}`}>
                 {!mine && isSupport && m.sender?.fullName && <span className="cd-msg-name">{m.sender.fullName}</span>}
-                {m.imageUrl && <img src={resolveImg(m.imageUrl)} alt="" className="cd-msg-img" />}
+                {m.imageUrl && <img src={resolveImg(m.imageUrl)} srcSet={srcSetFor(m.imageUrl)} sizes="220px" alt="" className="cd-msg-img" loading="lazy" />}
                 {m.body && <p>{m.body}</p>}
                 {!m.body && !m.imageUrl && m.order && <p>Order {m.order.orderNumber}</p>}
                 <span className="cd-msg-foot">

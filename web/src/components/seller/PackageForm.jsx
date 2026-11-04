@@ -7,7 +7,7 @@ import {
 import axios from '../../lib/axios';
 import { uploadImage } from '../../lib/upload';
 import { IMAGE_ACCEPT } from '../../lib/uploadableImage';
-import { resolveImg } from '../../lib/media';
+import { resolveImg, srcSetFor } from '../../lib/media';
 import { activeSalePrice } from '../../lib/variantPricing';
 import { PACKAGE_KINDS, packageItemsLabel, productKind } from '../../lib/productKinds';
 import { usePhoneLayout } from '../../hooks/useMobileNav';
@@ -845,7 +845,7 @@ function Thumb({ src, className = 'pkf-thumb' }) {
   if (!src) {
     return <span className={`${className} pkf-thumb--none`} aria-hidden="true"><Package size={18} /></span>;
   }
-  return <img src={resolveImg(src) || src} alt="" className={className} loading="lazy" />;
+  return <img src={resolveImg(src) || src} srcSet={srcSetFor(src)} sizes="96px" alt="" className={className} loading="lazy" />;
 }
 
 /** One of the shop's products: tap to put it in (or take it out), then how many. */

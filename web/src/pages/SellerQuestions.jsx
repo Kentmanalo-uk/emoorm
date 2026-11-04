@@ -5,7 +5,7 @@ import { Link, useSearchParams } from 'react-router-dom';
 import toast from 'react-hot-toast';
 import { Question, EyeSlash } from '../lib/icons';
 import axios from '../lib/axios';
-import { resolveImg, firstImage } from '../lib/media';
+import { resolveImg, firstImage, srcSetFor } from '../lib/media';
 import { confirmAction } from '../lib/confirm';
 import { timeAgo } from '../lib/format';
 import SellerPageHead from '../components/seller/SellerPageHead';
@@ -97,7 +97,7 @@ export default function SellerQuestions() {
           return (
             <li key={q.id} id={`q-${q.id}`} className={`seller-card sq-item${q.id === focusId ? ' is-focus' : ''}`}>
               <Link to={`/product/${q.product.slug}`} className="sq-product">
-                {firstImage(q.product.images) ? <img src={resolveImg(firstImage(q.product.images))} alt="" /> : <span />}
+                {firstImage(q.product.images) ? <img src={resolveImg(firstImage(q.product.images))} srcSet={srcSetFor(firstImage(q.product.images))} sizes="56px" alt="" /> : <span />}
                 <b>{q.product.name}</b>
               </Link>
               <p className="sq-question"><Question size={16} weight="fill" aria-hidden="true" /> {q.question}</p>

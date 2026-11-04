@@ -7,7 +7,7 @@ import {
 } from '../lib/icons';
 import axios from '../lib/axios';
 import useAuthStore from '../store/authStore';
-import { resolveImg } from '../lib/media';
+import { resolveImg, srcSetFor } from '../lib/media';
 import { useShare } from '../components/ShareSheet';
 import FeedbackDialog from '../components/feedback/FeedbackDialog';
 import ShopQrPop from '../components/seller/ShopQrPop';
@@ -115,7 +115,7 @@ export default function SellerMenu() {
           <div className="sme-id sqp-row">
             <Link to="/seller/store" className="sqp-row-link" aria-label="Edit shop profile" />
             <span className="sme-avatar" ref={logoRef}>
-              {store?.logo ? <img src={resolveImg(store.logo)} alt="" /> : <ShopLogoArt name={name} />}
+              {store?.logo ? <img src={resolveImg(store.logo)} srcSet={srcSetFor(store.logo)} sizes="56px" alt="" /> : <ShopLogoArt name={name} />}
             </span>
             <span className="sme-id-text">
               <span className="sqp-name-row">

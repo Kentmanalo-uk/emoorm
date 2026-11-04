@@ -7,7 +7,7 @@ import {
   Plus, Minus, Info, Basket, DotsThree, MagnifyingGlass,
 } from '../lib/icons';
 import axios from '../lib/axios';
-import { resolveImg, firstImage } from '../lib/media';
+import { resolveImg, firstImage, srcSetFor } from '../lib/media';
 import { confirmAction } from '../lib/confirm';
 import {
   isOpen, momentLabel, clockLabel, whenLabel,
@@ -38,7 +38,7 @@ const ADD_PICKS = [5, 10, 20];
 function Thumb({ src }) {
   const [failed, setFailed] = useState(false);
   if (!src || failed) return <span className="stw-thumb stw-thumb--empty" aria-hidden="true"><Basket size={22} /></span>;
-  return <img className="stw-thumb" src={src} alt="" loading="lazy" onError={() => setFailed(true)} />;
+  return <img className="stw-thumb" src={src} srcSet={srcSetFor(src)} sizes="64px" alt="" loading="lazy" onError={() => setFailed(true)} />;
 }
 
 /**

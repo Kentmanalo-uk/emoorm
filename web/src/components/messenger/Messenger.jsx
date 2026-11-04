@@ -13,7 +13,7 @@ import {
 } from '../../lib/unsend';
 import toast from 'react-hot-toast';
 import axiosInstance from '../../lib/axios';
-import { resolveImg } from '../../lib/media';
+import { resolveImg, srcSetFor } from '../../lib/media';
 import useAuthStore from '../../store/authStore';
 import SafetyNotice from '../common/SafetyNotice';
 import UserAvatar from '../ui/UserAvatar';
@@ -260,7 +260,7 @@ function MessageBubble({ message, isSelf, seen, onOpenImage, onUnsend }) {
         )}
         {hasMedia && (
           <button type="button" className="msgr-bubble-image" onClick={() => onOpenImage(message.imageUrl)} aria-label="Open photo">
-            <img src={resolveImg(message.imageUrl) || message.imageUrl} alt="Sent photo" loading="lazy" />
+            <img src={resolveImg(message.imageUrl) || message.imageUrl} srcSet={srcSetFor(message.imageUrl)} sizes="260px" alt="Sent photo" loading="lazy" decoding="async" />
           </button>
         )}
         {message.body && <p className="msgr-bubble-text">{message.body}</p>}

@@ -4,7 +4,7 @@ import { ArrowLeft, MapPin } from '../lib/icons';
 import { Link, useParams } from 'react-router-dom';
 import Layout from '../components/layout/Layout';
 import axios from '../lib/axios';
-import { resolveImg } from '../lib/media';
+import { resolveImg, srcSetFor } from '../lib/media';
 import './MunicipalityGallery.css';
 
 export default function MunicipalityGallery() {
@@ -30,7 +30,7 @@ export default function MunicipalityGallery() {
         <header className="municipality-gallery-header">
           <Link to={`/municipality/${id}`} className="municipality-gallery-back"><ArrowLeft size={16} /> Back to {municipality?.name || 'municipality'}</Link>
           <div className="municipality-gallery-title-row">
-            <div className="municipality-gallery-title-logo">{logo ? <img src={logo} alt="" /> : <span>{municipality?.name?.charAt(0) || '?'}</span>}</div>
+            <div className="municipality-gallery-title-logo">{logo ? <img src={logo} srcSet={srcSetFor(logo)} sizes="64px" alt="" /> : <span>{municipality?.name?.charAt(0) || '?'}</span>}</div>
             <div><h1>{municipality?.name || 'Municipality'} Gallery</h1><p><MapPin size={15} /> Community images and stories</p></div>
           </div>
         </header>
@@ -42,7 +42,7 @@ export default function MunicipalityGallery() {
             </div>
           ) : (
             <div className="municipality-gallery-full-grid">
-              {gallery.map((image, index) => <img key={`${image}-${index}`} src={resolveImg(image)} alt={`${municipality.name} gallery ${index + 1}`} />)}
+              {gallery.map((image, index) => <img key={`${image}-${index}`} src={resolveImg(image)} srcSet={srcSetFor(image)} sizes="(max-width: 768px) 50vw, 360px" alt={`${municipality.name} gallery ${index + 1}`} loading="lazy" decoding="async" />)}
             </div>
           )}
         </div>

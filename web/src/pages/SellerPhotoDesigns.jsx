@@ -7,7 +7,7 @@ import {
   Copy, PencilSimple, Plus, Trash,
 } from '../lib/icons';
 import axios from '../lib/axios';
-import { resolveImg } from '../lib/media';
+import { resolveImg, srcSetFor } from '../lib/media';
 import { MAX_DESIGNS, STARTERS, newId } from '../lib/photoDesign';
 import SellerPageHead from '../components/seller/SellerPageHead';
 import ImageOverlay from '../components/product/ImageOverlay';
@@ -176,7 +176,7 @@ export default function SellerPhotoDesigns() {
             {STARTERS.map((s) => (
               <Link key={s.key} to={`/seller/photo-designs/new?start=${s.key}`} className="spd-card is-starter">
                 <span className="spd-preview">
-                  {sample ? <img src={resolveImg(sample) || sample} alt="" /> : <span className="spd-blank" />}
+                  {sample ? <img src={resolveImg(sample) || sample} srcSet={srcSetFor(sample)} sizes="(max-width: 768px) 50vw, 240px" alt="" /> : <span className="spd-blank" />}
                   {s.key !== 'blank' && <ImageOverlay design="custom" store={store} layers={s.make(store)} />}
                   {s.key === 'blank' && <span className="spd-plus"><Plus size={28} /></span>}
                 </span>
@@ -194,7 +194,7 @@ export default function SellerPhotoDesigns() {
             {designs.map((d) => (
               <div key={d.id} className="spd-card">
                 <Link to={`/seller/photo-designs/${d.id}`} className="spd-preview" aria-label={`Edit ${d.name}`}>
-                  {sample ? <img src={resolveImg(sample) || sample} alt="" /> : <span className="spd-blank" />}
+                  {sample ? <img src={resolveImg(sample) || sample} srcSet={srcSetFor(sample)} sizes="(max-width: 768px) 50vw, 240px" alt="" /> : <span className="spd-blank" />}
                   <ImageOverlay design="custom" store={store} layers={d.layers} />
                 </Link>
                 <strong>{d.name}</strong>

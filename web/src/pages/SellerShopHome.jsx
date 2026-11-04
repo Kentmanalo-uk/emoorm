@@ -8,7 +8,7 @@ import toast from 'react-hot-toast';
 import axios from '../lib/axios';
 import { uploadImage } from '../lib/upload';
 import { IMAGE_ACCEPT } from '../lib/uploadableImage';
-import { resolveImg } from '../lib/media';
+import { resolveImg, srcSetFor } from '../lib/media';
 import {
   SECTION_KINDS, KIND_ORDER, HOME_PRESETS, newSection, sectionReady, buildPreset,
 } from '../lib/shopHome';
@@ -150,7 +150,7 @@ export default function SellerShopHome() {
     <div className="shb-phone" style={themeVars}>
       <div className="shb-phone-head">
         <span className="shb-phone-logo">
-          {store?.logo ? <img src={resolveImg(store.logo)} alt="" /> : (store?.name || 'S').charAt(0).toUpperCase()}
+          {store?.logo ? <img src={resolveImg(store.logo)} srcSet={srcSetFor(store.logo)} sizes="72px" alt="" /> : (store?.name || 'S').charAt(0).toUpperCase()}
         </span>
         <strong>{store?.name || 'Your shop'}</strong>
       </div>
@@ -460,7 +460,7 @@ function SpotlightField({ section: s, max, onChange, products, lookup }) {
         <ol className="shb-picked">
           {picked.map((p, i) => (
             <li key={p.id}>
-              <img src={resolveImg(p.images?.[0]) || '/brand-icon.png'} alt="" />
+              <img src={resolveImg(p.images?.[0]) || '/brand-icon.png'} srcSet={srcSetFor(p.images?.[0])} sizes="(max-width: 768px) 50vw, 200px" alt="" />
               <span className="shb-picked-name">{p.name}<small>{peso(p.price)}</small></span>
               <button type="button" className="shb-icon-btn" onClick={() => moveOne(i, -1)} disabled={i === 0} aria-label="Move up"><ArrowUp size={14} /></button>
               <button type="button" className="shb-icon-btn" onClick={() => moveOne(i, 1)} disabled={i === picked.length - 1} aria-label="Move down"><ArrowDown size={14} /></button>
@@ -488,7 +488,7 @@ function SpotlightField({ section: s, max, onChange, products, lookup }) {
               return (
                 <li key={p.id}>
                   <button type="button" className={`shb-pick${on ? ' is-on' : ''}`} onClick={() => toggle(p.id)} aria-pressed={on}>
-                    <img src={resolveImg(p.images?.[0]) || '/brand-icon.png'} alt="" />
+                    <img src={resolveImg(p.images?.[0]) || '/brand-icon.png'} srcSet={srcSetFor(p.images?.[0])} sizes="(max-width: 768px) 50vw, 200px" alt="" />
                     <span className="shb-picked-name">{p.name}<small>{peso(p.price)}</small></span>
                     <span className="shb-pick-check">{on && <Check size={12} weight="bold" />}</span>
                   </button>

@@ -37,7 +37,7 @@ import Layout from '../components/layout/Layout';
 import LoadFailed from '../components/ui/LoadFailed';
 import ReportModal from '../components/ReportModal';
 import axios from '../lib/axios';
-import { resolveImg } from '../lib/media';
+import { resolveImg, srcSetFor } from '../lib/media';
 import ProductImage from '../components/ProductImage';
 import ImageOverlay from '../components/product/ImageOverlay';
 import {
@@ -603,13 +603,13 @@ export default function StoreDetail() {
 
             <div className="shop-m-hero">
               <div className="shop-m-backdrop" aria-hidden="true">
-                {banner ? <img src={resolveImg(banner)} alt="" /> : <ShopCoverArt name={store.name} />}
+                {banner ? <img src={resolveImg(banner)} srcSet={srcSetFor(banner)} sizes="(max-width: 768px) 100vw, 1200px" alt="" fetchPriority="high" /> : <ShopCoverArt name={store.name} />}
               </div>
 
               <div className="shop-m-card">
                 <div className="shop-m-main">
                   <div className="shop-m-logo">
-                    {store.logo ? <img src={resolveImg(store.logo)} alt="" /> : <ShopLogoArt name={store.name} />}
+                    {store.logo ? <img src={resolveImg(store.logo)} srcSet={srcSetFor(store.logo)} sizes="96px" alt="" /> : <ShopLogoArt name={store.name} />}
                   </div>
                   <div className="shop-m-id-text">
                     <button type="button" className="shop-m-name" onClick={() => setMobileTab('about')}>
@@ -706,7 +706,7 @@ export default function StoreDetail() {
                       {categories.map((c) => (
                         <button type="button" key={c.id} className="shop-m-cat" onClick={() => pickCategory(c.id)}>
                           <span className="shop-m-cat-img">
-                            {c.image ? <img src={resolveImg(c.image)} alt="" /> : <Package size={24} />}
+                            {c.image ? <img src={resolveImg(c.image)} srcSet={srcSetFor(c.image)} sizes="64px" alt="" loading="lazy" decoding="async" /> : <Package size={24} />}
                           </span>
                           <strong>{c.name}</strong>
                           <small>{c.count ?? ''}</small>
@@ -856,7 +856,7 @@ export default function StoreDetail() {
             <div className="shop-profile">
             <div className="shop-hero-banner">
               {banner ? (
-                <img src={resolveImg(banner)} alt="" />
+                <img src={resolveImg(banner)} srcSet={srcSetFor(banner)} sizes="(max-width: 768px) 100vw, 1200px" alt="" />
               ) : (
                 <ShopCoverArt name={store.name} />
               )}
@@ -866,7 +866,7 @@ export default function StoreDetail() {
             <div className="shop-hero-card">
               <div className="shop-avatar">
                 {store.logo ? (
-                  <img src={resolveImg(store.logo)} alt={store.name} />
+                  <img src={resolveImg(store.logo)} srcSet={srcSetFor(store.logo)} sizes="96px" alt={store.name} />
                 ) : (
                   <ShopLogoArt name={store.name} />
                 )}

@@ -10,7 +10,7 @@ import axios from '../lib/axios';
 import useUnsavedChanges from '../hooks/useUnsavedChanges';
 import { confirmAction } from '../lib/confirm';
 import LoadFailed from '../components/ui/LoadFailed';
-import { resolveImg, firstImage } from '../lib/media';
+import { resolveImg, firstImage, srcSetFor } from '../lib/media';
 import { isOpen, momentLabel } from '../lib/availability';
 import { saleInfo } from '../lib/variantPricing';
 import {
@@ -37,7 +37,7 @@ function Photo({ product }) {
   const [failed, setFailed] = useState(false);
   const img = firstImage(product?.images);
   if (!img || failed) return <span className="tpp-photo is-empty" aria-hidden="true"><Basket size={22} /></span>;
-  return <img className="tpp-photo" src={resolveImg(img)} alt="" loading="lazy" onError={() => setFailed(true)} />;
+  return <img className="tpp-photo" src={resolveImg(img)} srcSet={srcSetFor(img)} sizes="(max-width: 768px) 100vw, 420px" alt="" loading="lazy" onError={() => setFailed(true)} />;
 }
 
 /** A numbered section: a short title, at most one hint, the fields, and its error under them. */
