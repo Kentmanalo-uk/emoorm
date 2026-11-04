@@ -67,11 +67,17 @@ export const setupPwaInstall = () => {
     emit();
   });
   if ('serviceWorker' in navigator && import.meta.env.PROD) {
-    window.addEventListener('load', () => {
+    // Once the page is up and the browser is idle — not at the window's load
+    // event, which waits for every image: on Home that came many seconds in,
+    // or not at all before the visitor left, so a return visit found no
+    // service worker keeping the built files and photos.
+    const register = () => {
       navigator.serviceWorker.register('/sw.js').catch(() => {
         // Not installable then; the site works the same.
       });
-    });
+    };
+    if ('requestIdleCallback' in window) window.requestIdleCallback(register, { timeout: 4000 });
+    else window.setTimeout(register, 3000);
   }
 };
 

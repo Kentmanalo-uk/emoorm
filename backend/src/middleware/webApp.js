@@ -202,6 +202,12 @@ const mountWebApp = (app) => {
       // every bundle silently revalidates on each page view.
       if (path.dirname(filePath) === assetsDir && HASHED.test(path.basename(filePath))) {
         res.set('Cache-Control', 'public, max-age=31536000, immutable');
+      } else if (path.dirname(filePath) === path.join(assetsDir, 'banners')) {
+        // The built-in banners (Home's carousel before the admin's load, and
+        // banner rows that point at them): big pictures that change rarely,
+        // under fixed names. A day before asking again, and a week more
+        // shown from the copy while a fresh one is fetched.
+        res.set('Cache-Control', 'public, max-age=86400, stale-while-revalidate=604800');
       } else {
         res.set('Cache-Control', 'public, max-age=0, must-revalidate');
       }

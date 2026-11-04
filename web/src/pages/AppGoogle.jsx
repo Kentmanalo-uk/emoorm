@@ -1,5 +1,6 @@
 import { useMemo, useState } from 'react';
 import { useGoogleLogin } from '@react-oauth/google';
+import withGoogle from '../lib/withGoogle';
 import axios from '../lib/axios';
 import AppLogo from '../components/AppLogo';
 import './AppGoogle.css';
@@ -35,7 +36,7 @@ const GOOGLE_ICON = (
   </svg>
 );
 
-export default function AppGoogle() {
+function AppGoogle() {
   const challenge = useMemo(() => new URLSearchParams(window.location.search).get('challenge') || '', []);
   const ret = useMemo(() => appReturn(new URLSearchParams(window.location.search).get('return') || ''), []);
   const [busy, setBusy] = useState(false);
@@ -105,3 +106,5 @@ export default function AppGoogle() {
     </main>
   );
 }
+
+export default withGoogle(AppGoogle);

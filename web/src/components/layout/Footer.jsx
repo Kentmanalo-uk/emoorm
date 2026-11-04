@@ -1,10 +1,11 @@
-import React, { useMemo } from 'react';
+import React, { useMemo, useRef } from 'react';
 import { Link, useLocation } from 'react-router-dom';
 import { useQuery } from '@tanstack/react-query';
 import axios from '../../lib/axios';
 import { resolveImg } from '../../lib/media';
 import { useMunicipalities, useCategories } from '../../hooks/useReferenceData';
 import { queryKeys, policy } from '../../lib/queryKeys';
+import useNearScreen from '../../hooks/useNearScreen';
 import AppLogo from '../AppLogo';
 import './Footer.css';
 import { EnvelopeSimple, FacebookLogo, InstagramLogo } from '../../lib/icons';
@@ -69,11 +70,16 @@ const isAppPage = (pathname) => pathname !== '/about';
 const Footer = () => {
   const { pathname } = useLocation();
   const currentYear = new Date().getFullYear();
-  const { municipalities } = useMunicipalities();
-  const { categories: fetchedCategories } = useCategories();
+  // Its lists load once it comes near the screen: the footer is at the very
+  // bottom, and on phones it is not shown at all (it then never asks).
+  const footerRef = useRef(null);
+  const near = useNearScreen(footerRef);
+  const { municipalities } = useMunicipalities({ enabled: near });
+  const { categories: fetchedCategories } = useCategories({ enabled: near });
   const { data: stores = [] } = useQuery({
     queryKey: queryKeys.stores({ page: 1, pageSize: 12 }),
     queryFn: async () => (await axios.get('/stores', { params: { page: 1, pageSize: 12 } })).data || [],
+    enabled: near,
     ...policy.publicContent,
   });
 
@@ -84,7 +90,7 @@ const Footer = () => {
   const categories = useMemo(() => allCategories.slice(0, 8), [allCategories]);
 
   return (
-    <footer className={`footer${isAppPage(pathname) ? ' footer--app-page' : ''}`}>
+    <footer ref={footerRef} className={`footer${isAppPage(pathname) ? ' footer--app-page' : ''}`}>
       <div className="container">
         {/* Brand band: municipality seals (decorative) and the app mark */}
         <div className="footer-brand-band">

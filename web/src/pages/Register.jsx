@@ -2,6 +2,7 @@ import { useState, useEffect } from 'react';
 import { Link, useLocation, useNavigate, useSearchParams } from 'react-router-dom';
 import { Eye, EyeSlash as EyeOff, Storefront } from '../lib/icons';
 import { useGoogleLogin } from '@react-oauth/google';
+import withGoogle from '../lib/withGoogle';
 import toast from 'react-hot-toast';
 import axios from '../lib/axios';
 import { useAppGoogleSignIn } from '../lib/appGoogle';
@@ -585,4 +586,4 @@ const Register = () => {
   );
 };
 
-export default Register;
+export default withGoogle(Register);

@@ -26,6 +26,9 @@ export default defineConfig([
       'react-hooks/set-state-in-effect': 'warn',
       'react-hooks/immutability': 'warn',
       'react-hooks/refs': 'warn',
+      // lib/withGoogle.jsx wraps a page component, so `export default
+      // withGoogle(Login)` still exports a component.
+      'react-refresh/only-export-components': ['error', { allowConstantExport: true, extraHOCs: ['withGoogle'] }],
     },
   },
 ])

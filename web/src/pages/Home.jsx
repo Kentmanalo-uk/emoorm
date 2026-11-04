@@ -16,13 +16,14 @@ import EmptyArt from '../components/ui/EmptyArt';
 import { usePhoneLayout } from '../hooks/useMobileNav';
 import { useLanguageIntro } from '../lib/languageIntro';
 import axios from '../lib/axios';
-import { resolveImg } from '../lib/media';
+import { resolveImg, srcSetFor } from '../lib/media';
 import useCartStore from '../store/cartStore';
 import useAuthStore from '../store/authStore';
 import './Home.css';
 import { useMunicipalities, useCategories } from '../hooks/useReferenceData';
 import useAppSettings from '../hooks/useAppSettings';
 import useFocusTrap from '../hooks/useFocusTrap';
+import useNearScreen from '../hooks/useNearScreen';
 import { POPULAR_SUGGESTIONS, loadRecent, saveRecent } from '../lib/buyerSearch';
 import CategoryIcon, { CategoryIconGradients } from '../components/CategoryIcon';
 import TodayRail from '../components/today/TodayRail';
@@ -124,6 +125,9 @@ const Home = () => {
   // Hold a card: its preview with quick actions.
 
   const [featuredProducts, setFeaturedProducts] = useState(() => homeCache.featured || []);
+  // The products at the top have arrived (or failed): only then is the page
+  // as long as it will be, so the sections below can tell whether they are near.
+  const [featuredReady, setFeaturedReady] = useState(() => Boolean(homeCache.featured));
   // One batch fills 5 rows of the grid at the current width; fixed per visit so pages line up.
   const [exploreBatch] = useState(() => EXPLORE_ROWS * exploreColumns());
   // Everything "Load more" had brought in, so coming back finds the same
@@ -136,7 +140,24 @@ const Home = () => {
   const [exploreLoading, setExploreLoading] = useState(false);
   const [nearbyStores, setNearbyStores] = useState(() => homeCache.nearbyStores || []);
   const [mappedStores, setMappedStores] = useState(() => homeCache.mappedStores || []);
-  const { municipalities } = useMunicipalities();
+  // The two shop sections sit below the first screen: each asks for its shops
+  // only when it comes near (useNearScreen), so a first visit spends its
+  // connection on what is on screen. Until then a section shows no "no shops"
+  // message, just its place.
+  const storesRef = useRef(null);
+  const mapRef = useRef(null);
+  const townsRef = useRef(null);
+  const exploreRef = useRef(null);
+  // 300px ahead: enough to load before a section scrolls in, short enough
+  // that on a phone nothing below the first screen and a half counts at once.
+  const NEAR = { enabled: featuredReady, margin: '300px' };
+  const storesNear = useNearScreen(storesRef, NEAR);
+  const mapNear = useNearScreen(mapRef, NEAR);
+  const townsNear = useNearScreen(townsRef, NEAR);
+  const exploreNear = useNearScreen(exploreRef, NEAR);
+  const [storesLoaded, setStoresLoaded] = useState(() => Boolean(homeCache.nearbyStores));
+  const [mapLoaded, setMapLoaded] = useState(() => Boolean(homeCache.mappedStores));
+  const { municipalities, isFetched: townsLoaded } = useMunicipalities({ enabled: townsNear });
   const { categories: sharedCategories } = useCategories();
   const { settings: appSettings } = useAppSettings();
   const categoryIcons = appSettings.categoryStyle === 'ICON';
@@ -170,7 +191,17 @@ const Home = () => {
         setFeaturedProducts(res.data || []);
         patchCache('home', { featured: res.data || [] });
       },
-    );
+    ).finally(() => { if (!cancelled) setFeaturedReady(true); });
+    return () => { cancelled = true; };
+  }, [user?.id]);
+
+  // Explore Products, under everything else: its first batch once it comes near.
+  useEffect(() => {
+    if (!exploreNear) return undefined;
+    let cancelled = false;
+    const load = (request, show) => request
+      .then((res) => { if (!cancelled) show(res); })
+      .catch((err) => console.error('Failed to load home data:', err));
     load(
       fetchForYou(user?.id, { page: 1, pageSize: exploreBatch, skip: SUGGESTED }),
       (res) => {
@@ -194,30 +225,44 @@ const Home = () => {
         });
       },
     );
-    load(
-      axios.get('/stores', {
-        params: {
-          pageSize: 6,
-          municipalityId: user?.municipalityId || undefined,
-        },
-      }),
-      (res) => {
+    return () => { cancelled = true; };
+  }, [exploreNear, user?.id, exploreBatch, exploreSaved]);
+
+  useEffect(() => {
+    if (!storesNear) return undefined;
+    let cancelled = false;
+    axios.get('/stores', {
+      params: {
+        pageSize: 6,
+        municipalityId: user?.municipalityId || undefined,
+      },
+    })
+      .then((res) => {
+        if (cancelled) return;
         setNearbyStores(res.data || []);
         patchCache('home', { nearbyStores: res.data || [] });
-      },
-    );
-    // Every public shop with a spot: its pin, or placed from its address
-    // (pinned: false, drawn with a dashed ring).
-    load(
-      axios.get('/stores/map'),
-      (res) => {
+      })
+      .catch((err) => console.error('Failed to load home data:', err))
+      .finally(() => { if (!cancelled) setStoresLoaded(true); });
+    return () => { cancelled = true; };
+  }, [storesNear, user?.municipalityId]);
+
+  // Every public shop with a spot: its pin, or placed from its address
+  // (pinned: false, drawn with a dashed ring).
+  useEffect(() => {
+    if (!mapNear) return undefined;
+    let cancelled = false;
+    axios.get('/stores/map')
+      .then((res) => {
+        if (cancelled) return;
         const mapped = Array.isArray(res.data) ? res.data : [];
         setMappedStores(mapped);
         patchCache('home', { mappedStores: mapped });
-      },
-    );
+      })
+      .catch((err) => console.error('Failed to load home data:', err))
+      .finally(() => { if (!cancelled) setMapLoaded(true); });
     return () => { cancelled = true; };
-  }, [user?.municipalityId, user?.id, exploreBatch, exploreSaved]);
+  }, [mapNear]);
 
   // Explore Products loads its next batch on its own as the page nears the
   // bottom, one request at a time. A failure waits for "Try again" (no
@@ -343,7 +388,7 @@ const Home = () => {
                   </div>
                 ) : (
                   <div className="category-image">
-                    <img src={resolveImg(cat.image)} alt={cat.name} loading="lazy" />
+                    <img src={resolveImg(cat.image)} srcSet={srcSetFor(cat.image)} sizes="72px" alt={cat.name} loading="lazy" decoding="async" />
                   </div>
                 )}
                 <span className="category-name">{cat.name}</span>
@@ -385,7 +430,7 @@ const Home = () => {
       </section>
 
       {/* Stores Section */}
-      <section className="stores-section">
+      <section className="stores-section" ref={storesRef}>
         <div className="container">
           <div className="section-header">
             <h2 className="section-title title-medium">Stores Near You</h2>
@@ -395,6 +440,8 @@ const Home = () => {
             <div className="home-stores-grid">
               {nearbyStores.map((store) => <HomeStoreCard key={store.id} store={store} />)}
             </div>
+          ) : !storesLoaded ? (
+            <div className="home-stores-grid" aria-busy="true" />
           ) : isPhone ? (
             <div className="home-empty">
               <EmptyArt name="stores" size={120} />
@@ -413,7 +460,7 @@ const Home = () => {
       </section>
 
       {/* Municipality discovery */}
-      <section className="municipalities-section">
+      <section className="municipalities-section" ref={townsRef}>
         <div className="container">
           <div className="section-header">
             <h2 className="section-title title-medium">Explore Municipals</h2>
@@ -425,7 +472,7 @@ const Home = () => {
                 <Link key={municipality.id} to={`/municipality/${municipality.id}`} className="municipality-tile">
                   <div className="municipality-tile-logo">
                     {municipality.logo ? (
-                      <img src={resolveImg(municipality.logo)} alt={`${municipality.name} logo`} />
+                      <img src={resolveImg(municipality.logo)} srcSet={srcSetFor(municipality.logo)} sizes="72px" alt={`${municipality.name} logo`} loading="lazy" decoding="async" />
                     ) : (
                       <span>{municipality.name?.charAt(0).toUpperCase()}</span>
                     )}
@@ -434,6 +481,8 @@ const Home = () => {
                 </Link>
               ))}
             </div>
+          ) : !townsLoaded ? (
+            <div className="municipality-rail" aria-busy="true" />
           ) : (
             <div className="municipalities-empty">
               <EmptyArt name="places" size={80} />
@@ -444,7 +493,7 @@ const Home = () => {
       </section>
 
       {/* Discover Stores Map */}
-      <section className="stores-section discover-stores-section">
+      <section className="stores-section discover-stores-section" ref={mapRef}>
         <div className="container">
           <div className="section-header">
             <h2 className="section-title title-medium">Discover Stores</h2>
@@ -457,7 +506,7 @@ const Home = () => {
               height={440}
               onSelect={(store) => navigate(`/stores/map?focus=${encodeURIComponent(store.id)}`)}
             />
-            {mappedStores.length === 0 && (
+            {mapLoaded && mappedStores.length === 0 && (
               <div className="discover-stores-empty">No shops on the map yet.</div>
             )}
             <Link to="/stores/map" className="discover-stores-open">
@@ -469,7 +518,7 @@ const Home = () => {
       </section>
 
       {/* Explore Products Section */}
-      <section className="products-section home-explore-section">
+      <section className="products-section home-explore-section" ref={exploreRef}>
         <div className="container">
           <div className="section-header">
             <h2 className="section-title title-medium">Explore Products</h2>
@@ -608,7 +657,18 @@ function HomeBannerCarousel({ bannerData }) {
               ? 0
               : index - 1;
           const info = bannerData[realIndex] || {};
-          const img = <img src={banner} alt={info.title || `Banner ${index}`} />;
+          const first = index === 1;
+          const img = (
+            <img
+              src={banner}
+              srcSet={srcSetFor(banner)}
+              sizes="(max-width: 768px) 100vw, 800px"
+              alt={info.title || `Banner ${index}`}
+              loading={first ? 'eager' : 'lazy'}
+              fetchPriority={first ? 'high' : 'auto'}
+              decoding="async"
+            />
+          );
           return (
             <div key={`${info.id || 'slide'}-${index}`} className="banner-slide">
               {info.linkUrl ? (
@@ -658,6 +718,9 @@ function HomepageSideBanner({ banner }) {
     <div className={`banner-card banner-card-image${loaded ? '' : ' is-loading'}`}>
       <img
         src={banner.imageUrl}
+        srcSet={srcSetFor(banner.imageUrl)}
+        sizes="400px"
+        decoding="async"
         alt={banner.title || 'Homepage banner'}
         onLoad={() => setLoaded(true)}
         onError={() => setLoaded(true)}
@@ -674,7 +737,7 @@ const PROMO_CLOSE_MS = 240;
 
 function PromotionPopup({ banner, onClose }) {
   const [closing, setClosing] = useState(false);
-  const image = <img src={banner.imageUrl} alt={banner.title || 'Promotion'} />;
+  const image = <img src={banner.imageUrl} srcSet={srcSetFor(banner.imageUrl)} sizes="(max-width: 768px) 90vw, 480px" alt={banner.title || 'Promotion'} />;
 
   // Let the shrink animation finish before the popup is removed.
   const close = () => {
@@ -723,22 +786,23 @@ const HomeStoreCard = memo(function HomeStoreCard({ store }) {
     : [address, town].filter(Boolean).join(', ')) || 'Oriental Mindoro';
   const count = store._count?.products || 0;
   const to = `/store/${store.slug}`;
-  const fallback = (e) => { e.currentTarget.onerror = null; e.currentTarget.src = '/placeholder-product.png'; };
+  // A srcset wins over src, so a broken photo drops it too.
+  const fallback = (e) => { e.currentTarget.onerror = null; e.currentTarget.removeAttribute('srcset'); e.currentTarget.src = '/placeholder-product.png'; };
 
   return (
     <article className="home-store-card" {...peekStore(store)}>
       <Link to={to} className={`home-store-media is-${productImages.length || 1}`} tabIndex={-1} aria-hidden="true">
         {productImages.length > 0 ? productImages.map((image) => (
-          <img key={image.id} src={image.src} alt="" loading="lazy" onError={fallback} />
+          <img key={image.id} src={image.src} srcSet={srcSetFor(image.src)} sizes="(max-width: 768px) 33vw, 120px" alt="" loading="lazy" decoding="async" onError={fallback} />
         )) : cover ? (
-          <img src={resolveImg(cover) || cover} alt="" loading="lazy" onError={fallback} />
+          <img src={resolveImg(cover) || cover} srcSet={srcSetFor(cover)} sizes="(max-width: 768px) 100vw, 360px" alt="" loading="lazy" decoding="async" onError={fallback} />
         ) : (
           <ShopCoverArt name={store.name} />
         )}
       </Link>
       <Link to={to} className="home-store-main">
         <div className="home-store-logo">
-          {store.logo ? <img src={resolveImg(store.logo) || store.logo} alt={`${store.name} logo`} /> : <ShopLogoArt name={store.name} />}
+          {store.logo ? <img src={resolveImg(store.logo) || store.logo} srcSet={srcSetFor(store.logo)} sizes="48px" alt={`${store.name} logo`} loading="lazy" decoding="async" /> : <ShopLogoArt name={store.name} />}
         </div>
         <div className="home-store-copy">
           <h3>{store.name}</h3>
