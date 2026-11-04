@@ -66,7 +66,7 @@ const emailAll = async (rows) => {
     try {
       // eslint-disable-next-line no-await-in-loop
       await sendPlayTesterAddedEmail({
-        email: row.email, name: row.user?.fullName || null, joinUrl: JOIN_URL, storeUrl: STORE_URL,
+        email: row.email, name: row.user?.fullName || null, joinUrl: JOIN_URL,
       });
     } catch (err) {
       console.error(`[play-testers] could not email ${row.email}: ${err.message}`);

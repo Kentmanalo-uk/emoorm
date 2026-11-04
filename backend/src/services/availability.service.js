@@ -929,13 +929,8 @@ const expireTodayOrders = async (now = new Date()) => {
   return count;
 };
 
-/**
- * Every minute: open windows whose time has come, end those whose ordering
- * time is over (stock back to 0), and expire Today orders. Queries also check
- * the time themselves, so nothing ended is sold even if this runs late.
- */
-const runClock = async () => {
-  const now = new Date();
+/** Open windows whose time has come; end those whose ordering time is over (stock back to 0). */
+const moveDueWindows = async (now = new Date()) => {
   const [dueOpen, dueEnd] = await availabilityRepository.findDue(now);
   let opened = 0;
   let ended = 0;
@@ -951,9 +946,50 @@ const runClock = async () => {
       else opened += 1;
     }
   }
-  const expired = await expireTodayOrders(now);
-  return { opened, ended, expired };
+  return { opened, ended };
 };
+
+/**
+ * Every minute: move the due windows (above) and expire Today orders. Queries
+ * also check the time themselves, so nothing ended is sold even if this runs late.
+ */
+const runClock = async () => {
+  const now = new Date();
+  const moved = await moveDueWindows(now);
+  const expired = await expireTodayOrders(now);
+  return { ...moved, expired };
+};
+
+// The host puts an idle server to sleep, and the clock runs only while it is
+// awake: a post due while it slept waited for someone to edit it, and the
+// visit that woke the server was answered before the clock's first run. So a
+// request after a quiet spell first opens (and ends) what is due: at most
+// once every CATCH_UP_MS here, waited on for at most CATCH_UP_WAIT_MS.
+const CATCH_UP_MS = 15 * 1000;
+const CATCH_UP_WAIT_MS = 3000;
+let caughtUpAt = 0;
+let catchingUp = null;
+const catchUp = () => {
+  if (catchingUp) return catchingUp;
+  if (Date.now() - caughtUpAt < CATCH_UP_MS) return null;
+  caughtUpAt = Date.now();
+  catchingUp = moveDueWindows()
+    .catch((err) => console.error('[today] catch-up failed:', err.message))
+    .finally(() => { catchingUp = null; });
+  return catchingUp;
+};
+
+/** Express middleware: catch up (above) before answering. Never fails the request. */
+const catchUpFirst = (req, res, next) => {
+  const pending = catchUp();
+  if (!pending) return next();
+  let done = false;
+  const go = () => { if (!done) { done = true; next(); } };
+  setTimeout(go, CATCH_UP_WAIT_MS).unref();
+  return pending.then(go, go);
+};
+// Tests: the next request catches up again, as after a quiet spell.
+const catchUpAgainForTests = () => { caughtUpAt = 0; };
 
 // ── Checkout ─────────────────────────────────────────────────────────────
 
@@ -1022,6 +1058,9 @@ module.exports = {
   listMine,
   listPublic,
   runClock,
+  moveDueWindows,
+  catchUpFirst,
+  catchUpAgainForTests,
   expireTodayOrders,
   checkoutWindows,
   refresh,

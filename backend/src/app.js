@@ -432,6 +432,9 @@ const onlyWrites = (limiter) => (req, res, next) => (req.method === 'POST' && !r
 for (const area of ['/messages', '/reports', '/support', '/feedback', '/admin-team/chats']) {
   app.use(`${config.apiPrefix}${area}`, onlyWrites(sendLimiter));
 }
+// Available Today posts due while the host had the server asleep open
+// before the first request after it wakes is answered (services/availability).
+app.use(config.apiPrefix, require('./services/availability.service').catchUpFirst);
 app.use(config.apiPrefix, apiRoutes);
 
 // Health check endpoint (includes database ping).

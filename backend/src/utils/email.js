@@ -691,36 +691,26 @@ const sendSellerRejectedEmail = async ({ user, reason }) => {
 
 /**
  * Added to the Google Play tester list: the link that lets this Google
- * account join the early version, then install it from Play.
+ * account join the early version. Written as a plain personal note (no
+ * logo, button or styled layout, one link): Gmail files mail that looks
+ * designed under Promotions, where testers never see it.
  */
-const sendPlayTesterAddedEmail = async ({ email, name = null, joinUrl, storeUrl }) => {
-  const hello = name || 'there';
-  const subject = "You're in: the early version of Emoorm on Google Play";
-  const text = [
-    `Hi ${hello},`,
-    '',
-    'You asked to try the early version of the Emoorm app, and your Google account is now on our tester list.',
-    '',
-    `1. Open this link on your Android phone and tap "Become a tester": ${joinUrl}`,
-    `2. Then install Emoorm from Google Play: ${storeUrl}`,
-    '',
-    `Use the same Google account as this email (${email}). If the link says the app isn't available, give it an hour and try again.`,
-    '',
-    'Found a problem? Tell us in Help & Support in the app. Salamat for helping us test!',
-    '— The Emoorm team',
-  ].join('\n');
-  const html = layout(`
-    ${heading("You're in!")}
-    ${para(`Hi ${escapeHtml(hello)}, you asked to try the early version of the Emoorm app, and your Google account is now on our tester list.`)}
-    <ol style="margin:0 0 16px;padding-left:20px;color:#374151;">
-      <li style="margin-bottom:6px;">Open the link below on your Android phone and tap <strong>Become a tester</strong>.</li>
-      <li>Then <a href="${escapeHtml(storeUrl)}" style="color:#059669;">install Emoorm from Google Play</a>.</li>
-    </ol>
-    ${button(joinUrl, 'Join the early version')}
-    ${para(`Use the same Google account as this email (<strong>${escapeHtml(email)}</strong>). If the link says the app isn't available, give it an hour and try again.`)}
-    ${para('Found a problem? Tell us in Help &amp; Support in the app. Salamat for helping us test!')}
-    ${footer}
-  `);
+const sendPlayTesterAddedEmail = async ({ email, name = null, joinUrl }) => {
+  const hello = name ? `Hi ${name},` : 'Hi,';
+  const subject = 'Your access to the Emoorm Android app';
+  const lines = [
+    hello,
+    'You asked to try the Emoorm app before it is out for everyone. We have added your Google account, so you can get it now.',
+    'On your Android phone, open this link and tap "Become a tester", then install Emoorm from Google Play:',
+    joinUrl,
+    `Please use the same Google account this email was sent to (${email}). If the link says the app isn't available yet, try again in an hour.`,
+    'If something does not work, tell us in Help & Support in the app.',
+    'Thank you,\nEmoorm',
+  ];
+  const text = lines.join('\n\n');
+  const html = lines.map((line) => (line === joinUrl
+    ? `<p><a href="${escapeHtml(joinUrl)}">${escapeHtml(joinUrl)}</a></p>`
+    : `<p>${escapeHtml(line).replace(/\n/g, '<br>')}</p>`)).join('\n');
   return sendMail({ to: email, subject, html, text });
 };
 

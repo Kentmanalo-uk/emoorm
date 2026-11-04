@@ -140,6 +140,24 @@ test('the clock opens scheduled windows and ends finished ones (stock to 0, noth
   assert.equal(await stockOf(now.id), 0);
 });
 
+test('a post due while the server slept (no clock run) opens before the first request is answered', async () => {
+  const seller = await h.user('SELLER');
+  const store = await readyShop(seller);
+  const item = await todayItem(store);
+  const post = (await publish(seller, { productId: item.id, quantity: 6, ordersOpenAt: at(HOUR), ordersCloseAt: at(3 * HOUR) })).body.data;
+  assert.equal(post.status, 'SCHEDULED');
+  const near = `/today?near=${store.municipalityId}&pageSize=50`;
+  assert.ok(!(await h.api('GET', near)).body.data.items.some((w) => w.id === post.id));
+
+  // Its time comes while nothing runs the clock; then a buyer looks.
+  await h.prisma.productAvailability.update({ where: { id: post.id }, data: { ordersOpenAt: at(-60e3), readyFrom: at(-60e3) } });
+  availabilityService.catchUpAgainForTests();
+  const list = await h.api('GET', near);
+  assert.ok(list.body.data.items.some((w) => w.id === post.id), 'on the list at once');
+  assert.equal((await h.prisma.productAvailability.findUnique({ where: { id: post.id } })).status, 'LIVE');
+  assert.equal(await stockOf(item.id), 6);
+});
+
 test('a Today order the shop does not confirm in time is cancelled', async () => {
   const seller = await h.user('SELLER');
   const store = await readyShop(seller);
