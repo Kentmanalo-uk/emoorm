@@ -63,46 +63,25 @@ const canonicalHost = (() => {
 // every https link on the canonical host as a verified App Link, so Google's
 // redirect back to the apex is handed to the app, which has no route for an
 // /api address and shows its "page not found" screen — the sign-in never
-// reaches the server. Android does not follow the redirect below to read
-// /.well-known/assetlinks.json, so www is never verified and a callback
-// served here stays in the browser. GOOGLE_APP_CALLBACK_URL must name this
+// reaches the server. A callback served on www stayed in the browser while
+// www was not a verified App Link (see ASSET_LINKS_PATH below for since
+// when it is). Expo Go and iPhones still use it. GOOGLE_APP_CALLBACK_URL must name this
 // same www address, and Google must list it as an authorized redirect URI.
 const googleAppCallbackPath = `${config.apiPrefix}/auth/google/app/callback`;
 
-// www answers /.well-known/assetlinks.json itself (Android does not follow a
-// redirect there), for Google's credential sharing: the app may use the
-// passwords saved for www too. It is the site's own file with only
-// get_login_creds kept — handle_all_urls would verify www as an App Link,
-// and the app (before 2.3) would then catch the Google callback above.
-const wwwAssetLinks = (() => {
-  let kept;
-  return () => {
-    if (kept === undefined) {
-      try {
-        const file = path.join(config.site.webDir, '.well-known', 'assetlinks.json');
-        const statements = JSON.parse(require('fs').readFileSync(file, 'utf8'));
-        kept = statements
-          .map((s) => ({ ...s, relation: (s.relation || []).filter((r) => r === 'delegate_permission/common.get_login_creds') }))
-          .filter((s) => s.relation.length);
-      } catch {
-        kept = null;
-      }
-    }
-    return kept;
-  };
-})();
+// www answers /.well-known/assetlinks.json itself, the same file as the apex
+// (Android does not follow a redirect there): Play Console verifies www as
+// an App Link and for credential sharing. Since then the Android app catches
+// the Google callback above too; that only matters to app builds before 2.3,
+// which signed in through the browser (2.3 signs in through Play Services).
+const ASSET_LINKS_PATH = '/.well-known/assetlinks.json';
 
 if (config.nodeEnv === 'production' && canonicalHost && !canonicalHost.startsWith('www.')) {
   app.use((req, res, next) => {
     const host = String(req.get('host') || '').toLowerCase();
     if (host !== `www.${canonicalHost}`) return next();
     if (req.path === googleAppCallbackPath) return next();
-    if (req.path === '/.well-known/assetlinks.json' && ['GET', 'HEAD'].includes(req.method)) {
-      const links = wwwAssetLinks();
-      if (!links) return res.status(404).json([]);
-      res.set('Cache-Control', 'public, max-age=3600');
-      return res.json(links);
-    }
+    if (req.path === ASSET_LINKS_PATH) return next();
     const target = `${new URL(config.site.url).protocol}//${canonicalHost}${req.originalUrl}`;
     return res.redirect(['GET', 'HEAD'].includes(req.method) ? 301 : 308, target);
   });
