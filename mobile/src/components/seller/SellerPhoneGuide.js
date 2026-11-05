@@ -5,14 +5,15 @@ import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { font, ink, t, themed } from '../../theme';
 import { useSetupReturn } from '../../lib/setupReturn';
 import { useAccountSwitchStore } from '../RoleSwitchOverlay';
-import SellerGuideArt from './SellerGuideArt';
+import SellerGuideMascot from './SellerGuideMascot';
 import { completeGuide, shouldShowGuide } from './sellerGuides';
 import { useSellerShell } from './SellerShell';
 import { SheetFrame } from '../Sheet';
 
 /**
  * Phones: the first time a shop opens a Seller Center page, a small sheet
- * rises with a picture of what the page is for, a title and a line or two
+ * rises with the mascot holding up what the page is for (SellerGuideMascot),
+ * a title and a line or two
  * (web/src/components/seller/SellerPhoneGuide.jsx + .css). One sheet per
  * page, saved on the shop (store.sellerGuides, PUT /stores/my/guides) under
  * the same keys as the website, so a page seen on one device is done on the
@@ -166,7 +167,7 @@ export default function SellerPhoneGuide() {
 function GuideBody({ page, artW, onClose }) {
   return (
     <>
-      <SellerGuideArt name={page.art} width={artW} style={styles.art} />
+      <SellerGuideMascot name={page.art} width={artW} style={styles.art} />
       <Text style={styles.title} accessibilityRole="header">{page.title}</Text>
       <Text style={styles.text}>{page.text}</Text>
       <Pressable accessibilityRole="button" onPress={onClose} style={({ pressed }) => [styles.ok, pressed && styles.okPressed]}>
