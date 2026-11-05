@@ -194,6 +194,9 @@ const isKnownPath = (path) => KNOWN_PATHS.some((re) => re.test(path));
 const PRIVATE_PREFIXES = [
   '/admin', '/seller', '/profile', '/checkout', '/cart', '/orders',
   '/notifications', '/messages', '/reset-password', '/verify-email', '/u/',
+  // A live lasts minutes and is gone (livestream/); the app's Go live page
+  // is a seller's. Neither belongs in search results, and neither is a 404.
+  '/live/', '/app-live',
 ];
 
 const isPrivatePath = (pathname) =>
