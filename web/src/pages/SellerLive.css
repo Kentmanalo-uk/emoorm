@@ -1,0 +1,459 @@
+/*
+ * Going live: the set-up (camera beside title and products), the live full
+ * screen over the whole Seller Center, and the summary after. The live's
+ * own controls borrow the viewer's (LiveWatch.css) so both read the same.
+ */
+@import './LiveWatch.css';
+
+.slv-page {
+  display: flex;
+  flex-direction: column;
+  gap: 16px;
+}
+
+.slv-notice {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  padding: 12px 14px;
+  border-radius: 12px;
+  background: #fff7ed;
+  color: #9a3412;
+  font-size: 14px;
+}
+
+.slv-setup {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr);
+  gap: 16px;
+}
+
+/* ── The camera ───────────────────────────────────────────────────────── */
+.slv-camera {
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+}
+
+.slv-preview {
+  position: relative;
+  aspect-ratio: 9 / 14;
+  max-height: 62vh;
+  overflow: hidden;
+  border-radius: 18px;
+  background: #111418;
+  color: #fff;
+}
+
+.slv-video {
+  position: absolute;
+  inset: 0;
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+}
+
+/* The front camera, as a mirror (viewers see it the right way round). */
+.slv-video.is-mirrored {
+  transform: scaleX(-1);
+}
+
+.slv-preview-tools {
+  position: absolute;
+  right: 12px;
+  bottom: 12px;
+  display: flex;
+  gap: 8px;
+}
+
+.slv-tips {
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+  margin: 0;
+  padding: 12px 14px 12px 30px;
+  border-radius: 12px;
+  background: var(--t-neutral-0, #fff);
+  color: var(--t-neutral-600, #4b5563);
+  font-size: 13.5px;
+  line-height: 1.45;
+}
+
+/* ── Title and products ───────────────────────────────────────────────── */
+.slv-form {
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+  padding: 16px;
+  border-radius: 16px;
+  background: var(--t-neutral-0, #fff);
+}
+
+.slv-label {
+  color: var(--t-neutral-700, #374151);
+  font-size: 14px;
+  font-weight: 600;
+}
+
+.slv-label-row {
+  display: flex;
+  align-items: baseline;
+  justify-content: space-between;
+  margin-top: 6px;
+}
+
+.slv-count {
+  color: var(--t-primary-700, #047857);
+  font-size: 13px;
+  font-weight: 600;
+}
+
+.slv-input,
+.slv-search {
+  height: 42px;
+  border: 1px solid #d5d8de;
+  border-radius: 10px;
+  background: #fff;
+  font: inherit;
+  font-size: 14.5px;
+}
+
+.slv-input {
+  padding: 0 12px;
+}
+
+.slv-input:focus,
+.slv-search:focus-within {
+  border-color: var(--t-primary-600, #059669);
+  outline: none;
+}
+
+.slv-search {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  padding: 0 12px;
+  color: #9ca3af;
+}
+
+.slv-search input {
+  flex: 1;
+  min-width: 0;
+  height: 100%;
+  border: 0;
+  outline: none;
+  background: none;
+  color: #1f2328;
+  font: inherit;
+}
+
+.slv-products {
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+  max-height: 340px;
+  margin: 0;
+  padding: 0;
+  overflow-y: auto;
+  list-style: none;
+}
+
+.slv-product {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  width: 100%;
+  padding: 6px 10px 6px 6px;
+  border: 1px solid #e5e7eb;
+  border-radius: 12px;
+  background: #fff;
+  color: #1f2328;
+  font: inherit;
+  text-align: left;
+  cursor: pointer;
+  transition: border-color 0.15s ease, background 0.15s ease;
+}
+
+.slv-product.is-on {
+  border-color: var(--t-primary-600, #059669);
+  background: #f0fdf4;
+}
+
+.slv-product img {
+  flex-shrink: 0;
+  width: 46px;
+  height: 46px;
+  border-radius: 8px;
+  object-fit: cover;
+  background: #f2f3f5;
+}
+
+.slv-product-text {
+  display: flex;
+  flex-direction: column;
+  flex: 1;
+  min-width: 0;
+  font-size: 13.5px;
+}
+
+.slv-product-text span {
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.slv-product-text strong {
+  color: #e11d48;
+  font-size: 13.5px;
+}
+
+.slv-check {
+  display: grid;
+  flex-shrink: 0;
+  place-items: center;
+  width: 24px;
+  height: 24px;
+  border: 1.5px solid #cfd3da;
+  border-radius: 50%;
+  color: transparent;
+  font-size: 12px;
+  font-weight: 700;
+}
+
+.slv-product.is-on .slv-check {
+  border-color: transparent;
+  background: var(--t-primary-600, #059669);
+  color: #fff;
+}
+
+.slv-go {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: 8px;
+  height: 48px;
+  margin-top: 8px;
+  padding: 0 22px;
+  border: 0;
+  border-radius: 24px;
+  background: linear-gradient(100deg, #f43f5e, #ff5a3c);
+  color: #fff;
+  font: inherit;
+  font-size: 16px;
+  font-weight: 700;
+  cursor: pointer;
+}
+
+.slv-go:disabled {
+  opacity: 0.5;
+  cursor: default;
+}
+
+.slv-go.is-small {
+  height: 34px;
+  margin: 0;
+  padding: 0 16px;
+  font-size: 14px;
+}
+
+.slv-note {
+  margin: 0;
+  color: var(--t-neutral-500, #6b7280);
+  font-size: 13px;
+}
+
+/* ── On air ───────────────────────────────────────────────────────────── */
+.slv-live {
+  position: fixed;
+  inset: 0;
+  z-index: 200;
+  overflow: hidden;
+  background: #000;
+  color: #fff;
+}
+
+.slv-top {
+  position: absolute;
+  top: 0;
+  right: 0;
+  left: 0;
+  z-index: 5;
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  padding: calc(env(safe-area-inset-top) + 12px) 12px 0;
+}
+
+.slv-onair {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  padding: 4px 10px;
+  border-radius: 8px;
+  background: #f43f5e;
+  font-size: 12.5px;
+  font-weight: 800;
+  letter-spacing: 0.04em;
+  font-variant-numeric: tabular-nums;
+}
+
+.slv-dot {
+  width: 8px;
+  height: 8px;
+  border-radius: 50%;
+  background: #fff;
+  animation: slv-blink 1.2s ease-in-out infinite;
+}
+
+@keyframes slv-blink {
+  50% { opacity: 0.25; }
+}
+
+.slv-end {
+  height: 32px;
+  margin-left: auto;
+  padding: 0 16px;
+  border: 0;
+  border-radius: 16px;
+  background: #fff;
+  color: #e11d48;
+  font: inherit;
+  font-size: 14px;
+  font-weight: 700;
+  cursor: pointer;
+}
+
+.slv-hint {
+  max-width: 300px;
+  margin: 0;
+  padding: 8px 12px;
+  border-radius: 12px;
+  background: rgba(0, 0, 0, 0.35);
+  font-size: 13px;
+  line-height: 1.4;
+}
+
+.slv-bag-edit {
+  position: absolute;
+  right: 16px;
+  bottom: calc(env(safe-area-inset-bottom) + 12px);
+  z-index: 21;
+  height: 36px;
+  padding: 0 14px;
+  border: 1px solid #d1d5db;
+  border-radius: 18px;
+  background: #fff;
+  color: #047857;
+  font: inherit;
+  font-size: 13.5px;
+  font-weight: 600;
+  cursor: pointer;
+}
+
+.slv-bag-editor {
+  position: absolute;
+  right: 0;
+  bottom: 0;
+  left: 0;
+  z-index: 22;
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+  max-height: 70%;
+  padding: 14px 14px calc(env(safe-area-inset-bottom) + 14px);
+  border-radius: 18px 18px 0 0;
+  background: #fff;
+  color: #1f2328;
+}
+
+.slv-bag-editor header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+}
+
+.slv-bag-editor .slv-products {
+  max-height: none;
+  overflow-y: auto;
+}
+
+/* ── After ────────────────────────────────────────────────────────────── */
+.slv-summary {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+  max-width: 560px;
+  padding: 22px;
+  border-radius: 16px;
+  background: var(--t-neutral-0, #fff);
+}
+
+.slv-summary h2 {
+  margin: 0;
+  font-size: 20px;
+  font-weight: 600;
+}
+
+.slv-summary p {
+  margin: 0;
+  color: var(--t-neutral-500, #6b7280);
+  font-size: 14px;
+}
+
+.slv-summary dl {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 10px;
+  margin: 10px 0;
+}
+
+.slv-summary dl div {
+  padding: 12px 14px;
+  border-radius: 12px;
+  background: #f6f7f9;
+}
+
+.slv-summary dt {
+  color: var(--t-neutral-500, #6b7280);
+  font-size: 12.5px;
+}
+
+.slv-summary dd {
+  margin: 2px 0 0;
+  font-size: 22px;
+  font-weight: 700;
+  font-variant-numeric: tabular-nums;
+}
+
+.slv-summary-actions {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 14px;
+}
+
+.slv-link {
+  color: var(--t-primary-700, #047857);
+  font-size: 14px;
+  font-weight: 600;
+}
+
+@media (min-width: 769px) {
+  .slv-setup {
+    grid-template-columns: minmax(280px, 380px) minmax(0, 1fr);
+    align-items: start;
+  }
+
+  .slv-preview {
+    aspect-ratio: 9 / 14;
+  }
+
+  /* On a computer the live is a wide webcam: shown whole. */
+  .slv-live .slv-video {
+    object-fit: contain;
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .slv-dot { animation: none; }
+}

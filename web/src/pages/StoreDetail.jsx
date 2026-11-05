@@ -1,4 +1,4 @@
-import { useState, useEffect, useMemo, useCallback, useRef } from 'react';
+import { useState, useEffect, useMemo, useCallback, useRef, lazy, Suspense } from 'react';
 import EmptyArt from '../components/ui/EmptyArt';
 import { Link, useParams, useNavigate } from 'react-router-dom';
 import useSeo, { storeSchema, breadcrumbs, clampText } from '../lib/seo';
@@ -70,6 +70,9 @@ import Select from '../components/ui/Select';
 import useProductPeek from '../components/peek/useProductPeek';
 import { ShopCoverArt, ShopLogoArt } from '../components/shop/ShopArt';
 import ShopInviteCard from '../components/shop/ShopInviteCard';
+
+// The bar to the shop's live, while it is on (loaded after the page).
+const ShopLiveBanner = lazy(() => import('../components/live/ShopLiveBanner'));
 
 const SORTS = [
   { key: 'newest', label: 'Newest', sortBy: 'createdAt', sortOrder: 'desc' },
@@ -601,6 +604,8 @@ export default function StoreDetail() {
               </div>
             </div>
 
+            <Suspense fallback={null}><ShopLiveBanner storeId={store.id} /></Suspense>
+
             <div className="shop-m-hero">
               <div className="shop-m-backdrop" aria-hidden="true">
                 {banner ? <img src={resolveImg(banner)} srcSet={srcSetFor(banner)} sizes="(max-width: 768px) 100vw, 1200px" alt="" fetchPriority="high" /> : <ShopCoverArt name={store.name} />}
@@ -978,6 +983,13 @@ export default function StoreDetail() {
             </div>
           </div>
         </div>
+
+        {/* The shop's live, while it is on (computers; phones show it under the top bar). */}
+        {!isPhone && (
+          <div className="shop-container">
+            <Suspense fallback={null}><ShopLiveBanner storeId={store.id} /></Suspense>
+          </div>
+        )}
 
         {/* Away notice (computers) */}
         {!isPhone && awayNotice && (

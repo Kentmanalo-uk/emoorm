@@ -1,4 +1,4 @@
-import { memo, useState, useEffect, useRef, useCallback } from 'react';
+import { memo, useState, useEffect, useRef, useCallback, lazy, Suspense } from 'react';
 import { Link, useNavigate } from 'react-router-dom';
 import { productKind } from '../lib/productKinds';
 import useSeo from '../lib/seo';
@@ -28,9 +28,13 @@ import { freshBoot } from '../lib/boot';
 import { POPULAR_SUGGESTIONS, loadRecent, saveRecent } from '../lib/buyerSearch';
 import CategoryIcon, { CategoryIconGradients } from '../components/CategoryIcon';
 import TodayRail from '../components/today/TodayRail';
+
 import useStorePeek from '../components/peek/useStorePeek';
 import { ShopCoverArt, ShopLogoArt } from '../components/shop/ShopArt';
 import { fetchForYou } from '../lib/forYou';
+
+// Shops selling live right now (hidden when none). Loaded after the page.
+const LiveNow = lazy(() => import('../components/live/LiveNow'));
 
 const EXPLORE_ROWS = 5;
 const EXPLORE_QUERY = { sortBy: 'createdAt', sortOrder: 'desc' };
@@ -400,6 +404,10 @@ const Home = () => {
           </div>
         </div>
       </section>
+
+      <Suspense fallback={null}>
+        <div className="container"><LiveNow /></div>
+      </Suspense>
 
       {/* Available Today: fresh items for a limited time (hidden when none). */}
       <TodayRail />

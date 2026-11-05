@@ -1,0 +1,281 @@
+/* Home's "Live now" row and the live cards. */
+.lnow {
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+  margin: 12px 0;
+}
+
+.lnow-head {
+  display: flex;
+  align-items: baseline;
+  gap: 10px;
+  padding: 0 2px;
+}
+
+.lnow-head h2 {
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+  margin: 0;
+  font-size: 18px;
+  font-weight: 700;
+}
+
+.lnow-head > span {
+  color: var(--t-neutral-500, #6b7280);
+  font-size: 13px;
+}
+
+.lnow-dot {
+  width: 9px;
+  height: 9px;
+  border-radius: 50%;
+  background: #f43f5e;
+  box-shadow: 0 0 0 0 rgba(244, 63, 94, 0.5);
+  animation: lnow-pulse 1.6s ease-out infinite;
+}
+
+@keyframes lnow-pulse {
+  to { box-shadow: 0 0 0 9px rgba(244, 63, 94, 0); }
+}
+
+.lnow-row {
+  display: flex;
+  gap: 10px;
+  overflow-x: auto;
+  scroll-snap-type: x mandatory;
+  scrollbar-width: none;
+  padding-bottom: 2px;
+}
+
+.lnow-row::-webkit-scrollbar {
+  display: none;
+}
+
+.lnow-card {
+  position: relative;
+  flex: 0 0 auto;
+  width: 138px;
+  aspect-ratio: 9 / 14;
+  overflow: hidden;
+  border-radius: 14px;
+  background: #1f2328;
+  color: #fff;
+  text-decoration: none;
+  scroll-snap-align: start;
+  isolation: isolate;
+}
+
+.lnow-thumb {
+  position: absolute;
+  inset: 0;
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+  transition: transform 0.3s ease;
+}
+
+.lnow-thumb.is-blank {
+  background: linear-gradient(160deg, #055d07, #0e7c3a 55%, #f43f5e);
+}
+
+.lnow-card:hover .lnow-thumb {
+  transform: scale(1.04);
+}
+
+.lnow-card::after {
+  content: '';
+  position: absolute;
+  inset: 45% 0 0;
+  z-index: 0;
+  background: linear-gradient(transparent, rgba(0, 0, 0, 0.72));
+}
+
+.lnow-badges {
+  position: absolute;
+  top: 7px;
+  left: 7px;
+  z-index: 1;
+  display: flex;
+  gap: 4px;
+}
+
+.lnow-live,
+.lnow-viewers {
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+  padding: 2px 6px;
+  border-radius: 5px;
+  font-size: 10.5px;
+  font-weight: 800;
+  letter-spacing: 0.04em;
+}
+
+.lnow-live {
+  background: #f43f5e;
+}
+
+.lnow-viewers {
+  background: rgba(0, 0, 0, 0.45);
+  font-weight: 600;
+  letter-spacing: 0;
+}
+
+/* Three bars rising and falling: the sign for "on air". */
+.lnow-bars {
+  display: inline-flex;
+  align-items: flex-end;
+  gap: 1.5px;
+  height: 9px;
+}
+
+.lnow-bars i {
+  width: 2px;
+  height: 100%;
+  border-radius: 1px;
+  background: #fff;
+  transform-origin: bottom;
+  animation: lnow-bar 0.9s ease-in-out infinite;
+}
+
+.lnow-bars i:nth-child(2) { animation-delay: -0.3s; }
+.lnow-bars i:nth-child(3) { animation-delay: -0.6s; }
+
+@keyframes lnow-bar {
+  0%, 100% { transform: scaleY(0.35); }
+  50% { transform: scaleY(1); }
+}
+
+.lnow-foot {
+  position: absolute;
+  right: 8px;
+  bottom: 8px;
+  left: 8px;
+  z-index: 1;
+  display: flex;
+  align-items: center;
+  gap: 6px;
+}
+
+.lnow-foot img,
+.lnow-logo-blank {
+  flex-shrink: 0;
+  width: 24px;
+  height: 24px;
+  border: 1.5px solid #fff;
+  border-radius: 50%;
+  object-fit: cover;
+  background: #fff;
+}
+
+.lnow-logo-blank {
+  display: grid;
+  place-items: center;
+  color: #055d07;
+}
+
+.lnow-text {
+  display: flex;
+  flex-direction: column;
+  min-width: 0;
+  line-height: 1.2;
+}
+
+.lnow-text strong,
+.lnow-text span {
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.lnow-text strong {
+  font-size: 12px;
+  font-weight: 600;
+}
+
+.lnow-text span {
+  color: rgba(255, 255, 255, 0.82);
+  font-size: 10.5px;
+}
+
+@media (min-width: 769px) {
+  .lnow-card {
+    width: 168px;
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .lnow-dot,
+  .lnow-bars i { animation: none; }
+}
+
+/* A shop's page while it is live. */
+.lnow-banner {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  margin: 10px 12px;
+  padding: 8px 12px 8px 8px;
+  border-radius: 14px;
+  background: linear-gradient(100deg, #f43f5e, #ff6a3d);
+  color: #fff;
+  text-decoration: none;
+  box-shadow: 0 6px 18px rgba(244, 63, 94, 0.25);
+}
+
+.lnow-banner img,
+.lnow-banner-blank {
+  flex-shrink: 0;
+  width: 40px;
+  height: 52px;
+  border-radius: 8px;
+  object-fit: cover;
+  background: rgba(255, 255, 255, 0.25);
+}
+
+.lnow-banner .lnow-live {
+  background: rgba(0, 0, 0, 0.22);
+}
+
+.lnow-banner-text {
+  display: flex;
+  flex-direction: column;
+  flex: 1;
+  min-width: 0;
+  line-height: 1.25;
+}
+
+.lnow-banner-text strong {
+  font-size: 14px;
+  font-weight: 700;
+}
+
+.lnow-banner-text span {
+  overflow: hidden;
+  color: rgba(255, 255, 255, 0.9);
+  font-size: 12.5px;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.lnow-banner-go {
+  display: inline-flex;
+  flex-shrink: 0;
+  align-items: center;
+  gap: 2px;
+  height: 30px;
+  padding: 0 12px;
+  border-radius: 15px;
+  background: #fff;
+  color: #e11d48;
+  font-size: 13px;
+  font-weight: 700;
+}
+
+@media (min-width: 769px) {
+  .lnow-banner {
+    margin: 0 0 16px;
+  }
+}

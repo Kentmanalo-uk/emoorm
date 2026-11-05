@@ -8,7 +8,7 @@ import {
   Headset, ArrowsLeftRight, List, X,
   CaretLeft, Plus, LockSimple, House, ChatCircleDots, Megaphone, User as UserIcon, Check, Sparkle,
   NotePencil, Receipt, UsersThree, Lifebuoy, Gift, CalendarCheck,
-  ArrowSquareOut,
+  ArrowSquareOut, VideoCamera,
 } from '../../lib/icons';
 import { SHOP_TEMPLATES } from '../../lib/shopTemplates';
 import axios from '../../lib/axios';
@@ -426,6 +426,10 @@ export default function SellerLayout() {
               <Megaphone size={17} weight="fill" /> <span>Marketing</span>
             </NavLink>
 
+            <NavLink to="/seller/live" className={navCls} title="Go live">
+              <VideoCamera size={17} weight="fill" /> <span>Go live</span>
+            </NavLink>
+
             <NavGroup id="business" icon={PieChart} label="Business" {...group}>
               <NavLink to="/seller/analytics" className={subNavCls}>Analytics</NavLink>
               <NavLink to="/seller/finance" className={subNavCls}>Earnings</NavLink>
@@ -782,6 +786,7 @@ const CREATE = [
   { label: 'Package', note: 'Products sold together', to: '/seller/products/new?type=package', icon: Gift },
   { label: 'Available today', note: 'A post on today’s menu', to: '/seller/today/new', icon: CalendarCheck },
   { label: 'Announcement', note: 'News for your followers', to: '/seller/marketing', icon: Megaphone },
+  { label: 'Live', note: 'Sell on camera, now', to: '/seller/live', icon: VideoCamera },
 ];
 
 function CreateMenu() {
@@ -845,6 +850,7 @@ const LABELS = {
   '/seller/verification': 'Verify identity',
   '/seller/menu': 'Menu',
   '/seller/marketing': 'Marketing',
+  '/seller/live': 'Go live',
   '/seller/decorate': 'Decorate my shop',
   '/seller/decorate/home': 'Shop home',
   '/seller/reviews': 'Reviews',
@@ -880,6 +886,7 @@ const PHONE_TITLES = {
   '/seller/messages': 'Chat',
   '/seller/assistant': 'Ate Moormy',
   '/seller/marketing': 'Marketing',
+  '/seller/live': 'Go live',
   '/seller/menu': 'Me',
   '/seller/decorate': 'Decorate my shop',
   '/seller/decorate/home': 'Shop home',

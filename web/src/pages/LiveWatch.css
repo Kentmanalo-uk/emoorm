@@ -1,0 +1,551 @@
+/*
+ * Watching a live: the video fills the screen on a phone; on a computer it
+ * stands in the middle at phone shape over a blurred still of itself.
+ */
+.lw {
+  position: fixed;
+  inset: 0;
+  z-index: 200;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  overflow: hidden;
+  background: #0b0d10;
+  color: #fff;
+}
+
+.lw-backdrop {
+  position: absolute;
+  inset: -40px;
+  background: #0b0d10 center / cover no-repeat;
+  filter: blur(36px) brightness(0.45);
+  transform: scale(1.1);
+}
+
+.lw-stage {
+  position: relative;
+  width: 100%;
+  height: 100%;
+  overflow: hidden;
+  background: #000;
+  -webkit-tap-highlight-color: transparent;
+  touch-action: manipulation;
+  user-select: none;
+}
+
+.lw-video,
+.lw-poster {
+  position: absolute;
+  inset: 0;
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+}
+
+.lw-poster {
+  filter: blur(10px);
+  transform: scale(1.06);
+}
+
+/* A landscape camera (a computer's) is shown whole, not cropped. */
+.lw.is-wide .lw-video {
+  object-fit: contain;
+}
+
+.lw-shade {
+  position: absolute;
+  right: 0;
+  left: 0;
+  pointer-events: none;
+}
+
+.lw-shade.is-top {
+  top: 0;
+  height: 120px;
+  background: linear-gradient(rgba(0, 0, 0, 0.45), transparent);
+}
+
+.lw-shade.is-bottom {
+  bottom: 0;
+  height: 46%;
+  background: linear-gradient(transparent, rgba(0, 0, 0, 0.55));
+}
+
+/* ── Top: the shop, LIVE, viewers ─────────────────────────────────────── */
+.lw-top {
+  position: absolute;
+  top: 0;
+  right: 0;
+  left: 0;
+  z-index: 5;
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  padding: calc(env(safe-area-inset-top) + 12px) 10px 0 12px;
+}
+
+.lw-shop {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  min-width: 0;
+  max-width: 58%;
+  padding: 4px 12px 4px 4px;
+  border-radius: 24px;
+  background: rgba(0, 0, 0, 0.32);
+  color: #fff;
+  text-decoration: none;
+}
+
+.lw-shop img,
+.lw-shop-blank {
+  flex-shrink: 0;
+  width: 34px;
+  height: 34px;
+  border-radius: 50%;
+  object-fit: cover;
+  background: #fff;
+}
+
+.lw-shop-blank {
+  display: grid;
+  place-items: center;
+  color: #055d07;
+}
+
+.lw-shop-text {
+  display: flex;
+  flex-direction: column;
+  min-width: 0;
+  line-height: 1.2;
+}
+
+.lw-shop-text strong,
+.lw-shop-text span {
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.lw-shop-text strong {
+  font-size: 13.5px;
+  font-weight: 600;
+}
+
+.lw-shop-text span {
+  color: rgba(255, 255, 255, 0.82);
+  font-size: 11.5px;
+}
+
+.lw-top-right {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  margin-left: auto;
+}
+
+.lw-badge {
+  padding: 3px 7px;
+  border-radius: 6px;
+  background: #f43f5e;
+  font-size: 11px;
+  font-weight: 800;
+  letter-spacing: 0.06em;
+}
+
+.lw-viewers {
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+  padding: 3px 8px;
+  border-radius: 6px;
+  background: rgba(0, 0, 0, 0.36);
+  font-size: 12px;
+  font-weight: 600;
+  font-variant-numeric: tabular-nums;
+}
+
+.lw-icon {
+  display: grid;
+  place-items: center;
+  width: 34px;
+  height: 34px;
+  padding: 0;
+  border: 0;
+  border-radius: 50%;
+  background: rgba(0, 0, 0, 0.32);
+  color: #fff;
+  cursor: pointer;
+}
+
+/* ── Loading and notices ──────────────────────────────────────────────── */
+.lw-loading {
+  position: absolute;
+  top: 50%;
+  left: 50%;
+  z-index: 3;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 12px;
+  max-width: 80%;
+  color: rgba(255, 255, 255, 0.92);
+  font-size: 14px;
+  text-align: center;
+  text-shadow: 0 1px 3px rgba(0, 0, 0, 0.5);
+  transform: translate(-50%, -50%);
+}
+
+.lw-spinner {
+  width: 34px;
+  height: 34px;
+  border: 3px solid rgba(255, 255, 255, 0.25);
+  border-top-color: #fff;
+  border-radius: 50%;
+  animation: lw-spin 0.8s linear infinite;
+}
+
+@keyframes lw-spin {
+  to { transform: rotate(360deg); }
+}
+
+.lw-chip {
+  position: absolute;
+  top: calc(env(safe-area-inset-top) + 62px);
+  left: 50%;
+  z-index: 6;
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  padding: 7px 14px;
+  border: 0;
+  border-radius: 18px;
+  background: rgba(0, 0, 0, 0.55);
+  color: #fff;
+  font: inherit;
+  font-size: 13px;
+  font-weight: 600;
+  white-space: nowrap;
+  transform: translateX(-50%);
+}
+
+.lw-chip.is-warn {
+  background: rgba(180, 83, 9, 0.85);
+}
+
+.lw-sound {
+  cursor: pointer;
+  animation: lw-nudge 2.4s ease-in-out infinite;
+}
+
+@keyframes lw-nudge {
+  0%, 100% { transform: translateX(-50%) scale(1); }
+  50% { transform: translateX(-50%) scale(1.05); }
+}
+
+/* ── Bottom: comments, the product on show, the composer ──────────────── */
+.lw-bottom {
+  position: absolute;
+  right: 0;
+  bottom: 0;
+  left: 0;
+  z-index: 5;
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+  padding: 0 12px calc(env(safe-area-inset-bottom) + 12px);
+}
+
+.lw-bottom .lv-comments {
+  width: min(78%, 360px);
+}
+
+.lw-pinned {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  width: min(86%, 380px);
+  padding: 8px;
+  border-radius: 14px;
+  background: #fff;
+  color: #1f2328;
+  box-shadow: 0 6px 20px rgba(0, 0, 0, 0.25);
+  animation: lw-pop 0.32s cubic-bezier(0.2, 1.3, 0.4, 1);
+}
+
+@keyframes lw-pop {
+  from { opacity: 0; transform: translateY(12px) scale(0.94); }
+  to { opacity: 1; transform: none; }
+}
+
+.lw-pinned-photo {
+  position: relative;
+  flex-shrink: 0;
+  width: 56px;
+  height: 56px;
+  padding: 0;
+  overflow: hidden;
+  border: 0;
+  border-radius: 10px;
+  background: #f2f3f5;
+  cursor: pointer;
+}
+
+.lw-pinned-photo img {
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+}
+
+.lw-pinned-no {
+  position: absolute;
+  top: 0;
+  left: 0;
+  padding: 1px 6px;
+  border-radius: 0 0 7px;
+  background: rgba(0, 0, 0, 0.62);
+  color: #fff;
+  font-size: 11px;
+  font-weight: 700;
+}
+
+.lw-pinned-info {
+  display: flex;
+  flex-direction: column;
+  flex: 1;
+  gap: 1px;
+  min-width: 0;
+}
+
+.lw-pinned-tag {
+  display: inline-flex;
+  align-items: center;
+  gap: 3px;
+  color: #047857;
+  font-size: 11px;
+  font-weight: 600;
+}
+
+.lw-pinned-name {
+  padding: 0;
+  overflow: hidden;
+  border: 0;
+  background: none;
+  color: #1f2328;
+  font: inherit;
+  font-size: 13.5px;
+  text-align: left;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+  cursor: pointer;
+}
+
+.lw-pinned-info strong {
+  color: #e11d48;
+  font-size: 15px;
+  font-weight: 700;
+}
+
+.lw-pinned-buy {
+  flex-shrink: 0;
+  height: 36px;
+  padding: 0 16px;
+  border: 0;
+  border-radius: 18px;
+  background: linear-gradient(100deg, #ff5a3c, #f43f5e);
+  color: #fff;
+  font: inherit;
+  font-size: 14px;
+  font-weight: 700;
+  cursor: pointer;
+}
+
+.lw-pinned-buy:disabled {
+  background: #9ca3af;
+  cursor: default;
+}
+
+.lw-actions {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+
+.lw-compose {
+  display: flex;
+  flex: 1;
+  align-items: center;
+  min-width: 0;
+  height: 42px;
+  padding: 0 4px 0 16px;
+  border-radius: 21px;
+  background: rgba(0, 0, 0, 0.38);
+}
+
+.lw-compose input {
+  flex: 1;
+  min-width: 0;
+  height: 100%;
+  padding: 0;
+  border: 0;
+  outline: none;
+  background: none;
+  color: #fff;
+  font: inherit;
+  font-size: 14px;
+}
+
+.lw-compose input::placeholder {
+  color: rgba(255, 255, 255, 0.72);
+}
+
+.lw-send {
+  display: grid;
+  place-items: center;
+  width: 34px;
+  height: 34px;
+  padding: 0;
+  border: 0;
+  border-radius: 50%;
+  background: #fff;
+  color: #055d07;
+  cursor: pointer;
+}
+
+.lw-round {
+  position: relative;
+  display: grid;
+  flex-shrink: 0;
+  place-items: center;
+  width: 42px;
+  height: 42px;
+  padding: 0;
+  border: 0;
+  border-radius: 50%;
+  background: rgba(0, 0, 0, 0.38);
+  color: #fff;
+  cursor: pointer;
+  transition: transform 0.12s ease;
+}
+
+.lw-round:active {
+  transform: scale(0.88);
+}
+
+.lw-round.is-bag {
+  background: linear-gradient(140deg, #ff8a3d, #f43f5e);
+}
+
+.lw-round.is-heart {
+  color: #ff4f7b;
+}
+
+.lw-round-count {
+  position: absolute;
+  top: -3px;
+  right: -3px;
+  min-width: 18px;
+  height: 18px;
+  padding: 0 5px;
+  border: 2px solid #f43f5e;
+  border-radius: 9px;
+  background: #fff;
+  color: #f43f5e;
+  font-size: 10.5px;
+  font-weight: 800;
+  line-height: 14px;
+  text-align: center;
+}
+
+/* ── Ended ────────────────────────────────────────────────────────────── */
+.lw-ended {
+  position: relative;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 8px;
+  max-width: 340px;
+  padding: 24px;
+  text-align: center;
+}
+
+.lw-ended-logo {
+  width: 76px;
+  height: 76px;
+  margin-bottom: 8px;
+  border: 3px solid rgba(255, 255, 255, 0.85);
+  border-radius: 50%;
+  object-fit: cover;
+  background: #fff;
+}
+
+.lw-ended-logo.is-blank {
+  display: grid;
+  place-items: center;
+  color: #055d07;
+}
+
+.lw-ended h1 {
+  margin: 0;
+  font-size: 22px;
+  font-weight: 600;
+}
+
+.lw-ended p {
+  margin: 0 0 12px;
+  color: rgba(255, 255, 255, 0.78);
+  font-size: 14px;
+}
+
+.lw-ended-actions {
+  display: flex;
+  flex-wrap: wrap;
+  justify-content: center;
+  gap: 10px;
+}
+
+.lw-btn {
+  display: inline-flex;
+  align-items: center;
+  height: 42px;
+  padding: 0 20px;
+  border: 1px solid rgba(255, 255, 255, 0.4);
+  border-radius: 21px;
+  color: #fff;
+  font-size: 14px;
+  font-weight: 600;
+  text-decoration: none;
+}
+
+.lw-btn.is-primary {
+  border-color: transparent;
+  background: #fff;
+  color: #055d07;
+}
+
+/* Computers: the live at phone shape in the middle. */
+@media (min-width: 769px) {
+  .lw-stage {
+    width: min(100vw - 48px, calc((100vh - 48px) * 9 / 16));
+    height: calc(100vh - 48px);
+    border-radius: 18px;
+    box-shadow: 0 30px 80px rgba(0, 0, 0, 0.5);
+  }
+
+  .lw.is-wide .lw-stage {
+    width: min(100vw - 48px, calc((100vh - 48px) * 16 / 10));
+  }
+
+  .lw-top {
+    padding-top: 14px;
+  }
+
+  .lw-chip {
+    top: 64px;
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .lw-pinned,
+  .lw-sound { animation: none; }
+}

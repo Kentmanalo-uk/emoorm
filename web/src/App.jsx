@@ -1,4 +1,5 @@
 import { Suspense, lazy, useState } from 'react';
+import { useDockedLive } from './lib/liveDock';
 import { BrowserRouter as Router, Routes, Route, Navigate, useLocation, useSearchParams } from 'react-router-dom';
 import { QueryClient, QueryClientProvider } from '@tanstack/react-query';
 import { bootData, freshBoot } from './lib/boot';
@@ -52,6 +53,8 @@ const Messages = lazy(() => import('./pages/Messages'));
 const Addresses = lazy(() => import('./pages/Addresses'));
 const Stores = lazy(() => import('./pages/Stores'));
 const StoreDetail = lazy(() => import('./pages/StoreDetail'));
+const LiveWatch = lazy(() => import('./pages/LiveWatch'));
+const LiveDock = lazy(() => import('./components/live/LiveDock'));
 const PublicProfile = lazy(() => import('./pages/PublicProfile'));
 const MunicipalityShowcase = lazy(() => import('./pages/MunicipalityShowcase'));
 const Wishlist = lazy(() => import('./pages/Wishlist'));
@@ -108,6 +111,7 @@ const SellerShopHome = lazy(() => import('./pages/SellerShopHome'));
 const SellerFulfillment = lazy(() => import('./pages/SellerFulfillment'));
 const SellerSettings = lazy(() => import('./pages/SellerSettings'));
 const SellerToday = lazy(() => import('./pages/SellerToday'));
+const SellerLive = lazy(() => import('./pages/SellerLive'));
 const SellerTodayPost = lazy(() => import('./pages/SellerTodayPost'));
 const SellerWelcome = lazy(() => import('./pages/SellerWelcome'));
 const MunicipalityGallery = lazy(() => import('./pages/MunicipalityGallery'));
@@ -249,6 +253,13 @@ function SearchRoute() {
   return isPhone && !asked ? <SearchStart /> : <Products />;
 }
 
+/** The live a shopper stepped away from, in the corner (loaded only then). */
+function LiveDockSlot() {
+  const docked = useDockedLive();
+  if (!docked) return null;
+  return <Suspense fallback={null}><LiveDock /></Suspense>;
+}
+
 function AppRoutes() {
   const location = useLocation();
   const isPhone = usePhoneLayout();
@@ -266,6 +277,7 @@ function AppRoutes() {
       <OfflineBanner />
       <AppInstallPing />
       <AppUpdateBar />
+      <LiveDockSlot />
       {/* A page that crashes shows "Reload" in its place; another page clears it. */}
       <ErrorBoundary resetKey={(background || location).pathname}>
       <Suspense fallback={<RouteLoading />}>
@@ -290,6 +302,7 @@ function AppRoutes() {
         <Route path="/stores/map" element={<StoreMap />} />
         <Route path="/today" element={<AvailableToday />} />
         <Route path="/store/:slug" element={<StoreDetail />} />
+        <Route path="/live/:id" element={<LiveWatch />} />
         <Route path="/invite/:code" element={<InviteLanding />} />
         <Route path="/u/:id" element={<PublicProfile />} />
         <Route path="/municipality/:id" element={<MunicipalityShowcase />} />
@@ -380,6 +393,7 @@ function AppRoutes() {
           <Route path="today" element={<SellerToday />} />
           <Route path="today/new" element={<SellerTodayPost />} />
           <Route path="today/:id/edit" element={<SellerTodayPost />} />
+          <Route path="live" element={<SellerLive />} />
           <Route path="reviews" element={<SellerReviews />} />
           <Route path="questions" element={<SellerQuestions />} />
           <Route path="offers" element={<SellerOffers />} />

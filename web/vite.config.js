@@ -1,4 +1,4 @@
-import { defineConfig } from 'vite'
+import { defineConfig, searchForWorkspaceRoot } from 'vite'
 import react from '@vitejs/plugin-react'
 import postcss from 'postcss'
 
@@ -94,6 +94,8 @@ export default defineConfig({
   // Listen on the LAN as well, so phones on the same Wi-Fi can open the dev site.
   server: {
     host: true,
+    // The live player and publisher live beside web/ in livestream/client.
+    fs: { allow: [searchForWorkspaceRoot(process.cwd()), '../livestream/client'] },
   },
   build: {
     // Keep classic media-query syntax (max-width: 768px) in the built CSS.

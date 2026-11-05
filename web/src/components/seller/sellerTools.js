@@ -1,7 +1,7 @@
 import {
   BellArt, BrushArt, BuoyArt, BubbleArt, ChartArt, ChatArt, GearArt, HeadsetArt, IdCardArt, MegaphoneArt,
   PackageArt, PinArt, PlusArt, PotArt, QrArt, QuestionArt, ReceiptArt, ReturnArt, ShopArt, SparkArt,
-  StarArt, TagArt, TONES, TruckArt, WalletArt,
+  StarArt, TagArt, TONES, TruckArt, WalletArt, LiveArt,
 } from '../art/FlatArt';
 
 /**
@@ -25,6 +25,7 @@ export const TOOL_SECTIONS = [
       { key: 'add', to: '/seller/products/new', label: 'Add product', Art: PlusArt, tour: 'add-product' },
       { key: 'today', to: '/seller/today', label: "Today's menu", Art: PotArt, tone: TONES.pink },
       { key: 'offers', to: '/seller/offers', label: 'Offers', Art: TagArt },
+      { key: 'live', to: '/seller/live', label: 'Go live', Art: LiveArt },
     ],
   },
   {

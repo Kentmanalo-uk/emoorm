@@ -406,6 +406,20 @@ export function MegaphoneArt({ size = 34, tone }) {
   );
 }
 
+/** Go live: a video camera, its lens lit, the red "on air" dot. */
+export function LiveArt({ size = 34, tone }) {
+  const [tint, deep] = tone || ROSE;
+  return (
+    <svg {...box(size)}>
+      <rect x="4" y="12" width="30" height="24" rx="7" fill={deep} />
+      <path d="M34 21.5 44 15v18l-10-6.5z" fill={tint} />
+      <circle cx="19" cy="24" r="6.5" fill={tint} />
+      <circle cx="19" cy="24" r="3" fill={CUT} />
+      <circle cx="10.5" cy="17.5" r="2.2" fill={CUT} />
+    </svg>
+  );
+}
+
 /* ── The seller's shop tools ─────────────────────────────────────────── */
 
 /**

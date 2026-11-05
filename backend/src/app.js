@@ -220,10 +220,23 @@ app.use(cors({
   },
   credentials: true,
   methods: ['GET', 'POST', 'PUT', 'PATCH', 'DELETE', 'OPTIONS'],
-  allowedHeaders: ['Content-Type', 'Authorization', 'X-Session'],
+  // X-Live-Key: the seller's page sending its live's video (livestream/).
+  allowedHeaders: ['Content-Type', 'Authorization', 'X-Session', 'X-Live-Key'],
 }));
 
 app.use(csrfOriginGuard);
+
+// Live selling (livestream/, kept in memory: nothing is recorded). Before the
+// slow-request log, the API's rate limit and its request queue: a viewer
+// holds a request open while the next second of video is on its way, and
+// those must neither be logged as slow nor take the places of page loads.
+// It keeps limits of its own.
+{
+  const { authenticate, optionalAuth } = require('./middleware/auth');
+  app.use(`${config.apiPrefix}/live`, require('../../livestream')({
+    express, authenticate, optionalAuth, hooks: require('./services/live.hooks'),
+  }));
+}
 
 // Any request slower than SLOW_REQUEST_MS (default 3 seconds) is written to
 // the log with its time, so a slow page or a 504 can be traced to the

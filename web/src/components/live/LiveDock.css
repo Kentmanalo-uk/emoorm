@@ -1,0 +1,83 @@
+/* The live in the corner while the shopper looks at a product. */
+.ldock {
+  position: fixed;
+  right: 12px;
+  bottom: calc(env(safe-area-inset-bottom) + 84px);
+  z-index: 150;
+  width: 112px;
+  aspect-ratio: 9 / 16;
+  overflow: hidden;
+  border-radius: 14px;
+  background: #111418;
+  box-shadow: 0 10px 28px rgba(0, 0, 0, 0.32);
+  opacity: 0;
+  transform: translateY(12px) scale(0.92);
+  animation: ldock-in 0.28s cubic-bezier(0.2, 0.9, 0.3, 1.1) forwards;
+}
+
+@keyframes ldock-in {
+  to { opacity: 1; transform: none; }
+}
+
+.ldock-open {
+  display: block;
+  width: 100%;
+  height: 100%;
+  padding: 0;
+  border: 0;
+  background: none;
+  cursor: pointer;
+}
+
+.ldock video {
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+  opacity: 0;
+  transition: opacity 0.25s ease;
+}
+
+.ldock.is-ready video {
+  opacity: 1;
+}
+
+.ldock-live {
+  position: absolute;
+  top: 6px;
+  left: 6px;
+  padding: 1px 5px;
+  border-radius: 4px;
+  background: #f43f5e;
+  color: #fff;
+  font-size: 9.5px;
+  font-weight: 800;
+  letter-spacing: 0.05em;
+}
+
+.ldock-close {
+  position: absolute;
+  top: 5px;
+  right: 5px;
+  display: grid;
+  place-items: center;
+  width: 22px;
+  height: 22px;
+  padding: 0;
+  border: 0;
+  border-radius: 50%;
+  background: rgba(0, 0, 0, 0.55);
+  color: #fff;
+  cursor: pointer;
+}
+
+@media (min-width: 769px) {
+  .ldock {
+    right: 24px;
+    bottom: 24px;
+    width: 150px;
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .ldock { animation: none; opacity: 1; transform: none; }
+}
