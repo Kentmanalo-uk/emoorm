@@ -97,7 +97,7 @@ export default function InviteFriends() {
         <PullScrollView onPull={load} showsVerticalScrollIndicator={false} contentContainerStyle={styles.fill}>
           <EmptyState
             page
-            art="launch"
+            art="invites"
             title={me.failed ? 'Could not load your invites' : 'Invites are off right now'}
             text={me.failed ? 'Pull down to try again.' : 'Check back later.'}
             actions={[{ label: 'Home', onPress: () => router.replace('/') }]}

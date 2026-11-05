@@ -38,6 +38,17 @@ import { SwitchAccountHost } from '../src/components/SwitchAccountSheet';
 // shopper was on (web pages/AuthSheet.css). iOS 26: the system's own sheet
 // (swipe down to close). Elsewhere: it slides up from the bottom over the
 // page, which stays behind it as on the website.
+// Pages slide in from the right as on iPhones, the page behind easing left
+// with it, on Android too (react-native-screens' ios_from_right), instead
+// of Android's own rise-and-fade. A swipe from anywhere on the left half
+// goes back on iPhones.
+const PAGE_TRANSITION = {
+  headerShown: false,
+  animation: 'ios_from_right',
+  gestureEnabled: true,
+  fullScreenGestureEnabled: true,
+};
+
 const AUTH_SHEET = liquidGlass
   ? { presentation: 'modal', gestureEnabled: true }
   : {
@@ -215,7 +226,7 @@ function AppRoot() {
         // Under the opening splash (BrandSplash) until the first page can show.
         <View style={styles.splash} />
       ) : (
-        <Stack screenOptions={{ headerShown: false }} screenLayout={repaintOnTheme}>
+        <Stack screenOptions={PAGE_TRANSITION} screenLayout={repaintOnTheme}>
           <Stack.Screen name="(tabs)" />
           <Stack.Screen
             name="product/[slug]"

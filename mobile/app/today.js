@@ -153,7 +153,7 @@ export default function AvailableToday() {
   ) : items.length === 0 ? (
     <EmptyState
       page
-      art="calendar"
+      art="today"
       style={styles.empty}
       title={state.enabled ? 'Nothing available right now' : 'Available Today is off for now'}
       text={state.enabled

@@ -248,6 +248,20 @@ export function ParcelArt({ size = 34, tone }) {
 }
 
 /** My Offers: a price tag. */
+/** Go live: a video camera, its lens lit, the white "on air" dot (web FlatArt LiveArt). */
+export function LiveArt({ size = 34, tone }) {
+  const [tint, deep] = tone || ROSE;
+  return (
+    <Svg {...box(size)}>
+      <Rect x="4" y="12" width="30" height="24" rx="7" fill={deep} />
+      <Path d="M34 21.5 44 15v18l-10-6.5z" fill={tint} />
+      <Circle cx="19" cy="24" r="6.5" fill={tint} />
+      <Circle cx="19" cy="24" r="3" fill={CUT} />
+      <Circle cx="10.5" cy="17.5" r="2.2" fill={CUT} />
+    </Svg>
+  );
+}
+
 export function TagArt({ size = 34, tone }) {
   const [tint, deep] = tone || AMBER;
   return (

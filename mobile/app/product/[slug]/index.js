@@ -26,6 +26,7 @@ import useCartStore, { standaloneLine } from '../../../src/store/cartStore';
 import { startBuyNow } from '../../../src/lib/buyNow';
 import useWishlistStore from '../../../src/store/wishlistStore';
 import { getCachedData, setCachedData, invalidateCachedData } from '../../../src/lib/dataCache';
+import { takePrefetchedProduct } from '../../../src/lib/productPrefetch';
 import { galleryImg, resolveImg } from '../../../src/lib/media';
 import { optionImage } from '../../../src/lib/variationImage';
 import { toast } from '../../../src/lib/toast';
@@ -200,7 +201,8 @@ function ProductPage({ slug, via }) {
     let live = true;
     (async () => {
       try {
-        const res = await apiClient.get(`/products/slug/${slug}`);
+        // A touch on the card may already have asked (lib/productPrefetch).
+        const res = await (takePrefetchedProduct(slug) || apiClient.get(`/products/slug/${slug}`));
         if (!live) return;
         setProduct(res.data);
         setQuantity((q) => Math.max(q, minOrder(res.data)));

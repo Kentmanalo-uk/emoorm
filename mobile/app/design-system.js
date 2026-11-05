@@ -153,7 +153,7 @@ export default function DesignSystemDemo() {
 
         <Section id="empty" only={params.only} title="Empty state">
           <View style={styles.sunken}>
-            <EmptyState flat art="calendar" title="Nothing available right now" text="Shops post fresh food and produce here during the day. Check back soon." actions={[{ label: 'Browse products', icon: ShoppingBagIcon, onPress: () => { } }]} />
+            <EmptyState flat art="today" title="Nothing available right now" text="Shops post fresh food and produce here during the day. Check back soon." actions={[{ label: 'Browse products', icon: ShoppingBagIcon, onPress: () => { } }]} />
           </View>
           <View style={styles.sunken}>
             <EmptyState art="cart" title="Your cart is empty" text="Add products to your cart." actions={[{ label: 'Browse products', onPress: () => { } }, { label: 'View wishlist', variant: 'outline', onPress: () => { } }]} />

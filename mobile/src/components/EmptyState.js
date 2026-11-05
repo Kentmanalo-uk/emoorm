@@ -20,6 +20,8 @@ import WeightWaveText from './WeightWaveText';
  *           contentContainerStyle flexGrow: 1) and centres in it
  * compact:  inside a card or section: a smaller picture and less room
  * artSize:  the EmptyArt size (default 112, compact 72)
+ * roomy:    the website's prop (a page's main empty state, drawn larger on
+ *           computers only); phones keep their size, so it changes nothing
  * inset / flat: older names: inset reads as compact; flat is the default now
  *
  * Pieces that cannot use the component (a custom layout) take the same look
@@ -27,7 +29,7 @@ import WeightWaveText from './WeightWaveText';
  */
 export default function EmptyState({
   art, icon, title, text, message, actions, actionLabel, onAction,
-  page = false, compact = false, inset = false, artSize, style, children,
+  page = false, compact = false, inset = false, artSize, roomy, style, children,
 }) {
   const small = compact || inset;
   const body = text ?? message;
@@ -40,7 +42,7 @@ export default function EmptyState({
 
   return (
     <View style={[emptyStyles.wrap, page && emptyStyles.page, small && emptyStyles.compact, style]}>
-      {art ? <EmptyArt name={art} size={artSize ?? (small ? 72 : 112)} style={emptyStyles.art} /> : null}
+      {art ? <EmptyArt name={art} size={artSize ?? (small ? 72 : 112)} roomy={roomy} style={emptyStyles.art} /> : null}
       {iconNode ? <View style={emptyStyles.art}>{iconNode}</View> : null}
       {title ? <Text style={[emptyStyles.title, small && emptyStyles.titleSmall]} accessibilityRole="header">{title}</Text> : null}
       {body ? <Text style={[emptyStyles.body, small && emptyStyles.bodySmall]}>{body}</Text> : null}

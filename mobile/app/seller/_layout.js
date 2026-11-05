@@ -39,7 +39,12 @@ export default function SellerLayout() {
   return (
     <SellerShellProvider>
       <View style={styles.screen}>
-        <Stack screenOptions={{ headerShown: false, contentStyle: styles.screen }}>
+        <Stack
+          // The same iPhone-style slide as the rest of the app (app/_layout.js).
+          screenOptions={{
+            headerShown: false, contentStyle: styles.screen, animation: 'ios_from_right', gestureEnabled: true, fullScreenGestureEnabled: true,
+          }}
+        >
           <Stack.Screen name="(tabs)" />
         </Stack>
         <SellerPhoneGuide />

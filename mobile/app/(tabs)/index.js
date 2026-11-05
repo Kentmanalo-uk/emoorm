@@ -1,6 +1,9 @@
-import { useCallback, useEffect, useRef, useState } from 'react';
 import {
-  ActivityIndicator, FlatList, Platform, Pressable, StyleSheet, Text, View, useWindowDimensions,
+  memo, useCallback, useEffect, useRef, useState,
+} from 'react';
+import {
+  ActivityIndicator, FlatList, Platform, Pressable, StyleSheet, Text, View, unstable_batchedUpdates,
+  useWindowDimensions,
 } from 'react-native';
 import { useRouter } from 'expo-router';
 import apiClient from '../../src/api/client';
@@ -14,6 +17,7 @@ import { useTabBarScroll } from '../../src/components/Glass';
 import HomeTodayRail from '../../src/components/home/HomeTodayRail';
 import useBrandRefresh from '../../src/components/useBrandRefresh';
 import { fetchForYou } from '../../src/lib/forYou';
+import LiveNow from '../../src/components/live/LiveNow';
 import HomeStoresMap from '../../src/components/home/HomeStoresMap';
 import StartSellingBubble from '../../src/components/home/StartSellingBubble';
 import { MapTrifoldIcon } from '../../src/lib/icons';
@@ -57,6 +61,34 @@ const loadAppSettings = () => {
   return settingsRequest;
 };
 
+// Each section drawn again only when its own data changes. Everything
+// above Explore is the list's header, which Home redraws whenever any
+// answer comes in; without these, every answer redrew every section above
+// it, in the middle of the shopper's scroll.
+const Banners = memo(BannerCarousel);
+const Shortcuts = memo(HomeShortcuts);
+const QuickSearch = memo(HomeQuickSearch);
+const Categories = memo(CategoryStrip);
+const Live = memo(LiveNow);
+const TodayRail = memo(HomeTodayRail);
+const StoreRow = memo(HomeStoreRow);
+const Towns = memo(MunicipalityRail);
+const StoresMap = memo(HomeStoresMap);
+const Card = memo(ProductCard);
+const ProductGrid = memo(function ProductGrid({ products, tileWidth }) {
+  return (
+    <View style={styles.grid}>
+      {products.map((product) => (
+        <Card key={product.id} product={product} variant="home" style={{ width: tileWidth }} />
+      ))}
+    </View>
+  );
+});
+
+// Work for once the phone has a spare moment (InteractionManager is gone
+// from React Native; requestIdleCallback is its replacement).
+const afterFrames = (fn) => (typeof requestIdleCallback === 'function' ? requestIdleCallback(fn, { timeout: 500 }) : setTimeout(fn, 120));
+
 // How many "Suggested for You" shows. A saved page may hold more, from before.
 const SUGGESTED = 4;
 
@@ -91,6 +123,50 @@ export default function Home() {
   // handler below is taken off altogether, so there is no per-frame work
   // left behind to pay for it.
   const [mapNear, setMapNear] = useState(false);
+  // Below the first screen (the towns, the nearby shops, the first Explore
+  // batch): asked for once the page is scrolled a little or after a short
+  // wait, so the first screen's requests go out alone (as the website's
+  // Home: hooks/useNearScreen). Latches on.
+  const [belowNear, setBelowNear] = useState(false);
+
+  // While a finger is moving the page, nothing new is drawn: answers that
+  // arrive (and sections that come near) wait, and all go in together the
+  // moment the scroll comes to rest. A redraw mid-fling is what made the
+  // first sections stutter; the fling itself never waits on anything.
+  const scrolling = useRef(false);
+  const restTimer = useRef(null);
+  const waiting = useRef([]);
+  const whenIdle = useCallback((fn) => {
+    if (scrolling.current) waiting.current.push(fn);
+    else fn();
+  }, []);
+  const settle = useCallback((ms = 140) => {
+    clearTimeout(restTimer.current);
+    restTimer.current = setTimeout(() => {
+      scrolling.current = false;
+      const jobs = waiting.current.splice(0);
+      if (jobs.length) unstable_batchedUpdates(() => jobs.forEach((job) => job()));
+    }, ms);
+  }, []);
+  const scrollEvents = {
+    onScrollBeginDrag: () => { scrolling.current = true; clearTimeout(restTimer.current); },
+    onMomentumScrollBegin: () => { scrolling.current = true; clearTimeout(restTimer.current); },
+    // A drag that ends without a fling settles a moment later; a fling
+    // cancels that and settles when it stops.
+    onScrollEndDrag: () => settle(220),
+    onMomentumScrollEnd: () => settle(),
+  };
+  useEffect(() => () => clearTimeout(restTimer.current), []);
+
+  useEffect(() => {
+    if (belowNear) return undefined;
+    const timer = setTimeout(() => whenIdle(() => setBelowNear(true)), 2500);
+    return () => clearTimeout(timer);
+  }, [belowNear, whenIdle]);
+
+  // Where the map section starts (onLayout), so the map is built only once
+  // it is about to come into view, and only at rest.
+  const mapTop = useRef(Infinity);
   const [explore, setExplore] = useState(() => cache.explore || []);
   const [explorePage, setExplorePage] = useState(() => cache.explorePage || 1);
   const [exploreHasMore, setExploreHasMore] = useState(() => Boolean(cache.exploreHasMore));
@@ -142,27 +218,38 @@ export default function Home() {
       setCategoryIcons(style === 'ICON');
       patchCache({ categoryStyle: style });
     });
-    fetchMunicipalities().then((list) => {
-      if (cancelled) return;
-      setMunicipalities(list || []);
-      patchCache({ municipalities: list || [] });
-    }).catch(() => {});
     return () => { cancelled = true; };
   }, []);
 
+  // The towns rail is well below the first screen.
+  useEffect(() => {
+    if (!belowNear) return undefined;
+    let cancelled = false;
+    fetchMunicipalities().then((list) => {
+      if (cancelled) return;
+      patchCache({ municipalities: list || [] });
+      whenIdle(() => setMunicipalities(list || []));
+    }).catch(() => {});
+    return () => { cancelled = true; };
+  }, [belowNear, whenIdle]);
+
   // Each section loads on its own and shows as soon as its answer arrives.
-  const loadSections = useCallback((isLive = () => true) => {
+  // `top`: Suggested for You; `below`: the sections under the first
+  // screen (a pull asks for both).
+  const loadSections = useCallback((isLive = () => true, { top = true, below = true } = {}) => {
     const load = (request, show) => request
-      .then((res) => { if (isLive()) show(res); })
+      .then((res) => { if (isLive()) whenIdle(() => show(res)); })
       .catch((err) => console.error('Failed to load home data:', err?.message || err));
 
-    return Promise.all([load(
+    const first = top ? load(
       fetchForYou(user?.id, { pageSize: SUGGESTED }),
       (res) => {
         setFeatured(res.data || []);
         patchCache({ featured: res.data || [] });
       },
-    ), load(
+    ) : Promise.resolve();
+    if (!below) return first;
+    return Promise.all([first, load(
       fetchForYou(user?.id, { page: 1, pageSize: EXPLORE_BATCH, skip: SUGGESTED }),
       (res) => {
         const fresh = res.data || [];
@@ -190,13 +277,22 @@ export default function Home() {
         patchCache({ nearbyStores: res.data || [] });
       },
     )]);
-  }, [townId, user?.id]);
+  }, [townId, user?.id, whenIdle]);
 
   useEffect(() => {
     let cancelled = false;
-    loadSections(() => !cancelled);
+    loadSections(() => !cancelled, { below: false });
     return () => { cancelled = true; };
   }, [loadSections]);
+
+  // The sections below the first screen, once they are near.
+  useEffect(() => {
+    if (!belowNear) return undefined;
+    let cancelled = false;
+    loadSections(() => !cancelled, { top: false });
+    return () => { cancelled = true; };
+    // Once when they come near (and again if the town or person changes).
+  }, [belowNear, loadSections]);
 
   // Pulled down: the sections again, and Available Today with them.
   const [todayKey, setTodayKey] = useState(0);
@@ -216,12 +312,12 @@ export default function Home() {
       .then((res) => {
         if (cancelled) return;
         const mapped = res.data || [];
-        setMappedStores(mapped);
         patchCache({ mappedStores: mapped });
+        whenIdle(() => setMappedStores(mapped));
       })
       .catch((err) => console.error('Failed to load home data:', err?.message || err));
     return () => { cancelled = true; };
-  }, [mapNear, townId]);
+  }, [mapNear, townId, whenIdle]);
 
   const loadMoreExplore = useCallback(async () => {
     if (exploreBusy.current || !exploreHasMore) return;
@@ -253,13 +349,11 @@ export default function Home() {
   // is usually there before the grid runs out. Not after a failure; that
   // waits for "Try again".
   const tileWidth = gridCellWidth(width);
-  const grid = (products) => (
-    <View style={styles.grid}>
-      {products.map((product) => (
-        <ProductCard key={product.id} product={product} variant="home" style={{ width: tileWidth }} />
-      ))}
-    </View>
-  );
+  const suggested = featured.slice(0, SUGGESTED);
+  const renderExplore = useCallback(({ item }) => (
+    <Card product={item} variant="home" style={{ width: tileWidth }} />
+  ), [tileWidth]);
+  const { height: screenH } = useWindowDimensions();
 
   return (
     <View style={styles.screen}>
@@ -274,9 +368,7 @@ export default function Home() {
         keyExtractor={(item) => item.id}
         numColumns={2}
         columnWrapperStyle={styles.gridRow}
-        renderItem={({ item }) => (
-          <ProductCard product={item} variant="home" style={{ width: tileWidth }} />
-        )}
+        renderItem={renderExplore}
         showsVerticalScrollIndicator={false}
         showsHorizontalScrollIndicator={false}
         style={styles.scroll}
@@ -287,8 +379,15 @@ export default function Home() {
         // nothing runs on scroll at all.
         onScroll={mapNear && Platform.OS !== 'ios' ? undefined : (e) => {
           pull.trackPull(e);
-          if (!mapNear && e.nativeEvent.contentOffset.y > 300) setMapNear(true);
+          const y = e.nativeEvent.contentOffset.y;
+          if (!belowNear && y > 120) whenIdle(() => setBelowNear(true));
+          // Built when the map is within a screen and a half of view, once
+          // the scroll rests and anything else on screen has finished.
+          if (!mapNear && y + screenH * 1.5 > mapTop.current) {
+            whenIdle(() => afterFrames(() => setMapNear(true)));
+          }
         }}
+        {...scrollEvents}
         scrollEventThrottle={Platform.OS === 'ios' ? 32 : 250}
         // Rows off screen are detached on Android rather than kept in the
         // view tree, and only a screenful or so is built at a time.
@@ -300,29 +399,32 @@ export default function Home() {
         {...tabScroll}
         ListHeaderComponent={(
           <>
-            <HomeQuickSearch />
+            <QuickSearch />
 
         {/* Banners */}
         <View style={styles.bannerSection}>
-          <BannerCarousel banners={banners} />
+          <Banners banners={banners} />
         </View>
 
         {/* The way in to the rest of the app: two pages of ten, swiped. */}
-        <HomeShortcuts />
+        <Shortcuts />
 
         {/* Shop by Category: pictures, or gradient icons (Settings › Branding) */}
         <View style={[styles.whiteSection, styles.railSection]}>
           <Text style={styles.categoriesTitle} accessibilityRole="header">Shop by Category</Text>
-          <CategoryStrip categories={categories} icons={categoryIcons} />
+          <Categories categories={categories} icons={categoryIcons} />
         </View>
 
+        {/* Shops selling live right now (hidden when none). */}
+        <Live />
+
         {/* Available Today: fresh items for a limited time (hidden when none). */}
-        <HomeTodayRail refreshKey={todayKey} />
+        <TodayRail refreshKey={todayKey} />
 
         {/* Suggested for You */}
         <View style={styles.listSection}>
           <SectionHeader title="Suggested for You" />
-          {featured.length > 0 ? grid(featured.slice(0, SUGGESTED)) : (
+          {featured.length > 0 ? <ProductGrid products={suggested} tileWidth={tileWidth} /> : (
             <HomeEmpty
               art="products"
               title="No suggestions yet"
@@ -337,7 +439,7 @@ export default function Home() {
         <View style={styles.listSection}>
           <SectionHeader title="Stores Near You" arrowLabel="View all stores" onArrow={() => router.push('/stores')} />
           {nearbyStores.length > 0 ? (
-            <HomeStoreRow stores={nearbyStores} />
+            <StoreRow stores={nearbyStores} />
           ) : (
             <HomeEmpty
               art="stores"
@@ -357,16 +459,19 @@ export default function Home() {
             onArrow={() => router.push('/stores')}
             style={styles.railHeader}
           />
-          <MunicipalityRail municipalities={municipalities} />
+          <Towns municipalities={municipalities} />
         </View>
 
         {/* Discover Stores map */}
-        <View style={[styles.whiteSection, styles.mapSection]}>
+        <View
+          style={[styles.whiteSection, styles.mapSection]}
+          onLayout={(e) => { mapTop.current = e.nativeEvent.layout.y; }}
+        >
           <SectionHeader title="Discover Stores" arrowLabel="Open the stores map" onArrow={() => router.push('/store-map')} />
           {/* A tapped pin, or the button, opens the full map (app/store-map.js). */}
           <View>
             {mapNear ? (
-              <HomeStoresMap
+              <StoresMap
                 stores={mappedStores}
                 height={340}
                 onSelect={(store) => router.push({ pathname: '/store-map', params: { focus: store.id } })}

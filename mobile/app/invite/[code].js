@@ -68,7 +68,7 @@ export default function InviteLanding() {
         <ScreenHeader title="Invite" />
         <EmptyState
           page
-          art="launch"
+          art="invites"
           title="This invite link isn't active"
           text="It may have been typed wrong, or invites are paused for now. You can still look around."
           actions={[{ label: 'Home', onPress: goHome }]}

@@ -114,7 +114,7 @@ export default function SellerQuestionsScreen() {
           ) : data.items.length === 0 ? (
             <EmptyState
               page
-              art="messages"
+              art="questions"
               title={tab === 'open' ? 'No questions waiting' : 'No questions yet'}
               text={tab === 'open' ? 'New questions from buyers show up here.' : 'Buyers can ask about a product on its page.'}
             />

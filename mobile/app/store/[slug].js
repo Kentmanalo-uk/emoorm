@@ -35,6 +35,7 @@ import { PullScrollView } from '../../src/components/PullList';
 import { ShopCoverArt, ShopLogoArt } from '../../src/components/shop/ShopArt';
 import ShopInviteCard from '../../src/components/shop/ShopInviteCard';
 import { savePendingInvite } from '../../src/lib/invite';
+import { ShopLiveBanner, ShopLiveRing } from '../../src/components/live/LiveNow';
 
 /*
  * A shop's page on phones (web/src/pages/StoreDetail.jsx, the is-phone
@@ -467,10 +468,14 @@ export default function StoreDetail() {
 
           <View style={styles.card}>
             <View style={styles.main}>
-              <View style={[styles.logo, !store.logo && styles.logoEmpty]}>
-                {store.logo ? (
-                  <Image source={{ uri: resolveImg(store.logo) }} style={styles.logoImg} />
-                ) : <ShopLogoArt name={store.name} />}
+              <View style={styles.logoWrap}>
+                <View style={[styles.logo, !store.logo && styles.logoEmpty]}>
+                  {store.logo ? (
+                    <Image source={{ uri: resolveImg(store.logo) }} style={styles.logoImg} />
+                  ) : <ShopLogoArt name={store.name} />}
+                </View>
+                {/* While the shop is live: a beating ring and LIVE on its logo. */}
+                <ShopLiveRing storeId={store.id} />
               </View>
               <View style={styles.idText}>
                 <Pressable style={styles.name} onPress={() => setMobileTab('about')} accessibilityRole="button">
@@ -550,6 +555,9 @@ export default function StoreDetail() {
               ))}
             </ScrollView>
           ) : null}
+
+          {/* The shop's live, while it is on. */}
+          <ShopLiveBanner storeId={store.id} />
 
           <ShopInviteCard store={store} signedIn={isAuthenticated} isOwner={isOwnStore} />
 
@@ -866,6 +874,7 @@ const styles = themed(() => StyleSheet.create({
     borderWidth: 2, borderColor: t.neutral[100], borderRadius: 37,
   },
   logoEmpty: {},
+  logoWrap: { position: 'relative', flexShrink: 0 },
   logoImg: { width: '100%', height: '100%', borderRadius: 37, backgroundColor: t.neutral[0] },
   idText: { flex: 1, minWidth: 0 },
   name: { flexDirection: 'row', alignItems: 'center', gap: 4, maxWidth: '100%', alignSelf: 'flex-start' },

@@ -251,7 +251,7 @@ export default function SellerTodayScreen() {
         <View>
           <EmptyState
             page
-            art="calendar"
+            art="today"
             title="No items on your menu yet"
             text="Add food you sell. Buyers see it as 'Not taking orders yet' until you post it."
             actions={enabled ? [{ label: 'Add from My products', onPress: () => setPicking(true), icon: PlusIcon }] : []}
@@ -295,7 +295,7 @@ export default function SellerTodayScreen() {
     body = noItems ? (
       <EmptyState
         page
-        art="calendar"
+        art="today"
         title="Nothing to post yet"
         text="Add items to your menu first, then post them."
         actions={[{ label: 'Go to Menu', onPress: () => pickTab('menu'), icon: PlusIcon }]}
@@ -303,7 +303,7 @@ export default function SellerTodayScreen() {
     ) : (
       <EmptyState
         page
-        art="calendar"
+        art="today"
         title={ended ? 'Nothing ended yet' : 'Nothing posted'}
         text={ended ? 'Posts that ended show here, so you can post them again.' : 'Post what you have today.'}
         actions={ended || !enabled ? [] : [{ label: 'Post an item', onPress: () => router.push('/seller/today/post'), icon: PlusIcon }]}

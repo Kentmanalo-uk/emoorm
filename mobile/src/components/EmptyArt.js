@@ -1,260 +1,850 @@
 import { useId } from 'react';
 import { View } from 'react-native';
 import Svg, {
-  Circle, Defs, Ellipse, G, LinearGradient, Path, Rect, Stop,
+  Circle, ClipPath, Defs, Ellipse, G, LinearGradient, Path, RadialGradient, Rect, Stop, Text as SvgText,
 } from 'react-native-svg';
+import WifiOffIk from '@ikions/react/icons/wifi-off';
 import { ikionShapes } from '../lib/ikionNative';
 import {
-  ArrowCounterClockwiseIcon, ArrowUpRightIcon, BellIcon, CalendarBlankIcon, CameraIcon, ChartBarIcon, ChartLineUpIcon,
-  ChatCircleDotsIcon, ChatCircleTextIcon, ChatTeardropTextIcon, CheckCircleIcon, ClockCounterClockwiseIcon, ClockIcon,
-  CoffeeIcon, CoinsIcon, CreditCardIcon, DeviceMobileIcon, EnvelopeSimpleIcon, FlagIcon, GearIcon, HandshakeIcon, HeadsetIcon, HeartIcon,
-  HeartbeatIcon, HouseIcon, IdentificationCardIcon, ImageSquareIcon, ImagesIcon, KeyIcon, LaptopIcon, LightningIcon,
-  MagnifyingGlassIcon, MapPinIcon, MapTrifoldIcon, MegaphoneIcon, NotePencilIcon, PackageIcon, PaperPlaneTiltIcon,
-  PercentIcon, PiggyBankIcon, PlusIcon, ReceiptIcon, RocketLaunchIcon, ShieldCheckIcon, ShoppingBagIcon, ShoppingCartIcon,
-  SmileyIcon, SparkleIcon, SquaresFourIcon, StarIcon, StorefrontIcon, TagIcon, TicketIcon, TrayIcon, TrendUpIcon,
-  TruckIcon, UploadSimpleIcon, UserPlusIcon, UsersThreeIcon, WrenchIcon,
+  CheckCircleIcon, HandshakeIcon, LightningIcon, PackageIcon, PlusIcon, QrCodeIcon, ShieldCheckIcon, UserPlusIcon,
 } from '../lib/icons';
-import { t } from '../theme';
+import { fontFamily } from '../theme';
+import { INK, PALETTES } from './avatars/avatars';
 
 /**
- * Picture for an empty state, in the Start selling sticker's style
- * (home/StartSellingBubble): flat shapes in the brand's green, pink and gold
- * on a soft pink-to-mint disc, white details, round badges with a white rim,
- * and one small sparkle. One per topic; same scene names as the website's
- * (web/src/components/ui/EmptyArt.jsx), which keeps its own glass look.
- * Decorative (hidden from screen readers): the heading beside it says what
- * is empty.
+ * Picture for an empty state: the website's (web/src/components/ui/
+ * EmptyArt.jsx), drawn the way the avatars are (components/avatars): a round
+ * pastel ground of two hues with a soft light over its top left, every shape
+ * a two-stop gradient, nothing outlined, a white highlight where the light
+ * falls. The subject is drawn a fifth larger than the circle holds and only
+ * the circle's lower half crops it, so it stands in the circle and rises out
+ * over its top edge. Still: nothing moves.
  *
- * `size` is the website's prop; the app draws the website's phone size
- * (a quarter larger, then 1.4×, at most 260 tall).
+ * Every topic has a picture of its own, of the thing the empty page is for,
+ * and its ground is one of the avatars' palettes. The colours are the
+ * website's own, fixed, in light and dark mode alike (as the avatars are).
+ *
+ * Decorative (hidden from screen readers): the heading beside it says what
+ * is empty. `size` is the website's prop; the app draws the website's phone
+ * size (EmptyArt.css: 1.4× its height, at most 260 tall). `roomy` is taken
+ * for the website's sake: it only makes a difference on computers.
  */
-const SCENES = {
-  // Phone: alerts and inboxes.
-  notifications: { layout: 'device', main: BellIcon, a: CheckCircleIcon, b: SparkleIcon },
-  inbox: { layout: 'device', main: TrayIcon, a: EnvelopeSimpleIcon, b: BellIcon },
-  followers: { layout: 'device', main: UserPlusIcon, a: HeartIcon, b: BellIcon },
-  // A stack of parcels / cards: things you list, ship or send back.
-  products: { layout: 'stack', main: PackageIcon, a: TagIcon, b: PlusIcon },
-  orders: { layout: 'stack', main: ReceiptIcon, a: ShoppingBagIcon, b: CheckCircleIcon },
-  returns: { layout: 'stack', main: ArrowCounterClockwiseIcon, a: PackageIcon, b: ReceiptIcon },
-  delivery: { layout: 'stack', main: TruckIcon, a: PackageIcon, b: MapPinIcon },
-  categories: { layout: 'stack', main: SquaresFourIcon, a: TagIcon, b: PlusIcon },
-  vouchers: { layout: 'stack', main: TicketIcon, a: TagIcon, b: PercentIcon },
-  banners: { layout: 'stack', main: ImageSquareIcon, a: UploadSimpleIcon, b: SparkleIcon },
-  gallery: { layout: 'stack', main: ImagesIcon, a: CameraIcon, b: MapPinIcon },
-  // A chart panel: numbers over time.
-  analytics: { layout: 'chart', main: ChartBarIcon, a: TrendUpIcon, b: CalendarBlankIcon },
-  revenue: { layout: 'chart', main: ChartLineUpIcon, a: CoinsIcon, b: ArrowUpRightIcon },
-  savings: { layout: 'chart', main: PiggyBankIcon, a: CoinsIcon, b: SparkleIcon },
-  activity: { layout: 'chart', main: ClockCounterClockwiseIcon, a: LightningIcon, b: CheckCircleIcon },
-  payments: { layout: 'chart', main: CreditCardIcon, a: ReceiptIcon, b: CheckCircleIcon },
-  // A magnifier over blurred results.
-  search: { layout: 'lens', main: MagnifyingGlassIcon, a: PackageIcon, b: SparkleIcon },
-  // A map tile with a pin.
-  places: { layout: 'map', main: MapPinIcon, a: MapTrifoldIcon, b: HouseIcon },
-  addresses: { layout: 'map', main: MapPinIcon, a: HouseIcon, b: PlusIcon },
-  // Speech bubbles: talking, rating, help.
-  messages: { layout: 'bubbles', main: ChatCircleDotsIcon, a: PaperPlaneTiltIcon, b: SmileyIcon },
-  feedback: { layout: 'bubbles', main: ChatTeardropTextIcon, a: SmileyIcon, b: StarIcon },
-  reviews: { layout: 'bubbles', main: StarIcon, a: ChatCircleTextIcon, b: HeartIcon },
-  support: { layout: 'bubbles', main: HeadsetIcon, a: ChatCircleDotsIcon, b: ShieldCheckIcon },
-  announcements: { layout: 'bubbles', main: MegaphoneIcon, a: UsersThreeIcon, b: SparkleIcon },
-  // Livestock deals: a handshake over a price, talked over in chat.
-  offers: { layout: 'bubbles', main: HandshakeIcon, a: TagIcon, b: ChatCircleDotsIcon },
-  // A storefront with an awning: shops and shopping.
-  stores: { layout: 'shop', main: StorefrontIcon, a: MapPinIcon, b: StarIcon },
-  following: { layout: 'shop', main: HeartIcon, a: BellIcon, b: StarIcon },
-  cart: { layout: 'shop', main: ShoppingCartIcon, a: TagIcon, b: PlusIcon },
-  wishlist: { layout: 'shop', main: HeartIcon, a: ShoppingBagIcon, b: SparkleIcon },
-  shopping: { layout: 'shop', main: ShoppingBagIcon, a: TagIcon, b: HeartIcon },
-  launch: { layout: 'shop', main: RocketLaunchIcon, a: SparkleIcon, b: StarIcon },
-  // A glass card holding the icon.
-  users: { layout: 'card', main: UsersThreeIcon, a: IdentificationCardIcon, b: MagnifyingGlassIcon },
-  reports: { layout: 'card', main: FlagIcon, a: ShieldCheckIcon, b: ChatCircleTextIcon },
-  healthy: { layout: 'card', main: HeartbeatIcon, a: ShieldCheckIcon, b: StorefrontIcon },
-  maintenance: { layout: 'card', main: WrenchIcon, a: GearIcon, b: CheckCircleIcon },
-  workspace: { layout: 'card', main: LaptopIcon, a: CoffeeIcon, b: NotePencilIcon },
-  calendar: { layout: 'card', main: CalendarBlankIcon, a: ClockIcon, b: CheckCircleIcon },
-  security: { layout: 'card', main: ShieldCheckIcon, a: KeyIcon, b: DeviceMobileIcon },
+
+// Each topic's ground (components/avatars/avatars.js palettes).
+const GROUNDS = {
+  notifications: 'sky', inbox: 'peri', followers: 'blush', products: 'sage', orders: 'butter', returns: 'coral',
+  delivery: 'aqua', categories: 'pistachio', vouchers: 'apricot', banners: 'corn', gallery: 'orchid',
+  analytics: 'lilac', revenue: 'teal', savings: 'blush', activity: 'violet', payments: 'sand', search: 'mushroom',
+  places: 'aqua', addresses: 'peach', messages: 'mushroom', feedback: 'butter', reviews: 'apricot',
+  support: 'sky', announcements: 'coral', offers: 'sand', stores: 'mushroom', following: 'mauve', cart: 'foam',
+  wishlist: 'blush', shopping: 'orchid', launch: 'peri', users: 'pistachio', reports: 'sage', healthy: 'teal',
+  maintenance: 'corn', workspace: 'peach', calendar: 'lilac', security: 'violet', offline: 'sky',
+  questions: 'corn', today: 'butter', testers: 'foam', designs: 'orchid', audit: 'sand', invites: 'blush', team: 'sky',
 };
 
-export const EMPTY_ART_NAMES = Object.keys(SCENES);
+export const EMPTY_ART_NAMES = Object.keys(GROUNDS);
 
-// The scene is 200 × 160; the website draws it a quarter larger than `size`,
-// and phones 1.4× that (EmptyArt.css), never taller than 260.
-const VIEW_W = 200;
-const VIEW_H = 160;
-const SCALE = 1.25;
+// The circle is 120 across on the grid and drawn a little larger than the
+// `size` callers ask for.
+const SCALE = 1.15;
+// The frame around it: room above and beside the circle for the subject.
+const VIEW = { x: -12, y: -18, w: 144, h: 138 };
+// The subject, a fifth larger than drawn, grown about a point just under
+// the circle's centre.
+const GROW = 'translate(60 64) scale(1.2) translate(-60 -64)';
+// Phones draw it 1.4× as tall, never taller than 260 (EmptyArt.css).
 const PHONE = 1.4;
 const MAX_H = 260;
 
 /** The height the scene takes for a `size` (to lay out around it). */
-export const emptyArtHeight = (size = 96) => Math.min(Math.round(size * SCALE) * PHONE, MAX_H);
+export const emptyArtHeight = (size = 96) => Math.min(Math.round((VIEW.h * size * SCALE) / 120) * PHONE, MAX_H);
 
-/** A four-point sparkle centred on (x, y), straight-edged like the Start selling sticker's. */
-const sparklePath = (x, y, r) => {
-  const p = r * 0.29;
-  const q = r * 0.71;
-  return `M${x} ${y - r}l${p} ${q} ${q} ${p} ${-q} ${p} ${-p} ${q} ${-p} ${-q} ${-q} ${-p} ${q} ${-p}Z`;
+/** A five-point star centred on (cx, cy). */
+const starPath = (cx, cy, R, r = R * 0.45) => {
+  const pts = [];
+  for (let i = 0; i < 10; i += 1) {
+    const a = (Math.PI / 5) * i - Math.PI / 2;
+    const rad = i % 2 ? r : R;
+    pts.push(`${(cx + rad * Math.cos(a)).toFixed(1)} ${(cy + rad * Math.sin(a)).toFixed(1)}`);
+  }
+  return `M${pts.join('L')}Z`;
 };
 
-// Icons on a gold badge are drawn in dark amber (the peso on the sticker's coin).
-const GOLD_INK = '#92400e';
+// A heart 22 wide, its dip at (0, 0); placed with translate/scale.
+const HEART = 'M0 -3c-3.2-5.4-11-3.2-11 2.4 0 5.2 6.8 9.4 11 12.4 4.2-3 11-7.2 11-12.4 0-5.6-7.8-7.8-11-2.4z';
 
-// An icon's filled shapes (its 24-unit drawing) go inside the scene's own
-// <Svg> instead of nesting another <Svg> (ikionShapes).
+// The subject's crop: the circle below its middle, free above it. One path
+// (the frame above y 60, then the circle's lower half) rather than a circle
+// and a rect, so no platform's fill rule can cut their overlap out.
+const POP = `M${VIEW.x} ${VIEW.y}H${VIEW.x + VIEW.w}V60H120A60 60 0 0 1 0 60H${VIEW.x}Z`;
+
+// The gradients every scene draws from (the website's, stop for stop).
+const DIAGONAL = { x1: '0.2', y1: '0', x2: '0.7', y2: '1' };
+const RAMPS = [
+  ['gold', ['#FFE68A', '#F7C431', '#E0A200']],
+  ['goldSide', ['#E8AE12', '#C98E00']],
+  ['glass', ['#FFFFFF', '#DDF3FF']],
+  ['ring', ['#9EA7FF', '#5B67E8']],
+  ['fruit', ['#FFC49A', '#FF8A4C']],
+  ['phone', ['#4A4466', '#2B2640']],
+  ['go', ['#5FD39A', '#2E9E67']],
+  ['goLine', ['#5FD39A', '#2E9E67'], { x1: '0', y1: '1', x2: '1', y2: '0' }],
+  ['mint', ['#D7F7E8', '#9FE8C8']],
+  ['heart', ['#FFA6C1', '#F0568A']],
+  ['blossom', ['#FFD9E4', '#F9A8C4']],
+  ['box', ['#FFD9A8', '#F2B06A']],
+  ['boxSide', ['#F4BF83', '#DE9548']],
+  ['lid', ['#FFEBCF', '#F9CF98']],
+  ['peach', ['#FFE0C7', '#FFB98A']],
+  ['leaf', ['#B8E39F', '#5BA53D']],
+  ['mapA', ['#B8E39F', '#7FC65E']],
+  ['mapB', ['#DFF2D4', '#B8E39F']],
+  ['sky', ['#9EC9FF', '#5B98F5']],
+  ['skyDeep', ['#5B98F5', '#2E6FD8']],
+  ['skyDeepLine', ['#5B98F5', '#2E6FD8'], { x1: '0', y1: '0', x2: '1', y2: '0' }],
+  ['skyLight', ['#D6E9FF', '#9EC9FF']],
+  ['violet', ['#C7A9F7', '#7E63EB']],
+  ['coral', ['#FFA99D', '#F76C58']],
+  ['coralDeep', ['#F76C58', '#E04A33']],
+  ['coralLine', ['#FFA99D', '#F76C58'], { x1: '0', y1: '0', x2: '1', y2: '1' }],
+  ['paper', ['#FFFFFF', '#E6EAF3']],
+  ['flame', ['#FFE68A', '#FF8A4C']],
+  ['wood', ['#E9C79B', '#C99A63']],
+  ['woodLine', ['#C99A63', '#A87A45'], { x1: '0', y1: '0', x2: '1', y2: '0' }],
+];
 
 export default function EmptyArt({ name, size = 96, style }) {
-  const scene = SCENES[name] || SCENES.inbox;
-  const id = `ea${useId().replace(/[^a-zA-Z0-9]/g, '')}`;
+  const topic = GROUNDS[name] ? name : 'inbox';
+  const pal = PALETTES[GROUNDS[topic]] || PALETTES.mushroom;
+  const uid = useId().replace(/[^a-zA-Z0-9]/g, '');
+  const id = (part) => `ea${uid}${part}`;
+  const url = (part) => `url(#${id(part)})`;
   const h = emptyArtHeight(size);
-  const w = (h * VIEW_W) / VIEW_H;
-  const url = (part) => `url(#${id}-${part})`;
+  const w = (h * VIEW.w) / VIEW.h;
+  const ramp = (part, stops, axis = DIAGONAL) => (
+    <LinearGradient key={part} id={id(part)} {...axis}>
+      {stops.map((c, i) => <Stop key={`${c}-${i}`} offset={String(i / (stops.length - 1))} stopColor={c} />)}
+    </LinearGradient>
+  );
 
   // ── Building blocks ──
-  // An icon, `s` wide, its corner at (x, y).
+  // An icon's filled drawing, `s` wide, its corner at (x, y) (ikionShapes:
+  // its shapes go inside this <Svg> rather than nesting another).
   const icon = (Icon, x, y, s, fill = '#ffffff') => (
     <G transform={`translate(${x} ${y}) scale(${s / 24})`} fill={fill}>
       {ikionShapes(Icon, { paint: fill })}
     </G>
   );
-  // A round sticker badge (the Start selling coin): a gradient disc with a
-  // white rim and its icon in the middle.
-  const badge = (cx, cy, r, Icon, tone = 'pink') => (
+  const shine = (cx, cy, rx, ry, rot = -30, op = 0.55) => (
+    <Ellipse cx={cx} cy={cy} rx={rx} ry={ry} fill="#ffffff" opacity={op} transform={`rotate(${rot} ${cx} ${cy})`} />
+  );
+  // A round gradient chip with an icon on it.
+  const chip = (cx, cy, r, Icon, tone) => (
     <G>
-      <Circle cx={cx} cy={cy + 1.5} r={r} fill={t.primary[900]} opacity="0.12" />
-      <Circle cx={cx} cy={cy} r={r} fill={url(tone)} stroke="#ffffff" strokeWidth="2.6" />
-      {icon(Icon, cx - r * 0.56, cy - r * 0.56, r * 1.12, tone === 'gold' ? GOLD_INK : '#ffffff')}
+      <Circle cx={cx} cy={cy} r={r} fill={url(tone)} />
+      {shine(cx - r * 0.38, cy - r * 0.5, r * 0.34, r * 0.18)}
+      {icon(Icon, cx - r * 0.55, cy - r * 0.55, r * 1.1, tone === 'gold' ? '#9A6A00' : '#ffffff')}
     </G>
   );
-  const bar = (x, y, wBar, hBar, fill) => <Rect x={x} y={y} width={wBar} height={hBar} rx={hBar / 2} fill={fill} />;
+  const line = (x, y, lw, fill = '#D6DBE6', hgt = 3.5) => <Rect x={x} y={y} width={lw} height={hgt} rx={hgt / 2} fill={fill} />;
+  const heart = (cx, cy, s, tone = 'heart') => <Path d={HEART} transform={`translate(${cx} ${cy}) scale(${s})`} fill={url(tone)} />;
+  const label = (x, y, fs, fill, text, transform) => (
+    <SvgText x={x} y={y} textAnchor="middle" fontSize={fs} fontFamily={fontFamily.bold} fontWeight="700" fill={fill} transform={transform}>
+      {text}
+    </SvgText>
+  );
+  const coin = (cx, cy, r) => (
+    <G>
+      <Circle cx={cx} cy={cy} r={r} fill={url('gold')} />
+      <Circle cx={cx} cy={cy} r={r * 0.74} fill="none" stroke="#FFF3BF" strokeWidth={r * 0.1} opacity="0.85" />
+      {label(cx, cy + r * 0.38, r * 1.05, '#9A6A00', '₱')}
+      {shine(cx - r * 0.4, cy - r * 0.45, r * 0.28, r * 0.15, -35, 0.7)}
+    </G>
+  );
+  // One of the avatars' little creatures (a capped head), centred on (x, y).
+  const buddy = (x, y, s, cap, body) => (
+    <G transform={`translate(${x} ${y}) scale(${s})`}>
+      <Rect x="-15" y="-8" width="30" height="34" rx="14" fill={url(body)} />
+      <Path d="M0 -24c-14 0-23 9-23 16 0 3 3 5 8 5h30c5 0 8-2 8-5 0-7-9-16-23-16z" fill={url(cap)} />
+      <Ellipse cx="-8" cy="-16" rx="5" ry="2.6" fill="#ffffff" opacity="0.35" transform="rotate(-20 -8 -16)" />
+      <Rect x="-6.5" y="2" width="4" height="7" rx="2" fill={INK} />
+      <Rect x="2.5" y="2" width="4" height="7" rx="2" fill={INK} />
+      <Path d="M-3.5 13c1.5 2.4 5.5 2.4 7 0" fill="none" stroke={INK} strokeWidth="1.8" strokeLinecap="round" />
+    </G>
+  );
+  // A parcel (seen from its corner), its top at (x, y), `s` = 1 for 60 wide.
+  const parcel = (x, y, s) => (
+    <G transform={`translate(${x} ${y}) scale(${s})`}>
+      <Path d="M0 12l30-12 30 12-30 12z" fill={url('lid')} />
+      <Path d="M0 12v32l30 13V24z" fill={url('box')} />
+      <Path d="M60 12v32l-30 13V24z" fill={url('boxSide')} />
+      <Path d="M14 6.4l30 12v9l-6-2.4v-6.6l-30-12z" fill={url('go')} />
+      <Path d="M30 24v33" stroke="#3BB37A" strokeWidth="5" />
+      {shine(14, 30, 5, 2.6, 25, 0.4)}
+    </G>
+  );
+  const sparkle = (x, y, r, fill = '#ffffff') => (
+    <Path d={`M${x} ${y - r}l${r * 0.29} ${r * 0.71} ${r * 0.71} ${r * 0.29} ${-r * 0.71} ${r * 0.29} ${-r * 0.29} ${r * 0.71} ${-r * 0.29} ${-r * 0.71} ${-r * 0.71} ${-r * 0.29} ${r * 0.71} ${-r * 0.29}z`} fill={fill} />
+  );
 
-  // ── The compositions ──
-  const layouts = {
-    // A phone with a list on screen, and the topic's badge beside it.
-    device: () => (
+  // ── One picture per topic ──
+  const scenes = {
+    // A phone, its bell ringing over the screen.
+    notifications: () => (
       <>
-        <Rect x="72" y="16" width="58" height="118" rx="13" fill={url('green')} />
-        <Rect x="77" y="27" width="48" height="98" rx="7" fill="#ffffff" />
-        <Rect x="93" y="20" width="16" height="3" rx="1.5" fill="#ffffff" opacity="0.75" />
-        {[[40, t.accent[400], 1], [60, t.primary[400], 1], [80, '#fbbf24', 0.55]].map(([y, dot, op]) => (
-          <G key={y} opacity={op}>
-            <Rect x="81" y={y} width="40" height="16" rx="5" fill={t.primary[50]} />
-            <Circle cx="89" cy={y + 8} r="4" fill={dot} />
-            {bar(96, y + 4.5, 20, 3, t.primary[300])}
-            {bar(96, y + 10, 13, 2.5, t.primary[200])}
+        <Rect x="36" y="30" width="44" height="78" rx="11" fill={url('phone')} />
+        <Rect x="40" y="35" width="36" height="68" rx="7.5" fill="#ffffff" />
+        {[52, 70].map((y, i) => (
+          <G key={y}>
+            <Rect x="44" y={y} width="28" height="13" rx="4" fill={i ? '#F3F5FA' : '#EAF8F1'} />
+            <Circle cx="50" cy={y + 6.5} r="3.2" fill={url(i ? 'heart' : 'go')} />
+            {line(56, y + 4, 13, '#D6DBE6', 2.6)}
+            {line(56, y + 8, 9, '#E6E9F0', 2.4)}
           </G>
         ))}
-        <Rect x="88" y="108" width="26" height="8" rx="4" fill={t.primary[500]} />
-        {badge(140, 42, 22, scene.main, 'pink')}
-        <Circle cx="156" cy="25" r="6" fill={url('gold')} stroke="#ffffff" strokeWidth="2" />
-        {badge(60, 106, 13, scene.a, 'gold')}
-      </>
-    ),
-    // Parcels: an amber box with a label in front, a pink one behind.
-    stack: () => (
-      <>
-        <G transform="rotate(7 126 60)">
-          <Rect x="98" y="34" width="56" height="50" rx="6" fill={url('pink')} />
-          <Rect x="121" y="34" width="10" height="50" fill="#ffffff" opacity="0.45" />
+        <G>
+          <Path d="M68 18c-9 0-15 7-15 15v8l-4 6h38l-4-6v-8c0-8-6-15-15-15z" fill={url('gold')} />
+          <Circle cx="68" cy="51" r="4.5" fill={url('gold')} />
+          {shine(61, 27, 4, 2.2)}
         </G>
-        <Rect x="46" y="60" width="84" height="72" rx="6" fill={url('amber')} />
-        <Rect x="42" y="52" width="92" height="16" rx="4" fill={url('amberLid')} />
-        <Rect x="100" y="52" width="11" height="80" fill="#fde68a" opacity="0.85" />
-        <Rect x="54" y="80" width="38" height="38" rx="6" fill="#ffffff" />
-        {icon(scene.main, 59, 85, 28, t.primary[600])}
-        {badge(146, 116, 16, scene.a, 'green')}
+        <Circle cx="84" cy="22" r="6" fill={url('heart')} />
       </>
     ),
-    // A chart board: bars, a rising line, and a gold coin with the topic.
-    chart: () => (
+    // An open tray, letters dropping in.
+    inbox: () => (
       <>
-        <Rect x="38" y="30" width="116" height="98" rx="12" fill="#ffffff" stroke={t.primary[100]} strokeWidth="2" />
-        <Path d="M38 42a12 12 0 0 1 12 -12h92a12 12 0 0 1 12 12v6h-116Z" fill={url('green')} />
-        {[50, 58, 66].map((x) => <Circle key={x} cx={x} cy="39" r="2.5" fill="#ffffff" opacity="0.85" />)}
-        {[[54, 26, 'green'], [76, 44, 'pink'], [98, 34, 'green'], [120, 56, 'pink']].map(([x, hBar, tone]) => (
-          <Rect key={x} x={x} y={116 - hBar} width="15" height={hBar} rx="4" fill={url(tone)} />
+        <Path d="M24 70l10-22h52l10 22v20a8 8 0 0 1-8 8H32a8 8 0 0 1-8-8z" fill={url('sky')} />
+        <Path d="M24 70h22a14 14 0 0 0 28 0h22v20a8 8 0 0 1-8 8H32a8 8 0 0 1-8-8z" fill={url('skyDeep')} />
+        <G>
+          <Rect x="40" y="26" width="40" height="27" rx="4" fill="#ffffff" />
+          <Path d="M40 30l20 13 20-13" fill="none" stroke="#C9D2E3" strokeWidth="2.4" strokeLinejoin="round" />
+          <Circle cx="76" cy="28" r="5" fill={url('heart')} />
+        </G>
+        {shine(34, 78, 5, 2.4, 0, 0.45)}
+      </>
+    ),
+    // Two little creatures, one waving in a third.
+    followers: () => (
+      <>
+        {buddy(44, 70, 0.95, 'heart', 'peach')}
+        {buddy(78, 72, 0.85, 'go', 'sky')}
+        {chip(90, 34, 12, UserPlusIcon, 'violet')}
+        {heart(30, 34, 0.55, 'heart')}
+      </>
+    ),
+    // An open parcel with a mango, a leaf and a price tag peeking out.
+    products: () => (
+      <>
+        <Circle cx="48" cy="46" r="11" fill={url('fruit')} />
+        <Path d="M48 36c1-5 6-7 10-6-1 5-5 7-10 6z" fill="#3BB37A" />
+        <Ellipse cx="66" cy="44" rx="9" ry="12" fill={url('leaf')} transform="rotate(20 66 44)" />
+        {parcel(30, 50, 1)}
+        <G>
+          <Path d="M80 30h16a4 4 0 0 1 4 4v14l-14 14-14-14V34a4 4 0 0 1 4-4z" fill={url('heart')} transform="rotate(20 88 46)" />
+          <Circle cx="88" cy="38" r="2.6" fill="#ffffff" />
+        </G>
+      </>
+    ),
+    // A long receipt and a shopping bag.
+    orders: () => (
+      <>
+        <G>
+          <Path d="M34 20h40v78l-5-4-5 4-5-4-5 4-5-4-5 4-5-4-5 4z" fill="#ffffff" />
+          {line(40, 30, 24, '#5FD39A', 4)}
+          {[42, 50, 58, 66].map((y) => (
+            <G key={y}>
+              {line(40, y, 16)}
+              {line(62, y, 6, '#C9D2E3')}
+            </G>
+          ))}
+          {line(40, 78, 28, '#F7C431', 4)}
+        </G>
+        <Path d="M70 58h26l3 40H67z" fill={url('heart')} />
+        <Path d="M76 58c0-8 3-12 7-12s7 4 7 12" fill="none" stroke="#F0568A" strokeWidth="3" strokeLinecap="round" />
+        {shine(74, 66, 4, 2.2, -10)}
+      </>
+    ),
+    // A parcel going back round an arrow.
+    returns: () => (
+      <>
+        <G>
+          <Path d="M60 18a42 42 0 1 1-39 26" fill="none" stroke={url('coralLine')} strokeWidth="7" strokeLinecap="round" />
+          <Path d="M14 34l7 14 13-8z" fill="#F76C58" />
+        </G>
+        {parcel(34, 42, 0.86)}
+      </>
+    ),
+    // A delivery truck on its way, dust behind it.
+    delivery: () => (
+      <>
+        <Rect x="14" y="94" width="92" height="5" rx="2.5" fill="#ffffff" opacity="0.6" />
+        <G>
+          <Rect x="22" y="50" width="48" height="36" rx="5" fill={url('box')} />
+          <Path d="M70 60h16l10 13v13H70z" fill={url('go')} />
+          <Path d="M74 64h11l6 9H74z" fill="#DDF3FF" />
+          <Circle cx="38" cy="88" r="8" fill={url('phone')} />
+          <Circle cx="38" cy="88" r="3" fill="#ffffff" />
+          <Circle cx="82" cy="88" r="8" fill={url('phone')} />
+          <Circle cx="82" cy="88" r="3" fill="#ffffff" />
+          {icon(PackageIcon, 36, 58, 20, '#C98E00')}
+          {shine(30, 56, 5, 2.4, -10, 0.45)}
+        </G>
+        {[[12, 64], [8, 74], [14, 82]].map(([x, y]) => <Rect key={y} x={x} y={y} width="8" height="3" rx="1.5" fill="#ffffff" opacity="0.8" />)}
+      </>
+    ),
+    // Four tiles, each a kind of thing sold.
+    categories: () => (
+      <>
+        {[[26, 26, 'go'], [62, 26, 'heart'], [26, 62, 'gold'], [62, 62, 'sky']].map(([x, y, tone]) => (
+          <G key={tone}>
+            <Rect x={x} y={y} width="32" height="32" rx="9" fill="#ffffff" />
+            <Circle cx={x + 16} cy={y + 16} r="10" fill={url(tone)} />
+            {shine(x + 12, y + 11, 3.6, 2, -30, 0.6)}
+          </G>
         ))}
-        <Path d="M61.5 82L83.5 64L105.5 74L127.5 52" fill="none" stroke="#f59e0b" strokeWidth="3" strokeLinecap="round" strokeLinejoin="round" />
-        {[[61.5, 82], [83.5, 64], [105.5, 74], [127.5, 52]].map(([x, y]) => (
-          <Circle key={x} cx={x} cy={y} r="3.2" fill="#ffffff" stroke="#f59e0b" strokeWidth="2" />
+        <Path d="M42 33c1-4 5-6 8-5-1 4-4 6-8 5z" fill="#2E9E67" />
+      </>
+    ),
+    // A ticket with a percent, its stub torn off.
+    vouchers: () => (
+      <>
+        <G>
+          <Path d="M18 44h84v10a8 8 0 0 0 0 16v10H18V70a8 8 0 0 0 0-16z" fill={url('fruit')} transform="rotate(-10 60 62)" />
+          <Path d="M76 46v34" stroke="#ffffff" strokeWidth="2.4" strokeDasharray="3 4" transform="rotate(-10 60 62)" />
+          <G transform="rotate(-10 60 62)">
+            <Circle cx="40" cy="56" r="4.5" fill="#ffffff" />
+            <Circle cx="56" cy="70" r="4.5" fill="#ffffff" />
+            <Path d="M58 52L38 74" stroke="#ffffff" strokeWidth="3.4" strokeLinecap="round" />
+          </G>
+          {shine(30, 52, 6, 2.6, -15, 0.45)}
+        </G>
+        {sparkle(92, 32, 5, '#F7C431')}
+      </>
+    ),
+    // A banner on a stand: hills and a sun on it.
+    banners: () => (
+      <>
+        <Rect x="58" y="74" width="4" height="26" fill="#9AA6BD" />
+        <Rect x="44" y="98" width="32" height="5" rx="2.5" fill="#9AA6BD" />
+        <Rect x="18" y="28" width="84" height="50" rx="8" fill="#ffffff" />
+        <Rect x="22" y="32" width="76" height="42" rx="5" fill={url('skyLight')} />
+        <Circle cx="82" cy="45" r="7" fill={url('gold')} />
+        <Path d="M22 74l22-22 16 14 12-10 26 18z" fill={url('leaf')} />
+        {chip(26, 30, 9, PlusIcon, 'go')}
+      </>
+    ),
+    // Photos fanned out and a camera.
+    gallery: () => (
+      <>
+        {[[-14, 30, 'skyLight'], [8, 52, 'blossom']].map(([rot, x, tone]) => (
+          <G key={x} transform={`rotate(${rot} ${x + 18} 50)`}>
+            <Rect x={x} y="26" width="36" height="44" rx="4" fill="#ffffff" />
+            <Rect x={x + 4} y="30" width="28" height="28" rx="2" fill={url(tone)} />
+            <Path d={`M${x + 4} 58l9-10 7 6 6-5 6 9z`} fill={url('leaf')} />
+          </G>
         ))}
-        {badge(154, 32, 20, scene.main, 'gold')}
+        <G>
+          <Rect x="30" y="66" width="52" height="34" rx="8" fill={url('phone')} />
+          <Rect x="40" y="61" width="16" height="7" rx="3" fill={url('phone')} />
+          <Circle cx="56" cy="83" r="11" fill="#ffffff" />
+          <Circle cx="56" cy="83" r="7.5" fill={url('violet')} />
+          {shine(53, 80, 2.6, 1.5, -30, 0.8)}
+          <Circle cx="74" cy="72" r="2.4" fill="#F7C431" />
+        </G>
       </>
     ),
-    // A magnifier over a product card.
-    lens: () => (
+    // Bars growing on a board.
+    analytics: () => (
       <>
-        <Rect x="100" y="32" width="58" height="74" rx="9" fill="#ffffff" stroke={t.primary[100]} strokeWidth="2" />
-        <Rect x="107" y="39" width="44" height="30" rx="5" fill={t.primary[100]} />
-        {bar(107, 76, 36, 4, t.primary[200])}
-        {bar(107, 85, 26, 4, t.accent[200])}
-        <Rect x="107" y="94" width="20" height="7" rx="3.5" fill={t.accent[400]} />
-        <Path d="M116 102L140 126" stroke={url('pink')} strokeWidth="13" strokeLinecap="round" />
-        <Circle cx="90" cy="74" r="34" fill="#e0f2fe" stroke={url('green')} strokeWidth="9" />
-        <Path d="M70 60a24 24 0 0 1 22 -10" fill="none" stroke="#ffffff" strokeWidth="4" strokeLinecap="round" />
-        {icon(scene.a, 74, 58, 32, t.primary[600])}
-      </>
-    ),
-    // A folded map, a dotted road, and a pink pin.
-    map: () => (
-      <>
-        <Path d="M40 52L80 42L80 122L40 132Z" fill={t.primary[200]} />
-        <Path d="M80 42L120 52L120 132L80 122Z" fill={t.primary[50]} />
-        <Path d="M120 52L160 42L160 122L120 132Z" fill={t.primary[200]} />
-        <Path d="M48 112C70 92 100 114 152 72" fill="none" stroke={t.accent[300]} strokeWidth="3" strokeDasharray="5 5" strokeLinecap="round" />
-        <Ellipse cx="100" cy="101" rx="11" ry="3.5" fill={t.primary[900]} opacity="0.2" />
-        <Path d="M100 99C100 99 75 73 75 56a25 25 0 0 1 50 0C125 73 100 99 100 99Z" fill={url('pink')} stroke="#ffffff" strokeWidth="2.6" />
-        <Circle cx="100" cy="56" r="10" fill="#ffffff" />
-        <Circle cx="100" cy="56" r="4.5" fill={t.accent[500]} />
-        {badge(150, 108, 15, scene.a, 'green')}
-      </>
-    ),
-    // Two speech bubbles: a pink one typing behind, a green one with the topic.
-    bubbles: () => (
-      <>
-        <Path d="M108 24h40a16 16 0 0 1 16 16v10a16 16 0 0 1 -16 16h-4l5 12l-17 -12h-24a16 16 0 0 1 -16 -16v-10a16 16 0 0 1 16 -16Z" fill={url('pink')} />
-        {[116, 128, 140].map((x) => <Circle key={x} cx={x} cy="45" r="3.2" fill="#ffffff" />)}
-        <Path d="M60 56h50a22 22 0 0 1 22 22v18a22 22 0 0 1 -22 22h-38l-22 16l4 -16a22 22 0 0 1 -16 -22v-18a22 22 0 0 1 22 -22Z" fill={url('green')} stroke="#ffffff" strokeWidth="3" />
-        {icon(scene.main, 68, 70, 34)}
-        {badge(148, 110, 14, scene.a, 'gold')}
-      </>
-    ),
-    // The Start selling shop, larger, with the topic's badge.
-    shop: () => (
-      <>
-        <Rect x="68" y="22" width="56" height="14" rx="4" fill={t.primary[700]} />
-        <Rect x="79" y="27" width="34" height="4" rx="2" fill="#ffffff" opacity="0.85" />
-        <Rect x="58" y="58" width="76" height="72" rx="5" fill={url('green')} />
-        <Path d="M54 36H138L142 56H50Z" fill="#ffffff" />
-        {[0, 2, 4].map((i) => (
-          <Path key={i} d={`M${54 + i * 16.8} 36H${70.8 + i * 16.8}L${50 + (i + 1) * 18.4} 56H${50 + i * 18.4}Z`} fill={t.accent[500]} />
+        <Rect x="18" y="26" width="84" height="70" rx="10" fill="#ffffff" opacity="0.94" />
+        {[[28, 26, 'violet'], [44, 40, 'go'], [60, 30, 'violet'], [76, 52, 'go']].map(([x, hb, tone]) => (
+          <Rect key={x} x={x} y={86 - hb} width="12" height={hb} rx="4" fill={url(tone)} />
         ))}
+        {line(26, 88, 66, '#E6E9F0', 2.4)}
+        {sparkle(88, 32, 4.5, '#F7C431')}
+      </>
+    ),
+    // A line climbing past a stack of coins.
+    revenue: () => (
+      <>
+        {[96, 88, 80].map((y) => (
+          <G key={y}>
+            <Ellipse cx="38" cy={y + 2} rx="16" ry="5" fill={url('goldSide')} />
+            <Rect x="22" y={y - 4} width="32" height="6" fill={url('goldSide')} />
+            <Ellipse cx="38" cy={y - 4} rx="16" ry="5" fill={url('gold')} />
+          </G>
+        ))}
+        <Path d="M22 66l20-14 16 8 30-28" fill="none" stroke={url('goLine')} strokeWidth="6" strokeLinecap="round" strokeLinejoin="round" />
+        <Path d="M80 26l14 2-2 14z" fill="#2E9E67" />
+        {coin(84, 74, 13)}
+      </>
+    ),
+    // A piggy bank, a coin dropping in.
+    savings: () => (
+      <>
+        {coin(62, 26, 10)}
+        <G>
+          <Ellipse cx="58" cy="72" rx="34" ry="26" fill={url('heart')} />
+          <Path d="M40 52l-6-12 14 6z" fill="#F0568A" />
+          <Rect x="88" y="64" width="10" height="13" rx="5" fill={url('heart')} />
+          <Circle cx="94" cy="68" r="1.6" fill="#B33A6A" />
+          <Circle cx="94" cy="73" r="1.6" fill="#B33A6A" />
+          <Rect x="38" y="90" width="9" height="12" rx="4" fill="#F0568A" />
+          <Rect x="66" y="90" width="9" height="12" rx="4" fill="#F0568A" />
+          <Rect x="52" y="48" width="18" height="4" rx="2" fill="#B33A6A" />
+          <Circle cx="76" cy="64" r="2.6" fill={INK} />
+          {shine(44, 60, 9, 4.5, -25, 0.4)}
+        </G>
+      </>
+    ),
+    // A clock with a bolt beside it.
+    activity: () => (
+      <>
+        <Circle cx="54" cy="62" r="34" fill={url('violet')} />
+        <Circle cx="54" cy="62" r="27" fill="#ffffff" />
+        {[0, 90, 180, 270].map((a) => <Rect key={a} x="52.5" y="38" width="3" height="6" rx="1.5" fill="#C7A9F7" transform={`rotate(${a} 54 62)`} />)}
+        <Rect x="52.5" y="46" width="3" height="17" rx="1.5" fill={INK} />
+        <Rect x="52.5" y="60.5" width="13" height="3" rx="1.5" fill={INK} />
+        <Circle cx="54" cy="62" r="3.2" fill={url('heart')} />
+        {chip(90, 32, 13, LightningIcon, 'gold')}
+        {shine(36, 42, 6, 3, -35, 0.4)}
+      </>
+    ),
+    // A bank card and a QR card, and a tick.
+    payments: () => (
+      <>
+        <G transform="rotate(-12 50 56)">
+          <Rect x="18" y="36" width="62" height="40" rx="7" fill={url('sky')} />
+          <Rect x="18" y="45" width="62" height="7" fill="#2E6FD8" opacity="0.6" />
+          <Rect x="24" y="58" width="12" height="9" rx="2" fill={url('gold')} />
+          {line(42, 62, 26, '#ffffff')}
+        </G>
+        <G>
+          <Rect x="56" y="48" width="42" height="50" rx="7" fill="#ffffff" />
+          {icon(QrCodeIcon, 63, 54, 28, '#2B2640')}
+          {line(64, 87, 26, '#5FD39A', 3.5)}
+        </G>
+        {chip(92, 30, 11, CheckCircleIcon, 'go')}
+      </>
+    ),
+    // A magnifying glass over a fruit.
+    search: () => (
+      <G>
+        <Rect x="73" y="71" width="11" height="34" rx="5.5" fill={url('ring')} transform="rotate(-42 78 88)" />
+        <Circle cx="54" cy="54" r="27" fill={url('ring')} />
+        <Circle cx="54" cy="54" r="19.5" fill={url('glass')} />
+        <Circle cx="55" cy="58" r="9" fill={url('fruit')} />
+        <Path d="M55 49c1-4 5-6 8-5-1 4-4 6-8 5z" fill="#3BB37A" />
+        <Ellipse cx="46" cy="45" rx="6" ry="3.4" fill="#ffffff" opacity="0.9" transform="rotate(-35 46 45)" />
+      </G>
+    ),
+    // A folded map and a pin dropping onto it.
+    places: () => (
+      <>
+        <Path d="M18 54l28-9v58l-28 9z" fill={url('mapA')} />
+        <Path d="M46 45l28 9v58l-28-9z" fill={url('mapB')} />
+        <Path d="M74 54l28-9v58l-28 9z" fill={url('mapA')} />
+        <Path d="M26 94c14-12 34 6 68-20" fill="none" stroke="#ffffff" strokeWidth="2.6" strokeDasharray="4 4" strokeLinecap="round" opacity="0.9" />
+        <G>
+          <Path d="M60 78s-18-18-18-31a18 18 0 0 1 36 0c0 13-18 31-18 31z" fill={url('heart')} />
+          <Circle cx="60" cy="47" r="7" fill="#ffffff" />
+          {shine(52, 37, 4, 2.2, -35)}
+        </G>
+      </>
+    ),
+    // A little house with a pin over its roof.
+    addresses: () => (
+      <>
+        <Rect x="14" y="98" width="92" height="6" rx="3" fill="#ffffff" opacity="0.55" />
+        <Path d="M30 64l28-22 28 22v36H30z" fill={url('lid')} />
+        <Path d="M24 66l34-28 34 28-6 4-28-22-28 22z" fill={url('coral')} />
+        <Rect x="50" y="78" width="16" height="22" rx="3" fill={url('boxSide')} />
+        <Rect x="36" y="70" width="10" height="10" rx="2" fill="#DDF3FF" />
+        <Rect x="70" y="70" width="10" height="10" rx="2" fill="#DDF3FF" />
+        <G>
+          <Path d="M84 46s-12-12-12-21a12 12 0 0 1 24 0c0 9-12 21-12 21z" fill={url('go')} />
+          <Circle cx="84" cy="25" r="4.5" fill="#ffffff" />
+        </G>
+      </>
+    ),
+    // Two chat bubbles, one typing.
+    messages: () => (
+      <>
+        <Path d="M66 22h26a12 12 0 0 1 12 12v8a12 12 0 0 1-12 12h-2l3 9-12-9H66a12 12 0 0 1-12-12v-8a12 12 0 0 1 12-12z" fill={url('heart')} />
+        {[71, 79, 87].map((x) => <Circle key={x} cx={x} cy="38" r="2.6" fill="#ffffff" />)}
+        <G>
+          <Path d="M30 50h36a16 16 0 0 1 16 16v12a16 16 0 0 1-16 16H44l-16 11 3-12a16 16 0 0 1-17-15V66a16 16 0 0 1 16-16z" fill={url('go')} />
+          {line(28, 66, 34, '#ffffff', 4)}
+          {line(28, 75, 22, '#ffffff', 4)}
+          {shine(30, 58, 6, 3)}
+        </G>
+      </>
+    ),
+    // A bubble with a smiling face, stars around it.
+    feedback: () => (
+      <>
+        <G>
+          <Path d="M30 28h52a16 16 0 0 1 16 16v20a16 16 0 0 1-16 16H54l-18 14 4-14h-10a16 16 0 0 1-16-16V44a16 16 0 0 1 16-16z" fill={url('gold')} />
+          <Circle cx="46" cy="50" r="3.6" fill={INK} />
+          <Circle cx="66" cy="50" r="3.6" fill={INK} />
+          <Path d="M44 60c4 6 20 6 24 0" fill="none" stroke={INK} strokeWidth="3" strokeLinecap="round" />
+          {shine(30, 38, 6, 3)}
+        </G>
+        <Path d={starPath(96, 92, 9)} fill={url('heart')} />
+        {sparkle(22, 92, 5, '#ffffff')}
+      </>
+    ),
+    // A card of five stars, the last one landing.
+    reviews: () => (
+      <>
+        <Rect x="16" y="42" width="88" height="42" rx="10" fill="#ffffff" />
         {[0, 1, 2, 3, 4].map((i) => (
-          <Circle key={i} cx={59.2 + i * 18.4} cy="56" r="9.2" fill={i % 2 ? '#ffffff' : t.accent[500]} />
+          <Path key={i} d={starPath(30 + i * 15, 58, 6.5)} fill={i < 4 ? url('gold') : '#E6E9F0'} />
         ))}
-        <Rect x="68" y="80" width="22" height="50" rx="4" fill="#ffffff" opacity="0.95" />
-        <Circle cx="84.5" cy="106" r="2" fill={t.primary[600]} />
-        <Rect x="98" y="80" width="26" height="20" rx="4" fill="#e0f2fe" />
-        <Path d="M111 80V100M98 90H124" stroke={t.primary[500]} strokeWidth="2" />
-        {badge(152, 36, 20, scene.main, 'pink')}
-        {badge(148, 112, 13, scene.a, 'gold')}
+        {line(24, 72, 40, '#E6E9F0', 3)}
+        <Path d={starPath(90, 32, 11)} fill={url('gold')} />
+        {heart(32, 98, 0.5, 'heart')}
       </>
     ),
-    // A card with the topic in a green disc.
-    card: () => (
+    // A headset over a help bubble.
+    support: () => (
       <>
-        <Rect x="66" y="30" width="80" height="96" rx="12" fill={t.accent[100]} transform="rotate(-8 106 78)" />
-        <Rect x="56" y="32" width="84" height="100" rx="12" fill="#ffffff" stroke={t.primary[100]} strokeWidth="2" />
-        <Circle cx="98" cy="68" r="22" fill={url('green')} />
-        {icon(scene.main, 85, 55, 26)}
-        {bar(72, 100, 52, 5, t.primary[200])}
-        {bar(80, 110, 36, 4, t.accent[200])}
-        {badge(142, 120, 15, scene.a, 'gold')}
+        <Path d="M46 58h40a14 14 0 0 1 14 14v8a14 14 0 0 1-14 14H70l-12 9 2-9h-14a14 14 0 0 1-14-14v-8a14 14 0 0 1 14-14z" fill={url('go')} />
+        {label(66, 84, 20, '#ffffff', '?')}
+        <G>
+          <Path d="M22 54a24 24 0 0 1 48 0" fill="none" stroke={url('skyDeepLine')} strokeWidth="7" strokeLinecap="round" />
+          <Rect x="15" y="50" width="14" height="22" rx="6" fill={url('sky')} />
+          <Rect x="63" y="50" width="14" height="22" rx="6" fill={url('sky')} />
+          <Path d="M22 72c0 8 8 12 16 12" fill="none" stroke="#5B98F5" strokeWidth="3" strokeLinecap="round" />
+          <Circle cx="40" cy="84" r="4" fill={url('heart')} />
+        </G>
+      </>
+    ),
+    // A megaphone, its sound going out in rings.
+    announcements: () => (
+      <>
+        <G transform="rotate(-14 50 62)">
+          <Path d="M28 52h12l34-18v56L40 72H28a6 6 0 0 1-6-6v-8a6 6 0 0 1 6-6z" fill={url('coral')} />
+          <Rect x="74" y="34" width="8" height="56" rx="4" fill={url('coralDeep')} />
+          <Path d="M34 72l6 20h10l-4-20z" fill="#E04A33" />
+          {shine(34, 56, 6, 3, 0, 0.5)}
+        </G>
+        {[0, 1, 2].map((i) => (
+          <Path key={i} d={`M${88 + i * 7} ${42 - i * 4}a${18 + i * 7} ${18 + i * 7} 0 0 1 0 ${30 + i * 8}`} fill="none" stroke="#ffffff" strokeWidth="3.4" strokeLinecap="round" />
+        ))}
+      </>
+    ),
+    // A price tag, coins and a deal being talked over.
+    offers: () => (
+      <>
+        <Path d="M24 44h34l20 20-26 26-28-28z" fill={url('box')} />
+        <Circle cx="34" cy="54" r="4" fill="#ffffff" />
+        {label(52, 72, 16, '#9A6A00', '₱', 'rotate(45 52 66)')}
+        {coin(36, 96, 9)}
+        {coin(54, 100, 8)}
+        <G>
+          <Path d="M70 22h22a10 10 0 0 1 10 10v8a10 10 0 0 1-10 10h-6l-8 7 1-7h-9a10 10 0 0 1-10-10v-8a10 10 0 0 1 10-10z" fill={url('go')} />
+          {icon(HandshakeIcon, 72, 25, 22)}
+        </G>
+      </>
+    ),
+    // A market stall with a striped awning and a plant.
+    stores: () => (
+      <>
+        <Rect x="26" y="56" width="62" height="46" rx="5" fill={url('go')} />
+        <Path d="M22 38h70l4 18H18z" fill="#ffffff" />
+        {[0, 2, 4].map((i) => <Path key={i} d={`M${22 + i * 14} 38h14l${i === 4 ? 4 : 0.8} 18h-${i === 4 ? 18 : 15.6}z`} fill={url('heart')} />)}
+        {[0, 1, 2, 3, 4].map((i) => <Circle key={i} cx={25.8 + i * 15.6} cy="56" r="7.8" fill={i % 2 ? '#ffffff' : '#F0568A'} />)}
+        <Rect x="34" y="72" width="17" height="30" rx="3" fill="#ffffff" />
+        <Rect x="58" y="72" width="22" height="14" rx="3" fill="#DDF3FF" />
+        <Rect x="90" y="86" width="12" height="16" rx="3" fill={url('box')} />
+        <G>
+          <Ellipse cx="92" cy="76" rx="5" ry="10" fill={url('leaf')} transform="rotate(-25 92 76)" />
+          <Ellipse cx="100" cy="78" rx="5" ry="9" fill={url('leaf')} transform="rotate(25 100 78)" />
+        </G>
+        <Rect x="45" y="28" width="24" height="9" rx="3" fill={url('phone')} />
+      </>
+    ),
+    // A shop with hearts rising from it: shops you follow.
+    following: () => (
+      <>
+        <Rect x="30" y="60" width="54" height="42" rx="5" fill={url('violet')} />
+        <Path d="M26 46h62l4 16H22z" fill={url('lid')} />
+        {[0, 1, 2, 3].map((i) => <Circle key={i} cx={30 + i * 18} cy="62" r="8" fill={i % 2 ? '#F9CF98' : '#FFEBCF'} />)}
+        <Rect x="38" y="76" width="15" height="26" rx="3" fill="#ffffff" />
+        <Rect x="60" y="76" width="18" height="12" rx="3" fill="#EADCFB" />
+        {heart(70, 32, 0.9, 'heart')}
+        {heart(46, 26, 0.55, 'heart')}
+      </>
+    ),
+    // A cart rolling, a fruit and a bag in it.
+    cart: () => (
+      <G>
+        <Circle cx="44" cy="70" r="11" fill={url('fruit')} />
+        <Rect x="58" y="56" width="20" height="22" rx="4" fill={url('heart')} />
+        <Path d="M14 34h12l10 46h50l8-34H32" fill="none" stroke={url('goLine')} strokeWidth="6" strokeLinecap="round" strokeLinejoin="round" />
+        <Path d="M33 50h59l-6 26H38z" fill={url('mint')} opacity="0.55" />
+        <Circle cx="42" cy="94" r="7" fill={url('phone')} />
+        <Circle cx="80" cy="94" r="7" fill={url('phone')} />
+        {shine(40, 66, 3.6, 2)}
+      </G>
+    ),
+    // A heart tied with a ribbon, saved for later.
+    wishlist: () => (
+      <>
+        <G>
+          {heart(60, 54, 3, 'heart')}
+          <Rect x="56" y="38" width="8" height="58" fill="#ffffff" opacity="0.85" />
+          <Path d="M60 44c-8-10-18-8-16-2s12 4 16 2c4 2 14 4 16-2s-8-8-16 2z" fill={url('gold')} />
+          {shine(40, 48, 6, 3)}
+        </G>
+        {sparkle(96, 30, 6, '#F7C431')}
+        {sparkle(24, 86, 4, '#ffffff')}
+      </>
+    ),
+    // Two shopping bags.
+    shopping: () => (
+      <>
+        <Path d="M24 50h40l4 50H20z" fill={url('go')} />
+        <Path d="M34 50c0-10 4-15 10-15s10 5 10 15" fill="none" stroke="#2E9E67" strokeWidth="3.4" strokeLinecap="round" />
+        {shine(30, 58, 5, 2.4, -10)}
+        <G>
+          <Path d="M56 58h40l4 42H52z" fill={url('heart')} />
+          <Path d="M66 58c0-9 4-13 10-13s10 4 10 13" fill="none" stroke="#F0568A" strokeWidth="3.4" strokeLinecap="round" />
+          {heart(76, 78, 0.5, 'gold')}
+        </G>
+      </>
+    ),
+    // A rocket lifting off a puff of cloud.
+    launch: () => (
+      <>
+        <G>
+          <Path d="M60 16c14 10 18 30 14 50H46c-4-20 0-40 14-50z" fill={url('paper')} />
+          <Circle cx="60" cy="40" r="8" fill={url('sky')} />
+          {shine(57, 37, 3, 1.6, -30, 0.8)}
+          <Path d="M46 52l-12 16 14-2z" fill={url('heart')} />
+          <Path d="M74 52l12 16-14-2z" fill={url('heart')} />
+          <Path d="M50 66h20l-4 10h-12z" fill="#C9D2E3" />
+          <Path d="M54 76c0 10 6 14 6 14s6-4 6-14z" fill={url('flame')} />
+        </G>
+        {[[30, 98, 13], [52, 102, 15], [76, 100, 14], [94, 96, 10]].map(([cx, cy, r]) => <Circle key={cx} cx={cx} cy={cy} r={r} fill="#ffffff" opacity="0.9" />)}
+        {sparkle(24, 36, 5, '#ffffff')}
+      </>
+    ),
+    // Three of the avatars' creatures, side by side.
+    users: () => (
+      <>
+        {buddy(32, 74, 0.8, 'sky', 'peach')}
+        {buddy(88, 74, 0.8, 'violet', 'mint')}
+        {buddy(60, 68, 1, 'heart', 'lid')}
+      </>
+    ),
+    // A flag on a little hill, flying.
+    reports: () => (
+      <>
+        <Ellipse cx="54" cy="106" rx="40" ry="16" fill={url('leaf')} />
+        <Rect x="40" y="26" width="5" height="74" rx="2.5" fill="#8A93A8" />
+        <Circle cx="42.5" cy="25" r="4" fill={url('gold')} />
+        <Path d="M45 30c14-6 22 6 40 0v28c-18 6-26-6-40 0z" fill={url('heart')} />
+        {shine(52, 38, 5, 2.4, -10, 0.45)}
+      </>
+    ),
+    // A heart with a steady pulse running through it.
+    healthy: () => (
+      <>
+        <G>{heart(60, 52, 3, 'go')}</G>
+        <Path d="M18 66h22l6-12 8 22 8-30 8 20h32" fill="none" stroke="#ffffff" strokeWidth="4" strokeLinecap="round" strokeLinejoin="round" />
+        {chip(92, 30, 11, CheckCircleIcon, 'sky')}
+      </>
+    ),
+    // A gear and a wrench beside it.
+    maintenance: () => (
+      <>
+        <G>
+          {[0, 45, 90, 135, 180, 225, 270, 315].map((a) => <Rect key={a} x="45" y="22" width="14" height="14" rx="3" fill={url('sky')} transform={`rotate(${a} 52 52)`} />)}
+          <Circle cx="52" cy="52" r="24" fill={url('sky')} />
+          <Circle cx="52" cy="52" r="10" fill="#ffffff" />
+        </G>
+        <G transform="rotate(40 82 78)">
+          <Rect x="77" y="60" width="10" height="40" rx="5" fill={url('gold')} />
+          <Path d="M70 52a12 12 0 0 1 24 0l-5 7h-14z" fill={url('gold')} />
+        </G>
+      </>
+    ),
+    // A laptop and a cup of coffee, steam rising.
+    workspace: () => (
+      <>
+        <Rect x="22" y="36" width="60" height="42" rx="6" fill={url('phone')} />
+        <Rect x="27" y="41" width="50" height="32" rx="3" fill="#ffffff" />
+        {line(32, 48, 26, '#5FD39A', 4)}
+        {line(32, 56, 36)}
+        {line(32, 63, 20, '#E6E9F0')}
+        <Path d="M14 78h76l-6 8H20z" fill="#9AA6BD" />
+        <Rect x="84" y="66" width="18" height="20" rx="4" fill={url('coral')} />
+        <Path d="M102 70a5 5 0 0 1 0 10" fill="none" stroke="#F76C58" strokeWidth="3" />
+        {[88, 96].map((x) => <Path key={x} d={`M${x} 60c-3-4 3-6 0-10`} fill="none" stroke="#ffffff" strokeWidth="2.6" strokeLinecap="round" />)}
+      </>
+    ),
+    // A calendar page with one day ticked.
+    calendar: () => (
+      <>
+        <Rect x="20" y="28" width="72" height="70" rx="10" fill="#ffffff" />
+        <Path d="M20 38a10 10 0 0 1 10-10h52a10 10 0 0 1 10 10v8H20z" fill={url('violet')} />
+        {[34, 54, 74].map((x) => <Rect key={x} x={x} y="22" width="5" height="12" rx="2.5" fill="#6D42D4" />)}
+        {[0, 1, 2].map((r) => [0, 1, 2, 3].map((c) => (
+          <Rect key={`${r}-${c}`} x={28 + c * 15} y={54 + r * 13} width="10" height="8" rx="2" fill={r === 1 && c === 2 ? url('go') : '#EEF0F5'} />
+        )))}
+        {chip(90, 88, 13, CheckCircleIcon, 'go')}
+      </>
+    ),
+    // A shield with a padlock on it.
+    security: () => (
+      <>
+        <Path d="M60 18l34 12v26c0 22-15 38-34 46-19-8-34-24-34-46V30z" fill={url('violet')} />
+        <Path d="M60 26l26 9v21c0 17-11 30-26 37z" fill="#ffffff" opacity="0.18" />
+        <G>
+          <Path d="M50 58v-6a10 10 0 0 1 20 0v6" fill="none" stroke="#ffffff" strokeWidth="5" />
+          <Rect x="44" y="56" width="32" height="26" rx="6" fill={url('gold')} />
+          <Circle cx="60" cy="67" r="3.6" fill="#9A6A00" />
+          <Rect x="58.5" y="68" width="3" height="7" rx="1.5" fill="#9A6A00" />
+        </G>
+        {shine(42, 34, 6, 3, -30, 0.45)}
+      </>
+    ),
+    // A cloud with its signal gone, waiting to try again.
+    offline: () => (
+      <>
+        <G>
+          <Path d="M34 82a18 18 0 0 1 4-35 24 24 0 0 1 45-4 18 18 0 0 1 3 36z" fill={url('skyLight')} />
+          {shine(48, 46, 8, 3.5, -20, 0.6)}
+          {icon(WifiOffIk, 46, 52, 28, '#2E6FD8')}
+        </G>
+        <G>
+          <Path d="M84 96a10 10 0 1 1 8-16" fill="none" stroke={url('goLine')} strokeWidth="4" strokeLinecap="round" />
+          <Path d="M88 74l6 7-8 2z" fill="#2E9E67" />
+        </G>
+      </>
+    ),
+    // A product, and a buyer's question about it.
+    questions: () => (
+      <>
+        <Rect x="16" y="40" width="44" height="58" rx="8" fill="#ffffff" />
+        <Rect x="21" y="45" width="34" height="26" rx="5" fill={url('mint')} />
+        <Circle cx="38" cy="58" r="8" fill={url('fruit')} />
+        <Path d="M38 50c1-4 5-6 8-5-1 4-4 6-8 5z" fill="#3BB37A" />
+        {line(21, 78, 26)}
+        {line(21, 86, 16, '#5FD39A', 4)}
+        <Path d="M80 22h14a10 10 0 0 1 10 10v4a10 10 0 0 1-10 10h-2l2 7-9-7h-5a10 10 0 0 1-10-10v-4a10 10 0 0 1 10-10z" fill={url('heart')} opacity="0.85" />
+        <G>
+          <Path d="M66 44h22a14 14 0 0 1 14 14v8a14 14 0 0 1-14 14H76l-12 10 2-10a14 14 0 0 1-14-14v-8a14 14 0 0 1 14-14z" fill={url('go')} />
+          {label(77, 72, 22, '#ffffff', '?')}
+          {shine(60, 52, 5, 2.4)}
+        </G>
+      </>
+    ),
+    // A basket of today's food under a rising sun.
+    today: () => (
+      <>
+        <Circle cx="88" cy="34" r="14" fill={url('gold')} />
+        <Path d="M36 58a24 24 0 0 1 48 0" fill="none" stroke={url('woodLine')} strokeWidth="5" strokeLinecap="round" />
+        <Circle cx="46" cy="58" r="11" fill={url('fruit')} />
+        <Path d="M46 47c1-4 5-6 8-5-1 4-4 6-8 5z" fill="#3BB37A" />
+        <G>
+          <Ellipse cx="72" cy="56" rx="14" ry="7" fill={url('ring')} />
+          <Path d="M84 56l9-7v14z" fill="#5B67E8" />
+          <Circle cx="64" cy="54" r="1.8" fill="#ffffff" />
+        </G>
+        <Ellipse cx="58" cy="60" rx="7" ry="11" fill={url('leaf')} transform="rotate(-20 58 60)" />
+        <Path d="M24 62h72l-8 36a6 6 0 0 1-6 5H38a6 6 0 0 1-6-5z" fill={url('wood')} />
+        {[74, 84, 94].map((y) => <Rect key={y} x="30" y={y} width="60" height="2.6" rx="1.3" fill="#B7864F" opacity="0.5" />)}
+        <Rect x="22" y="60" width="76" height="8" rx="4" fill={url('woodLine')} />
+        {shine(34, 76, 5, 2.4, -10, 0.35)}
+      </>
+    ),
+    // A phone getting the app, a download on its way down.
+    testers: () => (
+      <>
+        <Rect x="36" y="22" width="48" height="86" rx="12" fill={url('phone')} />
+        <Rect x="40" y="27" width="40" height="76" rx="8" fill="#ffffff" />
+        <Rect x="50" y="40" width="20" height="20" rx="6" fill={url('go')} />
+        <Path d="M60 44c-5 3-6 8-3 12 4-1 7-5 3-12z" fill="#ffffff" opacity="0.9" />
+        {line(48, 66, 24)}
+        <Rect x="46" y="76" width="28" height="9" rx="4.5" fill={url('go')} />
+        <Rect x="46" y="76" width="16" height="9" rx="4.5" fill="#2E9E67" />
+        <G>
+          <Circle cx="90" cy="30" r="12" fill={url('sky')} />
+          <Path d="M90 23v12m-5-5l5 5 5-5" fill="none" stroke="#ffffff" strokeWidth="2.8" strokeLinecap="round" strokeLinejoin="round" />
+        </G>
+        {sparkle(24, 40, 5, '#ffffff')}
+        {sparkle(98, 84, 4, '#F7C431')}
+      </>
+    ),
+    // A photo being dressed up: a brush, a sticker.
+    designs: () => (
+      <>
+        <Rect x="18" y="30" width="66" height="60" rx="8" fill="#ffffff" transform="rotate(-6 51 60)" />
+        <G transform="rotate(-6 51 60)">
+          <Rect x="23" y="35" width="56" height="42" rx="5" fill={url('skyLight')} />
+          <Circle cx="66" cy="46" r="6" fill={url('gold')} />
+          <Path d="M23 77l18-18 12 10 10-8 16 16z" fill={url('leaf')} />
+          <Rect x="23" y="66" width="56" height="11" fill={url('heart')} opacity="0.92" />
+          {line(28, 70, 22, '#ffffff', 3)}
+        </G>
+        <Path d={starPath(84, 30, 10)} fill={url('gold')} />
+        <G>
+          <Rect x="86" y="54" width="8" height="40" rx="4" fill={url('wood')} transform="rotate(35 90 74)" />
+          <Path d="M70 58c4-6 12-6 14 0l-6 8z" fill={url('heart')} transform="rotate(35 78 62)" />
+        </G>
+      </>
+    ),
+    // A clipboard of ticked entries, looked over.
+    audit: () => (
+      <>
+        <Rect x="24" y="24" width="60" height="78" rx="9" fill={url('wood')} />
+        <Rect x="30" y="32" width="48" height="64" rx="5" fill="#ffffff" />
+        <Rect x="42" y="18" width="24" height="12" rx="4" fill={url('phone')} />
+        {[44, 58, 72].map((y, i) => (
+          <G key={y}>
+            <Circle cx="38" cy={y + 2} r="4.5" fill={url(i === 2 ? 'gold' : 'go')} />
+            <Path d={`M35.8 ${y + 2}l1.6 1.6 3-3`} fill="none" stroke="#ffffff" strokeWidth="1.6" strokeLinecap="round" strokeLinejoin="round" />
+            {line(46, y - 1, 24)}
+            {line(46, y + 4, 14, '#E6E9F0', 2.6)}
+          </G>
+        ))}
+        <G>
+          <Rect x="88" y="86" width="8" height="20" rx="4" fill={url('ring')} transform="rotate(-42 92 96)" />
+          <Circle cx="82" cy="82" r="13" fill={url('ring')} />
+          <Circle cx="82" cy="82" r="9" fill={url('glass')} />
+          {shine(78, 78, 3, 1.6, -35, 0.9)}
+        </G>
+      </>
+    ),
+    // An envelope, a card with a heart rising out of it.
+    invites: () => (
+      <>
+        <G>
+          <Rect x="34" y="28" width="52" height="46" rx="6" fill="#ffffff" />
+          {heart(60, 44, 0.9, 'heart')}
+          {line(44, 62, 32, '#D6DBE6', 3)}
+        </G>
+        <Path d="M24 56l36 24 36-24v38a6 6 0 0 1-6 6H30a6 6 0 0 1-6-6z" fill={url('coral')} />
+        <Path d="M24 94l28-20h16l28 20" fill={url('coralDeep')} opacity="0.55" />
+        <Path d="M24 56l36 24 36-24" fill="none" stroke="#FFA99D" strokeWidth="2" />
+        {sparkle(20, 36, 5, '#ffffff')}
+        {sparkle(100, 40, 4, '#F7C431')}
+      </>
+    ),
+    // The admin team: three of the creatures and a shield.
+    team: () => (
+      <>
+        {buddy(34, 76, 0.8, 'go', 'lid')}
+        {buddy(86, 76, 0.8, 'heart', 'mint')}
+        {buddy(60, 70, 1, 'sky', 'peach')}
+        {chip(92, 30, 12, ShieldCheckIcon, 'violet')}
       </>
     ),
   };
-  const draw = layouts[scene.layout] || layouts.card;
+  const draw = scenes[topic];
 
   return (
     <View
@@ -263,42 +853,25 @@ export default function EmptyArt({ name, size = 96, style }) {
       importantForAccessibility="no-hide-descendants"
       pointerEvents="none"
     >
-      <Svg viewBox={`0 0 ${VIEW_W} ${VIEW_H}`} width={w} height={h} style={{ overflow: 'visible' }}>
+      <Svg viewBox={`${VIEW.x} ${VIEW.y} ${VIEW.w} ${VIEW.h}`} width={w} height={h}>
         <Defs>
-          <LinearGradient id={`${id}-sky`} x1="0" y1="0" x2="0" y2="1">
-            <Stop offset="0" stopColor={t.accent[50]} />
-            <Stop offset="1" stopColor={t.primary[50]} />
-          </LinearGradient>
-          <LinearGradient id={`${id}-green`} x1="0" y1="0" x2="0" y2="1">
-            <Stop offset="0" stopColor={t.primary[400]} />
-            <Stop offset="1" stopColor={t.primary[600]} />
-          </LinearGradient>
-          <LinearGradient id={`${id}-pink`} x1="0" y1="0" x2="0" y2="1">
-            <Stop offset="0" stopColor={t.accent[400]} />
-            <Stop offset="1" stopColor={t.accent[600]} />
-          </LinearGradient>
-          <LinearGradient id={`${id}-gold`} x1="0" y1="0" x2="1" y2="1">
-            <Stop offset="0" stopColor="#fde68a" />
-            <Stop offset="1" stopColor="#f59e0b" />
-          </LinearGradient>
-          <LinearGradient id={`${id}-amber`} x1="0" y1="0" x2="0" y2="1">
-            <Stop offset="0" stopColor="#fcd34d" />
-            <Stop offset="1" stopColor="#f59e0b" />
-          </LinearGradient>
-          <LinearGradient id={`${id}-amberLid`} x1="0" y1="0" x2="0" y2="1">
-            <Stop offset="0" stopColor="#fbbf24" />
-            <Stop offset="1" stopColor="#d97706" />
-          </LinearGradient>
+          <ClipPath id={id('clip')}><Circle cx="60" cy="60" r="60" /></ClipPath>
+          <ClipPath id={id('pop')}><Path d={POP} /></ClipPath>
+          {ramp('bg', pal.bg, { x1: '0', y1: '0', x2: '1', y2: '1' })}
+          {RAMPS.map(([part, stops, axis]) => ramp(part, stops, axis))}
+          <RadialGradient id={id('glow')} cx="0.28" cy="0.16" r="0.55">
+            <Stop offset="0" stopColor="#ffffff" stopOpacity="0.35" />
+            <Stop offset="1" stopColor="#ffffff" stopOpacity="0" />
+          </RadialGradient>
         </Defs>
 
-        {/* The soft pink-to-mint disc behind, and the ground shadow. */}
-        <Circle cx="100" cy="76" r="70" fill={url('sky')} />
-        <Rect x="46" y="136" width="108" height="6" rx="3" fill={t.primary[900]} opacity="0.12" />
-
-        {draw()}
-
-        {/* One small gold sparkle: clean, not busy. */}
-        <Path d={sparklePath(32, 40, 4.5)} fill="#fbbf24" />
+        <G clipPath={url('clip')}>
+          <Rect width="120" height="120" fill={url('bg')} />
+          <Rect width="120" height="120" fill={url('glow')} />
+        </G>
+        <G clipPath={url('pop')}>
+          <G transform={GROW}>{draw()}</G>
+        </G>
       </Svg>
     </View>
   );

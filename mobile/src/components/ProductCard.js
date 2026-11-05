@@ -14,6 +14,7 @@ import { notTakingOrders } from '../lib/availability';
 import { useProductPeek } from './peek/ProductPeek';
 import { parseImages } from './product/productLib';
 import { isStockless, priceUnit, startsFrom } from './orders/orderLines';
+import { prefetchProduct } from '../lib/productPrefetch';
 
 /*
  * The website's phone product tile.
@@ -80,6 +81,8 @@ function ProductCard({
       accessibilityRole="button"
       accessibilityLabel={p.name}
       onPress={open}
+      // The product starts loading as the finger lands (lib/productPrefetch).
+      onPressIn={!onPress && p.slug ? () => prefetchProduct(p.slug) : undefined}
       {...(product ? peekProduct(p, { onOpen: open }) : null)}
       style={[styles.card, look === 'grid' && styles.cardGrid, list && styles.cardList, style]}
     >
