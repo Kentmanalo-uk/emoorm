@@ -15,7 +15,7 @@ const TL = {
   ...Object.fromEntries([
     'Home', 'Cart', 'Profile', 'Chat', 'Wishlist', 'Delivery', 'Pickup', 'Filter', 'Filters',
     'Subtotal', 'Account', 'Inbox', 'Password', 'Email', 'Barangay', 'Stock', 'Seller', 'Voucher',
-    'Shopping Cart', 'Cash on Delivery', 'GCash', 'QR Ph', 'Ate Moormy', 'Package', 'Paluto',
+    'Shopping Cart', 'Cash on Delivery', 'GCash', 'QR Ph', 'Moormy', 'Package', 'Paluto',
   ].map((w) => [w, w])),
 
   // Moving around

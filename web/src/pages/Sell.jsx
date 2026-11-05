@@ -1,9 +1,9 @@
-﻿import { useEffect, useState } from 'react';
+﻿import { useEffect, useRef, useState } from 'react';
 import { Link, useNavigate } from 'react-router-dom';
 import { useQuery } from '@tanstack/react-query';
 import useSeo from '../lib/seo';
 import {
-  ArrowRight, Plus, Minus, House, PlayCircle, GraduationCap, Lifebuoy, Check,
+  ArrowRight, Plus, Minus, House, PlayCircle, GraduationCap, Lifebuoy, Check, Heart,
   Package, ClipboardText, ChatCircleDots, User,
 } from '../lib/icons';
 import useAuthStore from '../store/authStore';
@@ -13,7 +13,7 @@ import { useCategories, useMunicipalities } from '../hooks/useReferenceData';
 import { queryKeys, policy } from '../lib/queryKeys';
 import Footer from '../components/layout/Footer';
 import AppLogo from '../components/AppLogo';
-import Mascot from '../components/avatars/Mascot';
+import DraggableMascot from '../components/avatars/DraggableMascot';
 import CategoryIcon from '../components/CategoryIcon';
 import { ShopLogoArt } from '../components/shop/ShopArt';
 import axios from '../lib/axios';
@@ -76,10 +76,63 @@ function StatusGlyphs() {
 }
 
 /* The Seller Center on a recent iPhone Pro (titanium frame, Dynamic Island,
-   side buttons), a new order dropping in as an iOS banner now and then. */
-function PhoneScene() {
+   side buttons), a new order dropping in as an iOS banner now and then.
+   It turns to face you and comes closer (Sell.css): on phones as the page
+   scrolls, from the top of the page until the phone nears the top of the
+   screen; on computers on hover, in CSS.
+
+   On phones the browser runs it, tied to the scroll (a scroll-driven
+   animation, off the main thread); this only measures where it ends
+   (--zoom-end) when the layout changes. Browsers without that get --zoom
+   from a scroll listener instead, once a frame. */
+const SCROLL_DRIVEN = typeof CSS !== 'undefined' && CSS.supports?.('animation-timeline: scroll()');
+
+function PhoneScene({ followScroll }) {
+  const sceneRef = useRef(null);
+  useEffect(() => {
+    const scene = sceneRef.current;
+    if (!followScroll || !scene) return undefined;
+    if (window.matchMedia('(prefers-reduced-motion: reduce)').matches) return undefined;
+    // Done once the scene's top is a fifth of the way down the screen.
+    const span = () => Math.max(120, scene.getBoundingClientRect().top + window.scrollY - window.innerHeight * 0.2);
+
+    if (SCROLL_DRIVEN) {
+      const measure = () => scene.style.setProperty('--zoom-end', `${Math.round(span())}px`);
+      measure();
+      // The headline above can rewrap (fonts arriving, rotating the phone).
+      const observer = new ResizeObserver(measure);
+      observer.observe(scene.parentElement);
+      window.addEventListener('resize', measure);
+      return () => {
+        observer.disconnect();
+        window.removeEventListener('resize', measure);
+        scene.style.removeProperty('--zoom-end');
+      };
+    }
+
+    let frame = 0;
+    const update = () => {
+      frame = 0;
+      const t = Math.min(1, Math.max(0, window.scrollY / span()));
+      // Eased in and out, so it settles rather than stops.
+      scene.style.setProperty('--zoom', (t * t * (3 - 2 * t)).toFixed(3));
+    };
+    const onScroll = () => {
+      if (!frame) frame = requestAnimationFrame(update);
+    };
+    update();
+    window.addEventListener('scroll', onScroll, { passive: true });
+    window.addEventListener('resize', onScroll);
+    return () => {
+      cancelAnimationFrame(frame);
+      window.removeEventListener('scroll', onScroll);
+      window.removeEventListener('resize', onScroll);
+      scene.style.removeProperty('--zoom');
+    };
+  }, [followScroll]);
+
   return (
-    <div className="sl-scene" aria-hidden="true">
+    <div className="sl-scene" aria-hidden="true" ref={sceneRef}>
       <img className="sl-scene-mark" src="/brand-icon-white.svg" alt="" />
       <span className="sl-scene-sun" />
       <div className="sl-iphone">
@@ -154,6 +207,7 @@ export default function Sell() {
   }, [isSeller, startAccountSwitch]);
   const [openFaq, setOpenFaq] = useState(0);
 
+
   // The live catalogue and towns (usually already in the page: lib/boot).
   const { categories } = useCategories();
   const { municipalities } = useMunicipalities();
@@ -166,6 +220,33 @@ export default function Sell() {
   const shownShops = shops.filter((s) => s.logo).slice(0, SHOWN_SHOPS);
 
   const isPending = isAuthenticated && user?.sellerApplicationStatus === 'PENDING';
+
+  // The waving mascot (on the graphics card, so it never slows the scroll)
+  // is held still while it is off screen, so a phone does no work for it.
+  const mascotRef = useRef(null);
+  useEffect(() => {
+    const el = mascotRef.current;
+    if (!el) return undefined;
+    const observer = new IntersectionObserver(([entry]) => el.toggleAttribute('data-still', !entry.isIntersecting));
+    observer.observe(el);
+    return () => observer.disconnect();
+  }, [isPending]);
+
+  // The three "why" pictures play a little scene on hover (Sell.css). A
+  // phone has no hover: there each plays as it comes well into view, and
+  // again the next time it does.
+  useEffect(() => {
+    if (!window.matchMedia('(hover: none)').matches) return undefined;
+    const arts = document.querySelectorAll('.sl-feature-art');
+    const observer = new IntersectionObserver((entries) => {
+      entries.forEach((e) => {
+        if (e.intersectionRatio >= 0.6) e.target.classList.add('is-live');
+        else if (!e.isIntersecting) e.target.classList.remove('is-live');
+      });
+    }, { threshold: [0, 0.6] });
+    arts.forEach((a) => observer.observe(a));
+    return () => observer.disconnect();
+  }, []);
   const ctaLabel = isPending ? 'Application pending' : isAuthenticated ? 'Apply to sell' : 'Start selling';
   const handleCTA = () => {
     if (isPending) return;
@@ -225,9 +306,9 @@ export default function Sell() {
                     {ctaLabel} {!isPending && <ArrowRight size={17} weight="bold" />}
                   </button>
                   {!isPending && (
-                    <span className="sl-mascot" aria-hidden="true">
+                    <span className="sl-mascot" aria-hidden="true" ref={mascotRef}>
                       <span className="sl-mascot-say">Tara! It&apos;s free</span>
-                      <Mascot name="shroom" size={72} />
+                      <DraggableMascot size={72} />
                     </span>
                   )}
                 </span>
@@ -240,7 +321,7 @@ export default function Sell() {
                 )}
               </div>
             </div>
-            <PhoneScene />
+            <PhoneScene followScroll={isPhone} />
           </div>
         </section>
 
@@ -271,6 +352,7 @@ export default function Sell() {
                   <p><span>Delivery · Calapan</span><span>₱30.00</span></p>
                   <p className="sl-receipt-fee"><span>Emoorm fee</span><span>₱0.00</span></p>
                   <p className="sl-receipt-total"><span>You receive</span><span>₱270.00</span></p>
+                  <span className="sl-receipt-stamp"><b>₱0</b>fee</span>
                 </div>
               </div>
             </div>
@@ -285,8 +367,8 @@ export default function Sell() {
               </div>
               <div className="sl-feature-art" aria-hidden="true">
                 <div className="sl-areas">
-                  {BARANGAYS.map(([name, on]) => (
-                    <span key={name} className={on ? 'is-on' : ''}>{on && <Check size={14} weight="bold" />}{name}</span>
+                  {BARANGAYS.map(([name, on], i) => (
+                    <span key={name} className={on ? 'is-on' : ''} style={{ '--i': i }}>{on && <Check size={14} weight="bold" />}{name}</span>
                   ))}
                   <span className="sl-areas-pickup"><i /> Pickup at my stall</span>
                 </div>
@@ -303,9 +385,13 @@ export default function Sell() {
               </div>
               <div className="sl-feature-art" aria-hidden="true">
                 <div className="sl-chat">
-                  <p className="sl-chat-in">Pwede pa-reserve ng 2 bilao na biko para bukas?</p>
-                  <p className="sl-chat-out">Opo! Ready po by 3pm. Pickup or deliver?</p>
-                  <p className="sl-chat-in">Deliver po, Brgy. Lazareto 🙏</p>
+                  <p className="sl-chat-in" style={{ '--i': 0 }}>Pwede pa-reserve ng 2 bilao na biko para bukas?</p>
+                  <p className="sl-chat-out" style={{ '--i': 1 }}>
+                    Opo! Ready po by 3pm. Pickup or deliver?
+                    <span className="sl-chat-heart"><Heart size={13} weight="fill" /></span>
+                  </p>
+                  <p className="sl-chat-in" style={{ '--i': 2 }}>Deliver po, Brgy. Lazareto 🙏</p>
+                  <p className="sl-chat-typing" aria-hidden="true"><i /><i /><i /></p>
                 </div>
               </div>
             </div>

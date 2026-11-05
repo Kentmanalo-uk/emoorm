@@ -111,13 +111,13 @@ export function SellerProductsHeader() {
   );
 }
 
-/** Chat's bar: "Chat [Buyers ▾]", Ate Moormy (the AI assistant), the bell, ⋯ */
+/** Chat's bar: "Chat [Buyers ▾]", Moormy (the AI assistant), the bell, ⋯ */
 export function SellerChatHeader() {
   return (
     <SellerTabHeader
       chat
       actions={(
-        <SellerHeaderButton label="Ask Ate Moormy, your AI assistant" to="/seller/assistant">
+        <SellerHeaderButton label="Ask Moormy, your AI assistant" to="/seller/assistant">
           <SparkleIcon size={28} weight="fill" color={t.violet[500]} />
         </SellerHeaderButton>
       )}

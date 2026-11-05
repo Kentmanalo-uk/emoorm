@@ -20,6 +20,7 @@ import { useUnreadCounts, countChatRead, refreshChatCounts } from '../../lib/unr
 import useFocusTrap from '../../hooks/useFocusTrap';
 import { chatTime } from '../../lib/format';
 import { ShopLogoArt } from '../shop/ShopArt';
+import DraggableMascot from '../avatars/DraggableMascot';
 
 const LIST_POLL_MS = 30000;
 const THREAD_POLL_MS = 5000;
@@ -102,6 +103,41 @@ export default function ChatDock() {
   const [error, setError] = useState('');
   const bottomRef = useRef(null);
   const inputRef = useRef(null);
+
+  // Moormy, the mascot, lives behind the Messages tab: now and then it peeks
+  // over the edge (cap and eyes) for a moment; pointing at the tab brings it
+  // right up, waving (ChatDock.css). Never while the panel is open, the page
+  // is in the background, or motion is reduced.
+  const [peek, setPeek] = useState(false);
+  // Picked up and carried about (DraggableMascot): its spot on the tab stays
+  // risen until a moment after it is home again, then it sinks back.
+  const [carried, setCarried] = useState(false);
+  const carriedTimer = useRef(0);
+  const onCarried = useCallback((on) => {
+    clearTimeout(carriedTimer.current);
+    if (on) setCarried(true);
+    else carriedTimer.current = setTimeout(() => setCarried(false), 1000);
+  }, []);
+  useEffect(() => () => clearTimeout(carriedTimer.current), []);
+  useEffect(() => {
+    if (open || window.matchMedia('(prefers-reduced-motion: reduce)').matches) return undefined;
+    let timer = 0;
+    const schedule = (wait) => {
+      timer = setTimeout(() => {
+        if (document.hidden) { schedule(4000); return; }
+        setPeek(true);
+        timer = setTimeout(() => {
+          setPeek(false);
+          schedule(9000 + Math.random() * 7000);
+        }, 2600);
+      }, wait);
+    };
+    schedule(3500);
+    return () => {
+      clearTimeout(timer);
+      setPeek(false);
+    };
+  }, [open]);
 
   const loadStore = useCallback(() => axios.get('/messages/conversations')
     .then((res) => setStoreConvos(res.data || []))
@@ -461,6 +497,9 @@ export default function ChatDock() {
         aria-expanded={open}
         aria-label={barUnread ? `Messages, ${barUnread} unread` : 'Messages'}
       >
+        <span className={`cd-peek${peek ? ' is-peek' : ''}${carried ? ' is-up' : ''}`} aria-hidden="true">
+          <DraggableMascot size={50} onHeld={onCarried} />
+        </span>
         <ChatCircleDots size={20} weight="fill" />
         <span>Messages</span>
         {barUnread > 0 && <span className="cd-count">{barUnread > 9 ? '9+' : barUnread}</span>}

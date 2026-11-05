@@ -19,7 +19,7 @@ import {
 import { font, t, themed } from '../../src/theme';
 
 /*
- * /seller/assistant, Ate Moormy: the sellers' AI assistant
+ * /seller/assistant, Moormy: the sellers' AI assistant
  * (web/src/pages/SellerAssistant.jsx + SellerAssistant.css, phones). Answers
  * questions about selling on Emoorm only, in English or Tagalog; suggested
  * questions to tap; links to the page an answer is about. The chat stays on
@@ -35,24 +35,24 @@ const UI = {
     note: 'She answers questions about selling on Emoorm only, and can make mistakes. Check important details.',
     language: 'Language',
     suggested: 'Suggested questions',
-    placeholder: 'Ask Ate Moormy about your shop…',
+    placeholder: 'Ask Moormy about your shop…',
     newChat: 'New chat',
     retry: 'Try again',
-    cantLoad: "Ate Moormy can't load right now.",
+    cantLoad: "Moormy can't load right now.",
     offline: "I couldn't reach Emoorm just now. Check your connection and try again.",
-    typing: 'Ate Moormy is typing',
+    typing: 'Moormy is typing',
   },
   tl: {
     role: 'AI seller assistant',
     note: 'Tungkol lang sa pagbebenta sa Emoorm ang sinasagot niya, at puwede siyang magkamali. Suriin ang mahahalagang detalye.',
     language: 'Wika',
     suggested: 'Mga puwedeng itanong',
-    placeholder: 'Magtanong kay Ate Moormy…',
+    placeholder: 'Magtanong kay Moormy…',
     newChat: 'Bagong chat',
     retry: 'Subukan ulit',
-    cantLoad: 'Hindi ma-load si Ate Moormy ngayon.',
+    cantLoad: 'Hindi ma-load si Moormy ngayon.',
     offline: 'Hindi ko maabot ang Emoorm ngayon. Tingnan ang koneksyon mo at subukan ulit.',
-    typing: 'Nagta-type si Ate Moormy',
+    typing: 'Nagta-type si Moormy',
   },
 };
 const LANG_KEY = 'emoorm-moormy-lang';
@@ -213,11 +213,11 @@ export default function SellerAssistantScreen() {
             wantEnd.current = false;
             scrollRef.current?.scrollToEnd({ animated: messages.length > 0 && !still });
           }}
-          accessibilityLabel="Chat with Ate Moormy"
+          accessibilityLabel="Chat with Moormy"
         >
           <View style={styles.hero}>
             <Avatar size={56} style={styles.heroAvatar} />
-            <Text style={styles.heroName}>Ate Moormy</Text>
+            <Text style={styles.heroName}>Moormy</Text>
             <Text style={styles.heroRole}>{copy.role}</Text>
             <Text style={styles.heroNote}>{copy.note}</Text>
             <LangSwitch lang={lang} onChange={chooseLang} disabled={busy} label={copy.language} />

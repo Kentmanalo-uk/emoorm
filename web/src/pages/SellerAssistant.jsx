@@ -14,7 +14,7 @@ import './SellerDashboard.css';
 import './SellerAssistant.css';
 
 /*
- * Ate Moormy: the sellers' AI assistant. Answers questions about selling on
+ * Moormy: the sellers' AI assistant. Answers questions about selling on
  * Emoorm only, in English or Tagalog; suggested questions to tap; links to
  * the page an answer is about. The chat stays on this device (per account)
  * until "New chat".
@@ -28,12 +28,12 @@ const UI = {
     note: 'She answers questions about selling on Emoorm only, and can make mistakes. Check important details.',
     language: 'Language',
     suggested: 'Suggested questions',
-    placeholder: 'Ask Ate Moormy about your shop…',
+    placeholder: 'Ask Moormy about your shop…',
     newChat: 'New chat',
     retry: 'Try again',
-    cantLoad: "Ate Moormy can't load right now.",
+    cantLoad: "Moormy can't load right now.",
     offline: "I couldn't reach Emoorm just now. Check your connection and try again.",
-    typing: 'Ate Moormy is typing',
+    typing: 'Moormy is typing',
   },
   tl: {
     subtitle: 'Ang AI assistant mo sa pagbebenta sa Emoorm',
@@ -41,12 +41,12 @@ const UI = {
     note: 'Tungkol lang sa pagbebenta sa Emoorm ang sinasagot niya, at puwede siyang magkamali. Suriin ang mahahalagang detalye.',
     language: 'Wika',
     suggested: 'Mga puwedeng itanong',
-    placeholder: 'Magtanong kay Ate Moormy…',
+    placeholder: 'Magtanong kay Moormy…',
     newChat: 'Bagong chat',
     retry: 'Subukan ulit',
-    cantLoad: 'Hindi ma-load si Ate Moormy ngayon.',
+    cantLoad: 'Hindi ma-load si Moormy ngayon.',
     offline: 'Hindi ko maabot ang Emoorm ngayon. Tingnan ang koneksyon mo at subukan ulit.',
-    typing: 'Nagta-type si Ate Moormy',
+    typing: 'Nagta-type si Moormy',
   },
 };
 const LANG_KEY = 'emoorm-moormy-lang';
@@ -231,7 +231,7 @@ export default function SellerAssistant() {
       <div className="seller-container">
         {!isPhone && (
           <SellerPageHead
-            title="Ate Moormy"
+            title="Moormy"
             subtitle={t.subtitle}
             actions={(
               <button type="button" className="btn-seller-outline" onClick={newChat} disabled={busy || !messages.length}>
@@ -242,10 +242,10 @@ export default function SellerAssistant() {
         )}
 
         <div className="seller-card sa-card">
-          <div className="sa-scroll" role="log" aria-live="polite" aria-label="Chat with Ate Moormy">
+          <div className="sa-scroll" role="log" aria-live="polite" aria-label="Chat with Moormy">
             <div className={`sa-hero${tlClass(lang)}`} {...tlAttrs(lang)}>
               <Avatar size={56} />
-              <strong>Ate Moormy</strong>
+              <strong>Moormy</strong>
               <span>{t.role}</span>
               <small>{t.note}</small>
               {/* The language she answers in: English or Tagalog. */}

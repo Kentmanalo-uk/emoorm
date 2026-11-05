@@ -2,7 +2,7 @@ const config = require('../config/env');
 const { ApiError } = require('../middleware/errorHandler');
 
 /**
- * Ate Moormy's engine, shared by her seller and buyer sides. Each side gives
+ * Moormy's engine, shared by her seller and buyer sides. Each side gives
  * it a guide (sellerAssistantGuide / buyerAssistantGuide: topics, suggested
  * questions, the words of its subject), the person's live status for the
  * model to read, and the few lines of the model's instructions that differ.
@@ -74,7 +74,7 @@ const askModel = async (messages) => {
       if ([401, 402, 403].includes(err.status) || err.name === 'TimeoutError' || err.name === 'AbortError') break;
     }
   }
-  console.warn(`[ate-moormy] model unavailable (${lastError?.status || lastError?.name || 'error'}): answering from the guide`);
+  console.warn(`[moormy] model unavailable (${lastError?.status || lastError?.name || 'error'}): answering from the guide`);
   return null;
 };
 
@@ -214,7 +214,7 @@ const createAssistant = ({ guide, getSnapshot, describeSnapshot, prompt }) => {
     if (body.presetId && !preset) throw new ApiError('Unknown question', 400);
     const chosen = langOf(body.lang);
     const question = preset ? guide.pick(preset.question, chosen) : clean(body.question, MAX_QUESTION);
-    if (!question) throw new ApiError('Type a question for Ate Moormy', 400);
+    if (!question) throw new ApiError('Type a question for Moormy', 400);
     const lang = !preset && looksTagalog(question) ? 'tl' : chosen;
     const asked = Array.isArray(body.asked) ? body.asked.filter((id) => typeof id === 'string').slice(0, 30) : [];
     const history = cleanHistory(body.history);

@@ -28,10 +28,10 @@ export default function SellerMessages() {
         <SellerPageHead
           title="Messages"
           subtitle="Conversations with your buyers"
-          // Phones have Ate Moormy's button in the Chat header instead.
+          // Phones have Moormy's button in the Chat header instead.
           actions={isPhone ? null : (
-            <Link to="/seller/assistant" className="btn-seller-outline sa-open" title="Ate Moormy, your AI assistant">
-              <Sparkle size={16} weight="fill" /> Ask Ate Moormy
+            <Link to="/seller/assistant" className="btn-seller-outline sa-open" title="Moormy, your AI assistant">
+              <Sparkle size={16} weight="fill" /> Ask Moormy
             </Link>
           )}
         />

@@ -106,7 +106,7 @@ export function isReadable(notification) {
 }
 
 /*
- * A website path (as the API or Ate Moormy's answers give them) on the app's
+ * A website path (as the API or Moormy's answers give them) on the app's
  * routes: /profile/orders → /orders, /help → /help-center and so on. Paths
  * the app shares with the website pass through unchanged.
  */

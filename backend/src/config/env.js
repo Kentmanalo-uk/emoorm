@@ -206,7 +206,7 @@ const config = {
     debugOcr: process.env.IDENTITY_OCR_DEBUG === 'true' && process.env.NODE_ENV !== 'production',
   },
 
-  // Ate Moormy, the sellers' assistant: a small open model on Hugging Face
+  // Moormy, the sellers' assistant: a small open model on Hugging Face
   // (Inference Providers, OpenAI-style chat). Without HF_TOKEN she answers
   // from her built-in seller guide only.
   ai: {

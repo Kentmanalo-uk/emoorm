@@ -7,7 +7,7 @@ import { GradientFill } from './inbox/InboxGradient';
 
 /*
  * The light wash behind the page headers: soft pink on the left to light
- * green on the right (Ate Moormy's colours, very softened), with a soft
+ * green on the right (Moormy's colours, very softened), with a soft
  * bottom edge into the page's white. Put it first inside a header (it
  * fills it), or give `height` to cover a stack of views from the screen's
  * top (the status bar's gap and the bar under it).

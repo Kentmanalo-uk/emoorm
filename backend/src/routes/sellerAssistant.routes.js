@@ -6,7 +6,7 @@ const { authenticate, authorize } = require('../middleware/auth');
 const router = express.Router();
 
 /**
- * Seller Assistant Routes ("Ate Moormy")
+ * Seller Assistant Routes ("Moormy")
  *
  * Sellers only. Questions are capped per seller: each typed one may be a
  * paid model call on the free Hugging Face allowance.
@@ -17,7 +17,7 @@ const askLimiter = rateLimit({
   standardHeaders: true,
   legacyHeaders: false,
   keyGenerator: (req) => `seller-assistant:${req.user.id}`,
-  message: { success: false, message: 'Ate Moormy needs a short break. Try again in a few minutes.' },
+  message: { success: false, message: 'Moormy needs a short break. Try again in a few minutes.' },
 });
 
 router.get('/', authenticate, authorize('SELLER'), sellerAssistantController.getIntro);

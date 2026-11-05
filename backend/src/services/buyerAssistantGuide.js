@@ -1,5 +1,5 @@
 /**
- * Ate Moormy's buyer guide, in English and Tagalog: how shopping on Emoorm
+ * Moormy's buyer guide, in English and Tagalog: how shopping on Emoorm
  * works, in the words the app shows. Each topic answers on its own (the
  * suggested questions, and typed questions when no model is set up) and is
  * what the model answers from. Every fact here comes from the app itself
@@ -14,19 +14,19 @@ const seller = require('./sellerAssistantGuide');
 
 const { LANGS, pick, TAGALOG_WORDS, GREETING, ABOUT_QUESTION, OFF_TOPIC_PATTERNS } = seller;
 
-const NAME = 'Ate Moormy';
+const NAME = 'Moormy';
 
 const greeting = (name, lang = 'en') => (lang === 'tl'
-  ? `Hi${name ? ` ${name}` : ''}! Ako si **Ate Moormy**, ang shopping helper mo sa Emoorm. Magtanong ka tungkol sa pamimili sa Emoorm: paghahanap ng produkto, checkout, bayad, delivery o pickup, mga order mo, returns at iba pa. Puwede mo ring i-tap ang isang tanong sa ibaba.`
-  : `Hi${name ? ` ${name}` : ''}! I'm **Ate Moormy**, your Emoorm shopping helper. Ask me about buying on Emoorm: finding products, checkout, payments, delivery or pickup, your orders, returns and more. You can also tap a question below.`);
+  ? `Hi${name ? ` ${name}` : ''}! Ako si **Moormy**, ang shopping helper mo sa Emoorm. Magtanong ka tungkol sa pamimili sa Emoorm: paghahanap ng produkto, checkout, bayad, delivery o pickup, mga order mo, returns at iba pa. Puwede mo ring i-tap ang isang tanong sa ibaba.`
+  : `Hi${name ? ` ${name}` : ''}! I'm **Moormy**, your Emoorm shopping helper. Ask me about buying on Emoorm: finding products, checkout, payments, delivery or pickup, your orders, returns and more. You can also tap a question below.`);
 
 const hello = (name, lang = 'en') => (lang === 'tl'
   ? `Hello${name ? ` ${name}` : ''}! Ano ang gusto mong malaman tungkol sa pamimili sa Emoorm?`
   : `Hello${name ? ` ${name}` : ''}! What would you like to know about shopping on Emoorm?`);
 
 const ABOUT_ME = {
-  en: "I'm **Ate Moormy**, Emoorm's AI shopping helper. I can explain how buying works (checkout, payments, delivery and pickup, cancelling, returns and refunds, vouchers, reviews and your account) and tell you which of your orders are waiting on you. I only answer questions about shopping on Emoorm.",
-  tl: 'Ako si **Ate Moormy**, ang AI shopping helper ng Emoorm. Kaya kong ipaliwanag kung paano bumili (checkout, bayad, delivery at pickup, pag-cancel, returns at refunds, vouchers, reviews at ang account mo) at sabihin kung aling mga order mo ang naghihintay sa iyo. Tungkol lang sa pamimili sa Emoorm ang sinasagot ko.',
+  en: "I'm **Moormy**, Emoorm's AI shopping helper. I can explain how buying works (checkout, payments, delivery and pickup, cancelling, returns and refunds, vouchers, reviews and your account) and tell you which of your orders are waiting on you. I only answer questions about shopping on Emoorm.",
+  tl: 'Ako si **Moormy**, ang AI shopping helper ng Emoorm. Kaya kong ipaliwanag kung paano bumili (checkout, bayad, delivery at pickup, pag-cancel, returns at refunds, vouchers, reviews at ang account mo) at sabihin kung aling mga order mo ang naghihintay sa iyo. Tungkol lang sa pamimili sa Emoorm ang sinasagot ko.',
 };
 
 const OFF_TOPIC_REPLY = {

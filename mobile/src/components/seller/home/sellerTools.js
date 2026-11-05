@@ -64,7 +64,7 @@ export const TOOL_SECTIONS = [
     tools: [
       { key: 'analytics', to: '/seller/analytics', label: 'Performance', Art: ChartArt },
       { key: 'finance', to: '/seller/finance', label: 'Finance', Art: WalletArt },
-      { key: 'assistant', to: '/seller/assistant', label: 'Ate Moormy', Art: SparkArt, tone: TONES.violet },
+      { key: 'assistant', to: '/seller/assistant', label: 'Moormy', Art: SparkArt, tone: TONES.violet },
       { key: 'notifications', to: '/seller/notifications', label: 'Notifications', Art: BellArt },
     ],
   },

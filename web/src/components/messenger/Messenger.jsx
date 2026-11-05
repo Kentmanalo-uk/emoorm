@@ -42,7 +42,7 @@ import MoreProducts from '../product/MoreProducts';
 import { usePhoneLayout } from '../../hooks/useMobileNav';
 
 const POLL_INTERVAL_MS = 5000;
-// Ate Moormy's chat (buyers only): opened like a conversation, as ?c=moormy.
+// Moormy's chat (buyers only): opened like a conversation, as ?c=moormy.
 const MOORMY_ID = 'moormy';
 const QUICK_QUESTIONS = [
   'Hi! Is this still available?',
@@ -401,7 +401,7 @@ export default function Messenger({ role = 'buyer', className = '', title = '', 
   // messages"), for the conversation `id`.
   const [earlier, setEarlier] = useState({ id: null, messages: [], hasMore: null, loading: false });
   const messagesBoxRef = useRef(null);
-  // A question typed in Ate Moormy's intro card, asked as her chat opens.
+  // A question typed in Moormy's intro card, asked as her chat opens.
   const [moormyAsk, setMoormyAsk] = useState(null);
   const withMoormy = role === 'buyer';
   const isPhone = usePhoneLayout();

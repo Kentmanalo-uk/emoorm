@@ -453,7 +453,7 @@ export const LESSONS = [
       items: [
         { Icon: Key, title: 'Strong password', text: 'Never share it' },
         { Icon: ShieldCheck, title: 'New password', text: 'Changing it signs out other phones' },
-        { Icon: Robot, title: 'Ate Moormy', text: 'Your helper in Chat, any time' },
+        { Icon: Robot, title: 'Moormy', text: 'Your helper in Chat, any time' },
         { Icon: Headset, title: 'Town admin', text: 'Message the admin of your town' },
       ],
     },
@@ -461,7 +461,7 @@ export const LESSONS = [
       { screen: { src: '/tutorial/academy/profile-settings.webp', caption: 'Password, in Account Settings' }, title: 'Protect your account', text: 'Use a strong password only you know. To change it, open Account Settings and tap Password. Other phones are then signed out.' },
       { title: 'Watch for scams', text: 'Nobody from E-MOORM asks for your password, PIN or OTP. Do not click strange links.' },
       { title: 'Follow the rules', text: 'Sell real things you have. No fake or banned items. Be honest with buyers.' },
-      { screen: { src: '/tutorial/academy/assistant.webp', caption: 'Ate Moormy, your seller helper' }, title: 'Ask Ate Moormy', text: 'Your seller helper answers "how do I…" questions. Open Chat and tap Ask Ate Moormy (the sparkle on phones).' },
+      { screen: { src: '/tutorial/academy/assistant.webp', caption: 'Moormy, your seller helper' }, title: 'Ask Moormy', text: 'Your seller helper answers "how do I…" questions. Open Chat and tap Ask Moormy (the sparkle on phones).' },
       { screen: { src: '/tutorial/academy/support.webp', caption: 'Admin messages: New support case' }, title: 'Message your town admin', text: 'For problems with an order, a buyer or your shop, open Admin in your Seller Center.' },
     ],
     tips: ['If a buyer is rude or unsafe, report it. Your town admin will look at it.'],

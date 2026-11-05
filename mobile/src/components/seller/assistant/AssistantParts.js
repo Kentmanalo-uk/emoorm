@@ -8,7 +8,7 @@ import Glass from '../../Glass';
 import { font, ink, t, themed } from '../../../theme';
 
 /*
- * The pieces of Ate Moormy's seller page (web/src/pages/SellerAssistant.jsx
+ * The pieces of Moormy's seller page (web/src/pages/SellerAssistant.jsx
  * + SellerAssistant.css, `.sa-page.is-phone`): her round face, the English |
  * Tagalog switch, the question chips, the links an answer points to, the
  * "Try again" button, the typing dots and the question box.

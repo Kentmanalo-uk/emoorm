@@ -452,7 +452,7 @@ export default function SellerLayout() {
 
             <NavGroup id="help" icon={Lifebuoy} label="Help" {...group} badge={waiting['/seller/support']}>
               <NavLink to="/sell/academy" className={subNavCls}>Seller Academy</NavLink>
-              <NavLink to="/seller/assistant" className={subNavCls}>Ate Moormy (AI)</NavLink>
+              <NavLink to="/seller/assistant" className={subNavCls}>Moormy (AI)</NavLink>
               <NavLink to="/seller/support" className={subNavCls}>Message the admin{badge('/seller/support')}</NavLink>
             </NavGroup>
           </nav>
@@ -508,7 +508,7 @@ export default function SellerLayout() {
                 </Link>
               )}
               {cleanPath === '/seller/messages' && (
-                <Link to="/seller/assistant" className="scm-icon scm-ai" aria-label="Ask Ate Moormy, your AI assistant" title="Ate Moormy (AI assistant)">
+                <Link to="/seller/assistant" className="scm-icon scm-ai" aria-label="Ask Moormy, your AI assistant" title="Moormy (AI assistant)">
                   <Sparkle size={21} weight="fill" />
                 </Link>
               )}
@@ -667,7 +667,7 @@ export default function SellerLayout() {
           </SellerPageBoundary>
         </main>
         <SellerCenterGuide store={store} setStore={setStore} />
-        {/* Ate Moormy, a click away on every page but her own (computers). */}
+        {/* Moormy, a click away on every page but her own (computers). */}
         {!isPhone && cleanPath !== '/seller/assistant' && <MoormyDock />}
         <SetupReturnPill />
       </div>
@@ -841,7 +841,7 @@ const LABELS = {
   '/seller/orders': 'My Orders',
   '/seller/returns': 'Returns & refunds',
   '/seller/messages': 'Messages',
-  '/seller/assistant': 'Ate Moormy',
+  '/seller/assistant': 'Moormy',
   '/seller/support': 'Message the admin',
   '/seller/products': 'My Products',
   '/seller/products/new': 'Add Product',
@@ -884,7 +884,7 @@ const PHONE_TITLES = {
   '/seller/today': 'Available today',
   '/seller/today/new': 'Post an item',
   '/seller/messages': 'Chat',
-  '/seller/assistant': 'Ate Moormy',
+  '/seller/assistant': 'Moormy',
   '/seller/marketing': 'Marketing',
   '/seller/live': 'Go live',
   '/seller/menu': 'Me',

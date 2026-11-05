@@ -25,8 +25,8 @@ import MoreProducts from '../../src/components/home/MoreProducts';
 /*
  * The buyer's Messages tab (web/src/pages/Messages.jsx →
  * components/messenger/Messenger.jsx, its conversation list on phones):
- * the title bar with search and ⋯, Ate Moormy, then the chats. A chat opens
- * at /conversation/:id (the website's ?c=), Ate Moormy at /conversation/moormy.
+ * the title bar with search and ⋯, Moormy, then the chats. A chat opens
+ * at /conversation/:id (the website's ?c=), Moormy at /conversation/moormy.
  * ?store=<id> opens (or starts) the chat with that shop, as on the website.
  */
 

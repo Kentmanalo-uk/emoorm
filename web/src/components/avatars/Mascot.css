@@ -1,84 +1,140 @@
 /*
- * The mascot's idle life (Mascot.jsx). Every origin is in the drawing's own
- * 120 x 150 units, so it moves the same at any size.
+ * The mascot's life (Mascot.jsx), the app's wave (mobile Mascot.js): the arm
+ * swings and the forearm follows, the head tilts, the legs swing, it
+ * breathes and blinks. Only whole layers turn and scale, so the browser
+ * runs all of it on the graphics card. Origins are set inline, in pixels.
  */
 
-.mascot {
+.mascot-rig {
+  position: relative;
+  flex-shrink: 0;
+  pointer-events: none;
+}
+
+.mr-part {
+  position: absolute;
+  inset: 0;
+}
+
+.mr-layer {
+  position: absolute;
+  left: 0;
+  top: 0;
   display: block;
   overflow: visible;
 }
 
-.mascot * {
-  transform-box: view-box;
+.mr-leg,
+.mr-arm--R,
+.mr-elbow--R,
+.mr-head,
+.mr-breathe,
+.mr-blink {
+  will-change: transform;
+  animation-timing-function: cubic-bezier(0.42, 0, 0.58, 1);
+  animation-iteration-count: infinite;
 }
 
-/* Now and then a small hop off the edge, squashing as it lands. */
-.mascot-hop {
-  transform-origin: 60px 124px;
-  animation: mascot-hop 4.2s ease-in-out infinite;
+/* A friendly wave, 1.8 s a round: the arm swings out, the forearm a beat
+   behind; the head tilts with it. */
+.mr-arm--R { animation-name: mr-wave; animation-duration: 1.8s; }
+.mr-elbow--R { animation-name: mr-wave-bend; animation-duration: 1.8s; }
+.mr-head { animation-name: mr-tilt; animation-duration: 1.8s; }
+
+/* The other arm hangs at its side, the elbow soft. */
+.mr-arm--L { transform: rotate(-172deg); }
+.mr-elbow--L { transform: rotate(6deg); }
+
+/* Resting (wave off): both arms down, the head still. */
+.mascot-rig.is-resting .mr-arm--R { animation: none; transform: rotate(172deg); }
+.mascot-rig.is-resting .mr-elbow--R { animation: none; transform: rotate(-6deg); }
+.mascot-rig.is-resting .mr-head { animation: none; }
+
+.mr-breathe { animation-name: mr-breathe; animation-duration: 2.1s; }
+.mr-blink { animation-name: mr-blink; animation-duration: 4.2s; }
+.mr-leg { animation-name: mr-swing; animation-duration: 2.6s; }
+.mr-leg--r { animation-delay: -0.65s; }
+
+@keyframes mr-wave {
+  0%, 100% { transform: rotate(30deg); }
+  50% { transform: rotate(58deg); }
 }
 
-/* Breathing: the body widens a touch as it settles. */
-.mascot-breathe {
-  transform-origin: 60px 106px;
-  animation: mascot-breathe 2.1s ease-in-out infinite;
+@keyframes mr-wave-bend {
+  0%, 100% { transform: rotate(-22deg); }
+  50% { transform: rotate(10deg); }
 }
 
-.mascot-eyes {
-  transform-origin: 60px 76px;
-  animation: mascot-blink 4.2s ease-in-out infinite;
+@keyframes mr-tilt {
+  0%, 100% { transform: rotate(-3deg); }
+  50% { transform: rotate(3deg); }
 }
 
-/* Held out past the cap, so the hand shows. */
-.mascot-wave {
-  transform-origin: 88px 90px;
-  animation: mascot-wave 0.9s ease-in-out infinite alternate;
-}
-
-.mascot-leg {
-  transform-origin: 47px 96px;
-  animation: mascot-kick 1.3s ease-in-out infinite alternate;
-}
-
-.mascot-leg--b {
-  transform-origin: 73px 96px;
-  animation-delay: -0.65s;
-}
-
-@keyframes mascot-hop {
-  0%, 62%, 100% { transform: translateY(0) scale(1, 1); }
-  68% { transform: translateY(0) scale(1.06, 0.92); }
-  76% { transform: translateY(-14px) scale(0.96, 1.05); }
-  84% { transform: translateY(0) scale(1.08, 0.9); }
-  90% { transform: translateY(0) scale(1, 1); }
-}
-
-@keyframes mascot-breathe {
+@keyframes mr-breathe {
   0%, 100% { transform: scale(1, 1); }
-  50% { transform: scale(1.025, 0.97); }
+  50% { transform: scale(1.02, 0.975); }
 }
 
-@keyframes mascot-blink {
+@keyframes mr-blink {
   0%, 40%, 44%, 88%, 91%, 94%, 100% { transform: scaleY(1); }
   42%, 89.5%, 92.5% { transform: scaleY(0.1); }
 }
 
-@keyframes mascot-wave {
-  from { transform: rotate(28deg); }
-  to { transform: rotate(58deg); }
+@keyframes mr-swing {
+  0%, 100% { transform: rotate(-16deg); }
+  50% { transform: rotate(14deg); }
 }
 
-@keyframes mascot-kick {
-  from { transform: rotate(-16deg); }
-  to { transform: rotate(14deg); }
+/* Picking it up (DraggableMascot.jsx): it takes the pointer, a hand cursor,
+   and a double-tap on it neither zooms nor scrolls. Carried, the one in the
+   page waits unseen in its place. */
+.mascot-grab {
+  display: block;
+  pointer-events: auto;
+  cursor: grab;
+  touch-action: none;
+  user-select: none;
+  -webkit-user-select: none;
 }
+
+.mascot-grab.is-away {
+  visibility: hidden;
+}
+
+.mascot-carried {
+  position: fixed;
+  left: 0;
+  top: 0;
+  z-index: 10000;
+  pointer-events: none;
+  will-change: transform;
+}
+
+html.is-carrying-mascot,
+html.is-carrying-mascot * {
+  cursor: grabbing !important;
+  user-select: none !important;
+}
+
+/* Carried: the simulation sets the angles. Legs dangle and trail the swing,
+   arms go up and out, the head leans against the tilt. */
+.mascot-rig.is-held .mr-leg,
+.mascot-rig.is-held .mr-arm,
+.mascot-rig.is-held .mr-elbow,
+.mascot-rig.is-held .mr-head {
+  animation: none;
+}
+
+.mascot-rig.is-held .mr-leg--l { transform: rotate(var(--leg, 0deg)); }
+.mascot-rig.is-held .mr-leg--r { transform: rotate(calc(var(--leg, 0deg) * 0.8)); }
+.mascot-rig.is-held .mr-arm--R { transform: rotate(var(--arm, 150deg)); }
+.mascot-rig.is-held .mr-arm--L { transform: rotate(calc(var(--arm, 150deg) * -1)); }
+.mascot-rig.is-held .mr-elbow--R { transform: rotate(-12deg); }
+.mascot-rig.is-held .mr-elbow--L { transform: rotate(12deg); }
+.mascot-rig.is-held .mr-head { transform: rotate(var(--head, 0deg)); }
 
 @media (prefers-reduced-motion: reduce) {
-  .mascot-hop,
-  .mascot-breathe,
-  .mascot-eyes,
-  .mascot-wave,
-  .mascot-leg {
-    animation: none;
+  .mascot-rig * {
+    animation: none !important;
   }
 }

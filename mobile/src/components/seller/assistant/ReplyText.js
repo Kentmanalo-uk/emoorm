@@ -2,7 +2,7 @@ import { StyleSheet, Text, View } from 'react-native';
 import { font, themed } from '../../../theme';
 
 /*
- * Ate Moormy's answers, as paragraphs and lists (web/src/components/moormy/
+ * Moormy's answers, as paragraphs and lists (web/src/components/moormy/
  * ReplyText.jsx inside .sa-bubble): the little markdown her replies use
  * (**bold**, *italic*, "- " bullets, "1. " steps). Paragraphs and lists are
  * 8px apart, list items 4px, lists indented 20px; bold is 600.

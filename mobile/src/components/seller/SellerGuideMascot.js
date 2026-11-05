@@ -20,7 +20,7 @@ import {
  * the mascot (avatars/MascotRig) doing what the page is for. It packs a
  * parcel on Products, photographs a product on Add a product, eats on
  * Today's menu, ticks orders off on Orders, investigates floating cards
- * with a magnifying glass on Ask Ate Moormy, pins a poster and celebrates
+ * with a magnifying glass on Ask Moormy, pins a poster and celebrates
  * on Marketing, reads a review while the stars fill on Reviews -- each with
  * its own pose (sitting, standing, kneeling), face, props and timing, so
  * the page reads from the picture alone.
@@ -271,7 +271,7 @@ const SCENES = {
     ],
   },
 
-  // Ask Ate Moormy: kneeling, leaning in with a magnifying glass over
+  // Ask Moormy: kneeling, leaning in with a magnifying glass over
   // floating cards of information, wide-eyed -- then the idea lights up.
   assistant: {
     ms: 3800,

@@ -11,7 +11,7 @@ import { formatTime } from './inboxFormat';
  * time at the top right and the unread count under it.
  *
  * Pass `item` (a conversation from GET /messages/conversations) with
- * `currentUserId`, or the parts directly (Ate Moormy's row: `moormy`,
+ * `currentUserId`, or the parts directly (Moormy's row: `moormy`,
  * `avatar`, `title`, `titleAfter`, `time`, `preview`). `peek`: the row's
  * long-press preview props (components/peek/ConversationPeek).
  */

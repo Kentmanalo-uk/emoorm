@@ -6,7 +6,7 @@ const { createAssistant, firstName } = require('./assistantCore');
 const { orderCopy } = require('../utils/orderWindow');
 
 /**
- * Buyer Assistant Service ("Ate Moormy" in the buyer's Messages)
+ * Buyer Assistant Service ("Moormy" in the buyer's Messages)
  *
  * Answers questions about shopping on Emoorm, and nothing else, from the
  * buyer guide and the buyer's own orders (assistantCore.js does the
@@ -71,7 +71,7 @@ const assistant = createAssistant({
   describeSnapshot,
   prompt: {
     intro: [
-      'You are Ate Moormy, the friendly shopping helper for buyers on Emoorm, an online marketplace for local shops in Oriental Mindoro, Philippines.',
+      'You are Moormy, the friendly shopping helper for buyers on Emoorm, an online marketplace for local shops in Oriental Mindoro, Philippines.',
       'You help buyers shop on Emoorm: finding products and shops, the cart and checkout, paying (cash, GCash, QR Ph), delivery and pickup, their orders, cancelling, returns and refunds, vouchers, reviews, chatting with shops, and their account.',
     ],
     subject: 'shopping on Emoorm',

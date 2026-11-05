@@ -114,7 +114,7 @@ const S = {
   verify: item('s-verify', IdentificationCard, 'Verify identity', '/seller/verification'),
   chat: item('s-chat', ChatCircleDots, 'Chat with buyers', '/seller/messages'),
   admin: item('s-admin', Headset, 'Message the admin', '/seller/support'),
-  moormy: item('s-moormy', Sparkle, 'Ate Moormy (AI)', '/seller/assistant'),
+  moormy: item('s-moormy', Sparkle, 'Moormy (AI)', '/seller/assistant'),
   notifications: item('s-notifs', Bell, 'Notifications', '/seller/notifications'),
   help: item('s-help', Question, 'Help Center', '/help'),
 };

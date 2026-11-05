@@ -51,7 +51,7 @@ const PAGES = {
   },
   '/seller/assistant': {
     art: 'assistant',
-    title: 'Ask Ate Moormy',
+    title: 'Ask Moormy',
     text: 'Not sure how something works? Ask in English or Tagalog and she will walk you through it.',
   },
   '/seller/marketing': {

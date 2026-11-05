@@ -12,7 +12,7 @@ import MoormyAvatar from './MoormyAvatar';
 import './Moormy.css';
 
 /*
- * The buyer's chat with Ate Moormy, in the Messages thread pane: questions
+ * The buyer's chat with Moormy, in the Messages thread pane: questions
  * about shopping on Emoorm, answered in English or Tagalog, with suggested
  * questions to tap and links to the page an answer is about.
  */
@@ -22,27 +22,27 @@ const UI = {
     role: 'AI shopping helper',
     note: 'She answers questions about shopping on Emoorm only, and can make mistakes. Check important details.',
     suggested: 'Suggested questions',
-    placeholder: 'Ask Ate Moormy…',
+    placeholder: 'Ask Moormy…',
     newChat: 'New chat',
     switchLang: 'Answer in Tagalog',
     help: 'Help Center',
     retry: 'Try again',
-    cantLoad: "Ate Moormy can't load right now.",
+    cantLoad: "Moormy can't load right now.",
     offline: "I couldn't reach Emoorm just now. Check your connection and try again.",
-    typing: 'Ate Moormy is typing',
+    typing: 'Moormy is typing',
   },
   tl: {
     role: 'AI shopping helper',
     note: 'Tungkol lang sa pamimili sa Emoorm ang sinasagot niya, at puwede siyang magkamali. Suriin ang mahahalagang detalye.',
     suggested: 'Mga puwedeng itanong',
-    placeholder: 'Magtanong kay Ate Moormy…',
+    placeholder: 'Magtanong kay Moormy…',
     newChat: 'Bagong chat',
     switchLang: 'Answer in English',
     help: 'Help Center',
     retry: 'Subukan ulit',
-    cantLoad: 'Hindi ma-load si Ate Moormy ngayon.',
+    cantLoad: 'Hindi ma-load si Moormy ngayon.',
     offline: 'Hindi ko maabot ang Emoorm ngayon. Tingnan ang koneksyon mo at subukan ulit.',
-    typing: 'Nagta-type si Ate Moormy',
+    typing: 'Nagta-type si Moormy',
   },
 };
 const LANG_KEY = 'emoorm-moormy-lang';
@@ -183,13 +183,13 @@ export default function MoormyThread({ userId, pendingAsk, onAsked, onBack }) {
         </button>
         <MoormyAvatar size={40} />
         <div className="msgr-thread-title">
-          <div className="msgr-thread-name">Ate Moormy <span className="mmy-ai-tag">AI</span></div>
+          <div className="msgr-thread-name">Moormy <span className="mmy-ai-tag">AI</span></div>
           <div className="msgr-thread-sub">{t.role}</div>
         </div>
         <MoreMenu
           className="msgr-thread-more"
           buttonClassName="msgr-thread-menu"
-          label="Ate Moormy options"
+          label="Moormy options"
           iconSize={22}
           items={[
             messages.length > 0 && { key: 'new', icon: <NotePencil size={17} />, label: t.newChat, onClick: () => update((c) => ({ ...c, messages: [], asked: [] })) },
@@ -199,10 +199,10 @@ export default function MoormyThread({ userId, pendingAsk, onAsked, onBack }) {
         />
       </header>
 
-      <div className="msgr-messages mmy-messages" role="log" aria-live="polite" aria-label="Chat with Ate Moormy">
+      <div className="msgr-messages mmy-messages" role="log" aria-live="polite" aria-label="Chat with Moormy">
         <div className="mmy-hero" {...tlProps(lang)}>
           <MoormyAvatar size={64} />
-          <strong>Ate Moormy</strong>
+          <strong>Moormy</strong>
           <small>{t.note}</small>
         </div>
 

@@ -5,7 +5,7 @@ import { ikionShapes } from '../../lib/ikionNative';
 import { font, t, themed } from '../../theme';
 import stopPaint from '../../lib/stopPaint';
 
-// Ate Moormy's pink and green (web Moormy.css --mmy-*).
+// Moormy's pink and green (web Moormy.css --mmy-*).
 export const MMY = themed(() => ({
   pink: t.accent[500],
   pinkSoft: '#fdf2f8',
@@ -37,7 +37,7 @@ export function GradientFill({
   );
 }
 
-/** The pink-to-green "AI" pill after Ate Moormy's name (.mmy-ai-tag). */
+/** The pink-to-green "AI" pill after Moormy's name (.mmy-ai-tag). */
 export function AiTag({ style }) {
   return (
     <View style={[styles.tag, style]}>

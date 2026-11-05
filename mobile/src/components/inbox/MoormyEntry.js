@@ -10,7 +10,7 @@ import { AiTag, GradientFill, MMY } from './InboxGradient';
 import ConversationRow from './ConversationRow';
 
 /*
- * Ate Moormy at the top of the buyer's Messages list
+ * Moormy at the top of the buyer's Messages list
  * (web/src/components/moormy/MoormyEntry.jsx).
  *
  * Until the buyer first asks her something: an introduction with its own
@@ -139,7 +139,7 @@ function IntroCard({ firstName, onAsk }) {
 
   return (
     <Animated.View
-      accessibilityLabel="Ate Moormy, your AI shopping helper"
+      accessibilityLabel="Moormy, your AI shopping helper"
       onLayout={(e) => setWidth(e.nativeEvent.layout.width)}
       style={[styles.intro, {
         opacity: rise,
@@ -156,7 +156,7 @@ function IntroCard({ firstName, onAsk }) {
           <MoormyAvatar size={44} />
           <View style={styles.introText}>
             <View style={styles.introName}>
-              <Text style={styles.introNameText}>Ate Moormy</Text>
+              <Text style={styles.introNameText}>Moormy</Text>
               <AiTag />
             </View>
             <Text style={styles.greeting} accessibilityLabel={greeting}>
@@ -175,7 +175,7 @@ function IntroCard({ firstName, onAsk }) {
               returnKeyType="send"
               enterKeyHint="send"
               onSubmitEditing={submit}
-              accessibilityLabel="Ask Ate Moormy"
+              accessibilityLabel="Ask Moormy"
               style={styles.askInput}
               underlineColorAndroid="transparent"
             />
@@ -194,7 +194,7 @@ function IntroCard({ firstName, onAsk }) {
           </View>
           <Pressable
             accessibilityRole="button"
-            accessibilityLabel="Send to Ate Moormy"
+            accessibilityLabel="Send to Moormy"
             disabled={!canSend}
             onPress={submit}
             style={({ pressed }) => [styles.askSend, !canSend && styles.askSendOff, canSend && styles.askSendOn, pressed && { transform: [{ scale: 0.92 }] }]}
@@ -226,7 +226,7 @@ export default function MoormyEntry({ userId, firstName, onOpen }) {
     <ConversationRow
       moormy
       avatar={<MoormyAvatar size={44} />}
-      title="Ate Moormy"
+      title="Moormy"
       titleAfter={<AiTag />}
       time={last ? timeOf(chat.updatedAt) : ''}
       preview={preview}

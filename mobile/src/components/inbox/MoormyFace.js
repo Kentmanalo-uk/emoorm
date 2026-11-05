@@ -1,28 +1,18 @@
 import { useId } from 'react';
 import { Platform } from 'react-native';
 import Svg, {
-  Circle, ClipPath, Defs, Ellipse, G, Path, Rect,
+  Circle, ClipPath, Defs, Ellipse, G, LinearGradient, Path, RadialGradient, Rect, Stop,
 } from 'react-native-svg';
 
 /**
- * Ate Moormy's face (web/src/components/moormy/MoormyFace.jsx): a friendly
- * Filipina "ate" with round glasses and her hair in a bun, on the brand's
- * green disc in her pink shirt. Decorative: her name is always said beside
- * her.
+ * Moormy's face: the mascot (graphics/mascot.jpg; avatars/MascotRig.js)
+ * from the shoulders up, its lime mushroom cap, pink face and polo collar,
+ * on the brand's green disc. The website's is web/src/components/moormy/
+ * MoormyFace.jsx. Decorative: Moormy's name is always said beside it.
  *
- * Drawn the way the app's flat marks are (components/art/FlatArt.js): flat
- * fills only, each thing in two values of its own colour -- a pale one
- * where the light falls, a stronger one for the body -- with white for the
- * glass and the glints. No gradients, no shading ramps, no hairlines.
- *
- * She used to be a small painting: nine gradients, a gloss layer, blush at
- * 38% over a three-stop skin ramp, and strokes down to 1px. At 40pt, where
- * she is nearly always seen, none of that survived -- it turned to a
- * smudge, and it sat oddly beside a grid of flat marks on the same screen.
- * Flat shapes hold their edges at any size.
- *
- * The brand's pink and green are both still here: the green is the disc
- * she sits on, the pink is what she is wearing.
+ * Seen mostly at 40pt, so it is the mascot's bold shapes only (cap, spots,
+ * eyes, smile, collar), a little larger in the disc than the full figure
+ * would be; they hold their edges small.
  */
 
 // Hidden from screen readers (react-native-svg hands these straight to the DOM on web).
@@ -30,82 +20,81 @@ const HIDDEN = Platform.OS === 'web'
   ? { 'aria-hidden': true }
   : { accessibilityElementsHidden: true, importantForAccessibility: 'no-hide-descendants' };
 
-const GREEN = '#10B981';
-const GREEN_LIT = '#6EE7B7';
-const PINK = '#F472B6';
-const PINK_LIT = '#F9A8D4';
-const SKIN = '#E7B48F';
-const SKIN_DEEP = '#C98B62';
-const HAIR = '#2E1D18';
-const HAIR_LIT = '#4A312A';
-const INK = '#2A1A15';
-const CUT = '#FFFFFF';
+const INK = '#3A1230';
+const CAP_SIZE = 'translate(60 52) scale(0.84) translate(-60 -52)';
+const FACE = 'translate(60 63) scale(0.72) translate(-60 -76.5)';
+const SPOTS = [[40, 18, 6.5], [63, 11, 4.5], [83, 21, 7], [26, 34, 5], [96, 36, 4.5], [52, 29, 3.6], [74, 38, 4.2], [36, 46, 2.8]];
+
+const stops = (list) => list.map(([o, color, a = 1]) => <Stop key={`${o}${color}`} offset={String(o)} stopColor={color} stopOpacity={a} />);
 
 export default function MoormyFace({ size = 40 }) {
-  // Its own id per instance: react-native-svg hands these to the DOM on
-  // web, where two avatars on a screen would share one clip.
-  const clip = `mmy${useId().replace(/[^a-zA-Z0-9]/g, '')}`;
+  const uid = useId().replace(/[^a-zA-Z0-9]/g, '');
+  const id = (part) => `mf${uid}${part}`;
+  const u = (part) => `url(#${id(part)})`;
+  const ball = (part, list, cx = '0.36', cy = '0.3', r = '0.78') => (
+    <RadialGradient id={id(part)} cx={cx} cy={cy} r={r} fx={cx} fy={cy}>{stops(list)}</RadialGradient>
+  );
+
   return (
     <Svg width={size} height={size} viewBox="0 0 120 120" {...HIDDEN}>
       <Defs>
-        <ClipPath id={clip}><Circle cx="60" cy="60" r="60" /></ClipPath>
+        <ClipPath id={id('disc')}><Circle cx="60" cy="60" r="60" /></ClipPath>
+        <ClipPath id={id('dome')}><Path d="M15 49C15 22 35 5 60 5S105 22 105 49C105 53 95 55 60 55S15 53 15 49Z" /></ClipPath>
+        {ball('head', [[0, '#FFE6F3'], [0.45, '#FFC2E1'], [0.8, '#FF9CCF'], [1, '#F77DBC']])}
+        <RadialGradient id={id('shine')} cx="0.5" cy="0.5" r="0.5">{stops([[0, '#FFFFFF', 0.85], [1, '#FFFFFF', 0]])}</RadialGradient>
+        <RadialGradient id={id('blush')} cx="0.5" cy="0.5" r="0.5">{stops([[0, '#FF7FBE', 0.9], [1, '#FF7FBE', 0]])}</RadialGradient>
+        {ball('spot', [[0, '#FFFFFF'], [0.7, '#FAFFF6'], [1, '#DDF6CF']], '0.4', '0.35', '0.7')}
+        {ball('cap', [[0, '#F2FFB0'], [0.3, '#DCFF62'], [0.62, '#8DF22E'], [1, '#4DC41B']], '0.34', '0.22', '0.85')}
+        <LinearGradient id={id('band')} x1="0.2" y1="0" x2="0.7" y2="1">{stops([[0, '#69D922'], [1, '#3DAA17']])}</LinearGradient>
+        <LinearGradient id={id('brim')} x1="0" y1="0" x2="0" y2="1">{stops([[0, '#3DAF4C'], [1, '#1C7A47']])}</LinearGradient>
+        {ball('shirt', [[0, '#DAFF96'], [0.4, '#B4FF55'], [0.75, '#62DA20'], [1, '#3EB515']])}
       </Defs>
 
-      <G clipPath={`url(#${clip})`}>
+      <G clipPath={u('disc')}>
         {/* The disc, lit from the top left. */}
-        <Circle cx="60" cy="60" r="60" fill={GREEN} />
-        <Path d="M60 0A60 60 0 0 0 0 60a60 60 0 0 0 17.6 42.4L102.4 17.6A59.8 59.8 0 0 0 60 0z" fill={GREEN_LIT} />
+        <Circle cx="60" cy="60" r="60" fill="#047857" />
+        <Path d="M60 0A60 60 0 0 0 0 60a60 60 0 0 0 17.6 42.4L102.4 17.6A59.8 59.8 0 0 0 60 0z" fill="#0A8F6A" />
 
-        {/* Shoulders, and the collar catching the light. */}
-        <Path d="M60 84c20 0 36 12 38 36H22c2-24 18-36 38-36z" fill={PINK} />
-        <Path d="M60 84c-20 0-36 12-38 36h20c1.5-16 8-26 18-30z" fill={PINK_LIT} />
+        {/* The mascot, head and shoulders, centred and a touch larger. */}
+        <G transform="translate(60 66) scale(1.12) translate(-60 -58)">
+          {/* The polo shirt and its collar. */}
+          <Path d="M47 83C40 83 37 86 36.4 92L35.8 107C35.6 111.5 38 113.6 42 113.6H78C82 113.6 84.4 111.5 84.2 107L83.6 92C83 86 80 83 73 83Z" fill={u('shirt')} />
+          <Ellipse cx="45" cy="97" rx="8" ry="6" fill={u('shine')} />
+          <Path d="M53 83L60 90L67 83Z" fill="#3EA716" opacity={0.55} />
+          <Rect x="58.8" y="89" width="2.4" height="9" rx="1.2" fill="#3EB515" opacity={0.45} />
+          <Path d="M60 89.5L46 81.5Q43.5 85 45.5 90L53 95Z" fill="#CFFF86" />
+          <Path d="M60 89.5L74 81.5Q76.5 85 74.5 90L67 95Z" fill="#CFFF86" />
 
-        {/* The hair behind her, and the bun. An ellipse, not a block: a
-            flat-bottomed shape wider than her face leaves two straight
-            dark edges down her cheeks, and the whole thing reads as a
-            rectangle rather than as hair. */}
-        <Ellipse cx="60" cy="48" rx="28" ry="33" fill={HAIR} />
-        <Circle cx="60" cy="15" r="11" fill={HAIR} />
+          {/* The head. */}
+          <Rect x="37" y="40" width="46" height="46" rx="21" fill={u('head')} />
+          <Ellipse cx="48" cy="54" rx="11" ry="7.5" fill={u('shine')} transform="rotate(-18 48 54)" />
+          <Ellipse cx="45" cy="72" rx="6.5" ry="4" fill={u('blush')} />
+          <Ellipse cx="75" cy="72" rx="6.5" ry="4" fill={u('blush')} />
+          <Ellipse cx="60" cy="52" rx="22" ry="4" fill="#D24A90" opacity={0.16} />
 
-        <Rect x="52" y="64" width="16" height="20" rx="7" fill={SKIN_DEEP} />
+          {/* Eyes and a smile. */}
+          <G transform={FACE}>
+            {[52, 68].map((x) => (
+              <G key={x}>
+                <Rect x={x - 4.5} y="69" width="9" height="15" rx="4.5" fill={INK} />
+                <Circle cx={x + 1.5} cy="73" r="2" fill="#fff" />
+              </G>
+            ))}
+            <Path d="M52.5 88.5h15c0 6.2-3.6 9.5-7.5 9.5s-7.5-3.3-7.5-9.5z" fill={INK} />
+            <Path d="M55.6 95.2c1.3-2.2 7.5-2.2 8.8 0-1.2 1.6-2.8 2.3-4.4 2.3s-3.2-.7-4.4-2.3z" fill="#FF6E93" />
+          </G>
 
-        {/* Her ears, then her face over the hair. */}
-        <Ellipse cx="36" cy="54" rx="5" ry="6.5" fill={SKIN_DEEP} />
-        <Ellipse cx="84" cy="54" rx="5" ry="6.5" fill={SKIN_DEEP} />
-        <Ellipse cx="60" cy="51" rx="23" ry="25" fill={SKIN} />
-        {/* The fringe: thin where it is parted, thick at the temples, and
-            meeting the hairline at both ends so it has no loose edge. */}
-        <Path d="M37 48c0-14 10-23 23-23s23 9 23 23c-4-8-12-12-21-13-8 3-16 7-25 13z" fill={HAIR} />
-        <Path d="M43 34c4-5 10-8 17-8-7 3-12 7-14 13-2-1-3-3-3-5z" fill={HAIR_LIT} />
-
-        {/* Round glasses: white glass, a thick frame, a bridge and two arms. */}
-        <G fill={CUT}>
-          <Circle cx="49" cy="52" r="10" />
-          <Circle cx="71" cy="52" r="10" />
+          {/* The cap: brim, glossy dome, its darker wave, spots and shine. */}
+          <G transform={CAP_SIZE}>
+            <Ellipse cx="60" cy="50" rx="43" ry="8.5" fill={u('brim')} />
+            <Path d="M15 49C15 22 35 5 60 5S105 22 105 49C105 53 95 55 60 55S15 53 15 49Z" fill={u('cap')} />
+            <G clipPath={u('dome')}>
+              <Path d="M10 40C24 31 38 44 60 36S94 25 110 34V46C96 38 82 48 60 46S24 52 10 52Z" fill={u('band')} opacity={0.45} />
+            </G>
+            {SPOTS.map(([x, y, r]) => <Circle key={`${x}-${y}`} cx={x} cy={y} r={r} fill={u('spot')} />)}
+            <Ellipse cx="42" cy="17" rx="20" ry="9" fill={u('shine')} transform="rotate(-22 42 17)" />
+          </G>
         </G>
-        <G fill="none" stroke={INK} strokeWidth="3" strokeLinecap="round">
-          <Circle cx="49" cy="52" r="10" />
-          <Circle cx="71" cy="52" r="10" />
-          <Path d="M59 51.5h2" />
-          <Path d="M39 50l-5-2" />
-          <Path d="M81 50l5-2" />
-        </G>
-        <G fill={INK}>
-          <Circle cx="49" cy="53" r="3.2" />
-          <Circle cx="71" cy="53" r="3.2" />
-        </G>
-        {/* One glint across each lens. */}
-        <G fill={CUT} opacity="0.9">
-          <Circle cx="45.5" cy="48.5" r="1.8" />
-          <Circle cx="67.5" cy="48.5" r="1.8" />
-        </G>
-
-        {/* Cheeks, and a smile. */}
-        <G fill={PINK_LIT}>
-          <Ellipse cx="40" cy="62" rx="4.5" ry="3" />
-          <Ellipse cx="80" cy="62" rx="4.5" ry="3" />
-        </G>
-        <Path d="M52 66c2.5 4.5 13.5 4.5 16 0 1 6-17 6-16 0z" fill={INK} />
       </G>
     </Svg>
   );

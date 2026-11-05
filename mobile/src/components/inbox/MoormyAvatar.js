@@ -3,7 +3,7 @@ import { themed } from '../../theme';
 import MoormyFace from './MoormyFace';
 
 /**
- * Ate Moormy's picture (web MoormyAvatar.jsx): her face, round.
+ * Moormy's picture (web MoormyAvatar.jsx): the mascot's face, round.
  *
  * It used to take a `glow` and draw a breathing pink-to-green halo behind
  * her, 12pt out, 0.2 → 0.45 over 3.2s. Two places asked for it -- the top

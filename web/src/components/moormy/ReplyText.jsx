@@ -1,7 +1,7 @@
 import { Fragment } from 'react';
 
 /*
- * Ate Moormy's answers, as paragraphs and lists: the little markdown her
+ * Moormy's answers, as paragraphs and lists: the little markdown her
  * replies use (**bold**, *italic*, "- " bullets, "1. " steps). Shared by her
  * seller page and the buyers' chat.
  */

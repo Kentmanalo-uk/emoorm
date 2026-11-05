@@ -1,5 +1,5 @@
 /**
- * Ate Moormy's seller guide, in English and Tagalog: what the Seller Center
+ * Moormy's seller guide, in English and Tagalog: what the Seller Center
  * does, in the words the app shows. Each topic answers on its own (the
  * suggested questions, and typed questions when no model is set up) and is
  * what the model answers from. Every fact here comes from the app itself;
@@ -19,19 +19,19 @@ const pick = (value, lang = 'en') => (
   value && typeof value === 'object' && !Array.isArray(value) ? (value[lang] ?? value.en) : value
 );
 
-const NAME = 'Ate Moormy';
+const NAME = 'Moormy';
 
 const greeting = (name, lang = 'en') => (lang === 'tl'
-  ? `Hi${name ? ` ${name}` : ''}! Ako si **Ate Moormy**, ang seller assistant mo sa Emoorm. Magtanong ka tungkol sa pagbebenta sa Emoorm: ang shop mo, mga produkto, order, delivery, bayad, returns at iba pa. Puwede mo ring i-tap ang isang tanong sa ibaba.`
-  : `Hi${name ? ` ${name}` : ''}! I'm **Ate Moormy**, your Emoorm seller assistant. Ask me about selling on Emoorm: your shop, products, orders, delivery, payments, returns and more. You can also tap a question below.`);
+  ? `Hi${name ? ` ${name}` : ''}! Ako si **Moormy**, ang seller assistant mo sa Emoorm. Magtanong ka tungkol sa pagbebenta sa Emoorm: ang shop mo, mga produkto, order, delivery, bayad, returns at iba pa. Puwede mo ring i-tap ang isang tanong sa ibaba.`
+  : `Hi${name ? ` ${name}` : ''}! I'm **Moormy**, your Emoorm seller assistant. Ask me about selling on Emoorm: your shop, products, orders, delivery, payments, returns and more. You can also tap a question below.`);
 
 const hello = (name, lang = 'en') => (lang === 'tl'
   ? `Hello${name ? ` ${name}` : ''}! Ano ang gusto mong malaman tungkol sa pagbebenta sa Emoorm?`
   : `Hello${name ? ` ${name}` : ''}! What would you like to know about selling on Emoorm?`);
 
 const ABOUT_ME = {
-  en: "I'm **Ate Moormy**, Emoorm's AI assistant for sellers. I can explain how the Seller Center works (products, orders, delivery, payments, returns, marketing and your earnings) and tell you what your shop still needs or what is waiting for you. I only answer questions about selling on Emoorm.",
-  tl: 'Ako si **Ate Moormy**, ang AI assistant ng Emoorm para sa mga seller. Kaya kong ipaliwanag kung paano gumagana ang Seller Center (mga produkto, order, delivery, bayad, returns, marketing at kita mo) at sabihin kung ano pa ang kulang sa shop mo o ano ang naghihintay sa iyo. Tungkol lang sa pagbebenta sa Emoorm ang sinasagot ko.',
+  en: "I'm **Moormy**, Emoorm's AI assistant for sellers. I can explain how the Seller Center works (products, orders, delivery, payments, returns, marketing and your earnings) and tell you what your shop still needs or what is waiting for you. I only answer questions about selling on Emoorm.",
+  tl: 'Ako si **Moormy**, ang AI assistant ng Emoorm para sa mga seller. Kaya kong ipaliwanag kung paano gumagana ang Seller Center (mga produkto, order, delivery, bayad, returns, marketing at kita mo) at sabihin kung ano pa ang kulang sa shop mo o ano ang naghihintay sa iyo. Tungkol lang sa pagbebenta sa Emoorm ang sinasagot ko.',
 };
 
 const OFF_TOPIC_REPLY = {
@@ -882,7 +882,7 @@ const TAGALOG_WORDS = new Set([
 /** A message that only greets, thanks or asks for help. */
 const GREETING = /^(hi|hello|hey|hoy|yo|good (morning|afternoon|evening|day)|magandang (umaga|hapon|gabi|araw)|kumusta|musta|thanks|thank you|salamat|ty|ok|okay|sige|help|help me|can you help( me)?|pwede (mo )?(ba )?(akong )?tulungan|tulungan mo (ako)?)( po)?[\s!.?]*$/i;
 
-/** Asking who Ate Moormy is. */
+/** Asking who Moormy is. */
 const ABOUT_QUESTION = /^(who are you|what are you|what can you do|what do you do|sino ka|ano ka|anong kaya mo|ano ang kaya mo)( po)?[\s!.?]*$/i;
 
 /** Questions that are plainly about something else. */

@@ -6,7 +6,7 @@ import { chatTime } from '../../lib/format';
 import './Moormy.css';
 
 /*
- * Ate Moormy at the top of the buyer's Messages list.
+ * Moormy at the top of the buyer's Messages list.
  *
  * Until the buyer first asks her something: an introduction with its own
  * question box (the greeting types itself in, the box suggests questions in
@@ -62,12 +62,12 @@ function IntroCard({ firstName, onAsk }) {
   };
 
   return (
-    <section className={`mmy-intro${sending ? ' is-sending' : ''}`} aria-label="Ate Moormy, your AI shopping helper">
+    <section className={`mmy-intro${sending ? ' is-sending' : ''}`} aria-label="Moormy, your AI shopping helper">
       <div className="mmy-intro-head">
         <MoormyAvatar size={44} />
         <div className="mmy-intro-text">
           <div className="mmy-intro-name">
-            <strong>Ate Moormy</strong>
+            <strong>Moormy</strong>
             <span className="mmy-ai-tag">AI</span>
           </div>
           <p>
@@ -85,14 +85,14 @@ function IntroCard({ firstName, onAsk }) {
             onChange={(e) => setDraft(e.target.value)}
             maxLength={500}
             enterKeyHint="send"
-            aria-label="Ask Ate Moormy"
+            aria-label="Ask Moormy"
             disabled={sending}
           />
           {!draft && (
             <span key={example} className="mmy-ask-hint" aria-hidden="true">{EXAMPLES[example]}</span>
           )}
         </div>
-        <button type="submit" className="mmy-ask-send" disabled={!draft.trim() || sending} aria-label="Send to Ate Moormy">
+        <button type="submit" className="mmy-ask-send" disabled={!draft.trim() || sending} aria-label="Send to Moormy">
           <PaperPlaneTilt size={18} weight="fill" />
         </button>
       </form>
@@ -121,7 +121,7 @@ export default function MoormyEntry({ userId, firstName, active, onOpen }) {
       </div>
       <div className="msgr-convo-body">
         <div className="msgr-convo-row">
-          <span className="msgr-convo-title">Ate Moormy <span className="mmy-ai-tag">AI</span></span>
+          <span className="msgr-convo-title">Moormy <span className="mmy-ai-tag">AI</span></span>
           <span className="msgr-convo-time">{last ? timeOf(chat.updatedAt) : ''}</span>
         </div>
         <div className="msgr-convo-row">

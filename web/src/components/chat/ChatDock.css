@@ -1,13 +1,14 @@
-/* Floating chat dock (homepage) */
+/* Chat dock (homepage, computers and tablets): a Messages tab sitting on the
+   bottom edge of the screen, the panel opening above it. */
 .cd-root {
   position: fixed;
-  right: 20px;
-  bottom: 20px;
+  right: 24px;
+  bottom: 0;
   z-index: 90;
   display: flex;
   flex-direction: column;
   align-items: flex-end;
-  gap: 12px;
+  gap: 10px;
   pointer-events: none;
 }
 
@@ -15,37 +16,89 @@
   pointer-events: auto;
 }
 
-/* Launcher bar */
+/* The tab: white, square at the bottom where it meets the screen's edge,
+   lifted off the page by a shadow cast upward. */
 .cd-bar {
   position: relative;
   display: inline-flex;
   align-items: center;
   gap: 8px;
-  height: 44px;
-  padding: 0 18px 0 14px;
+  height: 40px;
+  padding: 0 16px 0 13px;
   font: inherit;
   font-size: 14px;
   font-weight: 600;
-  color: var(--t-neutral-0, #fff);
-  background: var(--t-primary-600, #059669);
-  border: 0;
-  border-radius: 999px;
+  color: var(--t-neutral-800, #1f2937);
+  background: var(--t-neutral-0, #fff);
+  border: 1px solid var(--t-neutral-200, #e5e7eb);
+  border-bottom: 0;
+  border-radius: 10px 10px 0 0;
+  box-shadow: 0 -4px 18px rgba(15, 23, 42, 0.1), 0 -1px 3px rgba(15, 23, 42, 0.05);
   cursor: pointer;
-  transition: background-color 0.15s ease, transform 0.15s ease;
+  transition: background-color 0.15s ease, box-shadow 0.15s ease;
+}
+
+.cd-bar > svg {
+  flex-shrink: 0;
+  color: var(--t-primary-700, #047857);
 }
 
 .cd-bar:hover {
-  background: var(--t-primary-700, #047857);
-  transform: translateY(-1px);
+  background: var(--t-neutral-50, #f9fafb);
+  box-shadow: 0 -6px 22px rgba(15, 23, 42, 0.14), 0 -1px 3px rgba(15, 23, 42, 0.06);
 }
 
 .cd-bar:focus-visible {
   outline: 2px solid var(--t-primary-700, #047857);
-  outline-offset: 3px;
+  outline-offset: -4px;
 }
 
 .cd-root.is-open .cd-bar {
-  background: var(--t-primary-700, #047857);
+  background: var(--t-neutral-50, #f9fafb);
+}
+
+/*
+ * Moormy behind the tab (ChatDock.jsx). Behind it on the page (z-index -1:
+ * under the tab's white, which hides everything below the edge), its seat
+ * on the tab's top edge when right up. Three places, moved between with a
+ * transition (on the graphics card): down out of sight; peeking, the cap and
+ * eyes over the edge, arms down; up, sitting on the edge and waving, while
+ * the pointer is on the tab. Its box is 50 x 62.5, its seat 43px down.
+ */
+.cd-peek {
+  position: absolute;
+  right: 12px;
+  bottom: calc(100% - 19px);
+  z-index: -1;
+  transform: translateY(46px);
+  transition: transform 0.5s cubic-bezier(0.34, 1.4, 0.64, 1);
+  will-change: transform;
+}
+
+.cd-peek.is-peek {
+  transform: translateY(18px);
+}
+
+/* Up: risen a little past its seat, so its shirt and shorts show. Also
+   while it is being carried about and coming home (is-up). */
+.cd-bar:hover .cd-peek,
+.cd-peek.is-up {
+  transform: translateY(-7px);
+  transition-duration: 0.45s;
+}
+
+.cd-root.is-open .cd-peek {
+  transform: translateY(46px);
+  transition-duration: 0.2s;
+}
+
+/* Peeking, it keeps its arms down; up, it waves. */
+.cd-bar:not(:hover) .cd-peek .mr-arm--R { animation: none; transform: rotate(172deg); }
+.cd-bar:not(:hover) .cd-peek .mr-elbow--R { animation: none; transform: rotate(-6deg); }
+.cd-bar:not(:hover) .cd-peek .mr-head { animation: none; }
+.cd-bar .cd-peek .mr-arm--R,
+.cd-bar .cd-peek .mr-elbow--R {
+  animation-duration: 1.1s;
 }
 
 .cd-count {
@@ -80,9 +133,9 @@
   box-shadow: 0 18px 48px rgba(15, 23, 42, 0.18), 0 2px 8px rgba(15, 23, 42, 0.06);
   opacity: 0;
   visibility: hidden;
-  /* Shrinks into / grows out of the Messages pill below it. */
+  /* Shrinks into / grows out of the Messages tab below it. */
   transform: scale(0.12);
-  transform-origin: calc(100% - 60px) calc(100% + 34px);
+  transform-origin: calc(100% - 60px) calc(100% + 30px);
   transition:
     transform 0.26s cubic-bezier(0.4, 0, 0.6, 1),
     opacity 0.18s ease 0.08s,
@@ -622,7 +675,8 @@
   .cd-root.is-open .cd-panel,
   .cd-panel > *,
   .cd-root.is-open .cd-panel > *,
-  .cd-bar {
+  .cd-bar,
+  .cd-peek {
     transition: none;
   }
 }

@@ -2,7 +2,7 @@ import { useEffect, useSyncExternalStore } from 'react';
 import AsyncStorage from '@react-native-async-storage/async-storage';
 
 /*
- * The buyer's chat with Ate Moormy, kept on this device per account
+ * The buyer's chat with Moormy, kept on this device per account
  * (web/src/lib/moormyChat.js, same storage key). The Messages list reads it
  * (her row shows the last message; before the first question she gets the
  * intro card with its own question box instead) and her chat writes it.

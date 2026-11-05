@@ -214,6 +214,13 @@
   display: inline-flex;
 }
 
+/* Still while it is off screen (Sell.jsx), so a phone does no work for a
+   mascot nobody sees. */
+.sl-mascot[data-still],
+.sl-mascot[data-still] * {
+  animation-play-state: paused !important;
+}
+
 .sl-mascot {
   position: absolute;
   top: -62px;
@@ -224,14 +231,9 @@
   pointer-events: none;
 }
 
-.sl-mascot svg {
-  flex-shrink: 0;
-  filter: drop-shadow(0 4px 6px rgba(0, 0, 0, 0.18));
-}
-
-/* Pointing at it makes the creature wave harder. */
-.sl-cta-wrap:hover .mascot-wave {
-  animation-duration: 0.35s;
+/* Pointing at the button makes the mascot wave harder. */
+.sl-cta-wrap:hover :is(.mr-arm--R, .mr-elbow--R, .mr-head) {
+  animation-duration: 0.8s;
 }
 
 /* A speech bubble, its tail towards the button. */
@@ -319,9 +321,21 @@
    little, still. The frame's thickness is the stack of thin
    shadows on its right (they follow the rounded corners, which a flat side
    panel could not); graphite titanium, a thin black border round the screen. */
+/* --zoom (0 to 1, on .sl-scene) turns it to face you and brings it closer,
+   the top held in place so the hero's bottom edge cuts it about halfway:
+   on phones as the page scrolls down, on computers on hover.
+
+   Kept smooth on slow phones: only transform and opacity ever change, so
+   the browser's compositor moves layers it already painted. The frame's
+   side (a stack of thin shadows) and the cast shadows are two layers that
+   only fade, the turned set out and the face-on set in; nothing is
+   repainted and nothing is laid out again as it turns. */
 .sl-iphone {
   --phone-scale: 1;
-  --tilt: perspective(1800px) rotateY(-24deg) rotateX(7deg) rotateZ(6deg) scale(var(--phone-scale));
+  --zoom-gain: 0.42;
+  /* Scaled from its centre: moved down by the growth above it, and a bit. */
+  --zoom-drop: calc(313px * var(--zoom-gain) + 28px);
+  --edge: calc(1 - var(--zoom, 0));
   position: relative;
   width: 300px;
   height: 626px;
@@ -330,24 +344,120 @@
   background: linear-gradient(135deg,
     #6d7076 0%, #2a2b2f 18%, #7c7f85 34%, #303135 52%,
     #5f6268 70%, #26272a 86%, #575a60 100%);
+  box-shadow: inset 0 0 0 1px rgba(255, 255, 255, 0.22);
+  transform:
+    translateY(calc(var(--zoom, 0) * var(--zoom-drop)))
+    perspective(1800px)
+    rotateY(calc(-24deg * var(--edge)))
+    rotateX(calc(7deg * var(--edge)))
+    rotateZ(calc(6deg * var(--edge)))
+    scale(calc(var(--phone-scale) * (1 + var(--zoom, 0) * var(--zoom-gain))));
+  will-change: transform;
+}
+
+.sl-iphone::before,
+.sl-iphone::after {
+  content: "";
+  position: absolute;
+  inset: 0;
+  border-radius: inherit;
+  pointer-events: none;
+  will-change: opacity;
+}
+
+/* Turned: the side's thickness on the right and a long cast shadow. */
+.sl-iphone::before {
   box-shadow:
-    inset 0 0 0 1px rgba(255, 255, 255, 0.22),
     1px 0 0 #45474c, 2px 0 0 #3e4045, 3px 0 0 #383a3e, 4px 1px 0 #333438,
     5px 1px 0 #2e2f33, 6px 1px 0 #292a2d, 7px 1px 0 #252628, 8px 2px 0 #212224,
     9px 2px 0 #1d1e20, 10px 2px 0 #1a1b1c, 11px 2px 0 #18191a,
     40px 50px 70px -16px rgba(0, 0, 0, 0.5),
     80px 100px 140px -40px rgba(0, 0, 0, 0.4);
-  transform: var(--tilt);
+  opacity: var(--edge);
+}
+
+/* Face on: a soft shadow straight below. */
+.sl-iphone::after {
+  box-shadow: 0 40px 80px -20px rgba(0, 0, 0, 0.45), 0 12px 30px -10px rgba(0, 0, 0, 0.3);
+  opacity: var(--zoom, 0);
+}
+
+/* Computers: on hover, eased (transitions of transform and opacity run on
+   the compositor too). */
+@media (hover: hover) and (pointer: fine) and (prefers-reduced-motion: no-preference) {
+  .sl-scene:hover {
+    --zoom: 1;
+  }
+
+  .sl-iphone,
+  .sl-iphone-btn {
+    transition: transform 0.75s cubic-bezier(0.22, 1, 0.36, 1);
+  }
+
+  .sl-iphone::before,
+  .sl-iphone::after {
+    transition: opacity 0.75s cubic-bezier(0.22, 1, 0.36, 1);
+  }
+}
+
+/* Phones: tied to the page's scroll by the browser itself (a scroll-driven
+   animation), from the top of the page to --zoom-end, where the scene's top
+   is a fifth of the way down the screen (measured by Sell.jsx on resize).
+   It runs off the main thread: no script on each frame. Browsers without
+   it get --zoom from a scroll listener instead (Sell.jsx). */
+@keyframes sl-phone-face {
+  from {
+    transform: translateY(0) perspective(1800px) rotateY(-24deg) rotateX(7deg) rotateZ(6deg) scale(var(--phone-scale));
+  }
+  to {
+    transform: translateY(var(--zoom-drop)) perspective(1800px) rotateY(0deg) rotateX(0deg) rotateZ(0deg) scale(calc(var(--phone-scale) * (1 + var(--zoom-gain))));
+  }
+}
+
+@keyframes sl-phone-fade-out {
+  from { opacity: 1; }
+  to { opacity: 0; }
+}
+
+@keyframes sl-phone-fade-in {
+  from { opacity: 0; }
+  to { opacity: 1; }
+}
+
+@keyframes sl-phone-btn-flush {
+  from { transform: translateX(0); }
+  to { transform: translateX(-10px); }
+}
+
+@supports (animation-timeline: scroll()) {
+  @media (max-width: 768px) and (prefers-reduced-motion: no-preference) {
+    .sl-iphone,
+    .sl-iphone::before,
+    .sl-iphone::after,
+    .sl-iphone-btn {
+      animation-duration: auto;
+      animation-timing-function: cubic-bezier(0.45, 0, 0.55, 1);
+      animation-fill-mode: both;
+      animation-timeline: scroll(root block);
+      animation-range: 0px var(--zoom-end, 360px);
+    }
+
+    .sl-iphone { animation-name: sl-phone-face; }
+    .sl-iphone::before { animation-name: sl-phone-fade-out; }
+    .sl-iphone::after { animation-name: sl-phone-fade-in; }
+    .sl-iphone-btn { animation-name: sl-phone-btn-flush; }
+  }
 }
 
 /* The side button and Camera Control, on the edge that faces you; the
-   left side's buttons face away. */
+   left side's buttons face away. Face on, they slide in flush. */
 .sl-iphone-btn {
   position: absolute;
   right: -13px;
   width: 3px;
   border-radius: 0 3px 3px 0;
   background: linear-gradient(90deg, #2c2d31, #7d8086 50%, #3a3c40);
+  transform: translateX(calc(-10px * var(--zoom, 0)));
 }
 
 .sl-iphone-btn--action,
@@ -886,6 +996,237 @@
   border-bottom-right-radius: 6px;
   background: var(--sl-green);
   color: #fff;
+}
+
+/*
+ * The three pictures play a short scene on hover (on a phone, as each comes
+ * into view: .is-live, Sell.jsx). Only transforms and fades, so they stay
+ * smooth; entrances are delayed and staggered, exits quick.
+ */
+.sl-feature-art {
+  --sl-spring: cubic-bezier(0.34, 1.56, 0.64, 1);
+  --sl-ease: cubic-bezier(0.22, 1, 0.36, 1);
+}
+
+/* Keep every peso: the receipt straightens and lifts, a highlighter runs
+   under the ₱0.00 fee, a "₱0 fee" stamp thumps down, the total pulses. */
+.sl-receipt {
+  position: relative;
+  transition: transform 0.55s var(--sl-spring), box-shadow 0.55s var(--sl-ease);
+}
+
+.sl-feature-art:is(:hover, .is-live) .sl-receipt {
+  transform: rotate(0deg) translateY(-8px) scale(1.02);
+  box-shadow: 0 30px 60px rgba(15, 23, 42, 0.16);
+}
+
+.sl-receipt-fee {
+  position: relative;
+}
+
+.sl-receipt-fee span {
+  position: relative;
+  z-index: 1;
+}
+
+.sl-receipt-fee::before {
+  content: '';
+  position: absolute;
+  inset: 3px -10px;
+  border-radius: 8px;
+  background: color-mix(in srgb, var(--sl-pink) 16%, transparent);
+  transform: scaleX(0);
+  transform-origin: left center;
+  transition: transform 0.25s ease;
+}
+
+.sl-feature-art:is(:hover, .is-live) .sl-receipt-fee::before {
+  transform: scaleX(1);
+  transition: transform 0.5s var(--sl-ease) 0.18s;
+}
+
+.sl-receipt-stamp {
+  position: absolute;
+  top: -36px;
+  right: -36px;
+  display: grid;
+  place-content: center;
+  width: 78px;
+  height: 78px;
+  border: 3px solid var(--sl-pink);
+  border-radius: 50%;
+  background: rgba(255, 255, 255, 0.92);
+  box-shadow: inset 0 0 0 4px #fff, inset 0 0 0 5.5px color-mix(in srgb, var(--sl-pink) 45%, transparent);
+  color: var(--sl-pink);
+  font-size: 11px;
+  font-weight: 800;
+  letter-spacing: 0.12em;
+  line-height: 1;
+  text-align: center;
+  text-transform: uppercase;
+  opacity: 0;
+  transform: rotate(-14deg) scale(1.9);
+  transition: opacity 0.18s ease, transform 0.18s ease;
+  pointer-events: none;
+}
+
+.sl-receipt-stamp b {
+  display: block;
+  margin-bottom: 2px;
+  font-size: 24px;
+  letter-spacing: -0.02em;
+  text-transform: none;
+}
+
+.sl-feature-art:is(:hover, .is-live) .sl-receipt-stamp {
+  opacity: 1;
+  transform: rotate(-14deg) scale(1);
+  transition: opacity 0.12s ease 0.42s, transform 0.42s cubic-bezier(0.3, 1.7, 0.5, 1) 0.42s;
+}
+
+.sl-receipt-total span:last-child {
+  display: inline-block;
+  transform-origin: right center;
+}
+
+.sl-feature-art:is(:hover, .is-live) .sl-receipt-total span:last-child {
+  animation: sl-total-pop 0.5s var(--sl-ease) 0.7s;
+}
+
+@keyframes sl-total-pop {
+  0%, 100% { transform: scale(1); }
+  45% { transform: scale(1.16); }
+}
+
+/* Deliver where you want: the barangays ripple up one by one, the ones not
+   yet served fill in green, the pickup switch flicks off and on. */
+.sl-feature-art:is(:hover, .is-live) .sl-areas span:not(.sl-areas-pickup) {
+  animation: sl-chip-hop 0.5s var(--sl-ease) calc(var(--i, 0) * 55ms);
+}
+
+@keyframes sl-chip-hop {
+  0%, 100% { transform: translateY(0); }
+  40% { transform: translateY(-7px); }
+}
+
+.sl-areas span:not(.is-on):not(.sl-areas-pickup) {
+  position: relative;
+  isolation: isolate;
+  overflow: hidden;
+  transition: color 0.2s ease, border-color 0.2s ease;
+}
+
+.sl-areas span:not(.is-on):not(.sl-areas-pickup)::before {
+  content: '';
+  position: absolute;
+  inset: 0;
+  z-index: -1;
+  background: var(--sl-green);
+  transform: scaleX(0);
+  transform-origin: left center;
+  transition: transform 0.2s ease;
+}
+
+.sl-feature-art:is(:hover, .is-live) .sl-areas span:not(.is-on):not(.sl-areas-pickup) {
+  border-color: var(--sl-green);
+  color: #fff;
+  transition: color 0.2s ease calc(0.2s + var(--i, 0) * 70ms), border-color 0.2s ease calc(0.15s + var(--i, 0) * 70ms);
+}
+
+.sl-feature-art:is(:hover, .is-live) .sl-areas span:not(.is-on):not(.sl-areas-pickup)::before {
+  transform: scaleX(1);
+  transition: transform 0.4s var(--sl-ease) calc(0.15s + var(--i, 0) * 70ms);
+}
+
+.sl-feature-art:is(:hover, .is-live) .sl-areas-pickup i::after {
+  animation: sl-switch 0.7s var(--sl-ease) 0.75s;
+}
+
+@keyframes sl-switch {
+  0%, 100% { transform: translateX(0); }
+  35%, 55% { transform: translateX(-14px); }
+}
+
+/* Talk to your buyers: the chat plays again, message by message; the
+   seller's reply gets a heart, and the buyer is typing. */
+/* Room under the messages for the "typing" bubble to appear in. */
+.sl-chat {
+  position: relative;
+  padding-bottom: 46px;
+}
+
+.sl-chat-in { transform-origin: left bottom; }
+.sl-chat-out { position: relative; transform-origin: right bottom; }
+
+.sl-feature-art:is(:hover, .is-live) .sl-chat p:not(.sl-chat-typing) {
+  animation: sl-bubble-in 0.45s var(--sl-ease) calc(var(--i, 0) * 0.3s) both;
+}
+
+@keyframes sl-bubble-in {
+  from { opacity: 0; transform: translateY(14px) scale(0.92); }
+  to { opacity: 1; transform: none; }
+}
+
+.sl-chat-heart {
+  position: absolute;
+  left: -10px;
+  bottom: -10px;
+  display: grid;
+  place-items: center;
+  width: 26px;
+  height: 26px;
+  border-radius: 50%;
+  background: #fff;
+  box-shadow: 0 4px 10px rgba(15, 23, 42, 0.14);
+  color: var(--sl-pink);
+  opacity: 0;
+  transform: scale(0.3);
+  transition: opacity 0.15s ease, transform 0.15s ease;
+}
+
+.sl-feature-art:is(:hover, .is-live) .sl-chat-heart {
+  opacity: 1;
+  transform: scale(1);
+  transition: opacity 0.12s ease 0.75s, transform 0.45s cubic-bezier(0.3, 1.8, 0.5, 1) 0.75s;
+}
+
+.sl-chat .sl-chat-typing {
+  position: absolute;
+  left: 0;
+  bottom: 0;
+  display: flex;
+  gap: 4px;
+  max-width: none;
+  padding: 13px 15px;
+  border-bottom-left-radius: 6px;
+  background: #fff;
+  box-shadow: 0 4px 14px rgba(15, 23, 42, 0.08);
+  opacity: 0;
+  transform: translateY(8px) scale(0.9);
+  transform-origin: left bottom;
+  transition: opacity 0.15s ease, transform 0.15s ease;
+}
+
+.sl-chat-typing i {
+  width: 7px;
+  height: 7px;
+  border-radius: 50%;
+  background: var(--t-neutral-400, #9ca3af);
+  animation: sl-typing 1s ease-in-out infinite;
+}
+
+.sl-chat-typing i:nth-child(2) { animation-delay: 0.15s; }
+.sl-chat-typing i:nth-child(3) { animation-delay: 0.3s; }
+
+.sl-feature-art:is(:hover, .is-live) .sl-chat .sl-chat-typing {
+  opacity: 1;
+  transform: none;
+  transition: opacity 0.2s ease 1.05s, transform 0.4s var(--sl-ease) 1.05s;
+}
+
+@keyframes sl-typing {
+  0%, 60%, 100% { transform: translateY(0); opacity: 0.5; }
+  30% { transform: translateY(-4px); opacity: 1; }
 }
 
 /* ─── Steps: a timeline ───────────────────────────────────────── */
@@ -1437,6 +1778,10 @@
 
   .sl-iphone {
     --phone-scale: 0.8;
+    /* Scaled from its top already: brought closer only up to the screen's
+       width (0.8 x 1.45 = 348px), and set a little lower. */
+    --zoom-gain: 0.45;
+    --zoom-drop: 18px;
     margin-bottom: calc(626px * -0.2);
     transform-origin: top center;
   }
@@ -1630,6 +1975,13 @@
   .sl-toast,
   .sl-mascot-say {
     animation: none;
+  }
+
+  .sl-feature-art *,
+  .sl-feature-art *::before,
+  .sl-feature-art *::after {
+    animation: none !important;
+    transition: none !important;
   }
 
   .sl-ribbon-track {

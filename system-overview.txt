@@ -170,7 +170,7 @@ Status terms used throughout this document:
      and platform settings.
   f. Communication: chat, help desk, team chat, notifications, email, SMS
      verification codes, and web push.
-  g. Assistance: a guided assistant for sellers and buyers ("Ate Moormy") and
+  g. Assistance: a guided assistant for sellers and buyers ("Moormy") and
      a Seller Academy and tutorial.
 
 3.2 Delimitations
@@ -682,7 +682,7 @@ and processes.
 5.24 Analytics and Reporting Module
   Purpose: Summarize activity for decisions. See Section 15.
 
-5.25 Assistant Module ("Ate Moormy")
+5.25 Assistant Module ("Moormy")
   Purpose: Answer how-to and status questions for sellers and buyers.
   Users: Sellers (seller assistant), buyers and sellers (buyer assistant).
   Features: suggested questions answered from a curated guide combined with
@@ -2011,7 +2011,7 @@ Selling
   Opening hours, vacation mode, prep days | Shop | Implemented |
   Shop QR poster | Shop | Implemented |
   Seller Academy and tutorial | Onboarding | Implemented |
-  Seller assistant (Ate Moormy) | Assistant | Implemented | Model answers need a service token
+  Seller assistant (Moormy) | Assistant | Implemented | Model answers need a service token
   Buyer assistant | Assistant | Implemented |
   Product types: regular, ready-to-eat, cook-to-order, livestock, package | Catalog | Implemented |
   Variations, tiered and sale prices | Catalog | Implemented |

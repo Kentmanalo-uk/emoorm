@@ -17,7 +17,7 @@ import { AiTag, GradientFill, MMY } from './InboxGradient';
 import { setMoormyChat, useMoormyChat } from './moormyChat';
 
 /*
- * The buyer's chat with Ate Moormy (web/src/components/moormy/
+ * The buyer's chat with Moormy (web/src/components/moormy/
  * MoormyThread.jsx): questions about shopping on Emoorm, answered in
  * English or Tagalog, with suggested questions to tap and links to the
  * page an answer is about.
@@ -28,27 +28,27 @@ const UI = {
     role: 'AI shopping helper',
     note: 'She answers questions about shopping on Emoorm only, and can make mistakes. Check important details.',
     suggested: 'Suggested questions',
-    placeholder: 'Ask Ate Moormy…',
+    placeholder: 'Ask Moormy…',
     newChat: 'New chat',
     switchLang: 'Answer in Tagalog',
     help: 'Help Center',
     retry: 'Try again',
-    cantLoad: "Ate Moormy can't load right now.",
+    cantLoad: "Moormy can't load right now.",
     offline: "I couldn't reach Emoorm just now. Check your connection and try again.",
-    typing: 'Ate Moormy is typing',
+    typing: 'Moormy is typing',
   },
   tl: {
     role: 'AI shopping helper',
     note: 'Tungkol lang sa pamimili sa Emoorm ang sinasagot niya, at puwede siyang magkamali. Suriin ang mahahalagang detalye.',
     suggested: 'Mga puwedeng itanong',
-    placeholder: 'Magtanong kay Ate Moormy…',
+    placeholder: 'Magtanong kay Moormy…',
     newChat: 'Bagong chat',
     switchLang: 'Answer in English',
     help: 'Help Center',
     retry: 'Subukan ulit',
-    cantLoad: 'Hindi ma-load si Ate Moormy ngayon.',
+    cantLoad: 'Hindi ma-load si Moormy ngayon.',
     offline: 'Hindi ko maabot ang Emoorm ngayon. Tingnan ang koneksyon mo at subukan ulit.',
-    typing: 'Nagta-type si Ate Moormy',
+    typing: 'Nagta-type si Moormy',
   },
 };
 const LANG_KEY = 'emoorm-moormy-lang';
@@ -268,13 +268,13 @@ export default function MoormyThread({ userId, pendingAsk, onAsked, onBack }) {
         <MoormyAvatar size={40} />
         <View style={styles.title}>
           <View style={styles.nameRow}>
-            <Text style={styles.name} numberOfLines={1}>Ate Moormy</Text>
+            <Text style={styles.name} numberOfLines={1}>Moormy</Text>
             <AiTag />
           </View>
           <Text style={styles.sub} numberOfLines={1}>{copy.role}</Text>
         </View>
         <ShellPageMenu
-          label="Ate Moormy options"
+          label="Moormy options"
           items={[
             messages.length > 0 && { key: 'new', Icon: NotePencilIcon, label: copy.newChat, onPress: () => update((c) => ({ ...c, messages: [], asked: [] })) },
             { key: 'lang', Icon: TranslateIcon, label: copy.switchLang, onPress: () => chooseLang(lang === 'tl' ? 'en' : 'tl') },
@@ -289,11 +289,11 @@ export default function MoormyThread({ userId, pendingAsk, onAsked, onBack }) {
         contentContainerStyle={styles.messages}
         onContentSizeChange={() => scrollRef.current?.scrollToEnd({ animated: messages.length > 0 })}
         keyboardShouldPersistTaps="handled"
-        accessibilityLabel="Chat with Ate Moormy"
+        accessibilityLabel="Chat with Moormy"
       >
         <View style={styles.hero}>
           <MoormyAvatar size={64} />
-          <Text style={styles.heroName}>Ate Moormy</Text>
+          <Text style={styles.heroName}>Moormy</Text>
           <Text style={styles.heroNote}>{copy.note}</Text>
         </View>
 

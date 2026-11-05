@@ -3,7 +3,7 @@ const { successResponse } = require('../utils/response');
 const { asyncHandler } = require('../middleware/errorHandler');
 
 /**
- * Buyer Assistant Controller ("Ate Moormy" in the buyer's Messages)
+ * Buyer Assistant Controller ("Moormy" in the buyer's Messages)
  */
 
 /**
@@ -12,7 +12,7 @@ const { asyncHandler } = require('../middleware/errorHandler');
  * @access Private (BUYER, SELLER)
  */
 const getIntro = asyncHandler(async (req, res) => {
-  successResponse(res, await buyerAssistantService.getIntro(req.user, req.query.lang), 'Ate Moormy is ready');
+  successResponse(res, await buyerAssistantService.getIntro(req.user, req.query.lang), 'Moormy is ready');
 });
 
 /**
