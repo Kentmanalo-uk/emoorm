@@ -4,7 +4,7 @@ import { API_BASE_URL } from './config';
 /*
  * Live selling (the website's /live, livestream/ at the root of the repo,
  * served by the backend at /api/live). The app plays a live with the
- * phone's own player from its Low-Latency HLS playlist (app/live/[id].js)
+ * phone's own player from its HLS playlist of whole seconds (app/live/[id].js)
  * and goes live through the website's camera page in a web view
  * (app/seller/live.js). This file: the JSON calls, the news long-poll and
  * the hearts, as the website's livestream/client/events.js.
@@ -12,8 +12,12 @@ import { API_BASE_URL } from './config';
 
 export const LIVE_BASE = `${API_BASE_URL.replace(/\/$/, '')}/live`;
 
-/** The playlist the phone's player follows. */
-export const livePlaylist = (id) => `${LIVE_BASE}/${id}/live.m3u8`;
+/**
+ * The playlist the phone's player follows: whole seconds (?ll=0), not the
+ * Low-Latency parts, which stalled on weaker connections. A second or two
+ * more delay, and it keeps playing.
+ */
+export const livePlaylist = (id) => `${LIVE_BASE}/${id}/live.m3u8?ll=0`;
 
 export const liveThumb = (live) => (live?.hasThumb ? `${LIVE_BASE}/${live.id}/thumb.jpg?t=${live.thumbAt || 0}` : null);
 
