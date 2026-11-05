@@ -142,10 +142,56 @@ const close = (seg) => {
  * frame and lasts about a second; its pieces about a fifth of one). Viewers
  * streaming the group are woken for each. `last`: the group is complete.
  */
-const putPart = (live, {
+const putPart = (live, args) => {
+  const {
+    seq, part, last, epoch,
+  } = args;
+  if (!live.inits.has(epoch)) return false;
+  // A whole second that came before the one in front of it (the seller's
+  // uploads run side by side): held a moment for the missing one, so
+  // seconds are kept, numbered and served in order.
+  if (part === 0 && last && live.latestSeq >= 0 && seq > live.latestSeq + 1 && !segment(live, seq)) {
+    if (!live.held) live.held = new Map();
+    if (!live.held.has(seq) && live.held.size < HOLD_MAX) {
+      live.held.set(seq, args);
+      setTimeout(() => releaseHeld(live, seq), HOLD_MS);
+    }
+    live.lastDataAt = Date.now();
+    return true;
+  }
+  const ok = addPart(live, args);
+  drainHeld(live);
+  return ok;
+};
+
+// How long a second waits for the one before it, and how many may wait.
+const HOLD_MS = 3000;
+const HOLD_MAX = 8;
+
+/** Adds the held seconds that now follow on. */
+const drainHeld = (live) => {
+  while (live.held?.has(live.latestSeq + 1)) {
+    const args = live.held.get(live.latestSeq + 1);
+    live.held.delete(live.latestSeq + 1);
+    addPart(live, args);
+  }
+};
+
+/** The second before `upTo` never came: go on without it. */
+const releaseHeld = (live, upTo) => {
+  if (!live.held?.has(upTo) || live.status === 'ENDED') return;
+  for (const s of [...live.held.keys()].sort((a, b) => a - b)) {
+    if (s > upTo) break;
+    const args = live.held.get(s);
+    live.held.delete(s);
+    if (s > live.latestSeq) addPart(live, args);
+  }
+  drainHeld(live);
+};
+
+const addPart = (live, {
   seq, part, last, epoch, dur, data,
 }) => {
-  if (!live.inits.has(epoch)) return false;
   live.lastDataAt = Date.now();
   let seg = segment(live, seq);
   if (!seg) {

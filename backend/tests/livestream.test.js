@@ -195,6 +195,36 @@ test('a second is only ever sent whole, once it is complete', async () => {
   assert.equal(partial.status, 204);
 });
 
+test('whole seconds that arrive out of order are kept in order', async () => {
+  const seller = await h.user('SELLER');
+  await h.shop(seller);
+  const { id, key } = (await h.api('POST', '/live', { token: h.token(seller), body: {} })).body.data;
+  await raw('PUT', `/live/${id}/init?epoch=0&codecs=avc1.42e01f,opus`, piece('init'), key);
+  const second = (seq) => raw('POST', `/live/${id}/seg?seq=${seq}&part=0&last=1&epoch=0&dur=1000`, piece(seq), key);
+  const app = await h.startApp();
+
+  // Uploads run side by side: 2 lands before 1. It waits for 1.
+  assert.equal((await second(0)).status, 200);
+  assert.equal((await second(2)).status, 200);
+  assert.equal((await (await fetch(`${app}/live/${id}`)).json()).data.latestSeq, 0);
+  assert.equal((await second(1)).status, 200);
+  assert.equal((await (await fetch(`${app}/live/${id}`)).json()).data.latestSeq, 2);
+  for (const seq of [1, 2]) {
+    // eslint-disable-next-line no-await-in-loop
+    const res = await fetch(`${app}/live/${id}/seg/${seq}.m4s`);
+    assert.equal(res.status, 200);
+    // eslint-disable-next-line no-await-in-loop
+    assert.match(Buffer.from(await res.arrayBuffer()).toString(), new RegExp(`^piece-${seq}-`));
+  }
+
+  // 4 comes but 3 never does (the seller dropped it): after a moment the
+  // live goes on from 4.
+  assert.equal((await second(4)).status, 200);
+  await new Promise((r) => { setTimeout(r, 3300); });
+  assert.equal((await (await fetch(`${app}/live/${id}`)).json()).data.latestSeq, 4);
+  assert.equal((await fetch(`${app}/live/${id}/seg/4.m4s`)).status, 200);
+});
+
 test('pieces sent together are split; a second that never came is skipped', async () => {
   const seller = await h.user('SELLER');
   await h.shop(seller);

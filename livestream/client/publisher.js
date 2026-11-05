@@ -17,10 +17,10 @@ import {
   initSegment, mediaSegment, avcCodec, aacConfig, VIDEO_TIMESCALE,
 } from './fmp4.js';
 
-// A key frame every second (where a viewer can start), sent in pieces of
-// a fifth of a second (how soon a viewer sees it).
+// A key frame every second (where a viewer can start); each second is
+// uploaded whole, up to three at a time.
 const SEGMENT_US = 1000000;
-const PART_US = 200000;
+const MAX_UPLOADS = 3;
 const FPS = 30;
 const SAMPLE_RATE = 48000;
 const AUDIO_BLOCK = 1024;
@@ -103,11 +103,10 @@ export class LivePublisher {
     this.running = false;
     this.rung = 0;
     this.queue = [];
-    this.uploading = false;
+    this.sending = 0;
     this.gop = -1;
     this.part = 0;
     this.frag = 0;
-    this.skipGop = false;
     this.epoch = -1;
     this.t0 = null;
     this.pendingVideo = [];
@@ -334,15 +333,13 @@ export class LivePublisher {
         const avcC = new Uint8Array(description.buffer ? description.buffer.slice(description.byteOffset ?? 0, (description.byteOffset ?? 0) + description.byteLength) : description);
         if (!this.avcC || !sameBytes(avcC, this.avcC)) this.newEpoch(avcC);
       }
-      // A new group: numbered pieces start again, and one that was being
-      // skipped (the upload fell behind) is over.
+      // A new group (a second): it goes up whole, in one piece, when the
+      // next key frame comes -- one upload a second, as the first version.
+      // (Uploading fifths of a second was five trips a second through the
+      // site's CDN; the seller fell behind, seconds were dropped half-sent,
+      // and viewers froze on the holes.)
       this.gop += 1;
       this.part = 0;
-      this.skipGop = false;
-    } else if (this.pendingVideo.length && chunk.timestamp - this.pendingVideo[0].ts >= PART_US) {
-      // A fifth of a second gathered: off it goes, without waiting for the
-      // group to end. This is what keeps viewers close to now.
-      this.flush(chunk.timestamp, false);
     }
     // Nothing before the first set-up and key frame.
     if (!this.avcC || this.t0 === null) return;
@@ -413,8 +410,8 @@ export class LivePublisher {
   // ── Pieces ────────────────────────────────────────────────────────────
 
   /**
-   * One piece (a fifth of a second): the frames gathered, up to `nextTs`.
-   * `last`: it ends its group of pictures (the next frame is a key frame).
+   * One piece: the frames of a second, up to `nextTs` (the next key frame).
+   * `last`: it ends its group of pictures -- always, one piece a second.
    */
   flush(nextTs, last) {
     const frames = this.pendingVideo;
@@ -428,8 +425,6 @@ export class LivePublisher {
     this.pendingAudio = [];
     const part = this.part;
     this.part += 1;
-    // The rest of a group whose start was dropped cannot be shown: skipped.
-    if (this.skipGop) return;
     this.frag += 1;
     const data = mediaSegment(
       this.frag,
@@ -455,18 +450,16 @@ export class LivePublisher {
   enqueue(item) {
     if (item.kind === 'part') {
       const waiting = this.waitingMs();
-      // A second behind: the picture gets lighter.
-      if (waiting >= 1000) this.stepDown();
-      // Two: what is waiting is dropped (an init never is) and the rest of
-      // this group with it, and the next starts at once, so viewers stay
-      // close to now rather than watching the past arrive late.
-      if (waiting >= 2000) {
-        const before = this.queue.length;
-        this.queue = this.queue.filter((q) => q.kind === 'init' || q.inFlight);
-        this.stats.dropped += before - this.queue.length;
-        this.skipGop = true;
-        this.forceKey = true;
-        return;
+      // Two seconds behind: the picture gets lighter. Four: the oldest
+      // whole second goes (an init never does, nor one being sent), so
+      // viewers stay near now -- a clean skip, never half a second.
+      if (waiting >= 2000) this.stepDown();
+      if (waiting >= 4000) {
+        const drop = this.queue.find((q) => q.kind === 'part' && !q.inFlight);
+        if (drop) {
+          this.queue.splice(this.queue.indexOf(drop), 1);
+          this.stats.dropped += 1;
+        }
       }
     }
     this.queue.push(item);
@@ -487,71 +480,42 @@ export class LivePublisher {
     if (this.size) this.configure(this.size.width, this.size.height, true);
   }
 
-  async pump() {
-    if (this.uploading) return;
-    this.uploading = true;
-    try {
-      while (this.running && this.queue.length && !this.gone) {
-        const item = this.nextUpload();
-        const started = performance.now();
-        // eslint-disable-next-line no-await-in-loop
-        const done = await this.upload(item);
-        this.queue = this.queue.filter((q) => !q.inFlight);
-        if (!done) continue;
-        this.stats.sentBytes += item.data.byteLength;
-        // Sent in well under its own length, with nothing waiting: room for more.
-        if (item.kind === 'part' && !this.queue.length && performance.now() - started < item.dur * 0.35) this.stepUp();
-        this.onStats({
-          ...this.stats,
-          seconds: Math.round((Date.now() - this.stats.startedAt) / 1000),
-          kbps: Math.round(LADDER[this.rung] / 1000),
-          // Seconds of video still to upload.
-          behind: Math.floor(this.waitingMs() / 1000),
-        });
-      }
-    } finally {
-      this.uploading = false;
+  /**
+   * Starts uploads: up to MAX_UPLOADS seconds on their way at once. Through
+   * the site's CDN an upload takes one to three seconds, longer than the
+   * second it carries, so one at a time could never keep up. A set-up piece
+   * (init) goes alone, before the seconds that need it.
+   */
+  pump() {
+    while (this.running && !this.gone && this.sending < MAX_UPLOADS) {
+      const item = this.queue.find((q) => !q.inFlight);
+      if (!item) return;
+      if (this.queue.some((q) => q.inFlight && q.kind === 'init')) return;
+      if (item.kind === 'init' && this.sending > 0) return;
+      item.inFlight = true;
+      this.sending += 1;
+      this.send(item);
     }
   }
 
-  /**
-   * What goes up next: the first waiting item, or, when pieces of one group
-   * have piled up (a slow or far connection), all of them in one request.
-   * One request per piece pays the trip to the server five times a second;
-   * a pile sent together pays it once, so a slow upload catches up rather
-   * than falling further behind.
-   */
-  nextUpload() {
-    const first = this.queue[0];
-    first.inFlight = true;
-    if (first.kind !== 'part') return first;
-    const batch = [first];
-    for (let i = 1; i < this.queue.length && batch.length < 8; i += 1) {
-      const next = this.queue[i];
-      const prev = batch[batch.length - 1];
-      if (next.kind !== 'part' || next.seq !== first.seq || next.epoch !== first.epoch || next.part !== prev.part + 1 || prev.last) break;
-      next.inFlight = true;
-      batch.push(next);
+  async send(item) {
+    const started = performance.now();
+    const done = await this.upload(item);
+    this.sending -= 1;
+    this.queue = this.queue.filter((q) => q !== item);
+    if (done) {
+      this.stats.sentBytes += item.data.byteLength;
+      // Sent in well under its own length, with nothing waiting: room for more.
+      if (item.kind === 'part' && !this.queue.length && performance.now() - started < item.dur * 0.35) this.stepUp();
+      this.onStats({
+        ...this.stats,
+        seconds: Math.round((Date.now() - this.stats.startedAt) / 1000),
+        kbps: Math.round(LADDER[this.rung] / 1000),
+        // Seconds of video still to upload.
+        behind: Math.floor(this.waitingMs() / 1000),
+      });
     }
-    if (batch.length === 1) return first;
-    const size = batch.reduce((n, b) => n + b.data.byteLength, 0);
-    const data = new Uint8Array(size);
-    let at = 0;
-    for (const b of batch) {
-      data.set(b.data, at);
-      at += b.data.byteLength;
-    }
-    return {
-      kind: 'part',
-      seq: first.seq,
-      part: first.part,
-      last: batch[batch.length - 1].last,
-      epoch: first.epoch,
-      dur: batch.reduce((n, b) => n + b.dur, 0),
-      sizes: batch.map((b) => b.data.byteLength),
-      durs: batch.map((b) => b.dur),
-      data,
-    };
+    this.pump();
   }
 
   async upload(item) {

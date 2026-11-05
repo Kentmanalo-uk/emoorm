@@ -312,6 +312,21 @@ export class LivePlayer {
         }
       }
     }
+    // Stuck: the picture has not moved for a second though there is video
+    // after it (a second the seller dropped, or a stop right at the edge of
+    // one). Step over rather than sit on "Catching up…".
+    if (Math.abs(t - (this.lastT ?? -1)) > 0.01 || v.paused) {
+      this.lastT = t;
+      this.movedAt = performance.now();
+    } else if (performance.now() - this.movedAt > 1000 && end - t > 0.3) {
+      let to = null;
+      for (let i = 0; i < b.length; i += 1) {
+        if (b.start(i) > t + 0.01) { to = b.start(i) + 0.05; break; }
+      }
+      v.currentTime = to ?? t + 0.15;
+      this.movedAt = performance.now();
+      return;
+    }
     const lag = end - t;
     if (lag > FAR_BEHIND) {
       v.currentTime = end - TARGET_LAG;

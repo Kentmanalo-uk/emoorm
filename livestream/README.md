@@ -5,7 +5,7 @@ media server, and it records nothing.
 
 ```
 seller's browser                     backend (this module)                 viewer
-camera ─ WebCodecs ─ 0.2 s fMP4 ─POST─▶ last 8 seconds in memory ─streamed GET─▶ Media Source / HLS
+camera ─ WebCodecs ─ 1 s fMP4 ─POST─▶ last 8 seconds in memory ─GET (whole seconds)─▶ Media Source / HLS
 (client/publisher.js, fmp4.js)        (server/sessions.js, router.js)    (client/player.js)
                        comments, hearts, pins: long-poll /events (client/events.js)
 ```
@@ -22,23 +22,26 @@ camera ─ WebCodecs ─ 0.2 s fMP4 ─POST─▶ last 8 seconds in memory ─st
 - **Memory only:** each live keeps about 8 seconds of video, about 2 MB.
   When a live ends, or the server restarts, it is gone. After a restart the
   seller's page starts a new live by itself.
-- **Pieces:** a key frame comes every second, and the second goes up in
-  pieces of a fifth of a second. A viewer asks for each second before it
-  exists and gets it as one streamed response, piece by piece as each
-  arrives. A finished second is a plain cacheable file, which is what the
-  HLS playlist lists.
-- **Live sync (player.js `steer`):** keeps each viewer a set distance behind
-  the newest video by playing slightly faster or slower. The distance
-  starts at 0.6 s. It grows each time the picture has to stop and wait, and
-  shrinks again after a calm spell. The player also steps over holes left
-  by pieces the seller could not send.
-- **Delay**, measured from camera to screen: about 0.9 s on a good
-  connection and about 1.1 s on weak data, plus the round trip to the
-  server.
-- **Slow seller uploads:** pieces that pile up go up together in one
-  request, and the picture gets lighter. Two seconds behind, what is
-  waiting is dropped and the next second starts at once, so viewers skip
-  the lost moment instead of watching it arrive late.
+- **Pieces:** a key frame comes every second, and each second goes up whole
+  in one request, up to three requests at a time (through Hostinger's CDN a
+  request takes one to three seconds, longer than the second it carries).
+  The server holds a second that arrives ahead of a missing one for up to
+  3 s, so seconds are kept and served in order. A viewer asks for the next
+  seconds before they exist and gets each one whole, once it is complete.
+  Never stream a second as it fills: the CDN (`Server: hcdn`) holds a
+  growing response back and viewers got nothing ("Catching up…").
+- **Viewing (player.js):** asks for three seconds at once, starts two
+  finished seconds back and plays about three seconds behind, a touch
+  faster or slower to hold that; it jumps ahead past 6.5 s and steps over
+  holes or a picture that has stopped with video after it.
+- **Delay**, camera to screen: about 3–5 s on the live site. Comments and
+  hearts go by their own long-poll and stay near real time.
+- **Slow seller uploads:** two seconds behind, the picture gets lighter;
+  four, the oldest whole second waiting is dropped (never half a second).
+- **History:** an under-a-second version (fifth-of-a-second pieces,
+  streamed responses, Low-Latency HLS) worked locally but froze on
+  emoorm.shop behind the CDN; the server still accepts parts and serves the
+  LL-HLS playlist, but the website and app no longer use them.
 - **Going live** needs WebCodecs: Chrome or Edge on Android or a computer.
   Any modern browser can watch, and iPhones older than iOS 17.1 get the HLS
   playlist.
