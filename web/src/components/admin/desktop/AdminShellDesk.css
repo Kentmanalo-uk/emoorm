@@ -1,0 +1,298 @@
+/* ═══════════════════════════════════════════════════════════════════════
+   The admin panel's shell, after the Seller Center's (SellerDesk.css) but
+   its own: a flat pale grey page, one white header (search on the left;
+   "+ Create", messages, notifications and language, the admin's account
+   on the right) and a white menu in folding groups under a chip saying
+   whose panel it is. The pink-to-green wash and the rail down the right
+   edge (suite.css) are gone on computers.
+
+   The groups' folding works at every width (the drawer on smaller
+   screens has them too); the look is computers only, 769px and wider, and
+   the header and the two-column page from 1025px (AdminLayout.jsx draws
+   the header's right side there). Loaded last, a class more specific than
+   suite.css where both style the same thing. Phones are untouched.
+   ═══════════════════════════════════════════════════════════════════════ */
+
+/* ── Whose panel: "All municipalities", or the town ────────────────────── */
+
+.ac-scope {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  align-self: flex-start;
+  max-width: 100%;
+  margin: 0 8px 10px;
+  padding: 5px 10px;
+  border-radius: 999px;
+  background: var(--t-primary-50, #ecfdf5);
+  color: var(--t-primary-700, #047857);
+  font-size: 12px;
+  font-weight: 600;
+  white-space: nowrap;
+}
+
+.ac-scope span {
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+.ac-shell.is-collapsed .ac-scope {
+  display: none;
+}
+
+/* ── Folding groups ────────────────────────────────────────────────────── */
+
+.ac-nav-group .ac-nav-chevron {
+  margin-left: auto;
+  opacity: 0.7;
+  transition: transform 320ms cubic-bezier(0.34, 1.56, 0.64, 1);
+}
+
+.ac-nav-group.is-open .ac-nav-chevron {
+  transform: rotate(180deg);
+}
+
+.ac-nav-group .nav-badge {
+  margin-left: auto;
+}
+
+.ac-nav-group .nav-badge + .ac-nav-chevron {
+  margin-left: 6px;
+}
+
+/* The group's pages: the wrapper's one grid row goes 0fr -> 1fr, which
+   reaches their natural height without measuring it; each link arrives
+   just behind the one above (as in the Seller Center). */
+.ac-subnav-wrap {
+  display: grid;
+  grid-template-rows: 0fr;
+  opacity: 0;
+  visibility: hidden;
+  transition:
+    grid-template-rows 320ms cubic-bezier(0.22, 1, 0.28, 1),
+    opacity 200ms ease,
+    visibility 0s linear 320ms;
+}
+
+.ac-subnav-wrap.is-open {
+  grid-template-rows: 1fr;
+  opacity: 1;
+  visibility: visible;
+  transition-delay: 0s, 0s, 0s;
+}
+
+.ac-subnav-wrap > .ac-subnav {
+  display: flex;
+  flex-direction: column;
+  gap: 1px;
+  min-height: 0;
+  max-height: none;
+  overflow: hidden;
+  padding: 0 0 0 34px;
+}
+
+.ac-subnav-wrap > .ac-subnav > *:first-child { margin-top: 2px; }
+.ac-subnav-wrap > .ac-subnav > *:last-child { margin-bottom: 4px; }
+
+.ac-subnav-wrap > .ac-subnav > * {
+  opacity: 0;
+  transform: translateY(-6px);
+  transition: transform 260ms cubic-bezier(0.22, 1, 0.28, 1), opacity 200ms ease;
+}
+
+.ac-subnav-wrap.is-open > .ac-subnav > * {
+  opacity: 1;
+  transform: none;
+}
+
+.ac-subnav-wrap.is-open > .ac-subnav > *:nth-child(1) { transition-delay: 40ms; }
+.ac-subnav-wrap.is-open > .ac-subnav > *:nth-child(2) { transition-delay: 72ms; }
+.ac-subnav-wrap.is-open > .ac-subnav > *:nth-child(3) { transition-delay: 104ms; }
+.ac-subnav-wrap.is-open > .ac-subnav > *:nth-child(4) { transition-delay: 136ms; }
+.ac-subnav-wrap.is-open > .ac-subnav > *:nth-child(n+5) { transition-delay: 160ms; }
+
+.ac-subnav-link {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  padding: 7px 12px;
+  border-radius: 6px;
+  color: var(--t-neutral-500, #6b7280);
+  font-size: 13px;
+  font-weight: 500;
+  text-decoration: none;
+  transition: background-color .12s, color .12s;
+}
+
+.ac-subnav-link .nav-badge {
+  margin-left: auto;
+}
+
+.ac-subnav-link:hover {
+  background: var(--t-neutral-100, #f3f4f6);
+  color: var(--t-neutral-900, #111827);
+}
+
+.ac-subnav-link--active,
+.ac-subnav-link--active:hover {
+  background: var(--t-primary-50, #ecfdf5);
+  color: var(--t-primary-700, #047857);
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .ac-subnav-wrap,
+  .ac-subnav-wrap > .ac-subnav > *,
+  .ac-nav-group .ac-nav-chevron {
+    transition: none;
+  }
+}
+
+/* ── Computers: the plain look ─────────────────────────────────────────── */
+
+@media (min-width: 769px) {
+  .ac-shell.ac-shell:not(.is-phone) {
+    --ac-page: #f2f3f7;
+    --ac-line: #e7e8ee;
+    background: var(--ac-page);
+  }
+
+  .ac-shell:not(.is-phone) .ac-sidebar.ac-sidebar {
+    border-right: 1px solid var(--ac-line);
+  }
+
+  .ac-shell:not(.is-phone) .ac-nav {
+    gap: 1px;
+  }
+
+  .ac-shell:not(.is-phone) .ac-nav-item {
+    padding: 10px 12px;
+    color: var(--t-neutral-700, #374151);
+    font-size: 14px;
+  }
+
+  .ac-shell:not(.is-phone) .ac-nav-item > svg:not(.ac-nav-chevron) {
+    color: var(--t-neutral-400, #9ca3af);
+  }
+
+  .ac-shell:not(.is-phone) .ac-nav-item:hover {
+    background: var(--ac-page);
+  }
+
+  .ac-shell:not(.is-phone) .ac-nav-item--active,
+  .ac-shell:not(.is-phone) .ac-nav-item--active:hover {
+    background: var(--t-primary-50, #ecfdf5);
+    color: var(--t-primary-700, #047857);
+    font-weight: 600;
+  }
+
+  /* The group holding the open page: its name and icon in green. */
+  .ac-shell:not(.is-phone) .ac-nav-item--active > svg:not(.ac-nav-chevron),
+  .ac-shell:not(.is-phone) .ac-nav-group.is-here,
+  .ac-shell:not(.is-phone) .ac-nav-group.is-here > svg:not(.ac-nav-chevron) {
+    color: var(--t-primary-700, #047857);
+  }
+
+  .ac-shell:not(.is-phone) .ac-nav-group.is-here {
+    font-weight: 600;
+  }
+
+  .ac-shell:not(.is-phone) .ac-nav-chevron {
+    color: var(--t-neutral-400, #9ca3af);
+  }
+
+  .ac-shell:not(.is-phone) .ac-subnav-wrap > .ac-subnav {
+    padding-left: 39px;
+  }
+
+  .ac-shell:not(.is-phone) .ac-subnav-link {
+    padding: 8px 12px;
+    color: var(--t-neutral-600, #4b5563);
+    font-size: 13.5px;
+  }
+
+  .ac-shell:not(.is-phone) .ac-subnav-link:hover {
+    background: var(--ac-page);
+  }
+
+  .ac-shell:not(.is-phone) .ac-subnav-link--active,
+  .ac-shell:not(.is-phone) .ac-subnav-link--active:hover {
+    background: var(--t-primary-50, #ecfdf5);
+    color: var(--t-primary-700, #047857);
+    font-weight: 600;
+  }
+}
+
+/* ── Computers: the header, and no rail ────────────────────────────────── */
+
+@media (min-width: 1025px) {
+  /* The rail lives in the header now: two columns, not three. */
+  .ac-shell.ac-shell:not(.is-phone) {
+    grid-template-columns: 232px minmax(0, 1fr);
+  }
+
+  .ac-shell.ac-shell.is-collapsed:not(.is-phone) {
+    grid-template-columns: 68px minmax(0, 1fr);
+  }
+
+  .ac-shell:not(.is-phone) .ac-main > .ac-topbar {
+    gap: 16px;
+    height: 60px;
+    padding-right: 20px;
+    background: var(--t-neutral-0, #fff);
+    border-bottom: 1px solid var(--ac-line);
+    backdrop-filter: none;
+    -webkit-backdrop-filter: none;
+  }
+
+  /* Search on the left, in its grey field. */
+  .ac-shell:not(.is-phone) .ac-topbar .shell-search {
+    max-width: 520px;
+    margin: 0;
+  }
+
+  .ac-shell:not(.is-phone) .ac-topbar .shell-search-field {
+    height: 38px;
+    background: #eff0f5;
+    border-color: transparent;
+    border-radius: 8px;
+  }
+
+  .ac-shell:not(.is-phone) .ac-topbar .shell-search-field:hover {
+    border-color: transparent;
+  }
+
+  .ac-shell:not(.is-phone) .ac-topbar .shell-search-field:focus-within {
+    background: var(--t-neutral-0, #fff);
+    border-color: #d5d8e1;
+  }
+
+  /* The rail's notifications and language buttons, grey like the rest of
+     the bar (suite.css paints the rail's icons pink and blue). */
+  .ac-shell:not(.is-phone) .ac-topbar .sr-rail.sr-rail--bar .sr-btn > svg:not([data-variant="outline"]) :is(path, circle, rect, line, polyline, polygon):not([fill="none"]) {
+    fill: currentColor;
+  }
+
+  .ac-shell:not(.is-phone) .ac-topbar .sr-rail.sr-rail--bar :is(.sr-btn--notif, .sr-btn--lang),
+  .ac-shell:not(.is-phone) .ac-topbar .sr-rail.sr-rail--bar .sr-item:hover :is(.sr-btn--notif, .sr-btn--lang),
+  .ac-shell:not(.is-phone) .ac-topbar .sr-rail.sr-rail--bar .sr-item.is-open :is(.sr-btn--notif, .sr-btn--lang) {
+    color: var(--t-neutral-600, #4b5563);
+  }
+
+  .ac-shell:not(.is-phone) .ac-topbar .sr-rail.sr-rail--bar .sr-item:hover .sr-btn,
+  .ac-shell:not(.is-phone) .ac-topbar .sr-rail.sr-rail--bar .sr-item:focus-within .sr-btn,
+  .ac-shell:not(.is-phone) .ac-topbar .sr-rail.sr-rail--bar .sr-item.is-open .sr-btn {
+    background: var(--ac-page);
+  }
+
+  .ac-shell:not(.is-phone) .sc-head-btn:hover {
+    background: var(--ac-page);
+  }
+
+  .ac-shell:not(.is-phone) .sc-head-rule {
+    background: var(--ac-line);
+  }
+
+  .ac-shell:not(.is-phone) .ac-content {
+    padding-top: 20px;
+  }
+}

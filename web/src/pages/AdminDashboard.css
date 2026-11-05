@@ -5,6 +5,134 @@
   gap: 16px;
 }
 
+/* The greeting: the brand's green, the admin's name and scope, two things
+   started most from here. A faint logo fills the right side. */
+.dash-hero {
+  position: relative;
+  display: flex;
+  align-items: center;
+  gap: 18px;
+  padding: 22px 28px;
+  overflow: hidden;
+  border-radius: 16px;
+  background:
+    radial-gradient(circle at 88% 20%, rgba(255, 255, 255, 0.14), transparent 45%),
+    linear-gradient(120deg, #046c4e 0%, #047857 45%, #059669 100%);
+  color: #fff;
+  isolation: isolate;
+}
+
+.dash-hero::after {
+  content: '';
+  position: absolute;
+  right: -30px;
+  bottom: -60px;
+  z-index: -1;
+  width: 240px;
+  height: 240px;
+  background: url('/brand-icon-white.svg') center / contain no-repeat;
+  opacity: 0.08;
+  transform: rotate(-12deg);
+}
+
+.dash-hero-mark {
+  display: grid;
+  place-items: center;
+  flex-shrink: 0;
+  width: 58px;
+  height: 58px;
+  border-radius: 50%;
+  background: #fff;
+  box-shadow: 0 0 0 4px rgba(255, 255, 255, 0.22);
+}
+
+.dash-hero-mark img {
+  width: 36px;
+  height: 36px;
+  object-fit: contain;
+  border-radius: 50%;
+}
+
+.dash-hero-text {
+  min-width: 0;
+}
+
+.dash-hero-text p {
+  margin: 0;
+}
+
+.dash-hero-hi {
+  color: rgba(255, 255, 255, 0.85);
+  font-size: 13.5px;
+  font-weight: 500;
+}
+
+.dash-hero-title {
+  margin-top: 2px !important;
+  font-size: 23px;
+  font-weight: 700;
+  letter-spacing: -0.01em;
+  line-height: 1.2;
+}
+
+.dash-hero-scope {
+  margin-top: 4px !important;
+  color: rgba(255, 255, 255, 0.78);
+  font-size: 13px;
+}
+
+.dash-hero-actions {
+  display: flex;
+  gap: 10px;
+  margin-left: auto;
+  flex-shrink: 0;
+}
+
+.dash-hero-btn {
+  display: inline-flex;
+  align-items: center;
+  gap: 7px;
+  height: 40px;
+  padding: 0 16px;
+  border: 1.5px solid rgba(255, 255, 255, 0.65);
+  border-radius: 10px;
+  color: #fff;
+  font-size: 14px;
+  font-weight: 600;
+  text-decoration: none;
+  white-space: nowrap;
+  transition: background-color .15s, border-color .15s, transform .15s;
+}
+
+.dash-hero-btn:hover {
+  background: rgba(255, 255, 255, 0.12);
+  border-color: #fff;
+}
+
+.dash-hero-btn.is-solid {
+  border-color: #fff;
+  background: #fff;
+  color: var(--t-primary-700, #047857);
+}
+
+.dash-hero-btn.is-solid:hover {
+  background: #f0fdf4;
+}
+
+.dash-hero-btn:active {
+  transform: scale(0.97);
+}
+
+@media (max-width: 900px) {
+  .dash-hero {
+    flex-wrap: wrap;
+  }
+
+  .dash-hero-actions {
+    margin-left: 0;
+  }
+}
+
 /* Header */
 .dash-header {
   display: flex;

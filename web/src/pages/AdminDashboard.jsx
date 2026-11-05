@@ -2,8 +2,14 @@ import { useCallback, useEffect, useState } from 'react';
 import { Link } from 'react-router-dom';
 import {
   CheckCircle, WarningCircle, BellRinging, CaretRight, ArrowUp, ArrowDown, ArrowClockwise,
-  X,
+  X, Megaphone, ArrowSquareOut,
 } from '../lib/icons';
+
+/** "Good morning" / "Good afternoon" / "Good evening", by the clock here. */
+const greeting = () => {
+  const h = new Date().getHours();
+  return h < 12 ? 'Good morning' : h < 18 ? 'Good afternoon' : 'Good evening';
+};
 import toast from 'react-hot-toast';
 import AdminLayout from '../components/admin/AdminLayout';
 import ReasonDialog from '../components/admin/ReasonDialog';
@@ -475,6 +481,8 @@ export default function AdminDashboard() {
   const subtitle = isSuperAdmin
     ? 'All municipalities'
     : analytics?.municipality?.name || user?.municipality?.name || '';
+  const firstName = (user?.fullName || '').trim().split(/\s+/)[0] || 'there';
+  const heroLogo = user?.municipality?.logo || analytics?.municipality?.logo || '';
 
   if (isPhone) {
     return (
@@ -491,9 +499,35 @@ export default function AdminDashboard() {
   return (
     <AdminLayout>
       <div className="dash">
+        {/* Computers: who is signed in and over what, on the brand's green
+            (as the Seller Center greets a shop), with what an admin starts
+            most from here. */}
+        <section className="dash-hero" aria-label="Welcome">
+          <span className="dash-hero-mark" aria-hidden="true">
+            {!isSuperAdmin && heroLogo
+              ? <img src={resolveImg(heroLogo)} alt="" />
+              : <img src="/brand-icon.png" alt="" />}
+          </span>
+          <div className="dash-hero-text">
+            <p className="dash-hero-hi">{greeting()}, {firstName}</p>
+            <p className="dash-hero-title">{isSuperAdmin ? 'Emoorm Super Admin' : `${subtitle || 'Municipal'} Admin`}</p>
+            <p className="dash-hero-scope">
+              {isSuperAdmin ? 'Every town and city of Oriental Mindoro' : 'Your town’s shops, buyers and orders'}
+            </p>
+          </div>
+          <div className="dash-hero-actions">
+            <Link to="/admin/messages?tab=announcements" className="dash-hero-btn is-solid">
+              <Megaphone size={16} weight="fill" /> Announcement
+            </Link>
+            <a href="/" target="_blank" rel="noopener noreferrer" className="dash-hero-btn">
+              <ArrowSquareOut size={16} /> View site
+            </a>
+          </div>
+        </section>
+
         <header className="dash-header">
           <div>
-            <h1 className="admin-page-title">Dashboard</h1>
+            <h1 className="admin-page-title">Overview</h1>
             {/* Both roles get the range and how fresh the figures are — that is
                 what says whether the numbers below can be trusted right now.
                 Only the scope differs: "All municipalities" is worth stating to

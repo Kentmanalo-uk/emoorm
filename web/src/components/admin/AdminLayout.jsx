@@ -1,12 +1,11 @@
 import { useEffect, useMemo, useRef, useState } from 'react';
 import { NavLink, Link, useLocation, useNavigate } from 'react-router-dom';
 import {
-  SquaresFour as LayoutGrid, Users, Package, Flag, ChartPie as PieChart,
+  SquaresFour as LayoutGrid, ChartPie as PieChart,
   CaretRight as ChevronRight, CaretLeft as ChevronLeft, Bell, SignOut as LogOut, Storefront as StoreIcon,
   EnvelopeSimple, Gear as SettingsIcon, Image as ImageIcon, Ticket, ChatsCircle,
-  Star, ArrowCounterClockwise, List, X, ChatCircleDots, PaintBrush,
-  House, Receipt, UserCircle, SquaresFour, Truck, DeviceMobile, UsersThree, PaperPlaneTilt,
-  IdentificationBadge, MapPin, UserGear, ClockCounterClockwise, Gift,
+  Star, List, X, House, Receipt, UserCircle, SquaresFour, UsersThree, PaperPlaneTilt,
+  MapPin, CaretDown, ClipboardText, Megaphone, Plus, ArrowSquareOut, Tag, Globe,
 } from '../../lib/icons';
 import { resolveImg } from '../../lib/media';
 import useAuthStore from '../../store/authStore';
@@ -71,6 +70,10 @@ import './desktop/moderation.css';
 // The business-suite look shared with the Seller Center, last so it wins.
 import '../layout/suite.css';
 import './desktop/conversations.css';
+// The Seller Center's desktop header pieces ("+ Create", the header buttons,
+// the account menu), then the admin's own plain shell over the suite's.
+import '../layout/SellerDesk.css';
+import './desktop/AdminShellDesk.css';
 import { afterSignOutPath } from '../../lib/afterSignOut';
 import PageMenu from '../layout/PageMenu';
 
@@ -94,6 +97,38 @@ export default function AdminLayout({ children }) {
   const mobileNav = useMobileNav(location.pathname);
   const isPhone = usePhoneLayout();
   const [logoutOpen, setLogoutOpen] = useState(false);
+
+  // The menu's groups: the one holding the open page starts open, and opens
+  // when a page in it is reached some other way (a link, the search).
+  const [openGroups, setOpenGroups] = useState(() => new Set([adminGroupOf(location.pathname)].filter(Boolean)));
+  const [groupPath, setGroupPath] = useState(location.pathname);
+  if (groupPath !== location.pathname) {
+    setGroupPath(location.pathname);
+    const here = adminGroupOf(location.pathname);
+    if (here && !openGroups.has(here)) setOpenGroups(new Set([...openGroups, here]));
+  }
+  const toggleGroup = (id) => setOpenGroups((prev) => {
+    const next = new Set(prev);
+    if (next.has(id)) next.delete(id); else next.add(id);
+    return next;
+  });
+
+  // Computers: the account menu at the header's right end.
+  const [accountOpen, setAccountOpen] = useState(false);
+  const accountRef = useRef(null);
+  useEffect(() => {
+    if (!accountOpen) return undefined;
+    const onDown = (event) => {
+      if (accountRef.current && !accountRef.current.contains(event.target)) setAccountOpen(false);
+    };
+    const onKey = (event) => { if (event.key === 'Escape') setAccountOpen(false); };
+    document.addEventListener('pointerdown', onDown);
+    document.addEventListener('keydown', onKey);
+    return () => {
+      document.removeEventListener('pointerdown', onDown);
+      document.removeEventListener('keydown', onKey);
+    };
+  }, [accountOpen]);
   // Phones: every table's rows become labelled cards (AdminPhone.css).
   const contentRef = useRef(null);
   useTableCardLabels(isPhone, contentRef);
@@ -165,6 +200,70 @@ export default function AdminLayout({ children }) {
     : assignedMunicipalityName ? `${assignedMunicipalityName} Admin` : 'Admin';
 
   const crumbs = buildCrumbs(location.pathname);
+  const group = { openGroups, toggleGroup, collapsed, path: location.pathname };
+
+  // Computers: the admin's account at the header's right end: their
+  // profile, Settings, the public site, and signing out.
+  const account = (
+    <div className={`sc-account sc-account--head${accountOpen ? ' is-open' : ''}`} ref={accountRef}>
+      <div className="sc-account-menu" role="menu" aria-label="Account" aria-hidden={!accountOpen}>
+        <div className="sc-account-menu-head">
+          <UserAvatar
+            src={user?.profilePhoto}
+            person={user}
+            name={initial}
+            alt=""
+            imgClassName="sc-user-avatar"
+            fallbackClassName="sc-user-avatar sc-user-avatar--fallback"
+          />
+          <span className="sc-account-menu-meta">
+            <strong>{user?.fullName || user?.email || 'Admin'}</strong>
+            <span>{isSuperAdmin ? roleLabel : `${roleLabel}${assignedMunicipalityName ? ` · ${assignedMunicipalityName}` : ''}`}</span>
+          </span>
+        </div>
+        <Link to="/admin/settings?tab=profile" role="menuitem" tabIndex={accountOpen ? 0 : -1} className="sc-account-item" onClick={() => setAccountOpen(false)}>
+          <UserCircle size={16} /> My profile
+        </Link>
+        <Link to="/admin/settings" role="menuitem" tabIndex={accountOpen ? 0 : -1} className="sc-account-item" onClick={() => setAccountOpen(false)}>
+          <SettingsIcon size={16} /> Settings
+        </Link>
+        <a href="/" target="_blank" rel="noopener noreferrer" role="menuitem" tabIndex={accountOpen ? 0 : -1} className="sc-account-item" onClick={() => setAccountOpen(false)}>
+          <ArrowSquareOut size={16} /> Open the site
+        </a>
+        <button
+          type="button"
+          role="menuitem"
+          tabIndex={accountOpen ? 0 : -1}
+          className="sc-account-item sc-account-item--out"
+          onClick={() => { setAccountOpen(false); setLogoutOpen(true); }}
+        >
+          <LogOut size={16} /> Sign out
+        </button>
+      </div>
+      <button
+        type="button"
+        className="sc-user-card"
+        title={user?.fullName || 'Account'}
+        aria-haspopup="menu"
+        aria-expanded={accountOpen}
+        onClick={() => setAccountOpen((open) => !open)}
+      >
+        <UserAvatar
+          src={user?.profilePhoto}
+          person={user}
+          name={initial}
+          alt=""
+          imgClassName="sc-user-avatar"
+          fallbackClassName="sc-user-avatar sc-user-avatar--fallback"
+        />
+        <span className="sc-user-meta">
+          <strong>{shortName}</strong>
+          <span>{roleLabel}</span>
+        </span>
+        <CaretDown size={14} className="sc-user-caret" />
+      </button>
+    </div>
+  );
 
   // Phones: the seller app's shape. Five tabs; Home and Me draw their own
   // header, the other tabs a title with round buttons, and every other page
@@ -240,142 +339,112 @@ export default function AdminLayout({ children }) {
             </button>
           </div>
 
+          {/* Whose panel this is: every town, or the admin's own. */}
+          <span className="ac-scope" title={isSuperAdmin ? 'You see every municipality' : `You manage ${assignedMunicipalityName || 'your municipality'}`}>
+            {isSuperAdmin ? <Globe size={13} weight="fill" /> : <MapPin size={13} weight="fill" />}
+            <span>{isSuperAdmin ? 'All municipalities' : (assignedMunicipalityName || 'Your municipality')}</span>
+          </span>
+
+          {/* The menu in groups, the way the Seller Center keeps it: what is
+              waiting first, then the people, the content, the messages, the
+              storefront and the platform. A closed group carries its pages'
+              waiting count; collapsed to icons, a group goes to its first
+              page. */}
           <nav className="ac-nav">
             <NavLink to="/admin" end className={navCls} title="Dashboard">
               <LayoutGrid size={17} weight="fill" /> <span>Dashboard</span>
             </NavLink>
 
-            {/* Work waiting on this admin, in sections; each page keeps its
-                own icon, so the collapsed rail still reaches every one. */}
-            <NavSection label="To review" />
-            <NavLink to="/admin/sellers" className={navCls} title="Seller applications">
-              <IdentificationBadge size={17} weight="fill" /> <span>Seller applications</span>{badge('/admin/sellers')}
-            </NavLink>
-            <NavLink to="/admin/products" className={navCls} title="Products">
-              <Package size={17} weight="fill" /> <span>Products</span>{badge('/admin/products')}
-            </NavLink>
-            <NavLink to="/admin/returns" className={navCls} title="Returns">
-              <ArrowCounterClockwise size={17} weight="fill" /> <span>Returns</span>{badge('/admin/returns')}
-            </NavLink>
-            <NavLink to="/admin/reports" className={navCls} title="Reports">
-              <Flag size={17} weight="fill" /> <span>Reports</span>{badge('/admin/reports')}
+            <AdminNavGroup id="review" icon={ClipboardText} label="To review" first="/admin/sellers" {...group} badge={mergeAll(REVIEW_PAGES.map((p) => waiting[p]))}>
+              <NavLink to="/admin/sellers" className={subNavCls}>Seller applications{badge('/admin/sellers')}</NavLink>
+              <NavLink to="/admin/products" className={subNavCls}>Products{badge('/admin/products')}</NavLink>
+              <NavLink to="/admin/returns" className={subNavCls}>Returns{badge('/admin/returns')}</NavLink>
+              <NavLink to="/admin/reports" className={subNavCls}>Reports{badge('/admin/reports')}</NavLink>
+            </AdminNavGroup>
+
+            <NavLink to="/admin/orders" className={navCls} title="Orders">
+              <Receipt size={17} weight="fill" /> <span>Orders</span>{badge('/admin/orders')}
             </NavLink>
             <NavLink to="/admin/support" className={navCls} title="Support">
               <ChatsCircle size={17} weight="fill" /> <span>Support</span>{badge('/admin/support')}
             </NavLink>
 
-            <NavSection label="People & stores" />
-            <NavLink to="/admin/all-sellers" className={navCls} title="Sellers">
-              <StoreIcon size={17} weight="fill" /> <span>Sellers</span>
-            </NavLink>
-            <NavLink to="/admin/buyers" className={navCls} title="Buyers">
-              <Users size={17} weight="fill" /> <span>Buyers</span>
-            </NavLink>
+            <AdminNavGroup id="people" icon={UsersThree} label="People & stores" first="/admin/all-sellers" {...group} badge={waiting['/admin/team']}>
+              <NavLink to="/admin/all-sellers" className={subNavCls}>Sellers</NavLink>
+              <NavLink to="/admin/buyers" className={subNavCls}>Buyers</NavLink>
+              {isSuperAdmin && <NavLink to="/admin/users" className={subNavCls}>All users</NavLink>}
+              {isSuperAdmin && <NavLink to="/admin/junior-admins" className={subNavCls}>Municipal admins</NavLink>}
+              {!isSuperAdmin && <NavLink to="/admin/team" className={subNavCls}>Admin team{badge('/admin/team')}</NavLink>}
+            </AdminNavGroup>
+
+            <AdminNavGroup id="content" icon={Star} label="Content" first="/admin/reviews" {...group}>
+              <NavLink to="/admin/reviews" className={subNavCls}>Reviews</NavLink>
+              <NavLink to="/admin/photo-designs" className={subNavCls}>Photo designs</NavLink>
+              {/* The super admin always (the switch lives there); a town's admin once invites are on. */}
+              {(isSuperAdmin || invitesOn) && <NavLink to="/admin/invites" className={subNavCls}>Invites</NavLink>}
+            </AdminNavGroup>
+
+            <AdminNavGroup
+              id="talk"
+              icon={EnvelopeSimple}
+              label="Messages"
+              first="/admin/messages"
+              {...group}
+              badge={{ count: (messageUnread || 0) + (unreadCount || 0) + (isSuperAdmin ? feedbackNew || 0 : 0) }}
+            >
+              {/* Admin-to-admin messaging; announcements live there as a tab. */}
+              <NavLink to="/admin/messages" className={subNavCls}>Messages<NavBadge count={messageUnread} label="unread" /></NavLink>
+              {/* Emails to many people: everyone, or a town's people for a municipal admin. */}
+              <NavLink to="/admin/email" className={subNavCls}>Email</NavLink>
+              <NavLink to="/admin/notifications" className={subNavCls}>Notifications<NavBadge count={unreadCount} label="unread" /></NavLink>
+              {isSuperAdmin && <NavLink to="/admin/feedback" className={subNavCls}>Feedback<NavBadge count={feedbackNew} label="new" /></NavLink>}
+            </AdminNavGroup>
+
             {isSuperAdmin && (
-              <NavLink to="/admin/users" className={navCls} title="All users">
-                <UsersThree size={17} weight="fill" /> <span>All users</span>
-              </NavLink>
-            )}
-            <NavLink to="/admin/orders" className={navCls} title="Orders">
-              <Receipt size={17} weight="fill" /> <span>Orders</span>{badge('/admin/orders')}
-            </NavLink>
-            <NavLink to="/admin/reviews" className={navCls} title="Reviews">
-              <Star size={17} weight="fill" /> <span>Reviews</span>
-            </NavLink>
-            <NavLink to="/admin/photo-designs" className={navCls} title="Photo designs">
-              <PaintBrush size={17} weight="fill" /> <span>Photo designs</span>
-            </NavLink>
-            {/* The super admin always (the switch lives there); a town's admin once invites are on. */}
-            {(isSuperAdmin || invitesOn) && (
-              <NavLink to="/admin/invites" className={navCls} title="Invites">
-                <Gift size={17} weight="fill" /> <span>Invites</span>
-              </NavLink>
+              <AdminNavGroup id="storefront" icon={StoreIcon} label="Storefront" first="/admin/banners" {...group}>
+                <NavLink to="/admin/banners" className={subNavCls}>Banners</NavLink>
+                <NavLink to="/admin/vouchers" className={subNavCls}>Vouchers</NavLink>
+                <NavLink to="/admin/couriers" className={subNavCls}>Couriers</NavLink>
+                <NavLink to="/admin/categories" className={subNavCls}>Categories</NavLink>
+              </AdminNavGroup>
             )}
 
-            <NavSection label={isSuperAdmin ? 'Messages' : 'Talk to the town'} />
-            {/* Admin-to-admin messaging; announcements live here as a tab. */}
-            <NavLink to="/admin/messages" className={navCls} title="Messages">
-              <EnvelopeSimple size={17} weight="fill" /> <span>Messages</span>
-              <NavBadge count={messageUnread} label="unread" />
-            </NavLink>
-            {/* Emails to many people: everyone, or a town's people for a municipal admin. */}
-            <NavLink to="/admin/email" className={navCls} title="Email">
-              <PaperPlaneTilt size={17} weight="fill" /> <span>Email</span>
-            </NavLink>
-            <NavLink to="/admin/notifications" className={navCls} title="Notifications">
-              <Bell size={17} weight="fill" /> <span>Notifications</span>
-              <NavBadge count={unreadCount} label="unread" />
-            </NavLink>
-            {isSuperAdmin && (
-              <NavLink to="/admin/feedback" className={navCls} title="Feedback">
-                <ChatCircleDots size={17} weight="fill" /> <span>Feedback</span>
-                <NavBadge count={feedbackNew} label="new" />
-              </NavLink>
-            )}
-
-            {isSuperAdmin ? (
-              <>
-                <NavSection label="Storefront" />
-                <NavLink to="/admin/banners" className={navCls} title="Banners">
-                  <ImageIcon size={17} weight="fill" /> <span>Banners</span>
-                </NavLink>
-                <NavLink to="/admin/vouchers" className={navCls} title="Vouchers">
-                  <Ticket size={17} weight="fill" /> <span>Vouchers</span>
-                </NavLink>
-                <NavLink to="/admin/couriers" className={navCls} title="Couriers">
-                  <Truck size={17} weight="fill" /> <span>Couriers</span>
-                </NavLink>
-                <NavLink to="/admin/categories" className={navCls} title="Categories">
-                  <SquaresFour size={17} weight="fill" /> <span>Categories</span>
-                </NavLink>
-
-                <NavSection label="Platform" />
-                <NavLink to="/admin/municipalities" className={navCls} title="Municipalities">
-                  <MapPin size={17} weight="fill" /> <span>Municipalities</span>
-                </NavLink>
-                <NavLink to="/admin/junior-admins" className={navCls} title="Municipal admins">
-                  <UserGear size={17} weight="fill" /> <span>Municipal admins</span>
-                </NavLink>
-                <NavLink to="/admin/app-users" className={navCls} title="App users">
-                  <DeviceMobile size={17} weight="fill" /> <span>App users</span>
-                </NavLink>
-              </>
-            ) : (
-              <>
-                <NavSection label="Town office" />
-                <NavLink to="/admin/team" className={navCls} title="Admin team">
-                  <UsersThree size={17} weight="fill" /> <span>Admin team</span>{badge('/admin/team')}
-                </NavLink>
-              </>
-            )}
-            <NavLink to="/admin/analytics" className={navCls} title="Analytics">
-              <PieChart size={17} weight="fill" /> <span>Analytics</span>
-            </NavLink>
-            <NavLink to="/admin/audit-logs" className={navCls} title="Audit log">
-              <ClockCounterClockwise size={17} weight="fill" /> <span>Audit log</span>
-            </NavLink>
-            <NavLink to="/admin/settings" className={navCls} title="Settings">
-              <SettingsIcon size={17} weight="fill" /> <span>Settings</span>
-            </NavLink>
+            <AdminNavGroup
+              id="platform"
+              icon={PieChart}
+              label={isSuperAdmin ? 'Platform' : 'Town office'}
+              first={isSuperAdmin ? '/admin/municipalities' : '/admin/analytics'}
+              {...group}
+            >
+              {isSuperAdmin && <NavLink to="/admin/municipalities" className={subNavCls}>Municipalities</NavLink>}
+              {isSuperAdmin && <NavLink to="/admin/app-users" className={subNavCls}>App users</NavLink>}
+              <NavLink to="/admin/analytics" className={subNavCls}>Analytics</NavLink>
+              <NavLink to="/admin/audit-logs" className={subNavCls}>Audit log</NavLink>
+              <NavLink to="/admin/settings" className={subNavCls}>Settings</NavLink>
+            </AdminNavGroup>
           </nav>
 
-          {/* An admin's profile is a tab of Settings: /profile is a buyer
-              page, which the admin guard would send straight back to /admin. */}
-          <Link to="/admin/settings?tab=profile" className="ac-user-card" title="View profile">
-            <UserAvatar
-              src={user?.profilePhoto}
-              person={user}
-              name={initial}
-              alt=""
-              imgClassName="ac-user-avatar"
-              fallbackClassName="ac-user-avatar ac-user-avatar--fallback"
-            />
-            <span className="ac-user-meta">
-              <strong>{shortName}</strong>
-              <span>{roleLabel}</span>
-            </span>
-            <ChevronRight size={14} className="ac-user-caret" />
-          </Link>
+          {/* Smaller screens: the admin's card at the foot of the drawer (the
+              header has the account menu on computers). An admin's profile is
+              a tab of Settings: /profile is a buyer page, which the admin
+              guard would send straight back to /admin. */}
+          {isCompact && (
+            <Link to="/admin/settings?tab=profile" className="ac-user-card" title="View profile">
+              <UserAvatar
+                src={user?.profilePhoto}
+                person={user}
+                name={initial}
+                alt=""
+                imgClassName="ac-user-avatar"
+                fallbackClassName="ac-user-avatar ac-user-avatar--fallback"
+              />
+              <span className="ac-user-meta">
+                <strong>{shortName}</strong>
+                <span>{roleLabel}</span>
+              </span>
+              <ChevronRight size={14} className="ac-user-caret" />
+            </Link>
+          )}
         </div>
       </aside>
 
@@ -403,27 +472,61 @@ export default function AdminLayout({ children }) {
             scope="admin"
           />
 
-          <div className="ac-topbar-actions">
-            <LanguageSwitcher variant="shell" />
-            <Link to="/admin/notifications" className="ac-icon-btn" title="Notifications">
-              <Bell size={17} />
-              {unreadCount > 0 && (
-                <span className="ac-icon-badge">{unreadCount > 9 ? '9+' : unreadCount}</span>
-              )}
-            </Link>
-            <button
-              type="button"
-              className="ac-icon-btn"
-              onClick={() => setLogoutOpen(true)}
-              title="Sign out"
-              aria-label="Sign out"
-            >
-              <LogOut size={17} />
-            </button>
-          </div>
+          {/* Computers: one white bar, as in the Seller Center: make
+              something, messages, notifications and language, the account. */}
+          {!isCompact && (
+            <div className="sc-head-actions">
+              <AdminCreateMenu isSuperAdmin={isSuperAdmin} />
+              <Link
+                to="/admin/messages"
+                className="sc-head-btn"
+                title="Messages"
+                aria-label={messageUnread > 0 ? `Messages, ${messageUnread} unread` : 'Messages'}
+              >
+                <EnvelopeSimple size={21} />
+                {messageUnread > 0 && <span className="sc-head-badge" aria-hidden="true">{messageUnread > 9 ? '9+' : messageUnread}</span>}
+              </Link>
+              <AppRail
+                placement="bar"
+                unreadCount={unreadCount}
+                notifications={notifications}
+                onRead={() => refreshShell('notifications')}
+                onLogout={handleLogout}
+                notificationsTo="/admin/notifications"
+                audience="ADMIN"
+                signOutMessage="You will need to sign in again to open the admin panel."
+              />
+              <span className="sc-head-rule" aria-hidden="true" />
+              {account}
+            </div>
+          )}
+
+          {/* Smaller screens: the buttons that were always here. */}
+          {isCompact && (
+            <div className="ac-topbar-actions">
+              <LanguageSwitcher variant="shell" />
+              <Link to="/admin/notifications" className="ac-icon-btn" title="Notifications">
+                <Bell size={17} />
+                {unreadCount > 0 && (
+                  <span className="ac-icon-badge">{unreadCount > 9 ? '9+' : unreadCount}</span>
+                )}
+              </Link>
+              <button
+                type="button"
+                className="ac-icon-btn"
+                onClick={() => setLogoutOpen(true)}
+                title="Sign out"
+                aria-label="Sign out"
+              >
+                <LogOut size={17} />
+              </button>
+            </div>
+          )}
         </header>
 
-        {!isPhone && <ToolStrip area="admin" role={user?.role} />}
+        {/* Tablets keep the strip of related pages; computers have the
+            grouped menu and "+ Create" instead. */}
+        {!isPhone && isCompact && <ToolStrip area="admin" role={user?.role} />}
 
         {isPhone && isTabRoot && !ownHeader && (
           <header className="scm-head acm-head">
@@ -454,15 +557,19 @@ export default function AdminLayout({ children }) {
         <main className="ac-content" ref={contentRef}>{children}</main>
       </div>
 
-      <AppRail
-        unreadCount={unreadCount}
-        notifications={notifications}
-        onRead={() => refreshShell('notifications')}
-        onLogout={handleLogout}
-        notificationsTo="/admin/notifications"
-        audience="ADMIN"
-        signOutMessage="You will need to sign in again to open the admin panel."
-      />
+      {/* The rail down the right edge: smaller screens only (computers have
+          it in the header). */}
+      {isCompact && (
+        <AppRail
+          unreadCount={unreadCount}
+          notifications={notifications}
+          onRead={() => refreshShell('notifications')}
+          onLogout={handleLogout}
+          notificationsTo="/admin/notifications"
+          audience="ADMIN"
+          signOutMessage="You will need to sign in again to open the admin panel."
+        />
+      )}
 
       {/* Phones: the app tab bar (hidden on pages opened from it). */}
       {isPhone && (
@@ -529,8 +636,112 @@ function navCls({ isActive }) {
   return `ac-nav-item ${isActive ? 'ac-nav-item--active' : ''}`;
 }
 
-function NavSection({ label }) {
-  return <span className="ac-nav-section" role="presentation">{label}</span>;
+function subNavCls({ isActive }) {
+  return `ac-subnav-link${isActive ? ' ac-subnav-link--active' : ''}`;
+}
+
+/** The menu's groups and the pages in each (which group holds a page). */
+const ADMIN_NAV_GROUPS = {
+  review: ['/admin/sellers', '/admin/products', '/admin/returns', '/admin/reports'],
+  people: ['/admin/all-sellers', '/admin/buyers', '/admin/users', '/admin/junior-admins', '/admin/team'],
+  content: ['/admin/reviews', '/admin/photo-designs', '/admin/invites'],
+  talk: ['/admin/messages', '/admin/email', '/admin/notifications', '/admin/feedback'],
+  storefront: ['/admin/banners', '/admin/vouchers', '/admin/couriers', '/admin/categories'],
+  platform: ['/admin/municipalities', '/admin/app-users', '/admin/analytics', '/admin/audit-logs', '/admin/settings'],
+};
+const REVIEW_PAGES = ADMIN_NAV_GROUPS.review;
+
+function adminGroupOf(pathname) {
+  return Object.keys(ADMIN_NAV_GROUPS)
+    .find((id) => ADMIN_NAV_GROUPS[id].some((p) => pathname === p || pathname.startsWith(`${p}/`)));
+}
+
+const SEVERITY_RANK = { none: 0, low: 1, medium: 2, high: 3 };
+
+/** Several queues as one badge: the counts added, the most urgent kept. */
+function mergeAll(list) {
+  return list.reduce((acc, w) => {
+    const count = (acc.count || 0) + (w?.count || 0);
+    const severity = (SEVERITY_RANK[w?.severity] || 0) > (SEVERITY_RANK[acc.severity] || 0) ? w.severity : acc.severity;
+    return { ...acc, ...w, count, severity };
+  }, { count: 0 });
+}
+
+/**
+ * A group in the menu: its row opens and closes its pages (collapsed to
+ * icons, it goes to `first`). Closed, it carries its pages' waiting count.
+ */
+function AdminNavGroup({
+  id, icon: Icon, label, first, openGroups, toggleGroup, collapsed, path, badge: waiting, children,
+}) {
+  const navigate = useNavigate();
+  const open = openGroups.has(id) && !collapsed;
+  const here = adminGroupOf(path) === id;
+  return (
+    <>
+      <button
+        type="button"
+        className={`ac-nav-item ac-nav-group${open ? ' is-open' : ''}${here ? ' is-here' : ''}`}
+        onClick={() => (collapsed ? navigate(first) : toggleGroup(id))}
+        aria-expanded={open}
+        title={label}
+      >
+        <Icon size={17} weight="fill" />
+        <span>{label}</span>
+        {!open && waiting?.count > 0 && <NavBadge {...waiting} />}
+        <CaretDown size={15} className="ac-nav-chevron" />
+      </button>
+      <div className={`ac-subnav-wrap${open ? ' is-open' : ''}`}>
+        <div className="ac-subnav">{children}</div>
+      </div>
+    </>
+  );
+}
+
+/** "+ Create": what an admin makes most, each a link to the page that does it. */
+const ADMIN_CREATE = [
+  { label: 'Announcement', note: 'News for sellers and buyers', to: '/admin/messages?tab=announcements', icon: Megaphone },
+  { label: 'Email', note: 'A message to many people', to: '/admin/email', icon: PaperPlaneTilt },
+  { label: 'Banner', note: 'A picture on the Home page', to: '/admin/banners/new', icon: ImageIcon, superOnly: true },
+  { label: 'Voucher', note: 'A discount code', to: '/admin/vouchers/new', icon: Ticket, superOnly: true },
+  { label: 'Category', note: 'A new aisle for products', to: '/admin/categories/new', icon: Tag, superOnly: true },
+];
+
+function AdminCreateMenu({ isSuperAdmin }) {
+  const [open, setOpen] = useState(false);
+  const ref = useRef(null);
+  useEffect(() => {
+    if (!open) return undefined;
+    const away = (e) => { if (!ref.current?.contains(e.target)) setOpen(false); };
+    const key = (e) => { if (e.key === 'Escape') setOpen(false); };
+    document.addEventListener('pointerdown', away);
+    document.addEventListener('keydown', key);
+    return () => {
+      document.removeEventListener('pointerdown', away);
+      document.removeEventListener('keydown', key);
+    };
+  }, [open]);
+  const items = ADMIN_CREATE.filter((c) => isSuperAdmin || !c.superOnly);
+  return (
+    <div className={`sc-create${open ? ' is-open' : ''}`} ref={ref}>
+      <button type="button" className="sc-create-btn" aria-haspopup="menu" aria-expanded={open} onClick={() => setOpen((v) => !v)}>
+        <Plus size={16} weight="bold" /> Create <CaretDown size={13} weight="bold" />
+      </button>
+      {open && (
+        <div className="sc-create-menu" role="menu">
+          {items.map(({ label, note, to, icon: Icon }) => (
+            <Link key={label} to={to} role="menuitem" className="sc-create-item" onClick={() => setOpen(false)}>
+              <span className="sc-create-icon"><Icon size={18} weight="fill" /></span>
+              <span>
+                <strong>{label}</strong>
+                <small>{note}</small>
+              </span>
+            </Link>
+          ))}
+        </div>
+      )}
+    </div>
+  );
 }
 
 function tabCls({ isActive }) {
