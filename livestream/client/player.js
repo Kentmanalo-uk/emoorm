@@ -36,6 +36,14 @@ const FAR_BEHIND = 6.5;
 const AHEAD = 3;
 // Video held before playing starts, so the picture does not stop at once.
 const START_BUFFER = 1.5;
+// A request for a second is given up after this (the server answers within
+// five seconds; through the CDN one can hang and never come back), and
+// asked again.
+const SEG_TIMEOUT_MS = 12000;
+// No new second taken in for this long while the server has newer ones (a
+// request that hung, or the browser's video stopped on an error): the
+// player is rebuilt at now, as if the page were opened again.
+const STALL_MS = 5000;
 
 const preloaded = new Map();
 
@@ -73,6 +81,8 @@ export class LivePlayer {
     this.codecs = null;
     this.timers = [];
     this.abort = new AbortController();
+    // Bumped on each rebuild: a loop from before it stops.
+    this.gen = 0;
   }
 
   setState(state) {
@@ -141,8 +151,11 @@ export class LivePlayer {
     this.sb.mode = 'segments';
     this.codecs = info.codecs;
 
-    v.addEventListener('waiting', () => { if (this.started) this.setState('waiting'); });
-    v.addEventListener('playing', () => this.setState('playing'));
+    if (!this.listening) {
+      this.listening = true;
+      v.addEventListener('waiting', () => { if (this.started) this.setState('waiting'); });
+      v.addEventListener('playing', () => this.setState('playing'));
+    }
     this.onVisibility = () => {
       // Hidden: stop downloading (data and battery); back: jump to now.
       if (document.hidden) {
@@ -152,15 +165,77 @@ export class LivePlayer {
         this.paused = false;
         this.abort = new AbortController();
         this.jumpToNow = true;
+        this.progressAt = performance.now();
         this.loop();
       }
     };
     document.addEventListener('visibilitychange', this.onVisibility);
 
     this.seq = startSeq(info);
+    this.progressAt = performance.now();
     this.timers.push(setInterval(() => this.steer(), 250));
     this.timers.push(setInterval(() => this.trim(), 5000));
+    this.timers.push(setInterval(() => this.watchdog(), 1000));
     this.loop();
+  }
+
+  /**
+   * Nothing new taken in for a while: if the browser's video has failed, or
+   * the server has seconds this player never got, start over at now.
+   */
+  async watchdog() {
+    if (!this.alive || this.paused || this.rebuilding || this.checking) return;
+    const broken = Boolean(this.video.error) || (this.ms && this.ms.readyState !== 'open');
+    if (!broken && performance.now() - this.progressAt < STALL_MS) return;
+    this.checking = true;
+    try {
+      const res = await fetch(this.root, { signal: this.abort.signal });
+      const body = await res.json();
+      if (!this.alive || this.paused) return;
+      if (!res.ok || body?.data?.status === 'ENDED') { this.setState('ended'); return; }
+      if (broken || (body.data.latestSeq ?? -1) > this.seq + 1) {
+        await this.rebuild(body.data);
+      } else {
+        // The seller has sent nothing newer (a slow upload): look again soon.
+        this.progressAt = performance.now() - STALL_MS / 2;
+      }
+    } catch { /* looked again in a second */ } finally {
+      this.checking = false;
+    }
+  }
+
+  /** A fresh Media Source at now, on the same <video>. */
+  async rebuild(info) {
+    if (this.rebuilding || !this.alive) return;
+    this.rebuilding = true;
+    this.gen += 1;
+    this.abort.abort();
+    this.abort = new AbortController();
+    for (const t of this.timers) clearInterval(t);
+    this.timers = [];
+    document.removeEventListener('visibilitychange', this.onVisibility);
+    const v = this.video;
+    try {
+      v.removeAttribute('src');
+      v.srcObject = null;
+      v.load();
+    } catch { /* gone */ }
+    if (this.objectUrl) URL.revokeObjectURL(this.objectUrl);
+    this.objectUrl = null;
+    this.sb = null;
+    this.ms = null;
+    this.appends = Promise.resolve();
+    this.epoch = null;
+    this.started = false;
+    this.appended = 0;
+    this.lastT = null;
+    this.setState('connecting');
+    try {
+      const mime = `video/mp4; codecs="${info.codecs}"`;
+      await this.startMse(info, mime);
+    } finally {
+      this.rebuilding = false;
+    }
   }
 
   append(buffer) {
@@ -200,8 +275,15 @@ export class LivePlayer {
 
   /** One piece: { status, epoch, data, body } or { error: true }. */
   async fetchSeg(seq) {
+    // Its own time limit, and stopped with the player.
+    const ctl = new AbortController();
+    const outer = this.abort.signal;
+    const stop = () => ctl.abort();
+    if (outer.aborted) return { error: true };
+    outer.addEventListener('abort', stop, { once: true });
+    const timer = setTimeout(stop, SEG_TIMEOUT_MS);
     try {
-      const res = await fetch(`${this.root}/seg/${seq}.m4s`, { signal: this.abort.signal });
+      const res = await fetch(`${this.root}/seg/${seq}.m4s`, { signal: ctl.signal });
       if (res.status === 200) {
         return { status: 200, epoch: Number(res.headers.get('X-Live-Epoch')), data: await res.arrayBuffer() };
       }
@@ -209,10 +291,14 @@ export class LivePlayer {
       return { status: res.status };
     } catch {
       return { error: true };
+    } finally {
+      clearTimeout(timer);
+      outer.removeEventListener('abort', stop);
     }
   }
 
   async loop() {
+    const gen = this.gen;
     let failures = 0;
     // Pieces on their way, by number. `ahead`: asked for before it was the
     // next to play -- a "not yet" or "skip" for one of those is old news,
@@ -221,13 +307,14 @@ export class LivePlayer {
     const ask = (seq, ahead) => {
       if (!inFlight.has(seq)) inFlight.set(seq, { result: this.fetchSeg(seq), ahead });
     };
-    while (this.alive && !this.paused) {
+    while (this.alive && !this.paused && gen === this.gen) {
       if (this.jumpToNow) {
         this.jumpToNow = false;
         inFlight = new Map();
         try {
           const res = await fetch(this.root, { signal: this.abort.signal });
           const body = await res.json();
+          if (gen !== this.gen) return;
           if (!res.ok || body?.data?.status === 'ENDED') { this.setState('ended'); return; }
           this.seq = startSeq(body.data);
         } catch { /* below */ }
@@ -237,7 +324,7 @@ export class LivePlayer {
       const entry = inFlight.get(this.seq);
       // eslint-disable-next-line no-await-in-loop
       const r = await entry.result;
-      if (!this.alive || this.paused) return;
+      if (!this.alive || this.paused || gen !== this.gen) return;
       inFlight.delete(this.seq);
       if (r.error) {
         failures += 1;
@@ -256,6 +343,8 @@ export class LivePlayer {
         } catch {
           if (!this.alive) return;
         }
+        if (gen !== this.gen) return;
+        this.progressAt = performance.now();
         this.seq += 1;
         this.appended = (this.appended || 0) + 1;
         this.kick();

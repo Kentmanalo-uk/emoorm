@@ -33,7 +33,11 @@ camera ─ WebCodecs ─ 1 s fMP4 ─POST─▶ last 8 seconds in memory ─GET 
 - **Viewing (player.js):** asks for three seconds at once, starts two
   finished seconds back and plays about three seconds behind, a touch
   faster or slower to hold that; it jumps ahead past 6.5 s and steps over
-  holes or a picture that has stopped with video after it.
+  holes or a picture that has stopped with video after it. Each request
+  gives up after 12 s, and when no second has come in for 5 s while the
+  server has newer ones (a request lost in the CDN: seen on emoorm.shop, the
+  picture froze for good), or the browser's video failed, the player
+  rebuilds itself at now.
 - **Delay**, camera to screen: about 3–5 s on the live site. Comments and
   hearts go by their own long-poll and stay near real time.
 - **Slow seller uploads:** two seconds behind, the picture gets lighter;
