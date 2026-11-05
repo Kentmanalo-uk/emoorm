@@ -100,7 +100,12 @@ const mergeComments = (list, incoming) => {
  * then the live itself full screen (comments, pins, hearts, viewers), then
  * how it went. The video is never recorded.
  */
-export default function SellerLive() {
+/** Tells the phone app around this page (its Go live screen) what is happening. */
+const toApp = (message) => {
+  try { window.ReactNativeWebView?.postMessage(JSON.stringify(message)); } catch { /* not in the app */ }
+};
+
+export default function SellerLive({ inApp = false }) {
   const [support, setSupport] = useState(null);
   const [phase, setPhase] = useState('setup'); // setup | starting | live | ended
   const [camError, setCamError] = useState('');
@@ -137,6 +142,11 @@ export default function SellerLive() {
   useEffect(() => {
     liveSupport().then(setSupport);
   }, []);
+
+  // The app hides its own header while the live fills the screen.
+  useEffect(() => {
+    if (inApp) toApp({ type: 'phase', phase });
+  }, [inApp, phase]);
 
   // ── The camera ────────────────────────────────────────────────────────
   const showStream = useCallback((s) => {
@@ -491,7 +501,7 @@ export default function SellerLive() {
   if (phase === 'ended') {
     return (
       <div className="slv-page">
-        <SellerPageHead title="Live" />
+        {!inApp && <SellerPageHead title="Live" />}
         <section className="slv-summary">
           <h2>Your live has ended</h2>
           <p>Nothing was recorded. Here is how it went:</p>
@@ -503,7 +513,9 @@ export default function SellerLive() {
           </dl>
           <div className="slv-summary-actions">
             <button type="button" className="slv-go" onClick={again}><VideoCamera size={18} weight="fill" /> Go live again</button>
-            <Link to="/seller/orders" className="slv-link">See orders</Link>
+            {inApp
+              ? <button type="button" className="slv-link slv-link-button" onClick={() => toApp({ type: 'close' })}>Done</button>
+              : <Link to="/seller/orders" className="slv-link">See orders</Link>}
           </div>
         </section>
       </div>
@@ -511,11 +523,15 @@ export default function SellerLive() {
   }
 
   return (
-    <div className="slv-page">
-      <SellerPageHead
-        title="Go live"
-        subtitle="Show your products on camera and sell while you talk. Viewers buy from the bag without leaving the live. Nothing is recorded."
-      />
+    <div className={`slv-page${inApp ? ' is-in-app' : ''}`}>
+      {inApp ? (
+        <p className="slv-intro">Show your products on camera and sell while you talk. Viewers buy from the bag without leaving the live. Nothing is recorded.</p>
+      ) : (
+        <SellerPageHead
+          title="Go live"
+          subtitle="Show your products on camera and sell while you talk. Viewers buy from the bag without leaving the live. Nothing is recorded."
+        />
+      )}
       {support && !support.ok && (
         <div className="slv-notice"><WarningCircle size={18} weight="fill" /> {support.reason}</div>
       )}

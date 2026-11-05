@@ -11,6 +11,26 @@
   gap: 16px;
 }
 
+/* Inside the phone app: its own header is above, so no page title here. */
+.slv-page.is-in-app {
+  padding: 12px 14px 28px;
+}
+
+.slv-intro {
+  margin: 0;
+  color: var(--t-neutral-600, #4b5563);
+  font-size: 14px;
+  line-height: 1.45;
+}
+
+.slv-link-button {
+  padding: 0;
+  border: 0;
+  background: none;
+  font: inherit;
+  cursor: pointer;
+}
+
 .slv-notice {
   display: flex;
   align-items: center;

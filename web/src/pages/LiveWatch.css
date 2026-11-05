@@ -87,17 +87,57 @@
 .lw-shop {
   display: flex;
   align-items: center;
-  gap: 8px;
+  gap: 6px;
   min-width: 0;
-  max-width: 58%;
-  padding: 4px 12px 4px 4px;
+  max-width: 62%;
+  padding: 4px 5px 4px 4px;
   border-radius: 24px;
   background: rgba(0, 0, 0, 0.32);
+}
+
+.lw-shop-link {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  min-width: 0;
+  padding-right: 6px;
   color: #fff;
   text-decoration: none;
 }
 
-.lw-shop img,
+/* Follow the shop: a round pink + that turns into a tick, then goes. */
+.lw-follow {
+  display: grid;
+  flex-shrink: 0;
+  place-items: center;
+  width: 28px;
+  height: 28px;
+  padding: 0;
+  border: 0;
+  border-radius: 50%;
+  background: #f43f5e;
+  color: #fff;
+  cursor: pointer;
+  transition: transform 0.15s ease, background 0.2s ease;
+}
+
+.lw-follow:active {
+  transform: scale(0.88);
+}
+
+.lw-follow.is-done {
+  background: #10b981;
+  animation: lw-follow-done 1.4s ease forwards;
+}
+
+@keyframes lw-follow-done {
+  0% { transform: scale(0.8); }
+  20% { transform: scale(1.1); }
+  35%, 75% { transform: scale(1); opacity: 1; }
+  100% { transform: scale(0.6); opacity: 0; }
+}
+
+.lw-shop-link img,
 .lw-shop-blank {
   flex-shrink: 0;
   width: 34px;

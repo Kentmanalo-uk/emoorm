@@ -46,6 +46,18 @@ export const renewSession = () => {
     authHandlers.endActingAs?.();
     return Promise.reject(new Error('That seller session has ended'));
   }
+  // Inside the phone app (its Go live screen shows /app-live): the app keeps
+  // the session, and renews it itself, so this page asks it for a fresh
+  // token instead (mobile/app/seller/live.js sets window.EmoormApp).
+  if (!refreshing && typeof window !== 'undefined' && window.EmoormApp?.renewToken) {
+    refreshing = window.EmoormApp.renewToken()
+      .then((accessToken) => {
+        if (!accessToken) throw new Error('No token');
+        if (authHandlers.setTokens) authHandlers.setTokens(accessToken);
+        return accessToken;
+      })
+      .finally(() => { refreshing = null; });
+  }
   if (!refreshing) {
     const stored = localStorage.getItem('refreshToken');
     refreshing = (stored || readToken()

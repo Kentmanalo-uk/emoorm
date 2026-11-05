@@ -4,12 +4,13 @@ import {
 import { Link, useNavigate, useParams } from 'react-router-dom';
 import toast from 'react-hot-toast';
 import {
-  ArrowsClockwise, Eye, Heart, PaperPlaneRight, PushPin, ShareNetwork, ShoppingBag, SpeakerSlash, Storefront, X,
+  ArrowsClockwise, Check, Eye, Heart, Plus, PaperPlaneRight, PushPin, ShareNetwork, ShoppingBag, SpeakerSlash, Storefront, X,
 } from '../lib/icons';
 import useAuthStore from '../store/authStore';
 import {
   LIVE_BASE, LivePlayer, compact, followLive, getLive, heartSender, liveThumb, sendComment, viewerId,
 } from '../lib/live';
+import { followStore, getFollowStatus } from '../lib/follow';
 import { dockLive, undockLive } from '../lib/liveDock';
 import { parseImages, resolveImg } from '../lib/media';
 import { peso } from '../lib/format';
@@ -152,8 +153,31 @@ function LiveWatch({ id }) {
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [liveId]);
 
+  // ── Following the shop (the + on its name) ────────────────────────────
+  const storeId = info?.store?.id;
+  const [following, setFollowing] = useState(null);
+  const [justFollowed, setJustFollowed] = useState(false);
+  useEffect(() => {
+    if (!storeId || !isAuthenticated) return;
+    getFollowStatus(storeId).then((r) => setFollowing(Boolean(r?.following))).catch(() => {});
+  }, [storeId, isAuthenticated]);
+
   // ── Actions ───────────────────────────────────────────────────────────
   const signIn = useCallback(() => navigate(`/login?redirect=${encodeURIComponent(`/live/${id}`)}`), [navigate, id]);
+
+  const follow = async () => {
+    if (!isAuthenticated) { signIn(); return; }
+    setJustFollowed(true);
+    try {
+      await followStore(storeId);
+      setFollowing(true);
+      // The tick shows a moment, then the button goes.
+      setTimeout(() => setJustFollowed(false), 1400);
+    } catch (err) {
+      setJustFollowed(false);
+      toast.error(err.message || 'Could not follow the shop.');
+    }
+  };
 
   const heart = () => {
     hearts.current?.burst(1, { mine: true });
@@ -223,6 +247,8 @@ function LiveWatch({ id }) {
   const pinnedNo = pinned ? bag.indexOf(pinned) + 1 : 0;
   const store = info?.store;
   const mine = me?.id && info?.sellerId === me.id;
+  // Signed out: the + asks them to sign in first.
+  const showFollow = store && !mine && ((isAuthenticated ? following : false) === false || justFollowed);
 
   if (gone || (ended && info)) {
     return (
@@ -269,15 +295,28 @@ function LiveWatch({ id }) {
 
         <header className="lw-top">
           {store && (
-            <Link to={`/store/${store.slug}`} className="lw-shop" onClick={() => info && dockLive(info)}>
-              {store.logo
-                ? <img src={resolveImg(store.logo)} alt="" />
-                : <span className="lw-shop-blank"><Storefront size={16} weight="fill" /></span>}
-              <span className="lw-shop-text">
-                <strong>{store.name}</strong>
-                <span>{info.title}</span>
-              </span>
-            </Link>
+            <div className="lw-shop">
+              <Link to={`/store/${store.slug}`} className="lw-shop-link" onClick={() => info && dockLive(info)}>
+                {store.logo
+                  ? <img src={resolveImg(store.logo)} alt="" />
+                  : <span className="lw-shop-blank"><Storefront size={16} weight="fill" /></span>}
+                <span className="lw-shop-text">
+                  <strong>{store.name}</strong>
+                  <span>{info.title}</span>
+                </span>
+              </Link>
+              {showFollow && (
+                <button
+                  type="button"
+                  className={`lw-follow${justFollowed ? ' is-done' : ''}`}
+                  onClick={follow}
+                  disabled={justFollowed}
+                  aria-label={justFollowed ? 'Following' : `Follow ${store.name}`}
+                >
+                  {justFollowed ? <Check size={14} weight="bold" /> : <Plus size={15} weight="bold" />}
+                </button>
+              )}
+            </div>
           )}
           <div className="lw-top-right">
             <span className="lw-badge">LIVE</span>

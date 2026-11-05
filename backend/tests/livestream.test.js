@@ -220,3 +220,43 @@ test('pieces sent together are split; a second that never came is skipped', asyn
   assert.equal(skipped.status, 410);
   assert.equal((await skipped.json()).nextSeq, 2);
 });
+
+test('Low-Latency HLS: pieces listed as parts, the next one waited for, blocking reloads', async () => {
+  const seller = await h.user('SELLER');
+  const store = await h.shop(seller);
+  const { id, key } = (await h.api('POST', '/live', { token: h.token(seller), body: {} })).body.data;
+  await raw('PUT', `/live/${id}/init?epoch=0&codecs=avc1.42e01f,mp4a.40.2`, piece('init'), key);
+  await raw('POST', `/live/${id}/seg?seq=0&part=0&last=0&epoch=0&dur=200`, piece(0), key);
+  await raw('POST', `/live/${id}/seg?seq=0&part=1&last=0&epoch=0&dur=210`, piece(1), key);
+
+  const base = await h.startApp();
+  const list = await (await fetch(`${base}/live/${id}/live.m3u8`)).text();
+  assert.match(list, /#EXT-X-SERVER-CONTROL:CAN-BLOCK-RELOAD=YES/);
+  assert.match(list, /#EXT-X-PART:DURATION=0\.200,URI="part\/0\/0\.m4s",INDEPENDENT=YES/);
+  assert.match(list, /#EXT-X-PART:DURATION=0\.210,URI="part\/0\/1\.m4s"\n/);
+  assert.match(list, /#EXT-X-PRELOAD-HINT:TYPE=PART,URI="part\/0\/2\.m4s"/);
+  // Whole seconds only for a player that asks for that.
+  assert.doesNotMatch(await (await fetch(`${base}/live/${id}/live.m3u8?ll=0`)).text(), /EXT-X-PART/);
+
+  // A piece there now, and the hinted one waited for.
+  assert.deepEqual(Buffer.from(await (await fetch(`${base}/live/${id}/part/0/1.m4s`)).arrayBuffer()), piece(1));
+  const hinted = fetch(`${base}/live/${id}/part/0/2.m4s`);
+  // A blocking reload for that piece is answered when it comes, too.
+  const reload = fetch(`${base}/live/${id}/live.m3u8?_HLS_msn=0&_HLS_part=2`);
+  await new Promise((r) => { setTimeout(r, 150); });
+  await raw('POST', `/live/${id}/seg?seq=0&part=2&last=1&epoch=0&dur=190`, piece(2), key);
+  assert.deepEqual(Buffer.from(await (await hinted).arrayBuffer()), piece(2));
+  const reloaded = await (await reload).text();
+  assert.match(reloaded, /part\/0\/2\.m4s/);
+  assert.match(reloaded, /#EXTINF:0\.600,\nseg\/0\.m4s/);
+  // A piece that will never come is refused at once.
+  assert.equal((await fetch(`${base}/live/${id}/part/0/9.m4s`)).status, 404);
+
+  // The shop's own comments carry the shop's name and logo.
+  await h.prisma.store.update({ where: { id: store.id }, data: { logo: '/uploads/shop-logo.png' } });
+  const second = (await h.api('POST', '/live', { token: h.token(seller), body: {} })).body.data;
+  const said = await h.api('POST', `/live/${second.id}/comments`, { token: h.token(seller), body: { text: 'Hello!' } });
+  assert.equal(said.body.data.user.name, store.name);
+  assert.equal(said.body.data.user.logo, '/uploads/shop-logo.png');
+  assert.equal(said.body.data.seller, true);
+});

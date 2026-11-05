@@ -136,6 +136,11 @@ export class LivePublisher {
     this.pendingVideo = [];
     this.pendingAudio = [];
     this.forceKey = true;
+    // A new live starts its clock at zero (the next key frame), as a fresh
+    // one does: Android's player stalls on one that starts minutes in.
+    this.t0 = null;
+    this.audioTick = null;
+    this.frag = 0;
     if (this.avcC) {
       const avcC = this.avcC;
       this.avcC = null;

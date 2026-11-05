@@ -152,8 +152,11 @@ const putPart = (live, {
     // Old (already let go), or a group that did not arrive from its start.
     if (seq <= live.latestSeq || part !== 0) return true;
     for (const s of live.segments) close(s);
+    // msn: the HLS media sequence number, one after another even when a
+    // second was dropped (seq then skips one; players count without gaps).
+    live.nextMsn = (live.nextMsn ?? -1) + 1;
     seg = {
-      seq, epoch, parts: [], dur: 0, done: false, data: null,
+      seq, epoch, parts: [], durs: [], dur: 0, done: false, data: null, msn: live.nextMsn, at: Date.now(),
     };
     live.segments.push(seg);
     while (live.segments.length > KEEP_SEGMENTS) live.segments.shift();
@@ -168,6 +171,7 @@ const putPart = (live, {
     return true;
   }
   seg.parts.push(data);
+  seg.durs.push(dur);
   seg.dur += dur;
   if (last) close(seg);
   if (live.status === 'STARTING') {
@@ -201,31 +205,64 @@ const waitFor = (live, kind, ms) => new Promise((resolve) => {
   list.push(fn);
 });
 
-/** The HLS playlist (iPhones without Media Source, the phone app). */
-const playlist = (live) => {
-  const segs = live.segments.filter((s) => s.done).slice(-PLAYLIST_SEGMENTS);
+// Low-Latency HLS: each piece is listed as a part, so a player (the phone
+// app's, Safari's) plays a fifth of a second after it arrives rather than
+// a whole second after. PART_TARGET is the longest a piece runs (seven
+// frames at 30 a second); players hold back about three of them.
+const PART_TARGET = 0.25;
+const PART_HOLD_BACK = 0.8;
+// Seconds whose pieces are listed (older ones only as whole seconds).
+const PARTS_FOR_LAST = 3;
+
+/**
+ * The HLS playlist, Low-Latency: complete seconds as segments, the newest
+ * seconds' pieces as parts, and a hint for the piece coming next.
+ */
+const playlist = (live, { lowLatency = true } = {}) => {
+  const segs = live.segments.filter((s) => (lowLatency ? s.parts.length : s.done)).slice(-PLAYLIST_SEGMENTS);
   if (!segs.length) return null;
-  const target = Math.max(1, Math.ceil(Math.max(...segs.map((s) => s.dur)) / 1000));
+  const done = segs.filter((s) => s.done);
+  const target = Math.max(1, Math.round(Math.max(1000, ...done.map((s) => s.dur)) / 1000));
   const lines = [
     '#EXTM3U',
-    '#EXT-X-VERSION:7',
+    '#EXT-X-VERSION:9',
     '#EXT-X-INDEPENDENT-SEGMENTS',
     `#EXT-X-TARGETDURATION:${target}`,
-    `#EXT-X-MEDIA-SEQUENCE:${segs[0].seq}`,
+    ...(lowLatency ? [
+      `#EXT-X-SERVER-CONTROL:CAN-BLOCK-RELOAD=YES,PART-HOLD-BACK=${PART_HOLD_BACK}`,
+      `#EXT-X-PART-INF:PART-TARGET=${PART_TARGET}`,
+    ] : []),
+    `#EXT-X-MEDIA-SEQUENCE:${segs[0].msn}`,
     `#EXT-X-DISCONTINUITY-SEQUENCE:${segs[0].epoch}`,
   ];
   let epoch = null;
-  for (const s of segs) {
+  segs.forEach((s, i) => {
     if (s.epoch !== epoch) {
       if (epoch !== null) lines.push('#EXT-X-DISCONTINUITY');
       lines.push(`#EXT-X-MAP:URI="init/${s.epoch}.mp4"`);
       epoch = s.epoch;
     }
-    lines.push(`#EXTINF:${(s.dur / 1000).toFixed(3)},`, `seg/${s.seq}.m4s`);
-  }
+    lines.push(`#EXT-X-PROGRAM-DATE-TIME:${new Date(s.at).toISOString()}`);
+    if (lowLatency && i >= segs.length - PARTS_FOR_LAST) {
+      s.durs.forEach((d, n) => {
+        lines.push(`#EXT-X-PART:DURATION=${(d / 1000).toFixed(3)},URI="part/${s.seq}/${n}.m4s"${n === 0 ? ',INDEPENDENT=YES' : ''}`);
+      });
+    }
+    if (s.done) lines.push(`#EXTINF:${(s.dur / 1000).toFixed(3)},`, `seg/${s.seq}.m4s`);
+  });
+  const last = segs[segs.length - 1];
   if (live.status === 'ENDED') lines.push('#EXT-X-ENDLIST');
+  else if (!lowLatency) { /* whole seconds only */ } else if (last.done) lines.push(`#EXT-X-PRELOAD-HINT:TYPE=PART,URI="part/${last.seq + 1}/0.m4s"`);
+  else lines.push(`#EXT-X-PRELOAD-HINT:TYPE=PART,URI="part/${last.seq}/${last.parts.length}.m4s"`);
   return `${lines.join('\n')}\n`;
 };
+
+/**
+ * Whether the playlist already has segment `msn`'s part `part` (no part:
+ * the whole segment): what a blocking playlist request waits for.
+ */
+const hasPart = (live, msn, part) => live.segments.some((s) => s.msn > msn
+  || (s.msn === msn && (s.done || (part >= 0 && s.parts.length > part))));
 
 // ── Talk ────────────────────────────────────────────────────────────────
 
@@ -349,7 +386,7 @@ const sweep = () => {
 setInterval(sweep, 5000).unref();
 
 module.exports = {
-  create, get, keyMatches, end, putInit, putPart, segment, waitFor, playlist,
+  create, get, keyMatches, end, putInit, putPart, segment, waitFor, playlist, hasPart,
   addComment, hideComment, addHearts, setPinned, setBag, seen, viewerCount, news, summary, onAir,
   KEEP_SEGMENTS,
   // Tests only.

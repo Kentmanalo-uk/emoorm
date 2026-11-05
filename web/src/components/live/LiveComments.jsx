@@ -1,5 +1,6 @@
 import { memo, useEffect, useRef } from 'react';
 import Avatar from '../avatars/Avatar';
+import { resolveImg } from '../../lib/media';
 import './live.css';
 
 /*
@@ -25,7 +26,12 @@ function LiveComments({ comments, onPick, className = '' }) {
     <div className={`lv-comments ${className}`} ref={list} onScroll={onScroll} aria-live="polite">
       {comments.map((c) => (
         <div key={c.id} className={`lv-comment${c.seller ? ' is-seller' : ''}${c.mine ? ' is-mine' : ''}`}>
-          <span className="lv-comment-avatar"><Avatar seed={c.user?.id} name={c.user?.avatarKey} size={22} /></span>
+          <span className="lv-comment-avatar">
+            {/* The shop speaks as the shop: its logo. */}
+            {c.seller && c.user?.logo
+              ? <img src={resolveImg(c.user.logo)} alt="" />
+              : <Avatar seed={c.user?.id} name={c.user?.avatarKey} size={22} />}
+          </span>
           <span className="lv-comment-body">
             <b>{c.user?.name || 'Shopper'}</b>
             {c.seller && <em className="lv-seller-tag">Seller</em>}

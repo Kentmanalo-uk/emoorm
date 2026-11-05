@@ -279,3 +279,54 @@
     margin: 0 0 16px;
   }
 }
+
+/* A shop's logo while it is live (ShopLiveRing): the ring beats like a
+   heart, two quick swells and a rest, and LIVE sits at its foot. */
+.lnow-ring {
+  position: absolute;
+  inset: -5px;
+  z-index: 2;
+  border-radius: 50%;
+  text-decoration: none;
+}
+
+.lnow-ring-beat {
+  position: absolute;
+  inset: 0;
+  border: 3px solid #f43f5e;
+  border-radius: 50%;
+  box-shadow: 0 0 0 0 rgba(244, 63, 94, 0.45);
+  animation: lnow-beat 1.6s ease-in-out infinite;
+}
+
+@keyframes lnow-beat {
+  0% { transform: scale(1); box-shadow: 0 0 0 0 rgba(244, 63, 94, 0.45); }
+  14% { transform: scale(1.06); }
+  28% { transform: scale(1); }
+  42% { transform: scale(1.05); box-shadow: 0 0 0 7px rgba(244, 63, 94, 0); }
+  70%, 100% { transform: scale(1); box-shadow: 0 0 0 0 rgba(244, 63, 94, 0); }
+}
+
+.lnow-ring-badge {
+  position: absolute;
+  bottom: -9px;
+  left: 50%;
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+  padding: 2px 7px;
+  border: 2px solid #fff;
+  border-radius: 7px;
+  background: #f43f5e;
+  color: #fff;
+  font-size: 10.5px;
+  font-weight: 800;
+  letter-spacing: 0.05em;
+  line-height: 1.2;
+  white-space: nowrap;
+  transform: translateX(-50%);
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .lnow-ring-beat { animation: none; }
+}

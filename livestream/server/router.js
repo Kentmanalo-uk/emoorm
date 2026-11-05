@@ -7,7 +7,8 @@
  *   GET  /:id/events?v=&viewer=    news after version v (held until there is some)
  *   GET  /:id/init/:epoch.mp4      the video's set-up piece
  *   GET  /:id/seg/:seq.m4s         one second of video, streamed piece by piece while it is filled
- *   GET  /:id/live.m3u8            the same pieces as an HLS playlist
+ *   GET  /:id/live.m3u8            the same video as a Low-Latency HLS playlist (blocking reload)
+ *   GET  /:id/part/:seq/:n.m4s     one piece, for that playlist (the next one waited for)
  *   GET  /:id/thumb.jpg            a still of the live, for lists
  *   GET  /mic-worklet.js           the seller page's microphone tap (see below)
  *   PUT  /:id/init   POST /:id/seg   POST /:id/thumb      the seller's page (X-Live-Key)
@@ -35,6 +36,9 @@ const SEG_WAIT_MS = 5000;
 // A group being streamed that has had nothing new for this long is ended
 // (the seller's connection dropped); the viewer asks for the next.
 const STREAM_IDLE_MS = 4000;
+// Low-Latency HLS: a blocking playlist reload, and a piece hinted as next.
+const PLAYLIST_WAIT_MS = 3000;
+const PART_WAIT_MS = 3000;
 const EVENTS_WAIT_MS = 20000;
 const MAX_BAG = 50;
 const MAX_TITLE = 80;
@@ -390,12 +394,60 @@ module.exports = function createLiveRouter({
     return res.status(204).end();
   });
 
-  router.get('/:id/live.m3u8', (req, res) => {
-    const text = lives.playlist(req.live);
+  router.get('/:id/live.m3u8', async (req, res) => {
+    const { live } = req;
+    // A blocking reload (Low-Latency HLS): the player asks for the playlist
+    // once it has piece _HLS_part of segment _HLS_msn, and is answered the
+    // moment it does (or after three seconds, as it is).
+    if (req.query._HLS_msn != null) {
+      const msn = int(req.query._HLS_msn);
+      const part = req.query._HLS_part != null ? int(req.query._HLS_part) : -1;
+      const deadline = Date.now() + PLAYLIST_WAIT_MS;
+      while (live.status !== 'ENDED' && !lives.hasPart(live, msn, part) && Date.now() < deadline) {
+        // eslint-disable-next-line no-await-in-loop
+        await lives.waitFor(live, 'seg', deadline - Date.now());
+        if (res.destroyed || req.socket?.destroyed) return undefined;
+      }
+    }
+    // ?ll=0: whole seconds only (a player that handles parts badly).
+    const text = lives.playlist(live, { lowLatency: req.query.ll !== '0' });
     res.set('Cache-Control', 'no-store');
     if (!text) return fail(res, 404, 'The live has not started yet.');
     res.set('Content-Type', 'application/vnd.apple.mpegurl');
     return res.send(text);
+  });
+
+  // One piece (Low-Latency HLS parts). The one hinted as coming next is
+  // waited for, so a player asks once and gets it the moment it arrives.
+  router.get('/:id/part/:seq/:file', async (req, res) => {
+    const { live } = req;
+    const seq = int(req.params.seq);
+    const n = int(String(req.params.file).replace(/\.m4s$/, ''));
+    if (seq < 0 || n < 0) return fail(res, 400, 'Bad piece.');
+    const ready = () => {
+      const seg = lives.segment(live, seq);
+      return seg && seg.parts.length > n ? seg : null;
+    };
+    // Still to come: the next piece of this second, or the first of the next.
+    const coming = () => {
+      const seg = lives.segment(live, seq);
+      if (seg) return !seg.done && n === seg.parts.length;
+      return seq === live.latestSeq + 1 && n === 0;
+    };
+    let seg = ready();
+    const deadline = Date.now() + PART_WAIT_MS;
+    while (!seg && live.status !== 'ENDED' && coming() && Date.now() < deadline) {
+      // eslint-disable-next-line no-await-in-loop
+      await lives.waitFor(live, 'seg', deadline - Date.now());
+      if (res.destroyed || req.socket?.destroyed) return undefined;
+      seg = ready();
+    }
+    if (!seg) {
+      res.set('Cache-Control', 'no-store');
+      return fail(res, 404, live.status === 'ENDED' ? 'This live has ended.' : 'No such piece.');
+    }
+    res.set({ 'Content-Type': 'video/mp4', 'Cache-Control': 'public, max-age=60, immutable' });
+    return res.end(seg.parts[n]);
   });
 
   router.get('/:id/thumb.jpg', (req, res) => {
@@ -416,11 +468,15 @@ module.exports = function createLiveRouter({
         return fail(res, 429, 'You are commenting too fast. Please wait a moment.');
       }
       if (hooks.isAbusive(text)) return fail(res, 422, 'That comment cannot be posted on a live. Please keep it friendly.');
-      const profile = await hooks.profileOf(req.user.id);
+      // The shop speaks as the shop: its name and logo, not the person's.
+      const seller = req.user.id === live.sellerId;
+      const profile = seller ? null : await hooks.profileOf(req.user.id);
       const comment = lives.addComment(live, {
-        user: { id: req.user.id, name: profile.name, avatarKey: profile.avatarKey || null },
+        user: seller
+          ? { id: req.user.id, name: live.store.name, logo: live.store.logo || null }
+          : { id: req.user.id, name: profile.name, avatarKey: profile.avatarKey || null },
         text,
-        seller: req.user.id === live.sellerId,
+        seller,
       });
       return ok(res, comment, 201);
     } catch (err) {

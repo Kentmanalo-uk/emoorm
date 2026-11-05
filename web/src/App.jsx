@@ -286,6 +286,8 @@ function AppRoutes() {
         <Route path="/" element={<Home />} />
         {/* The Android app's Google sign-in, opened in the phone's browser. */}
         <Route path="/app-google" element={<AppGoogle />} />
+        {/* The phone app's Go live screen shows this in its web view. */}
+        <Route path="/app-live" element={<SellerLive inApp />} />
         <Route path="/login" element={<Login />} />
         <Route path="/seller/login" element={<Login seller />} />
         <Route path="/register" element={<Register />} />

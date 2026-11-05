@@ -73,6 +73,8 @@ import ShopInviteCard from '../components/shop/ShopInviteCard';
 
 // The bar to the shop's live, while it is on (loaded after the page).
 const ShopLiveBanner = lazy(() => import('../components/live/ShopLiveBanner'));
+// The beating ring and LIVE on the shop's logo, while it is on.
+const ShopLiveRing = lazy(() => import('../components/live/ShopLiveRing'));
 
 const SORTS = [
   { key: 'newest', label: 'Newest', sortBy: 'createdAt', sortOrder: 'desc' },
@@ -613,8 +615,11 @@ export default function StoreDetail() {
 
               <div className="shop-m-card">
                 <div className="shop-m-main">
-                  <div className="shop-m-logo">
-                    {store.logo ? <img src={resolveImg(store.logo)} srcSet={srcSetFor(store.logo)} sizes="96px" alt="" /> : <ShopLogoArt name={store.name} />}
+                  <div className="shop-live-wrap">
+                    <div className="shop-m-logo">
+                      {store.logo ? <img src={resolveImg(store.logo)} srcSet={srcSetFor(store.logo)} sizes="96px" alt="" /> : <ShopLogoArt name={store.name} />}
+                    </div>
+                    <Suspense fallback={null}><ShopLiveRing storeId={store.id} /></Suspense>
                   </div>
                   <div className="shop-m-id-text">
                     <button type="button" className="shop-m-name" onClick={() => setMobileTab('about')}>
@@ -869,12 +874,15 @@ export default function StoreDetail() {
 
             <div className="shop-profile-body">
             <div className="shop-hero-card">
-              <div className="shop-avatar">
-                {store.logo ? (
-                  <img src={resolveImg(store.logo)} srcSet={srcSetFor(store.logo)} sizes="96px" alt={store.name} />
-                ) : (
-                  <ShopLogoArt name={store.name} />
-                )}
+              <div className="shop-live-wrap is-avatar">
+                <div className="shop-avatar">
+                  {store.logo ? (
+                    <img src={resolveImg(store.logo)} srcSet={srcSetFor(store.logo)} sizes="96px" alt={store.name} />
+                  ) : (
+                    <ShopLogoArt name={store.name} />
+                  )}
+                </div>
+                <Suspense fallback={null}><ShopLiveRing storeId={store.id} /></Suspense>
               </div>
 
               <div className="shop-hero-title">

@@ -2095,3 +2095,26 @@
   font-size: 11.5px;
   color: var(--t-danger-600, #dc2626);
 }
+
+/* The logo with its live ring (components/live/ShopLiveRing) laid over it. */
+.shop-live-wrap {
+  position: relative;
+  flex-shrink: 0;
+  align-self: flex-start;
+}
+
+/* The computer layout lifts the logo over the cover: the wrapper takes the
+   lift, so the ring sits on the logo rather than below it. */
+.shop-live-wrap.is-avatar {
+  margin-top: -56px;
+}
+
+.shop-live-wrap.is-avatar > .shop-avatar {
+  margin-top: 0;
+}
+
+@media (max-width: 768px) {
+  .shop-live-wrap.is-avatar {
+    margin-top: -44px;
+  }
+}
