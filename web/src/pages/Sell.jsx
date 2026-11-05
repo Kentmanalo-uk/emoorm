@@ -93,19 +93,39 @@ function PhoneScene({ followScroll }) {
     const scene = sceneRef.current;
     if (!followScroll || !scene) return undefined;
     if (window.matchMedia('(prefers-reduced-motion: reduce)').matches) return undefined;
-    // Done once the scene's top is a fifth of the way down the screen.
-    const span = () => Math.max(120, scene.getBoundingClientRect().top + window.scrollY - window.innerHeight * 0.2);
+    // Done once the scene's top is a fifth of the way down the screen. The
+    // screen's height is taken once (and again only when its width changes,
+    // a phone turned): a phone's browser changes it every time its address
+    // bar slides in or out mid-scroll, and following that moved the end of
+    // the animation under the finger -- the phone flickered back to its
+    // tilted start for a frame.
+    let width = window.innerWidth;
+    let height = window.innerHeight;
+    const span = () => Math.max(120, scene.getBoundingClientRect().top + window.scrollY - height * 0.2);
 
     if (SCROLL_DRIVEN) {
-      const measure = () => scene.style.setProperty('--zoom-end', `${Math.round(span())}px`);
+      let set = null;
+      const measure = () => {
+        const end = Math.round(span());
+        // Small shifts are not worth disturbing a running animation for.
+        if (set !== null && Math.abs(end - set) < 6) return;
+        set = end;
+        scene.style.setProperty('--zoom-end', `${end}px`);
+      };
       measure();
-      // The headline above can rewrap (fonts arriving, rotating the phone).
+      // The headline above can rewrap (fonts arriving).
       const observer = new ResizeObserver(measure);
       observer.observe(scene.parentElement);
-      window.addEventListener('resize', measure);
+      const onResize = () => {
+        if (window.innerWidth === width) return;
+        width = window.innerWidth;
+        height = window.innerHeight;
+        measure();
+      };
+      window.addEventListener('resize', onResize);
       return () => {
         observer.disconnect();
-        window.removeEventListener('resize', measure);
+        window.removeEventListener('resize', onResize);
         scene.style.removeProperty('--zoom-end');
       };
     }

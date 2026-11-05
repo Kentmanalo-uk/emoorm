@@ -352,7 +352,9 @@
     rotateX(calc(7deg * var(--edge)))
     rotateZ(calc(6deg * var(--edge)))
     scale(calc(var(--phone-scale) * (1 + var(--zoom, 0) * var(--zoom-gain))));
-  will-change: transform;
+  /* No will-change: it would hold the phone to the picture first drawn
+     (small, at rest), stretched when brought close. Its animations give it
+     its own layer anyway. */
 }
 
 .sl-iphone::before,
@@ -1776,13 +1778,18 @@
     padding-bottom: 44px;
   }
 
+  /* Drawn at the size it is brought up to (zoom 1.16: 348px wide, the
+     screen's width) and shrunk for the rest of the way, never enlarged: an
+     enlarged layer is a stretched picture, and phones showed it jagged
+     face on. 0.69 x 1.16 = 0.8 of its size at rest, 1.45 times that
+     brought close; scaled from its top, the space it no longer takes given
+     back below it, and set a little lower when close. */
   .sl-iphone {
-    --phone-scale: 0.8;
-    /* Scaled from its top already: brought closer only up to the screen's
-       width (0.8 x 1.45 = 348px), and set a little lower. */
+    zoom: 1.16;
+    --phone-scale: calc(0.8 / 1.16);
     --zoom-gain: 0.45;
-    --zoom-drop: 18px;
-    margin-bottom: calc(626px * -0.2);
+    --zoom-drop: 16px;
+    margin-bottom: calc(626px * (0.8 / 1.16 - 1));
     transform-origin: top center;
   }
 
