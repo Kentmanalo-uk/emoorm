@@ -1,5 +1,5 @@
 /*
- * The viewer's side: plays a live in a <video>, about two seconds behind
+ * The viewer's side: plays a live in a <video>, about three seconds behind
  * the seller.
  *
  *   const player = new LivePlayer(videoEl, { base, id, onState });
@@ -7,16 +7,16 @@
  *   player.destroy();
  *
  * Media Source where there is one (every desktop browser, Android, iPhones
- * from iOS 17.1 as ManagedMediaSource): it asks for the next one-second piece
- * before it exists (the server answers the moment it arrives), appends it,
- * and keeps the playhead close to the newest piece by playing a touch faster
- * or slower, never by jumping unless it has fallen far behind. Older iPhones
- * get the same pieces as an HLS playlist instead.
+ * from iOS 17.1 as ManagedMediaSource): it starts two finished seconds
+ * back, asks for the next few one-second pieces at once (the server answers
+ * each the moment it is complete), appends them in order, and keeps the
+ * playhead near the newest piece by playing a touch faster or slower, never
+ * by jumping unless it has fallen far behind. Older iPhones get the same
+ * pieces as an HLS playlist instead.
  *
- * Whole seconds, not the server's fifth-of-a-second parts: the under-a-
- * second player that streamed parts stalled on weaker connections and sat
- * on "Catching up…", so this steadier one came back. A second or two of
- * delay is the price, and it plays.
+ * Whole seconds only, never a piece still being recorded: on the live site
+ * those were streamed, Hostinger's CDN held the stream back, and viewers sat
+ * on "Catching up…". A few seconds of delay is the price, and it plays.
  *
  * States: 'connecting' | 'playing' | 'waiting' | 'reconnecting' | 'ended' | 'unsupported'
  */
@@ -26,12 +26,22 @@ const MediaSourceType = typeof window !== 'undefined'
   : null;
 
 // Seconds between the newest video and what is on screen: enough cushion
-// for a piece that comes a little late, little enough to answer "how much
-// is #3?" while the shopper still remembers asking.
-const TARGET_LAG = 1.6;
-const FAR_BEHIND = 5;
+// for a piece that comes late (a request through the site's CDN takes one
+// to three seconds), little enough to answer "how much is #3?" while the
+// shopper still remembers asking.
+const TARGET_LAG = 3;
+const FAR_BEHIND = 6.5;
+// Pieces asked for at once: each answer takes longer than the second it
+// holds, so the next ones are already on their way.
+const AHEAD = 3;
+// Video held before playing starts, so the picture does not stop at once.
+const START_BUFFER = 1.5;
 
 const preloaded = new Map();
+
+// Where to start: two seconds before the one being recorded (both already
+// complete, so the picture comes at once), never before the oldest kept.
+const startSeq = (info) => Math.max(info.oldestSeq ?? 0, (info.latestSeq ?? 0) - 2, 0);
 
 /** Fetches a live's set-up and newest piece early (a card in view), so opening it is instant. */
 export function preloadLive(base, info) {
@@ -147,7 +157,7 @@ export class LivePlayer {
     };
     document.addEventListener('visibilitychange', this.onVisibility);
 
-    this.seq = Math.max(0, info.latestSeq);
+    this.seq = startSeq(info);
     this.timers.push(setInterval(() => this.steer(), 250));
     this.timers.push(setInterval(() => this.trim(), 5000));
     this.loop();
@@ -188,47 +198,75 @@ export class LivePlayer {
     this.epoch = epoch;
   }
 
+  /** One piece: { status, epoch, data, body } or { error: true }. */
+  async fetchSeg(seq) {
+    try {
+      const res = await fetch(`${this.root}/seg/${seq}.m4s`, { signal: this.abort.signal });
+      if (res.status === 200) {
+        return { status: 200, epoch: Number(res.headers.get('X-Live-Epoch')), data: await res.arrayBuffer() };
+      }
+      if (res.status === 410) return { status: 410, body: await res.json().catch(() => ({})) };
+      return { status: res.status };
+    } catch {
+      return { error: true };
+    }
+  }
+
   async loop() {
     let failures = 0;
+    // Pieces on their way, by number. `ahead`: asked for before it was the
+    // next to play -- a "not yet" or "skip" for one of those is old news,
+    // so it is asked for again rather than believed.
+    let inFlight = new Map();
+    const ask = (seq, ahead) => {
+      if (!inFlight.has(seq)) inFlight.set(seq, { result: this.fetchSeg(seq), ahead });
+    };
     while (this.alive && !this.paused) {
       if (this.jumpToNow) {
         this.jumpToNow = false;
+        inFlight = new Map();
         try {
           const res = await fetch(this.root, { signal: this.abort.signal });
           const body = await res.json();
           if (!res.ok || body?.data?.status === 'ENDED') { this.setState('ended'); return; }
-          this.seq = Math.max(0, body.data.latestSeq);
+          this.seq = startSeq(body.data);
         } catch { /* below */ }
       }
-      let res;
-      try {
-        res = await fetch(`${this.root}/seg/${this.seq}.m4s`, { signal: this.abort.signal });
-      } catch {
-        if (!this.alive || this.paused) return;
+      ask(this.seq, false);
+      for (let i = 1; i < AHEAD; i += 1) ask(this.seq + i, true);
+      const entry = inFlight.get(this.seq);
+      // eslint-disable-next-line no-await-in-loop
+      const r = await entry.result;
+      if (!this.alive || this.paused) return;
+      inFlight.delete(this.seq);
+      if (r.error) {
         failures += 1;
         if (failures > 2) this.setState('reconnecting');
-        await new Promise((r) => { setTimeout(r, Math.min(4000, 400 * failures)); });
+        // eslint-disable-next-line no-await-in-loop
+        await new Promise((ok) => { setTimeout(ok, Math.min(4000, 400 * failures)); });
         continue;
       }
-      if (res.status === 200) {
+      if (r.status === 200) {
         failures = 0;
-        const epoch = Number(res.headers.get('X-Live-Epoch'));
-        const data = await res.arrayBuffer();
         try {
-          if (epoch !== this.epoch) await this.loadInit(epoch);
-          await this.append(data);
+          // eslint-disable-next-line no-await-in-loop
+          if (r.epoch !== this.epoch) await this.loadInit(r.epoch);
+          // eslint-disable-next-line no-await-in-loop
+          await this.append(r.data);
         } catch {
           if (!this.alive) return;
         }
         this.seq += 1;
+        this.appended = (this.appended || 0) + 1;
         this.kick();
         continue;
       }
-      if (res.status === 204) continue; // not yet: ask again
-      if (res.status === 410) {
+      if (entry.ahead && (r.status === 204 || r.status === 410)) continue; // ask again, now
+      if (r.status === 204) continue; // not complete yet: ask again
+      if (r.status === 410) {
         // A second that never came: on to the next one there is (or to now).
-        const body = await res.json().catch(() => ({}));
-        this.seq = Math.max(0, body.nextSeq ?? body.latestSeq ?? this.seq);
+        this.seq = Math.max(0, r.body.nextSeq ?? r.body.latestSeq ?? this.seq);
+        inFlight = new Map();
         continue;
       }
       // 404: the live ended (or never was).
@@ -237,12 +275,13 @@ export class LivePlayer {
     }
   }
 
-  /** The first piece is in: start from it. */
+  /** Enough video is in: start a few seconds behind the newest. */
   kick() {
     const v = this.video;
     const b = v.buffered;
     if (!b.length) return;
-    if (!this.started) {
+    const held = b.end(b.length - 1) - b.start(0);
+    if (!this.started && (held >= START_BUFFER || this.appended >= 3)) {
       this.started = true;
       v.currentTime = Math.max(b.start(0), b.end(b.length - 1) - TARGET_LAG);
       v.play().catch(() => {
@@ -280,9 +319,11 @@ export class LivePlayer {
       return;
     }
     let rate = 1;
-    if (lag > TARGET_LAG + 1.2) rate = 1.12;
-    else if (lag > TARGET_LAG + 0.5) rate = 1.05;
-    else if (lag < 0.7) rate = 0.95;
+    // Whole seconds arrive in bursts, so the distance swings by about one:
+    // only a clear drift is corrected.
+    if (lag > TARGET_LAG + 2) rate = 1.15;
+    else if (lag > TARGET_LAG + 1) rate = 1.06;
+    else if (lag < 1.2) rate = 0.96;
     if (Math.abs(v.playbackRate - rate) > 0.001) v.playbackRate = rate;
     if (v.paused && !this.userPaused && v.readyState >= 3) v.play().catch(() => {});
   }

@@ -163,44 +163,36 @@ test('the microphone worklet is served from the site itself', async () => {
   assert.match(await res.text(), /registerProcessor\('emoorm-mic-tap'/);
 });
 
-test('a second streams out piece by piece as the seller uploads it', async () => {
+test('a second is only ever sent whole, once it is complete', async () => {
   const seller = await h.user('SELLER');
   await h.shop(seller);
   const { id, key } = (await h.api('POST', '/live', { token: h.token(seller), body: {} })).body.data;
   await raw('PUT', `/live/${id}/init?epoch=0&codecs=avc1.42e01f,opus`, piece('init'), key);
 
-  // A viewer asks for the second before it starts.
-  const started = Date.now();
+  // A viewer asks for the second before it starts. It is not streamed as it
+  // fills (the site's CDN held such a stream back and viewers got nothing):
+  // the answer comes after the last piece, in one go, with its length.
   const res = fetch(`${await h.startApp()}/live/${id}/seg/0.m4s`);
-  const arrivals = [];
-  const reading = res.then(async (r) => {
-    assert.equal(r.status, 200);
-    const reader = r.body.getReader();
-    let bytes = 0;
-    for (;;) {
-      // eslint-disable-next-line no-await-in-loop
-      const { done, value } = await reader.read();
-      if (done) break;
-      bytes += value.length;
-      arrivals.push(Date.now() - started);
-    }
-    return bytes;
-  });
+  let lastSentAt = 0;
   for (let p = 0; p < 4; p += 1) {
     // eslint-disable-next-line no-await-in-loop
     assert.equal((await raw('POST', `/live/${id}/seg?seq=0&part=${p}&last=${p === 3 ? 1 : 0}&epoch=0&dur=200`, piece(p), key)).status, 200);
+    lastSentAt = Date.now();
     // eslint-disable-next-line no-await-in-loop
     await new Promise((r) => { setTimeout(r, 120); });
   }
-  assert.equal(await reading, 4 * 64);
-  // Each piece came as it was sent, not all together at the end.
-  assert.ok(arrivals.length >= 3, `arrived in ${arrivals.length} chunks`);
-  assert.ok(arrivals[0] < arrivals[arrivals.length - 1] - 200, `spread over time: ${arrivals.join(', ')}`);
+  const r = await res;
+  assert.equal(r.status, 200);
+  assert.equal(r.headers.get('content-length'), String(4 * 64));
+  assert.match(r.headers.get('cache-control'), /immutable/);
+  assert.equal((await r.arrayBuffer()).byteLength, 4 * 64);
+  assert.ok(lastSentAt > 0);
 
-  // Once complete it is one cacheable whole.
-  const whole = await fetch(`${await h.startApp()}/live/${id}/seg/0.m4s`);
-  assert.match(whole.headers.get('cache-control'), /immutable/);
-  assert.equal((await whole.arrayBuffer()).byteLength, 4 * 64);
+  // A second still being recorded, asked for while the seller is slow: no
+  // half second, a "not yet" after the wait.
+  await raw('POST', `/live/${id}/seg?seq=1&part=0&last=0&epoch=0&dur=200`, piece(0), key);
+  const partial = await fetch(`${await h.startApp()}/live/${id}/seg/1.m4s`);
+  assert.equal(partial.status, 204);
 });
 
 test('pieces sent together are split; a second that never came is skipped', async () => {

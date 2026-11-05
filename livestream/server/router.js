@@ -33,9 +33,6 @@ const MAX_SEGMENT_BYTES = 3 * 1024 * 1024;
 const MAX_INIT_BYTES = 64 * 1024;
 const MAX_THUMB_BYTES = 300 * 1024;
 const SEG_WAIT_MS = 5000;
-// A group being streamed that has had nothing new for this long is ended
-// (the seller's connection dropped); the viewer asks for the next.
-const STREAM_IDLE_MS = 4000;
 // Low-Latency HLS: a blocking playlist reload, and a piece hinted as next.
 const PLAYLIST_WAIT_MS = 3000;
 const PART_WAIT_MS = 3000;
@@ -332,48 +329,38 @@ module.exports = function createLiveRouter({
     const seq = int(String(req.params.file).replace(/\.m4s$/, ''));
     if (seq < 0) return fail(res, 400, 'Bad piece.');
     let seg = lives.segment(live, seq);
-    // The next piece (or the one after): wait for it rather than have the
-    // viewer ask again and again.
+    // The next piece (or the one after), or one still being recorded: wait
+    // until it is complete, then send it whole. Never streamed as it fills:
+    // Hostinger's CDN holds a streamed response back and the viewer got
+    // nothing at all -- "Catching up..." for good. A whole second, sent in
+    // one go, goes straight through.
     const deadline = Date.now() + SEG_WAIT_MS;
-    while (!seg && live.status !== 'ENDED' && seq > live.latestSeq && seq <= live.latestSeq + 3 && Date.now() < deadline) {
+    while ((seg ? !seg.done : (seq > live.latestSeq && seq <= live.latestSeq + 3))
+      && live.status !== 'ENDED' && Date.now() < deadline) {
       // eslint-disable-next-line no-await-in-loop
-      await lives.waitFor(live, 'seg', deadline - Date.now());
+      const woke = await lives.waitFor(live, 'seg', deadline - Date.now());
       if (res.destroyed || req.socket?.destroyed) return undefined;
+      // Too many waiting already: look again shortly instead.
+      // eslint-disable-next-line no-await-in-loop
+      if (!woke && Date.now() < deadline) await new Promise((r) => { setTimeout(r, 150); });
       seg = lives.segment(live, seq);
     }
-    if (seg) {
+    if (seg?.done) {
+      // Complete: the same for everyone, so a cache may keep it.
       res.set({
         'Content-Type': 'video/mp4',
+        'Content-Length': String(seg.data.length),
         'X-Live-Epoch': String(seg.epoch),
+        'Cache-Control': 'public, max-age=60, immutable',
         'Access-Control-Expose-Headers': 'X-Live-Epoch, X-Live-Latest',
       });
-      // Complete: the same for everyone, so a cache may keep it.
-      if (seg.done) {
-        res.set('Cache-Control', 'public, max-age=60, immutable');
-        return res.end(seg.data);
-      }
-      // Still being filled: each piece goes out the moment it arrives, in
-      // one response, so the viewer sees it a fifth of a second after the
-      // seller does rather than a second. (A proxy that holds the response
-      // back until it ends only costs that second, not the video.)
-      res.set({ 'Cache-Control': 'no-store', 'X-Accel-Buffering': 'no' });
-      res.flushHeaders();
-      let sent = 0;
-      let lastNewAt = Date.now();
-      while (!res.destroyed && !req.socket?.destroyed) {
-        while (sent < seg.parts.length) {
-          res.write(seg.parts[sent]);
-          sent += 1;
-          lastNewAt = Date.now();
-        }
-        if (seg.done || live.status === 'ENDED' || Date.now() - lastNewAt > STREAM_IDLE_MS) break;
-        // eslint-disable-next-line no-await-in-loop
-        const woke = await lives.waitFor(live, 'seg', 1000);
-        // Too many waiting already: look again shortly instead.
-        // eslint-disable-next-line no-await-in-loop
-        if (!woke) await new Promise((r) => { setTimeout(r, 150); });
-      }
-      return res.end();
+      return res.end(seg.data);
+    }
+    // Still being recorded after the wait (the seller's upload is slow):
+    // ask again.
+    if (seg && live.status !== 'ENDED') {
+      res.set('Cache-Control', 'no-store');
+      return res.status(204).end();
     }
     res.set({
       'Cache-Control': 'no-store',
