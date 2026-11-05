@@ -4,6 +4,7 @@ import './styles/fonts.css';
 import './index.css';
 import './styles/phone-app.css';
 import './styles/motion.css';
+import './styles/iconTiles.css';
 import App from './App.jsx';
 import { loadGoogleTranslate, getCurrentLanguage } from './lib/googleTranslate';
 import { startCuratedTagalog } from './lib/tagalog';

@@ -599,7 +599,7 @@ function TownOption({ label, n, on, onPick }) {
 function RouteCard({ store, route, located, onClose }) {
   return (
     <div className="sm-routecard">
-      <span className="sm-routecard-icon"><Path size={18} weight="bold" /></span>
+      <span className="sm-routecard-icon"><Path size={18} weight="fill" /></span>
       <div className="sm-routecard-text">
         {!route ? (
           <p className="sm-routecard-meta">{located ? 'Finding the way…' : 'Finding your location…'}</p>

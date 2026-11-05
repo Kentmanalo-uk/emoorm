@@ -87,7 +87,7 @@ const stepText = (step, shopName) => {
 
 const StepIcon = ({ step }) => {
   const { type, modifier = '' } = step.maneuver || {};
-  const props = { size: 16, weight: 'bold' };
+  const props = { size: 16, weight: 'fill' };
   if (type === 'depart') return <NavigationArrow {...props} weight="fill" />;
   if (type === 'arrive') return <FlagCheckered {...props} />;
   if (type === 'roundabout' || type === 'rotary') return <ArrowsClockwise {...props} />;

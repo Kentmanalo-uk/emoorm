@@ -54,7 +54,7 @@ export default function ConfirmDialog({
       <div className="cf-dialog ui-sheet-panel" ref={trapRef} onClick={(e) => e.stopPropagation()}>
         <div className="cf-dialog-body">
           <div className={`cf-dialog-icon ${!danger ? 'cf-dialog-icon--neutral' : ''}`}>
-            {danger ? <AlertTriangle size={20} /> : <HelpCircle size={20} />}
+            {danger ? <AlertTriangle size={20} weight="fill" /> : <HelpCircle size={20} weight="fill" />}
           </div>
           <div className="cf-dialog-text">
             <h3 id="cf-dialog-title">{title}</h3>

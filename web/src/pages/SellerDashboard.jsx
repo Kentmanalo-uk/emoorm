@@ -3,7 +3,7 @@ import EmptyArt from '../components/ui/EmptyArt';
 import { HOME_TOOLS, TOOLS_BY_KEY } from '../components/seller/sellerTools';
 import { Link, useOutletContext, useNavigate } from 'react-router-dom';
 import {
-  Plus, Clock, Truck, CheckCircle, Package,
+  Plus, Clock, Truck, Package,
   TrendUp as TrendingUp, Star, Users, WarningCircle, X,
   IdentificationCard, ArrowRight, CaretRight, LockSimple, Bell,
   ArrowCounterClockwise, PaintBrush, Megaphone, ShareNetwork, Check, ExclamationMark,
@@ -32,20 +32,26 @@ import './Profile.css';
 import { readCache, writeCache } from '../lib/pageCache';
 import { ShopLogoArt } from '../components/shop/ShopArt';
 
+/*
+ * Where an order stands: its words, its colour, the badge on its photo, and
+ * how far along the four steps it is (placed, being prepared, on its way or
+ * waiting, done). A cancelled order has no steps.
+ */
 const STATUS_META = {
-  PENDING: { label: 'New', tint: 'sc-tint-amber', Icon: Clock },
-  CONFIRMED: { label: 'Confirmed', tint: 'sc-tint-blue', Icon: CheckCircle },
-  PREPARING: { label: 'Preparing', tint: 'sc-tint-blue', Icon: Package },
-  TO_SHIP: { label: 'To ship', tint: 'sc-tint-blue', Icon: Truck },
-  READY: { label: 'Ready', tint: 'sc-tint-blue', Icon: Truck },
-  OUT_FOR_DELIVERY: { label: 'Out for delivery', tint: 'sc-tint-blue', Icon: Truck },
-  SHIPPED: { label: 'Shipped', tint: 'sc-tint-blue', Icon: Truck },
-  READY_FOR_PICKUP: { label: 'Ready for pickup', tint: 'sc-tint-blue', Icon: Package },
-  DELIVERED: { label: 'Delivered', tint: 'sc-tint-green', Icon: CheckCircle },
-  PICKED_UP: { label: 'Picked up', tint: 'sc-tint-green', Icon: CheckCircle },
-  COMPLETED: { label: 'Completed', tint: 'sc-tint-green', Icon: CheckCircle },
-  CANCELLED: { label: 'Cancelled', tint: 'sc-tint-red', Icon: Clock },
+  PENDING: { label: 'New', tone: 'amber', Icon: Clock, step: 1 },
+  CONFIRMED: { label: 'Confirmed', tone: 'blue', Icon: Check, step: 2 },
+  PREPARING: { label: 'Preparing', tone: 'blue', Icon: Package, step: 2 },
+  TO_SHIP: { label: 'To ship', tone: 'blue', Icon: Package, step: 3 },
+  READY: { label: 'Ready', tone: 'blue', Icon: Package, step: 3 },
+  OUT_FOR_DELIVERY: { label: 'Out for delivery', tone: 'blue', Icon: Truck, step: 3 },
+  SHIPPED: { label: 'Shipped', tone: 'blue', Icon: Truck, step: 3 },
+  READY_FOR_PICKUP: { label: 'Ready for pickup', tone: 'blue', Icon: Package, step: 3 },
+  DELIVERED: { label: 'Delivered', tone: 'green', Icon: Check, step: 4 },
+  PICKED_UP: { label: 'Picked up', tone: 'green', Icon: Check, step: 4 },
+  COMPLETED: { label: 'Completed', tone: 'green', Icon: Check, step: 4 },
+  CANCELLED: { label: 'Cancelled', tone: 'red', Icon: X, step: 0 },
 };
+const ORDER_STEPS = 4;
 
 const TOUR_STEPS = [
   {
@@ -1298,13 +1304,9 @@ const orderDay = (value) => {
  * number stays on the order itself.
  */
 function PhoneOrderRow({ order, onClick }) {
-  const { label, tint } = STATUS_META[order.status] || STATUS_META.PENDING;
-  const items = order.items || [];
-  const first = items[0];
-  const photo = first ? lineImage(first.product, first.selectedVariations) : null;
-  const name = first?.productName || first?.product?.name || 'Order';
-  const more = items.length - 1;
-  const qty = items.reduce((sum, it) => sum + (it.quantity || 0), 0);
+  const status = STATUS_META[order.status] || STATUS_META.PENDING;
+  const { label, tone } = status;
+  const { photo, name, more, qty } = orderLook(order);
 
   return (
     <li
@@ -1314,9 +1316,7 @@ function PhoneOrderRow({ order, onClick }) {
       role="button"
       tabIndex={0}
     >
-      <span className="sh-order-img">
-        {photo ? <img src={resolveImg(photo)} srcSet={srcSetFor(photo)} sizes="64px" alt="" /> : <Package size={22} weight="fill" />}
-      </span>
+      <OrderThumb photo={photo} status={status} className="sh-order-thumb" />
       <span className="sh-order-body">
         <strong>
           {name}
@@ -1327,9 +1327,58 @@ function PhoneOrderRow({ order, onClick }) {
       </span>
       <span className="sh-order-right">
         <b>₱{formatNumber(order.total)}</b>
-        <em className={`sh-order-status is-${tint.replace('sc-tint-', '')}`}>{label}</em>
+        <OrderState label={label} tone={tone} step={status.step} />
       </span>
     </li>
+  );
+}
+
+/** An order's first product: its photo and name, and how many more and in all. */
+function orderLook(order) {
+  const items = order.items || [];
+  const first = items[0];
+  return {
+    photo: first ? lineImage(first.product, first.selectedVariations) : null,
+    name: first?.productName || first?.product?.name || 'Order',
+    more: items.length - 1,
+    qty: items.reduce((sum, it) => sum + (it.quantity || 0), 0) || order.itemsCount || 1,
+  };
+}
+
+/**
+ * The order's product photo, with where it stands as a small badge on its
+ * corner: a solid disc in the status's colour, its icon in white.
+ */
+function OrderThumb({ photo, status, className }) {
+  const { Icon, tone } = status;
+  return (
+    <span className={`ord-thumb ${className}`}>
+      <span className="ord-thumb-img">
+        {photo ? <img src={resolveImg(photo)} srcSet={srcSetFor(photo)} sizes="64px" alt="" /> : <Package size={22} weight="fill" />}
+      </span>
+      <span className={`ord-badge is-${tone}`} aria-hidden="true"><Icon size={11} weight="bold" /></span>
+    </span>
+  );
+}
+
+/**
+ * Where it stands in words, over a short track of the four steps: the steps
+ * done filled in the status's colour, the one under way breathing. A
+ * cancelled order is its words alone.
+ */
+function OrderState({ label, tone, step }) {
+  const live = step > 0 && step < ORDER_STEPS;
+  return (
+    <span className={`ord-state is-${tone}${live ? ' is-live' : ''}`}>
+      <span className="ord-state-label">{label}</span>
+      {step > 0 && (
+        <span className="ord-track" aria-hidden="true">
+          {Array.from({ length: ORDER_STEPS }, (_, i) => (
+            <i key={i} className={i < step ? (i === step - 1 && live ? 'is-now' : 'is-done') : ''} />
+          ))}
+        </span>
+      )}
+    </span>
   );
 }
 
@@ -1344,16 +1393,15 @@ function OverviewStat({ label, value, sub, warn }) {
   );
 }
 
+/**
+ * Computers: a recent order by its product's photo and name, the order's
+ * number, size and day underneath, and on the right the total over where it
+ * stands.
+ */
 function OrderRow({ order, onClick }) {
-  const meta = STATUS_META[order.status] || STATUS_META.PENDING;
-  const { Icon, label, tint } = meta;
-  const qty = order.items?.reduce((s, it) => s + (it.quantity || 0), 0) ?? order.itemsCount ?? 1;
+  const status = STATUS_META[order.status] || STATUS_META.PENDING;
+  const { photo, name, more, qty } = orderLook(order);
   const short = (order.orderNumber || order.id || '').toString().slice(-8);
-  const date = order.createdAt
-    ? new Date(order.createdAt).toLocaleDateString('en-US', {
-      month: 'numeric', day: 'numeric', year: 'numeric',
-    })
-    : '';
 
   return (
     <li
@@ -1363,16 +1411,17 @@ function OrderRow({ order, onClick }) {
       role="button"
       tabIndex={0}
     >
-      <span className={`sd-order-icon ${tint}`}>
-        <Icon size={16} />
-      </span>
+      <OrderThumb photo={photo} status={status} className="sd-order-thumb" />
       <div className="sd-order-body">
-        <strong>Order #{short}</strong>
-        <span>Qty: {qty} · {date}</span>
+        <strong>
+          {name}
+          {more > 0 && <small> + {more} more</small>}
+        </strong>
+        <span>#{short} · {qty} {qty === 1 ? 'item' : 'items'} · {orderDay(order.createdAt)}</span>
       </div>
       <div className="sd-order-right">
         <span className="sd-order-total">₱{formatNumber(order.total)}</span>
-        <span className={`sd-order-status ${tint}`}>{label}</span>
+        <OrderState label={status.label} tone={status.tone} step={status.step} />
       </div>
     </li>
   );

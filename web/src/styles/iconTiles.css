@@ -1,0 +1,196 @@
+/*
+ * Icons stand on their own: no pale tinted tile behind them, the icon
+ * itself filled with a gradient (light at the top left into deep at the
+ * bottom right) from the set components/ui/IconGradients.jsx defines once
+ * for the page (#gi-green, #gi-amber, ...).
+ *
+ * Each place that drew an icon on a tinted tile is listed here, its tone
+ * following the tile's old colour (a warning stays amber, a danger red):
+ * the tile sets --gi, its icon paints with it. The tile keeps its size, so
+ * nothing around it moves; the icon grows a little into the room the
+ * tile's colour used to take (--icon-zoom, read by every icon,
+ * lib/icons.jsx). Loaded with the app, ahead of any page's styles, so the
+ * lines that must win say !important.
+ *
+ * Generated: every selector is spelled out, no :is() lists (the build's
+ * CSS minifier dropped a whole rule while rewriting one).
+ */
+
+/* The tiles: colour gone, size kept, the icon a little larger, green unless
+   a tone below says otherwise. */
+.sc-create-icon,
+.proof-icon,
+.cf-dialog-icon,
+.fp-success-icon,
+.pf-m-purchase-icon,
+.pf-m-row-icon,
+.rp-done-icon,
+.sa-panel-icon,
+.sa-mini-icon,
+.apply-option-icon,
+.sm-routecard-icon,
+.pr-step-icon,
+.del-user-icon,
+.sr-confirm-icon,
+.hc-panel-icon,
+.sd-idv-icon,
+.sd-action-icon,
+.sfi-split-icon,
+.sh-notice-icon,
+.sqr-note-icon,
+.dash-attention > svg {
+  background: none !important;
+  border-color: transparent !important;
+  box-shadow: none !important;
+  --icon-zoom: 1.3;
+  --gi: url(#gi-green);
+}
+
+/* The big ones (a page's whole message): a touch more. */
+.fp-success-icon,
+.rp-done-icon {
+  --icon-zoom: 1.6;
+}
+
+.dash-attention > svg {
+  --icon-zoom: 1.2;
+}
+
+/* The fill: the filled icon, and any part of it drawn in the icon's colour. */
+.sc-create-icon svg[data-variant="filled"],
+.proof-icon svg[data-variant="filled"],
+.cf-dialog-icon svg[data-variant="filled"],
+.fp-success-icon svg[data-variant="filled"],
+.pf-m-purchase-icon svg[data-variant="filled"],
+.pf-m-row-icon svg[data-variant="filled"],
+.rp-done-icon svg[data-variant="filled"],
+.sa-panel-icon svg[data-variant="filled"],
+.sa-mini-icon svg[data-variant="filled"],
+.apply-option-icon svg[data-variant="filled"],
+.sm-routecard-icon svg[data-variant="filled"],
+.pr-step-icon svg[data-variant="filled"],
+.del-user-icon svg[data-variant="filled"],
+.sr-confirm-icon svg[data-variant="filled"],
+.hc-panel-icon svg[data-variant="filled"],
+.sd-idv-icon svg[data-variant="filled"],
+.sd-action-icon svg[data-variant="filled"],
+.sfi-split-icon svg[data-variant="filled"],
+.sh-notice-icon svg[data-variant="filled"],
+.sqr-note-icon svg[data-variant="filled"],
+.dash-attention > svg[data-variant="filled"] {
+  fill: var(--gi);
+}
+
+.sc-create-icon svg [fill="currentColor"],
+.proof-icon svg [fill="currentColor"],
+.cf-dialog-icon svg [fill="currentColor"],
+.fp-success-icon svg [fill="currentColor"],
+.pf-m-purchase-icon svg [fill="currentColor"],
+.pf-m-row-icon svg [fill="currentColor"],
+.rp-done-icon svg [fill="currentColor"],
+.sa-panel-icon svg [fill="currentColor"],
+.sa-mini-icon svg [fill="currentColor"],
+.apply-option-icon svg [fill="currentColor"],
+.sm-routecard-icon svg [fill="currentColor"],
+.pr-step-icon svg [fill="currentColor"],
+.del-user-icon svg [fill="currentColor"],
+.sr-confirm-icon svg [fill="currentColor"],
+.hc-panel-icon svg [fill="currentColor"],
+.sd-idv-icon svg [fill="currentColor"],
+.sd-action-icon svg [fill="currentColor"],
+.sfi-split-icon svg [fill="currentColor"],
+.sh-notice-icon svg [fill="currentColor"],
+.sqr-note-icon svg [fill="currentColor"],
+.dash-attention > svg [fill="currentColor"] {
+  fill: var(--gi);
+}
+
+/* Parts drawn as lines (a tick, a stroke) take it as their ink. */
+.sc-create-icon svg [stroke="currentColor"],
+.proof-icon svg [stroke="currentColor"],
+.cf-dialog-icon svg [stroke="currentColor"],
+.fp-success-icon svg [stroke="currentColor"],
+.pf-m-purchase-icon svg [stroke="currentColor"],
+.pf-m-row-icon svg [stroke="currentColor"],
+.rp-done-icon svg [stroke="currentColor"],
+.sa-panel-icon svg [stroke="currentColor"],
+.sa-mini-icon svg [stroke="currentColor"],
+.apply-option-icon svg [stroke="currentColor"],
+.sm-routecard-icon svg [stroke="currentColor"],
+.pr-step-icon svg [stroke="currentColor"],
+.del-user-icon svg [stroke="currentColor"],
+.sr-confirm-icon svg [stroke="currentColor"],
+.hc-panel-icon svg [stroke="currentColor"],
+.sd-idv-icon svg [stroke="currentColor"],
+.sd-action-icon svg [stroke="currentColor"],
+.sfi-split-icon svg [stroke="currentColor"],
+.sh-notice-icon svg [stroke="currentColor"],
+.sqr-note-icon svg [stroke="currentColor"],
+.dash-attention > svg [stroke="currentColor"] {
+  stroke: var(--gi);
+}
+
+/* Tones (the tile's old colour), later ones winning. */
+
+.sh-notice-icon,
+.sd-idv-icon,
+.rp-done-icon--warn,
+.dash-attention > svg,
+.sd-action.is-confirm .sd-action-icon,
+.sd-action.is-offers .sd-action-icon,
+.sd-action.is-reviews .sd-action-icon {
+  --gi: url(#gi-amber);
+}
+
+.cf-dialog-icon,
+.del-user-icon,
+.sr-confirm-icon,
+.sh-notice.is-red .sh-notice-icon,
+.sh-notice.is-bad .sh-notice-icon,
+.sd-lead.is-red .sd-idv-icon,
+.dash-attention.is-urgent > svg,
+.sfi-split-icon.is-refund {
+  --gi: url(#gi-red);
+}
+
+.sd-action.is-returns .sd-action-icon {
+  --gi: url(#gi-rose);
+}
+
+.cf-dialog-icon--neutral,
+.sm-routecard-icon,
+.sh-notice.is-blue .sh-notice-icon,
+.sd-lead.is-blue .sd-idv-icon,
+.sfi-split-icon.is-online,
+.sd-action.is-payments .sd-action-icon {
+  --gi: url(#gi-blue);
+}
+
+.sh-notice.is-green .sh-notice-icon,
+.sh-notice.is-good .sh-notice-icon,
+.sd-lead.is-green .sd-idv-icon,
+.dash-attention.is-clear > svg,
+.sfi-split-icon.is-cash {
+  --gi: url(#gi-green);
+}
+
+.sd-action.is-pack .sd-action-icon {
+  --gi: url(#gi-violet);
+}
+
+.sd-action.is-questions .sd-action-icon {
+  --gi: url(#gi-teal);
+}
+
+.sfi-split-icon.is-rider {
+  --gi: url(#gi-orange);
+}
+
+.sh-notice.is-none .sh-notice-icon {
+  --gi: url(#gi-slate);
+}
+
+/* The finance split's refund has a "−" sign, not an icon: in the red. */
+.sfi-split-icon.is-refund {
+  color: #dc2626;
+}

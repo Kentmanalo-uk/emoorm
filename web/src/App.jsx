@@ -13,6 +13,7 @@ import RoleGate from './components/RoleGate';
 import ScrollMemory from './components/ScrollMemory';
 import StatusBarTint from './components/StatusBarTint';
 import AppToaster from './components/ui/AppToaster';
+import IconGradients from './components/ui/IconGradients';
 import ActingAsBar from './components/layout/ActingAsBar';
 import NotificationWatcher from './components/NotificationWatcher';
 import ActivityBar from './components/ui/ActivityBar';
@@ -483,6 +484,8 @@ function App() {
         {/* A superadmin standing in for a shop, above every page. */}
         <ActingAsBar />
         <AppToaster />
+        {/* The icon gradients every page can fill an icon with (styles/iconTiles.css). */}
+        <IconGradients />
         <NotificationWatcher />
         {/* Long-press previews of products, shops, chats and notifications. */}
         <PeekHost />
