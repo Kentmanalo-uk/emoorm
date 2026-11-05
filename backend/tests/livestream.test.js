@@ -114,7 +114,11 @@ test('a live: pieces in, pieces out, the bag, news, the end', async () => {
   // comment every two seconds each.)
   const rude = await h.user('BUYER');
   assert.equal((await h.api('POST', `/live/${id}/comments`, { token: h.token(rude), body: { text: 'gago ka' } })).status, 422);
-  assert.equal((await h.api('POST', `/live/${id}/comments`, { token: h.token(buyer), body: { text: 'Another one!' } })).status, 429);
+  // Two at once from one person: the second waits its turn (sent together,
+  // so a slow machine cannot let the two-second window pass between them).
+  const chatty = await h.user('BUYER');
+  const pair = await Promise.all(['One!', 'Two!'].map((text) => h.api('POST', `/live/${id}/comments`, { token: h.token(chatty), body: { text } })));
+  assert.deepEqual(pair.map((r) => r.status).sort(), [201, 429]);
   assert.equal((await h.api('POST', `/live/${id}/comments`, { body: { text: 'hello' } })).status, 401);
 
   // Only the shop pins, and only from its bag; it can hide a comment.
@@ -135,7 +139,7 @@ test('a live: pieces in, pieces out, the bag, news, the end', async () => {
   const ended = await h.api('POST', `/live/${id}/end`, { token: h.token(seller) });
   assert.equal(ended.status, 200);
   assert.equal(ended.body.data.hearts, 5);
-  assert.equal(ended.body.data.comments, 1);
+  assert.equal(ended.body.data.comments, 2);
   assert.equal((await h.api('GET', `/live/${id}`)).body.data.status, 'ENDED');
   assert.equal((await fetch(`${await h.startApp()}/live/${id}/seg/3.m4s`)).status, 404);
   assert.equal((await raw('POST', `/live/${id}/seg?seq=4&epoch=0&dur=1000`, piece(4), key)).status, 410);
