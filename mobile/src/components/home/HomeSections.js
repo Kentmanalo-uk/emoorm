@@ -2,7 +2,7 @@ import { useState } from 'react';
 import { Image, Pressable, ScrollView, StyleSheet, Text, useWindowDimensions, View } from 'react-native';
 import { useRouter } from 'expo-router';
 import { ArrowRightIcon } from '../../lib/icons';
-import { resolveImg } from '../../lib/media';
+import { resolveImg, sizedImg } from '../../lib/media';
 import { font, t, text, themed } from '../../theme';
 import EmptyState from '../EmptyState';
 import HomeCategoryIcon from './HomeCategoryIcon';
@@ -12,7 +12,17 @@ import { ShopCoverArt, ShopLogoArt } from '../shop/ShopArt';
 /*
  * The pieces of Home's sections on phones (web/src/pages/Home.jsx and the
  * ≤480px rules in Home.css).
+ *
+ * Every picture here is the server's small copy for the box it is drawn in
+ * (lib/media sizedImg). They were the stored originals: eleven 1024px
+ * category pictures alone came to 46 MB of decoded bitmaps for 72px tiles.
+ * With the banners' 1600px originals (HomeBanners) that was more than a
+ * weak GPU keeps as textures, so it sent the pictures again on every frame:
+ * on a slow-GPU emulator, half a second a frame on the first scroll down
+ * Home, against about 70ms with the small copies (Android's own Settings
+ * scrolls at 65ms there).
  */
+const pic = (src, widthDp) => ({ uri: sizedImg(src, widthDp) });
 
 /** A section's title with the green arrow to its full list. */
 export function SectionHeader({ title, arrowLabel, onArrow, style }) {
@@ -75,7 +85,7 @@ export function CategoryStrip({ categories, icons }) {
             </View>
           ) : (
             <View style={styles.catImage}>
-              <Image source={{ uri: resolveImg(cat.image) }} style={styles.catPicture} resizeMode="cover" />
+              <Image source={pic(cat.image, 72)} style={styles.catPicture} resizeMode="cover" />
             </View>
           )}
           <Text style={styles.catName} numberOfLines={1}>{cat.name}</Text>
@@ -159,7 +169,7 @@ export function HomeStoreCard({ store, width }) {
       <View style={styles.storeMain}>
         <View style={styles.storeLogo}>
           {store.logo ? (
-            <Image source={{ uri: resolveImg(store.logo) || store.logo }} style={styles.fill} resizeMode="cover" />
+            <Image source={pic(store.logo, 52)} style={styles.fill} resizeMode="cover" />
           ) : <ShopLogoArt name={store.name} />}
         </View>
         <View style={styles.storeCopy}>
@@ -184,7 +194,7 @@ function StoreThumb({ src, style }) {
   return (
     <View style={[styles.thumb, style]}>
       <Image
-        source={failed ? require('../../../assets/brand-icon.png') : { uri: src }}
+        source={failed ? require('../../../assets/brand-icon.png') : pic(src, 220)}
         style={failed ? styles.thumbFallback : styles.fill}
         resizeMode={failed ? 'contain' : 'cover'}
         onError={() => setFailed(true)}
@@ -213,7 +223,7 @@ export function MunicipalityRail({ municipalities }) {
         >
           <View style={styles.muniLogo}>
             {m.logo ? (
-              <Image source={{ uri: resolveImg(m.logo) }} style={styles.fill} resizeMode="cover" accessibilityLabel={`${m.name} logo`} />
+              <Image source={pic(m.logo, 80)} style={styles.fill} resizeMode="cover" accessibilityLabel={`${m.name} logo`} />
             ) : (
               <Text style={styles.muniInitial}>{m.name?.charAt(0).toUpperCase()}</Text>
             )}

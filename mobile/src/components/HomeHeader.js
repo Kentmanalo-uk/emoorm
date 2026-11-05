@@ -7,6 +7,7 @@ import Svg, { Circle, Path, Rect } from 'react-native-svg';
 import { MagnifyingGlassIcon } from '../lib/icons';
 import { font, t, text, themed } from '../theme';
 import { fetchCategories } from '../lib/referenceData';
+import { isPageMoving } from '../lib/pageMotion';
 import { loadRecent, PLACEHOLDER_SUGGESTIONS, POPULAR_SUGGESTIONS, saveRecent } from '../lib/shellSearch';
 
 // The website's own outline camera (Header.jsx), not a Phosphor icon.
@@ -20,13 +21,15 @@ function CameraGlyph({ size = 26, color }) {
   );
 }
 
-// Swaps the suggestion every 3s with a 220ms fade, as the website does.
+// Swaps the suggestion every 3s with a 220ms fade, as the website does --
+// except under a scroll, when that swap waits for the next tick.
 function useRotatingPlaceholder() {
   const [index, setIndex] = useState(0);
   const opacity = useRef(new Animated.Value(1)).current;
   useEffect(() => {
     let timer = null;
     const tick = () => {
+      if (isPageMoving()) return;
       Animated.timing(opacity, { toValue: 0, duration: 220, useNativeDriver: true }).start(() => {
         setIndex((i) => (i + 1) % PLACEHOLDER_SUGGESTIONS.length);
         Animated.timing(opacity, { toValue: 1, duration: 220, useNativeDriver: true }).start();

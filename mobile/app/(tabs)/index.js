@@ -18,9 +18,10 @@ import HomeTodayRail from '../../src/components/home/HomeTodayRail';
 import useBrandRefresh from '../../src/components/useBrandRefresh';
 import { fetchForYou } from '../../src/lib/forYou';
 import LiveNow from '../../src/components/live/LiveNow';
-import HomeStoresMap from '../../src/components/home/HomeStoresMap';
+import { setPageMoving } from '../../src/lib/pageMotion';
 import StartSellingBubble from '../../src/components/home/StartSellingBubble';
 import { MapTrifoldIcon } from '../../src/lib/icons';
+import { MapArt } from '../../src/components/art/FlatArt';
 import {
   BannerCarousel, FALLBACK_BANNERS, PromotionPopup,
 } from '../../src/components/home/HomeBanners';
@@ -73,7 +74,6 @@ const Live = memo(LiveNow);
 const TodayRail = memo(HomeTodayRail);
 const StoreRow = memo(HomeStoreRow);
 const Towns = memo(MunicipalityRail);
-const StoresMap = memo(HomeStoresMap);
 const Card = memo(ProductCard);
 const ProductGrid = memo(function ProductGrid({ products, tileWidth }) {
   return (
@@ -84,10 +84,6 @@ const ProductGrid = memo(function ProductGrid({ products, tileWidth }) {
     </View>
   );
 });
-
-// Work for once the phone has a spare moment (InteractionManager is gone
-// from React Native; requestIdleCallback is its replacement).
-const afterFrames = (fn) => (typeof requestIdleCallback === 'function' ? requestIdleCallback(fn, { timeout: 500 }) : setTimeout(fn, 120));
 
 // How many "Suggested for You" shows. A saved page may hold more, from before.
 const SUGGESTED = 4;
@@ -117,12 +113,6 @@ export default function Home() {
   const [municipalities, setMunicipalities] = useState(() => cache.municipalities || []);
   const [featured, setFeatured] = useState(() => cache.featured || []);
   const [nearbyStores, setNearbyStores] = useState(() => cache.nearbyStores || []);
-  const [mappedStores, setMappedStores] = useState(() => cache.mappedStores || []);
-  // The map is a long way down. It loads once the page has been scrolled
-  // towards it, and this latches on: after the first time, the scroll
-  // handler below is taken off altogether, so there is no per-frame work
-  // left behind to pay for it.
-  const [mapNear, setMapNear] = useState(false);
   // Below the first screen (the towns, the nearby shops, the first Explore
   // batch): asked for once the page is scrolled a little or after a short
   // wait, so the first screen's requests go out alone (as the website's
@@ -144,19 +134,27 @@ export default function Home() {
     clearTimeout(restTimer.current);
     restTimer.current = setTimeout(() => {
       scrolling.current = false;
+      setPageMoving(false);
       const jobs = waiting.current.splice(0);
       if (jobs.length) unstable_batchedUpdates(() => jobs.forEach((job) => job()));
     }, ms);
   }, []);
+  // The page's own decorations (banners, the search word, the Start
+  // selling wave) hold still while it moves too (lib/pageMotion).
+  const moveStart = useCallback(() => {
+    scrolling.current = true;
+    setPageMoving(true);
+    clearTimeout(restTimer.current);
+  }, []);
   const scrollEvents = {
-    onScrollBeginDrag: () => { scrolling.current = true; clearTimeout(restTimer.current); },
-    onMomentumScrollBegin: () => { scrolling.current = true; clearTimeout(restTimer.current); },
+    onScrollBeginDrag: moveStart,
+    onMomentumScrollBegin: moveStart,
     // A drag that ends without a fling settles a moment later; a fling
     // cancels that and settles when it stops.
     onScrollEndDrag: () => settle(220),
     onMomentumScrollEnd: () => settle(),
   };
-  useEffect(() => () => clearTimeout(restTimer.current), []);
+  useEffect(() => () => { clearTimeout(restTimer.current); setPageMoving(false); }, []);
 
   useEffect(() => {
     if (belowNear) return undefined;
@@ -164,9 +162,6 @@ export default function Home() {
     return () => clearTimeout(timer);
   }, [belowNear, whenIdle]);
 
-  // Where the map section starts (onLayout), so the map is built only once
-  // it is about to come into view, and only at rest.
-  const mapTop = useRef(Infinity);
   const [explore, setExplore] = useState(() => cache.explore || []);
   const [explorePage, setExplorePage] = useState(() => cache.explorePage || 1);
   const [exploreHasMore, setExploreHasMore] = useState(() => Boolean(cache.exploreHasMore));
@@ -301,24 +296,6 @@ export default function Home() {
     return loadSections();
   });
 
-  // Every shop with a spot: its pin, or placed from its address
-  // (pinned: false). Asked for only once the map is being scrolled
-  // towards -- it is the largest response the home page fetches and the
-  // one furthest from what is on screen when it opens.
-  useEffect(() => {
-    if (!mapNear) return undefined;
-    let cancelled = false;
-    apiClient.get('/stores/map')
-      .then((res) => {
-        if (cancelled) return;
-        const mapped = res.data || [];
-        patchCache({ mappedStores: mapped });
-        whenIdle(() => setMappedStores(mapped));
-      })
-      .catch((err) => console.error('Failed to load home data:', err?.message || err));
-    return () => { cancelled = true; };
-  }, [mapNear, townId, whenIdle]);
-
   const loadMoreExplore = useCallback(async () => {
     if (exploreBusy.current || !exploreHasMore) return;
     exploreBusy.current = true;
@@ -353,7 +330,6 @@ export default function Home() {
   const renderExplore = useCallback(({ item }) => (
     <Card product={item} variant="home" style={{ width: tileWidth }} />
   ), [tileWidth]);
-  const { height: screenH } = useWindowDimensions();
 
   return (
     <View style={styles.screen}>
@@ -375,17 +351,11 @@ export default function Home() {
         contentContainerStyle={styles.content}
         onEndReached={() => { if (!exploreFailed) loadMoreExplore(); }}
         onEndReachedThreshold={1.5}
-        // Only until the map has been asked for; then it is undefined and
-        // nothing runs on scroll at all.
-        onScroll={mapNear && Platform.OS !== 'ios' ? undefined : (e) => {
+        // Only until the sections below the first screen have been asked
+        // for; then (on Android) it is undefined and nothing runs on scroll.
+        onScroll={belowNear && Platform.OS !== 'ios' ? undefined : (e) => {
           pull.trackPull(e);
-          const y = e.nativeEvent.contentOffset.y;
-          if (!belowNear && y > 120) whenIdle(() => setBelowNear(true));
-          // Built when the map is within a screen and a half of view, once
-          // the scroll rests and anything else on screen has finished.
-          if (!mapNear && y + screenH * 1.5 > mapTop.current) {
-            whenIdle(() => afterFrames(() => setMapNear(true)));
-          }
+          if (!belowNear && e.nativeEvent.contentOffset.y > 120) whenIdle(() => setBelowNear(true));
         }}
         {...scrollEvents}
         scrollEventThrottle={Platform.OS === 'ios' ? 32 : 250}
@@ -462,34 +432,28 @@ export default function Home() {
           <Towns municipalities={municipalities} />
         </View>
 
-        {/* Discover Stores map */}
-        <View
-          style={[styles.whiteSection, styles.mapSection]}
-          onLayout={(e) => { mapTop.current = e.nativeEvent.layout.y; }}
-        >
+        {/* Discover Stores: only a way in. Nothing of the map is loaded on
+            Home -- not the shops (GET /stores/map, the largest answer Home
+            asked for) and not one map tile; the full map (app/store-map.js)
+            loads them when it is opened. */}
+        <View style={[styles.whiteSection, styles.mapSection]}>
           <SectionHeader title="Discover Stores" arrowLabel="Open the stores map" onArrow={() => router.push('/store-map')} />
-          {/* A tapped pin, or the button, opens the full map (app/store-map.js). */}
-          <View>
-            {mapNear ? (
-              <StoresMap
-                stores={mappedStores}
-                height={340}
-                onSelect={(store) => router.push({ pathname: '/store-map', params: { focus: store.id } })}
-              />
-            ) : (
-              // The same height, so the page does not jump when the map
-              // arrives and the scroll position stays where it was.
-              <View style={styles.mapWaiting} />
-            )}
-            <Pressable
-              accessibilityRole="button"
-              onPress={() => router.push('/store-map')}
-              style={({ pressed }) => [styles.mapOpen, pressed && styles.mapOpenPressed]}
-            >
-              <MapTrifoldIcon size={16} weight="fill" color="#fff" />
-              <Text style={styles.mapOpenText}>Open full map</Text>
-            </Pressable>
-          </View>
+          <Pressable
+            accessibilityRole="button"
+            accessibilityLabel="Open the full stores map"
+            onPress={() => router.push('/store-map')}
+            style={({ pressed }) => [styles.mapCard, pressed && styles.mapCardPressed]}
+          >
+            <MapArt size={56} />
+            <View style={styles.mapCopy}>
+              <Text style={styles.mapTitle}>Every shop on the map</Text>
+              <Text style={styles.mapBody}>Find the shops in your town and get directions.</Text>
+              <View style={styles.mapOpen}>
+                <MapTrifoldIcon size={16} weight="fill" color="#fff" />
+                <Text style={styles.mapOpenText}>Open full map</Text>
+              </View>
+            </View>
+          </Pressable>
         </View>
 
             {/* Explore Products: the heading here, the grid below as
@@ -533,14 +497,19 @@ const styles = themed(() => StyleSheet.create({
   railSection: { paddingLeft: 12 },
   railHeader: { paddingRight: 12 },
   categoriesTitle: { paddingRight: 12, marginBottom: 12, fontSize: 18, lineHeight: 22.5, ...font(500), color: t.neutral[900] },
-  mapWaiting: { height: 340, backgroundColor: t.neutral[100] },
   mapSection: { paddingHorizontal: 12 },
-  mapOpen: {
-    position: 'absolute', right: 10, bottom: 22, flexDirection: 'row', alignItems: 'center', gap: 6,
-    height: 38, paddingHorizontal: 16, borderRadius: 999, backgroundColor: t.primary[600],
-    boxShadow: [{ offsetX: 0, offsetY: 4, blurRadius: 12, color: 'rgba(4, 120, 87, 0.3)' }],
+  mapCard: {
+    flexDirection: 'row', alignItems: 'center', gap: 14, padding: 16, borderRadius: 14,
+    backgroundColor: t.primary[50],
   },
-  mapOpenPressed: { backgroundColor: t.primary[700] },
+  mapCardPressed: { opacity: 0.85 },
+  mapCopy: { flex: 1, minWidth: 0, alignItems: 'flex-start', gap: 4 },
+  mapTitle: { fontSize: 15.5, lineHeight: 20, ...font(600), color: t.neutral[900] },
+  mapBody: { fontSize: 13, lineHeight: 18, ...font(400), color: t.neutral[600] },
+  mapOpen: {
+    marginTop: 8, flexDirection: 'row', alignItems: 'center', gap: 6,
+    height: 38, paddingHorizontal: 16, borderRadius: 999, backgroundColor: t.primary[600],
+  },
   mapOpenText: { fontSize: 13.5, lineHeight: 17, color: t.onBrand, ...font(600) },
 
   // Sections on the page background (Suggested, Stores, Explore).

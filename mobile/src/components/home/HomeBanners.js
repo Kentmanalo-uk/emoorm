@@ -5,6 +5,8 @@ import {
 import { useRouter } from 'expo-router';
 import { XIcon } from '../../lib/icons';
 import { appPath } from '../../lib/notificationLink';
+import { galleryImg } from '../../lib/media';
+import { isPageMoving } from '../../lib/pageMotion';
 import { ink, t, themed, veil } from '../../theme';
 
 /*
@@ -24,7 +26,9 @@ const SLIDE_MS = 600;
 const AUTO_MS = 5000;
 const slideEasing = Easing.bezier(0.4, 0, 0.2, 1);
 
-const source = (banner) => (banner.image ? banner.image : { uri: banner.imageUrl });
+// The server's 960px copy, not the 1600px original: the same picture at a
+// phone's width, and a third of the memory once decoded (5.8 MB a slide).
+const source = (banner, width) => (banner.image ? banner.image : { uri: galleryImg(banner.imageUrl, width) });
 
 /** Opens a banner's link: outside links in the browser, our paths in the app. */
 export function useOpenBannerLink() {
@@ -81,10 +85,17 @@ export function BannerCarousel({ banners }) {
   const goToRef = useRef(goTo);
   goToRef.current = goTo;
 
-  // Auto-advance, restarted by every slide change.
+  // Auto-advance, restarted by every slide change. Never under a scroll:
+  // a slide moving while the page is flung is two animations in every
+  // frame, so the next slide waits for the page to come to rest.
   useEffect(() => {
     if (count <= 1 || moving) return undefined;
-    const timer = setTimeout(() => goToRef.current(indexRef.current + 1), AUTO_MS);
+    let timer = null;
+    const advance = () => {
+      if (isPageMoving()) { timer = setTimeout(advance, 800); return; }
+      goToRef.current(indexRef.current + 1);
+    };
+    timer = setTimeout(advance, AUTO_MS);
     return () => clearTimeout(timer);
   }, [count, index, moving]);
 
@@ -102,7 +113,16 @@ export function BannerCarousel({ banners }) {
 
   if (!count) return <View style={[styles.carousel, { height }]} />;
 
-  const realIndex = index === 0 ? count - 1 : index === count + 1 ? 0 : index - 1;
+  const realOf = (i) => (i === 0 ? count - 1 : i === count + 1 ? 0 : i - 1);
+  const realIndex = realOf(index);
+  // Only the slide on show and the one either side (the next to slide in,
+  // or to be dragged into view) hold a picture; the rest are empty boxes
+  // of the same size: three decoded pictures held instead of every one, which
+  // on a phone with 2 GB is memory the rest of Home needs.
+  const near = (i) => {
+    const d = Math.abs(realOf(i) - realIndex);
+    return d <= 1 || d === count - 1;
+  };
 
   return (
     <View style={[styles.carousel, { height }]} {...pan.panHandlers}>
@@ -116,7 +136,7 @@ export function BannerCarousel({ banners }) {
             onPress={() => openLink(banner.linkUrl)}
             style={{ width, height }}
           >
-            <Image source={source(banner)} style={styles.slideImage} resizeMode="cover" />
+            {near(i) ? <Image source={source(banner, width)} style={styles.slideImage} resizeMode="cover" /> : null}
           </Pressable>
         ))}
       </Animated.View>

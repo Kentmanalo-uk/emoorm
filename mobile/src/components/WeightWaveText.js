@@ -3,6 +3,7 @@ import {
   Animated, Easing, StyleSheet, View,
 } from 'react-native';
 import { font, themed, t } from '../theme';
+import { isPageMoving, onPageMotion } from '../lib/pageMotion';
 
 /*
  * Words in a weight wave (the Start selling sticker's, and the signed-out
@@ -17,26 +18,59 @@ import { font, themed, t } from '../theme';
  *
  * style:  size, line height and colour (the weight is the wave's)
  * period: one wave and its rest, in ms
+ * rest:   a further pause between waves, in ms
  * paused: hold still (regular weight)
+ *
+ * Between waves nothing runs at all, and no wave starts or carries on
+ * while the page under it is being scrolled (lib/pageMotion): a running
+ * animation makes Android redraw the whole window every frame, and this
+ * sits over Home, where that window is the banners, the shortcuts and
+ * every card on screen.
  */
 const clamp = { extrapolate: 'clamp' };
+// The last letter's wave ends here; past it nothing changes.
+const WAVE_END = 0.75;
 
-export default function WeightWaveText({ text, style, period = 2800, paused = false }) {
+export default function WeightWaveText({
+  text, style, period = 2800, rest = 2000, paused = false,
+}) {
   const wave = useRef(new Animated.Value(0)).current;
 
   useEffect(() => {
     if (paused) return undefined;
-    // Restarted by hand rather than Animated.loop, which the web build does not run natively.
+    // Restarted by hand rather than Animated.loop, which the web build
+    // does not run natively, and so the rest between waves draws nothing.
     let on = true;
-    const run = () => {
+    let running = false;
+    let timer = null;
+    const later = (ms) => { clearTimeout(timer); timer = setTimeout(run, ms); };
+    function run() {
+      timer = null;
+      // A scroll in progress: the end of it starts the next wave.
+      if (!on || isPageMoving()) return;
+      running = true;
       wave.setValue(0);
       Animated.timing(wave, {
-        toValue: 1, duration: period, easing: Easing.linear, useNativeDriver: true,
-      }).start(({ finished }) => { if (finished && on) run(); });
-    };
+        toValue: WAVE_END, duration: period * WAVE_END, easing: Easing.linear, useNativeDriver: true,
+      }).start(({ finished }) => {
+        running = false;
+        if (!on) return;
+        if (finished) later(period * (1 - WAVE_END) + rest);
+        // Stopped by a scroll that has already ended by the time the
+        // native side says so: nothing else would start it again.
+        else if (!timer && !isPageMoving()) later(600);
+      });
+    }
+    const off = onPageMotion((moving) => {
+      if (moving) {
+        clearTimeout(timer);
+        timer = null;
+        if (running) { wave.stopAnimation(); wave.setValue(0); }
+      } else if (on && !running && !timer) later(600);
+    });
     run();
-    return () => { on = false; wave.stopAnimation(); };
-  }, [paused, period, wave]);
+    return () => { on = false; clearTimeout(timer); off(); wave.stopAnimation(); };
+  }, [paused, period, rest, wave]);
 
   const letters = [...text];
   const last = Math.max(1, letters.length - 1);
