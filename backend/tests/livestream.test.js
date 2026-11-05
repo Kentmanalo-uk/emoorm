@@ -158,3 +158,65 @@ test('the microphone worklet is served from the site itself', async () => {
   assert.match(res.headers.get('content-type'), /javascript/);
   assert.match(await res.text(), /registerProcessor\('emoorm-mic-tap'/);
 });
+
+test('a second streams out piece by piece as the seller uploads it', async () => {
+  const seller = await h.user('SELLER');
+  await h.shop(seller);
+  const { id, key } = (await h.api('POST', '/live', { token: h.token(seller), body: {} })).body.data;
+  await raw('PUT', `/live/${id}/init?epoch=0&codecs=avc1.42e01f,opus`, piece('init'), key);
+
+  // A viewer asks for the second before it starts.
+  const started = Date.now();
+  const res = fetch(`${await h.startApp()}/live/${id}/seg/0.m4s`);
+  const arrivals = [];
+  const reading = res.then(async (r) => {
+    assert.equal(r.status, 200);
+    const reader = r.body.getReader();
+    let bytes = 0;
+    for (;;) {
+      // eslint-disable-next-line no-await-in-loop
+      const { done, value } = await reader.read();
+      if (done) break;
+      bytes += value.length;
+      arrivals.push(Date.now() - started);
+    }
+    return bytes;
+  });
+  for (let p = 0; p < 4; p += 1) {
+    // eslint-disable-next-line no-await-in-loop
+    assert.equal((await raw('POST', `/live/${id}/seg?seq=0&part=${p}&last=${p === 3 ? 1 : 0}&epoch=0&dur=200`, piece(p), key)).status, 200);
+    // eslint-disable-next-line no-await-in-loop
+    await new Promise((r) => { setTimeout(r, 120); });
+  }
+  assert.equal(await reading, 4 * 64);
+  // Each piece came as it was sent, not all together at the end.
+  assert.ok(arrivals.length >= 3, `arrived in ${arrivals.length} chunks`);
+  assert.ok(arrivals[0] < arrivals[arrivals.length - 1] - 200, `spread over time: ${arrivals.join(', ')}`);
+
+  // Once complete it is one cacheable whole.
+  const whole = await fetch(`${await h.startApp()}/live/${id}/seg/0.m4s`);
+  assert.match(whole.headers.get('cache-control'), /immutable/);
+  assert.equal((await whole.arrayBuffer()).byteLength, 4 * 64);
+});
+
+test('pieces sent together are split; a second that never came is skipped', async () => {
+  const seller = await h.user('SELLER');
+  await h.shop(seller);
+  const { id, key } = (await h.api('POST', '/live', { token: h.token(seller), body: {} })).body.data;
+  await raw('PUT', `/live/${id}/init?epoch=0&codecs=avc1.42e01f,opus`, piece('init'), key);
+
+  // Three pieces in one upload (the seller had fallen behind).
+  const three = Buffer.concat([piece(0), piece(1), piece(2)]);
+  assert.equal((await raw('POST', `/live/${id}/seg?seq=0&part=0&last=1&epoch=0&dur=600&sizes=64,64,64&durs=200,200,200`, three, key)).status, 200);
+  const seg0 = await fetch(`${await h.startApp()}/live/${id}/seg/0.m4s`);
+  assert.deepEqual(Buffer.from(await seg0.arrayBuffer()), three);
+  // Sizes that do not add up are refused.
+  assert.equal((await raw('POST', `/live/${id}/seg?seq=1&part=0&epoch=0&dur=400&sizes=64,10&durs=200,200`, Buffer.concat([piece(0), piece(1)]), key)).status, 400);
+
+  // Second 1 never arrives (its start was dropped); second 2 does.
+  assert.equal((await raw('POST', `/live/${id}/seg?seq=1&part=2&epoch=0&dur=200`, piece(9), key)).status, 200);
+  await raw('POST', `/live/${id}/seg?seq=2&part=0&last=1&epoch=0&dur=200`, piece(2), key);
+  const skipped = await fetch(`${await h.startApp()}/live/${id}/seg/1.m4s`);
+  assert.equal(skipped.status, 410);
+  assert.equal((await skipped.json()).nextSeq, 2);
+});

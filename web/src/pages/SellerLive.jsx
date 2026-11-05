@@ -26,16 +26,63 @@ const KEEP_COMMENTS = 50;
 
 const isPhoneScreen = () => window.matchMedia?.('(max-width: 768px)').matches;
 
-/** Camera and microphone, upright on a phone, wide on a computer. */
-const openCamera = (facing) => navigator.mediaDevices.getUserMedia({
-  video: {
-    facingMode: facing,
-    width: { ideal: isPhoneScreen() ? 720 : 1280 },
-    height: { ideal: isPhoneScreen() ? 1280 : 720 },
-    frameRate: { ideal: 30, max: 30 },
-  },
-  audio: { echoCancellation: true, noiseSuppression: true, autoGainControl: true },
-});
+/**
+ * Camera and microphone, upright on a phone, wide on a computer. A camera
+ * that refuses the size or frame rate asked for is asked again, plainly.
+ */
+const openCamera = async (facing) => {
+  const tries = [
+    {
+      video: {
+        facingMode: facing,
+        width: { ideal: isPhoneScreen() ? 720 : 1280 },
+        height: { ideal: isPhoneScreen() ? 1280 : 720 },
+        frameRate: { ideal: 30, max: 30 },
+      },
+      audio: { echoCancellation: true, noiseSuppression: true, autoGainControl: true },
+    },
+    { video: { facingMode: facing }, audio: true },
+    { video: true, audio: true },
+  ];
+  let last;
+  for (const constraints of tries) {
+    try {
+      return await navigator.mediaDevices.getUserMedia(constraints);
+    } catch (err) {
+      last = err;
+      // A refusal is the person's answer: asking again differently will not change it.
+      if (err?.name === 'NotAllowedError' || err?.name === 'SecurityError') throw err;
+    }
+  }
+  throw last;
+};
+
+// Facebook, Messenger, Instagram, TikTok and similar open links in their own
+// browser, which does not let pages use the camera.
+const IN_APP_BROWSER = /FBAN|FBAV|FB_IAB|Messenger|Instagram|Line\/|TikTok|musical_ly|BytedanceWebview/i;
+
+/** What to tell the seller when the camera did not open. */
+const cameraTrouble = (err) => {
+  if (IN_APP_BROWSER.test(navigator.userAgent || '')) {
+    return 'This app’s built-in browser cannot use the camera. Tap ⋯ and choose "Open in browser" (Chrome), then go live from there.';
+  }
+  if (!window.isSecureContext || !navigator.mediaDevices?.getUserMedia) {
+    return 'The camera only works on the secure site. Open https://emoorm.shop/seller/live in Chrome.';
+  }
+  switch (err?.name) {
+    case 'NotAllowedError':
+    case 'SecurityError':
+      return 'Camera or microphone is blocked. Tap the icon left of the address (🔒 or ⓘ) › Permissions, allow Camera and Microphone, then tap Try again.';
+    case 'NotFoundError':
+    case 'OverconstrainedError':
+      return 'No camera or microphone was found on this device.';
+    case 'NotReadableError':
+    case 'AbortError':
+      return 'Another app is using the camera. Close it (a video call, the camera app), then tap Try again.';
+    default:
+      return 'The camera could not be opened. Tap Try again.';
+  }
+};
 
 const stopStream = (stream) => stream?.getTracks().forEach((t) => t.stop());
 
@@ -75,6 +122,7 @@ export default function SellerLive() {
   const [summary, setSummary] = useState(null);
   const [offline, setOffline] = useState(false);
   const [camReady, setCamReady] = useState(false);
+  const [camAsking, setCamAsking] = useState(false);
 
   const preview = useRef(null);
   const stream = useRef(null);
@@ -100,24 +148,34 @@ export default function SellerLive() {
     }
   }, []);
 
+  // Asked for from a tap (Turn on camera): browsers quietly hold back a
+  // permission prompt that no tap asked for.
+  const turnOnCamera = useCallback(async () => {
+    if (stream.current) return;
+    setCamAsking(true);
+    setCamError('');
+    try {
+      if (!window.isSecureContext || !navigator.mediaDevices?.getUserMedia || IN_APP_BROWSER.test(navigator.userAgent || '')) {
+        throw new Error('unavailable');
+      }
+      showStream(await openCamera(facing));
+    } catch (err) {
+      setCamError(cameraTrouble(err));
+    } finally {
+      setCamAsking(false);
+    }
+  }, [facing, showStream]);
+
+  // Already allowed (a seller who has gone live before): no tap needed.
   useEffect(() => {
-    if (!support?.ok) return undefined;
     let cancelled = false;
-    openCamera('user')
-      .then((s) => {
-        if (cancelled) { stopStream(s); return; }
-        showStream(s);
-      })
-      .catch((err) => {
-        if (cancelled) return;
-        setCamError(err?.name === 'NotAllowedError'
-          ? 'Allow the camera and microphone for E-MOORM in your browser, then reload this page.'
-          : 'The camera could not be opened. Close other apps using it and reload this page.');
-      });
-    return () => {
-      cancelled = true;
-    };
-  }, [support, showStream]);
+    navigator.permissions?.query({ name: 'camera' })
+      .then((state) => { if (!cancelled && state.state === 'granted') turnOnCamera(); })
+      .catch(() => {});
+    return () => { cancelled = true; };
+    // Once, on opening the page.
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, []);
 
   // Everything stops when the page closes.
   useEffect(() => () => {
@@ -465,8 +523,20 @@ export default function SellerLive() {
         <section className="slv-camera">
           <div className="slv-preview">
             <video ref={preview} className={`slv-video${facing === 'user' ? ' is-mirrored' : ''}`} muted playsInline autoPlay />
-            {!camReady && !camError && support?.ok && <div className="lw-loading"><span className="lw-spinner" />Opening the camera…</div>}
-            {camError && <div className="lw-loading">{camError}</div>}
+            {!camReady && (
+              <div className="lw-loading slv-cam-ask">
+                {camAsking ? (
+                  <><span className="lw-spinner" />Waiting for the camera…<small>Choose Allow when your browser asks.</small></>
+                ) : (
+                  <>
+                    {camError ? <p>{camError}</p> : <p>Your camera and microphone are used only while you are live. Nothing is recorded.</p>}
+                    <button type="button" className="slv-go is-small" onClick={turnOnCamera}>
+                      <VideoCamera size={16} weight="fill" /> {camError ? 'Try again' : 'Turn on camera'}
+                    </button>
+                  </>
+                )}
+              </div>
+            )}
             <div className="slv-preview-tools">
               <button type="button" className="lw-round" onClick={toggleMic} aria-label={micOn ? 'Mute the microphone' : 'Turn the microphone on'} aria-pressed={!micOn}>
                 {micOn ? <MicIcon /> : <MicOffIcon />}

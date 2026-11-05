@@ -17,7 +17,10 @@ import {
   initSegment, mediaSegment, avcCodec, aacConfig, VIDEO_TIMESCALE,
 } from './fmp4.js';
 
+// A key frame every second (where a viewer can start), sent in pieces of
+// a fifth of a second (how soon a viewer sees it).
 const SEGMENT_US = 1000000;
+const PART_US = 200000;
 const FPS = 30;
 const SAMPLE_RATE = 48000;
 const AUDIO_BLOCK = 1024;
@@ -101,7 +104,10 @@ export class LivePublisher {
     this.rung = 0;
     this.queue = [];
     this.uploading = false;
-    this.seq = 0;
+    this.gop = -1;
+    this.part = 0;
+    this.frag = 0;
+    this.skipGop = false;
     this.epoch = -1;
     this.t0 = null;
     this.pendingVideo = [];
@@ -121,7 +127,8 @@ export class LivePublisher {
     this.id = id;
     this.key = key;
     this.queue = [];
-    this.seq = 0;
+    this.gop = -1;
+    this.part = 0;
     this.epoch = -1;
     this.gone = false;
     // The next piece starts on a key frame, after a fresh init (the
@@ -315,16 +322,26 @@ export class LivePublisher {
     const key = chunk.type === 'key';
     if (key) {
       if (this.t0 === null) this.t0 = chunk.timestamp;
-      if (this.pendingVideo.length) this.flush(chunk.timestamp);
+      // The group of pictures before this one is complete.
+      if (this.pendingVideo.length) this.flush(chunk.timestamp, true);
       const description = meta?.decoderConfig?.description;
       if (description) {
         const avcC = new Uint8Array(description.buffer ? description.buffer.slice(description.byteOffset ?? 0, (description.byteOffset ?? 0) + description.byteLength) : description);
         if (!this.avcC || !sameBytes(avcC, this.avcC)) this.newEpoch(avcC);
       }
+      // A new group: numbered pieces start again, and one that was being
+      // skipped (the upload fell behind) is over.
+      this.gop += 1;
+      this.part = 0;
+      this.skipGop = false;
+    } else if (this.pendingVideo.length && chunk.timestamp - this.pendingVideo[0].ts >= PART_US) {
+      // A fifth of a second gathered: off it goes, without waiting for the
+      // group to end. This is what keeps viewers close to now.
+      this.flush(chunk.timestamp, false);
     }
     // Nothing before the first set-up and key frame.
     if (!this.avcC || this.t0 === null) return;
-    if (!this.pendingVideo.length && !key) return;
+    if (this.gop < 0 || (!this.pendingVideo.length && !key && this.part === 0)) return;
     this.pendingVideo.push({ data, ts: chunk.timestamp, key });
   }
 
@@ -390,41 +407,62 @@ export class LivePublisher {
 
   // ── Pieces ────────────────────────────────────────────────────────────
 
-  /** One piece: the frames since the last key frame, up to `nextKeyTs`. */
-  flush(nextKeyTs) {
+  /**
+   * One piece (a fifth of a second): the frames gathered, up to `nextTs`.
+   * `last`: it ends its group of pictures (the next frame is a key frame).
+   */
+  flush(nextTs, last) {
     const frames = this.pendingVideo;
     this.pendingVideo = [];
     const tick = (ts) => Math.round(((ts - this.t0) * VIDEO_TIMESCALE) / 1e6);
     const samples = frames.map((f, i) => {
-      const next = i + 1 < frames.length ? frames[i + 1].ts : nextKeyTs;
+      const next = i + 1 < frames.length ? frames[i + 1].ts : nextTs;
       return { data: f.data, key: f.key, duration: Math.max(1, tick(next) - tick(f.ts)) };
     });
     const audio = this.pendingAudio;
     this.pendingAudio = [];
-    this.seq += 1;
+    const part = this.part;
+    this.part += 1;
+    // The rest of a group whose start was dropped cannot be shown: skipped.
+    if (this.skipGop) return;
+    this.frag += 1;
     const data = mediaSegment(
-      this.seq,
+      this.frag,
       { baseTime: tick(frames[0].ts), samples },
       audio.length ? { baseTime: audio[0].tick, samples: audio } : null,
     );
     this.enqueue({
-      kind: 'seg',
-      seq: this.seq - 1,
+      kind: 'part',
+      seq: this.gop,
+      part,
+      last,
       epoch: this.epoch,
-      dur: Math.max(1, Math.round((nextKeyTs - frames[0].ts) / 1000)),
+      dur: Math.max(1, Math.round((nextTs - frames[0].ts) / 1000)),
       data,
     });
   }
 
+  /** Milliseconds of video waiting to be uploaded. */
+  waitingMs() {
+    return this.queue.reduce((n, q) => n + (q.dur || 0), 0);
+  }
+
   enqueue(item) {
-    // Two seconds behind: the picture gets lighter. Four: the oldest piece
-    // goes too (an init never does), so viewers stay close to now.
-    const segs = this.queue.filter((q) => q.kind === 'seg');
-    if (item.kind === 'seg' && segs.length >= 2) this.stepDown();
-    if (item.kind === 'seg' && segs.length >= 4) {
-      const drop = segs[0];
-      this.queue.splice(this.queue.indexOf(drop), 1);
-      this.stats.dropped += 1;
+    if (item.kind === 'part') {
+      const waiting = this.waitingMs();
+      // A second behind: the picture gets lighter.
+      if (waiting >= 1000) this.stepDown();
+      // Two: what is waiting is dropped (an init never is) and the rest of
+      // this group with it, and the next starts at once, so viewers stay
+      // close to now rather than watching the past arrive late.
+      if (waiting >= 2000) {
+        const before = this.queue.length;
+        this.queue = this.queue.filter((q) => q.kind === 'init' || q.inFlight);
+        this.stats.dropped += before - this.queue.length;
+        this.skipGop = true;
+        this.forceKey = true;
+        return;
+      }
     }
     this.queue.push(item);
     this.pump();
@@ -449,20 +487,21 @@ export class LivePublisher {
     this.uploading = true;
     try {
       while (this.running && this.queue.length && !this.gone) {
-        const item = this.queue[0];
+        const item = this.nextUpload();
         const started = performance.now();
         // eslint-disable-next-line no-await-in-loop
         const done = await this.upload(item);
-        if (this.queue[0] === item) this.queue.shift();
+        this.queue = this.queue.filter((q) => !q.inFlight);
         if (!done) continue;
         this.stats.sentBytes += item.data.byteLength;
         // Sent in well under its own length, with nothing waiting: room for more.
-        if (item.kind === 'seg' && !this.queue.length && performance.now() - started < item.dur * 0.35) this.stepUp();
+        if (item.kind === 'part' && !this.queue.length && performance.now() - started < item.dur * 0.35) this.stepUp();
         this.onStats({
           ...this.stats,
           seconds: Math.round((Date.now() - this.stats.startedAt) / 1000),
           kbps: Math.round(LADDER[this.rung] / 1000),
-          behind: this.queue.length,
+          // Seconds of video still to upload.
+          behind: Math.floor(this.waitingMs() / 1000),
         });
       }
     } finally {
@@ -470,10 +509,51 @@ export class LivePublisher {
     }
   }
 
+  /**
+   * What goes up next: the first waiting item, or, when pieces of one group
+   * have piled up (a slow or far connection), all of them in one request.
+   * One request per piece pays the trip to the server five times a second;
+   * a pile sent together pays it once, so a slow upload catches up rather
+   * than falling further behind.
+   */
+  nextUpload() {
+    const first = this.queue[0];
+    first.inFlight = true;
+    if (first.kind !== 'part') return first;
+    const batch = [first];
+    for (let i = 1; i < this.queue.length && batch.length < 8; i += 1) {
+      const next = this.queue[i];
+      const prev = batch[batch.length - 1];
+      if (next.kind !== 'part' || next.seq !== first.seq || next.epoch !== first.epoch || next.part !== prev.part + 1 || prev.last) break;
+      next.inFlight = true;
+      batch.push(next);
+    }
+    if (batch.length === 1) return first;
+    const size = batch.reduce((n, b) => n + b.data.byteLength, 0);
+    const data = new Uint8Array(size);
+    let at = 0;
+    for (const b of batch) {
+      data.set(b.data, at);
+      at += b.data.byteLength;
+    }
+    return {
+      kind: 'part',
+      seq: first.seq,
+      part: first.part,
+      last: batch[batch.length - 1].last,
+      epoch: first.epoch,
+      dur: batch.reduce((n, b) => n + b.dur, 0),
+      sizes: batch.map((b) => b.data.byteLength),
+      durs: batch.map((b) => b.dur),
+      data,
+    };
+  }
+
   async upload(item) {
+    const many = item.sizes ? `&sizes=${item.sizes.join(',')}&durs=${item.durs.join(',')}` : '';
     const url = item.kind === 'init'
       ? `${this.base}/${this.id}/init?epoch=${item.epoch}&codecs=${encodeURIComponent(item.codecs)}`
-      : `${this.base}/${this.id}/seg?seq=${item.seq}&epoch=${item.epoch}&dur=${item.dur}`;
+      : `${this.base}/${this.id}/seg?seq=${item.seq}&part=${item.part}&last=${item.last ? 1 : 0}&epoch=${item.epoch}&dur=${item.dur}${many}`;
     for (let attempt = 0; attempt < 3 && this.running; attempt += 1) {
       try {
         // eslint-disable-next-line no-await-in-loop
@@ -483,10 +563,12 @@ export class LivePublisher {
           body: item.data,
         });
         if (res.ok) {
-          if (item.kind === 'seg') {
+          if (item.kind === 'part' && item.last) {
             // eslint-disable-next-line no-await-in-loop
             const body = await res.json().catch(() => null);
             if (body?.data?.viewers != null) this.stats.viewers = body.data.viewers;
+          } else {
+            res.body?.cancel?.().catch?.(() => {});
           }
           return true;
         }

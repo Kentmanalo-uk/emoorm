@@ -5,7 +5,7 @@ media server, and it records nothing.
 
 ```
 seller's browser                     backend (this module)                 viewer
-camera ─ WebCodecs ─ 1 s fMP4 ─PUT/POST─▶ last 8 pieces in memory ─GET─▶ Media Source / HLS
+camera ─ WebCodecs ─ 0.2 s fMP4 ─POST─▶ last 8 seconds in memory ─streamed GET─▶ Media Source / HLS
 (client/publisher.js, fmp4.js)        (server/sessions.js, router.js)    (client/player.js)
                        comments, hearts, pins: long-poll /events (client/events.js)
 ```
@@ -22,8 +22,23 @@ camera ─ WebCodecs ─ 1 s fMP4 ─PUT/POST─▶ last 8 pieces in memory ─G
 - **Memory only:** each live keeps about 8 seconds of video, about 2 MB.
   When a live ends, or the server restarts, it is gone. After a restart the
   seller's page starts a new live by itself.
-- **Delay:** viewers are about 2–3 seconds behind the seller. The player
-  speeds up or slows down slightly to stay there.
+- **Pieces:** a key frame comes every second, and the second goes up in
+  pieces of a fifth of a second. A viewer asks for each second before it
+  exists and gets it as one streamed response, piece by piece as each
+  arrives. A finished second is a plain cacheable file, which is what the
+  HLS playlist lists.
+- **Live sync (player.js `steer`):** keeps each viewer a set distance behind
+  the newest video by playing slightly faster or slower. The distance
+  starts at 0.6 s. It grows each time the picture has to stop and wait, and
+  shrinks again after a calm spell. The player also steps over holes left
+  by pieces the seller could not send.
+- **Delay**, measured from camera to screen: about 0.9 s on a good
+  connection and about 1.1 s on weak data, plus the round trip to the
+  server.
+- **Slow seller uploads:** pieces that pile up go up together in one
+  request, and the picture gets lighter. Two seconds behind, what is
+  waiting is dropped and the next second starts at once, so viewers skip
+  the lost moment instead of watching it arrive late.
 - **Going live** needs WebCodecs: Chrome or Edge on Android or a computer.
   Any modern browser can watch, and iPhones older than iOS 17.1 get the HLS
   playlist.

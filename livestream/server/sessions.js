@@ -76,7 +76,7 @@ const create = ({ store, sellerId, title, bag }) => {
     epoch: -1,
     inits: new Map(), // epoch -> { data, codecs }
     codecs: null,
-    segments: [], // { seq, epoch, dur, data }
+    segments: [], // { seq, epoch, parts: [Buffer], dur, done, data (when done) }
     latestSeq: -1,
     segWaiters: [],
     thumb: null,
@@ -130,13 +130,46 @@ const putInit = (live, { epoch, codecs, data }) => {
   bump(live);
 };
 
-const putSegment = (live, { seq, epoch, dur, data }) => {
+/** A group that will get no more pieces: kept whole, for the playlist. */
+const close = (seg) => {
+  if (seg.done) return;
+  seg.done = true;
+  seg.data = Buffer.concat(seg.parts);
+};
+
+/**
+ * A piece of video: part `part` of group `seq` (a group starts on a key
+ * frame and lasts about a second; its pieces about a fifth of one). Viewers
+ * streaming the group are woken for each. `last`: the group is complete.
+ */
+const putPart = (live, {
+  seq, part, last, epoch, dur, data,
+}) => {
   if (!live.inits.has(epoch)) return false;
-  if (seq <= live.latestSeq) return true; // a retried upload
-  live.segments.push({ seq, epoch, dur, data });
-  while (live.segments.length > KEEP_SEGMENTS) live.segments.shift();
-  live.latestSeq = seq;
   live.lastDataAt = Date.now();
+  let seg = segment(live, seq);
+  if (!seg) {
+    // Old (already let go), or a group that did not arrive from its start.
+    if (seq <= live.latestSeq || part !== 0) return true;
+    for (const s of live.segments) close(s);
+    seg = {
+      seq, epoch, parts: [], dur: 0, done: false, data: null,
+    };
+    live.segments.push(seg);
+    while (live.segments.length > KEEP_SEGMENTS) live.segments.shift();
+    live.latestSeq = seq;
+  }
+  // A retried upload, or one after a piece that never came (the rest of the
+  // group cannot be shown without it).
+  if (seg.done || part < seg.parts.length) return true;
+  if (part > seg.parts.length) {
+    close(seg);
+    wake(live, 'seg');
+    return true;
+  }
+  seg.parts.push(data);
+  seg.dur += dur;
+  if (last) close(seg);
   if (live.status === 'STARTING') {
     live.status = 'LIVE';
     bump(live);
@@ -170,7 +203,7 @@ const waitFor = (live, kind, ms) => new Promise((resolve) => {
 
 /** The HLS playlist (iPhones without Media Source, the phone app). */
 const playlist = (live) => {
-  const segs = live.segments.slice(-PLAYLIST_SEGMENTS);
+  const segs = live.segments.filter((s) => s.done).slice(-PLAYLIST_SEGMENTS);
   if (!segs.length) return null;
   const target = Math.max(1, Math.ceil(Math.max(...segs.map((s) => s.dur)) / 1000));
   const lines = [
@@ -316,7 +349,7 @@ const sweep = () => {
 setInterval(sweep, 5000).unref();
 
 module.exports = {
-  create, get, keyMatches, end, putInit, putSegment, segment, waitFor, playlist,
+  create, get, keyMatches, end, putInit, putPart, segment, waitFor, playlist,
   addComment, hideComment, addHearts, setPinned, setBag, seen, viewerCount, news, summary, onAir,
   KEEP_SEGMENTS,
   // Tests only.

@@ -58,6 +58,20 @@
   transform: scaleX(-1);
 }
 
+.slv-cam-ask {
+  width: 84%;
+  line-height: 1.45;
+}
+
+.slv-cam-ask p {
+  margin: 0;
+}
+
+.slv-cam-ask small {
+  color: rgba(255, 255, 255, 0.75);
+  font-size: 12.5px;
+}
+
 .slv-preview-tools {
   position: absolute;
   right: 12px;

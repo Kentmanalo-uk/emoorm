@@ -1,17 +1,24 @@
 /*
- * The viewer's side: plays a live in a <video>, about two seconds behind
- * the seller.
+ * The viewer's side: plays a live in a <video>, under a second behind the
+ * seller on a good connection.
  *
  *   const player = new LivePlayer(videoEl, { base, id, onState });
  *   player.start(info);   // info: GET /live/:id (codecs, epoch, latestSeq)
+ *   player.stats();       // { lag, target, stalls } for a debug overlay
  *   player.destroy();
  *
  * Media Source where there is one (every desktop browser, Android, iPhones
- * from iOS 17.1 as ManagedMediaSource): it asks for the next one-second piece
- * before it exists (the server answers the moment it arrives), appends it,
- * and keeps the playhead close to the newest piece by playing a touch faster
- * or slower, never by jumping unless it has fallen far behind. Older iPhones
- * get the same pieces as an HLS playlist instead.
+ * from iOS 17.1 as ManagedMediaSource). Each second of video is asked for
+ * before it exists and comes as one streamed response: the server writes a
+ * fifth of a second at a time as the seller uploads it, and each is played
+ * the moment it lands. Older iPhones get whole seconds as an HLS playlist.
+ *
+ * The live-sync controller (steer) keeps the playhead a set distance behind
+ * the newest video, by playing a touch faster or slower rather than
+ * jumping. The distance is not fixed: it starts small, grows each time the
+ * picture has to stop and wait (a shaky connection needs more cushion), and
+ * shrinks again after a calm spell. So a viewer on good Wi-Fi watches
+ * almost as it happens and one on weak data still watches without stops.
  *
  * States: 'connecting' | 'playing' | 'waiting' | 'reconnecting' | 'ended' | 'unsupported'
  */
@@ -20,11 +27,14 @@ const MediaSourceType = typeof window !== 'undefined'
   ? (window.ManagedMediaSource || window.MediaSource || null)
   : null;
 
-// Seconds between the newest video and what is on screen: enough cushion
-// for a piece that comes a little late, little enough to answer "how much
-// is #3?" while the shopper still remembers asking.
-const TARGET_LAG = 1.6;
-const FAR_BEHIND = 5;
+// Seconds behind the newest video: where the controller starts, how close
+// and how far it may go, and how far behind it jumps instead of hurrying.
+const START_TARGET = 0.6;
+const MIN_TARGET = 0.45;
+const MAX_TARGET = 3;
+const STALL_STEP = 0.35;
+const CALM_MS = 12000;
+const JUMP_AFTER = 3;
 
 const preloaded = new Map();
 
@@ -58,6 +68,8 @@ export class LivePlayer {
     this.codecs = null;
     this.timers = [];
     this.abort = new AbortController();
+    this.target = START_TARGET;
+    this.stalls = 0;
   }
 
   setState(state) {
@@ -84,6 +96,7 @@ export class LivePlayer {
     this.alive = false;
     this.abort.abort();
     for (const t of this.timers) clearInterval(t);
+    clearTimeout(this.kickTimer);
     document.removeEventListener('visibilitychange', this.onVisibility);
     try {
       this.video.pause();
@@ -126,7 +139,16 @@ export class LivePlayer {
     this.sb.mode = 'segments';
     this.codecs = info.codecs;
 
-    v.addEventListener('waiting', () => { if (this.started) this.setState('waiting'); });
+    v.addEventListener('waiting', () => {
+      if (!this.started) return;
+      this.setState('waiting');
+      // The moment playback starts is not a stall.
+      if (Date.now() - this.startedAt < 2500) return;
+      // The picture stopped: this connection needs more cushion.
+      this.stalls += 1;
+      this.lastStallAt = Date.now();
+      this.target = Math.min(MAX_TARGET, this.target + STALL_STEP);
+    });
     v.addEventListener('playing', () => this.setState('playing'));
     this.onVisibility = () => {
       // Hidden: stop downloading (data and battery); back: jump to now.
@@ -143,7 +165,11 @@ export class LivePlayer {
     document.addEventListener('visibilitychange', this.onVisibility);
 
     this.seq = Math.max(0, info.latestSeq);
-    this.timers.push(setInterval(() => this.steer(), 250));
+    this.target = START_TARGET;
+    this.stalls = 0;
+    this.lastStallAt = Date.now();
+    this.lastEaseAt = Date.now();
+    this.timers.push(setInterval(() => this.steer(), 200));
     this.timers.push(setInterval(() => this.trim(), 5000));
     this.loop();
   }
@@ -207,22 +233,21 @@ export class LivePlayer {
       }
       if (res.status === 200) {
         failures = 0;
+        if (this.state === 'reconnecting') this.setState('waiting');
         const epoch = Number(res.headers.get('X-Live-Epoch'));
-        const data = await res.arrayBuffer();
         try {
           if (epoch !== this.epoch) await this.loadInit(epoch);
-          await this.append(data);
+          await this.readStreamed(res);
         } catch {
-          if (!this.alive) return;
+          if (!this.alive || this.paused) return;
         }
         this.seq += 1;
-        this.kick();
         continue;
       }
       if (res.status === 204) continue; // not yet: ask again
       if (res.status === 410) {
         const body = await res.json().catch(() => ({}));
-        this.seq = Math.max(0, body.latestSeq ?? this.seq);
+        this.seq = Math.max(0, body.nextSeq ?? body.latestSeq ?? this.seq);
         continue;
       }
       // 404: the live ended (or never was).
@@ -231,29 +256,87 @@ export class LivePlayer {
     }
   }
 
+  /**
+   * One second of video as it streams in: each moof + mdat pair (a fifth of
+   * a second) is appended the moment the whole of it has arrived.
+   */
+  async readStreamed(res) {
+    if (!res.body?.getReader) {
+      await this.append(await res.arrayBuffer());
+      this.kick();
+      return;
+    }
+    const reader = res.body.getReader();
+    let buf = new Uint8Array(0);
+    let from = 0; // where the current moof starts
+    let at = 0; // the next box to read
+    for (;;) {
+      // eslint-disable-next-line no-await-in-loop
+      const { done, value } = await reader.read();
+      if (done) break;
+      const joined = new Uint8Array(buf.length - from + value.length);
+      joined.set(buf.subarray(from));
+      joined.set(value, buf.length - from);
+      at -= from;
+      from = 0;
+      buf = joined;
+      while (buf.length - at >= 8) {
+        const size = ((buf[at] << 24) | (buf[at + 1] << 16) | (buf[at + 2] << 8) | buf[at + 3]) >>> 0;
+        if (size < 8) throw new Error('bad box');
+        if (buf.length - at < size) break;
+        const type = String.fromCharCode(buf[at + 4], buf[at + 5], buf[at + 6], buf[at + 7]);
+        at += size;
+        if (type === 'mdat') {
+          // eslint-disable-next-line no-await-in-loop
+          await this.append(buf.slice(from, at));
+          this.kick();
+          from = at;
+        }
+      }
+    }
+  }
+
   /** The first piece is in: start from it. */
   kick() {
     const v = this.video;
     const b = v.buffered;
-    if (!b.length) return;
-    if (!this.started) {
+    if (!b.length || this.started || this.kickTimer) return;
+    // A moment for the rest of the second already on the server to land
+    // (it comes in one burst), so playing starts at now, not at its start.
+    this.kickTimer = setTimeout(() => {
+      const r = v.buffered;
+      if (!this.alive || !r.length) return;
       this.started = true;
-      v.currentTime = Math.max(b.start(0), b.end(b.length - 1) - TARGET_LAG);
+      this.startedAt = Date.now();
+      v.currentTime = Math.max(r.start(r.length - 1), r.end(r.length - 1) - this.target);
       v.play().catch(() => {
         // Sound needs a tap first: start without it.
         v.muted = true;
         v.play().catch(() => {});
       });
-    }
+    }, 250);
   }
 
-  /** Keeps the playhead near now, smoothly. */
+  stats() {
+    const b = this.video.buffered;
+    const lag = b.length ? b.end(b.length - 1) - this.video.currentTime : null;
+    return { lag, target: this.target, stalls: this.stalls };
+  }
+
+  /** The live-sync controller: keeps the playhead `target` behind now, smoothly. */
   steer() {
     const v = this.video;
     const b = v.buffered;
-    if (!this.started || !b.length || v.seeking) return;
+    if (!this.started || !b.length) return;
     const end = b.end(b.length - 1);
+    const lastStart = b.start(b.length - 1);
     const t = v.currentTime;
+    // A calm spell: creep closer to now again.
+    const now = Date.now();
+    if (now - this.lastStallAt > CALM_MS && now - this.lastEaseAt > CALM_MS / 2 && this.target > MIN_TARGET) {
+      this.target = Math.max(MIN_TARGET, this.target - 0.1);
+      this.lastEaseAt = now;
+    }
     // Over a hole (a piece that never came): to the next video.
     let inside = false;
     for (let i = 0; i < b.length; i += 1) {
@@ -267,16 +350,37 @@ export class LivePlayer {
         }
       }
     }
+    // Moving to a place it has: let it get there.
+    if (v.seeking) return;
+    // Standing still with video ahead: a hole too small to show in the
+    // buffered ranges (a frame or two the seller could not send), which the
+    // browser will not cross by itself. Step over it.
+    if (!v.paused && Math.abs(t - this.lastT) < 0.01 && end - t > 0.4) {
+      if (!this.stuckSince) this.stuckSince = now;
+      else if (now - this.stuckSince > 700) {
+        let next = null;
+        for (let i = 0; i < b.length; i += 1) if (next === null && b.start(i) > t + 0.05) next = b.start(i);
+        v.currentTime = next !== null ? next + 0.02 : Math.min(end - 0.1, t + 0.3);
+        this.stuckSince = 0;
+        return;
+      }
+    } else {
+      this.stuckSince = 0;
+    }
+    this.lastT = t;
     const lag = end - t;
-    if (lag > FAR_BEHIND) {
-      v.currentTime = end - TARGET_LAG;
+    if (lag > this.target + JUMP_AFTER) {
+      // Never into a hole: no earlier than the start of the newest stretch.
+      v.currentTime = Math.max(lastStart + 0.02, end - this.target);
       v.playbackRate = 1;
       return;
     }
+    // Faster the further behind, slower when too close; nothing in between
+    // (a small dead zone, so the sound never wavers for no reason).
+    const off = lag - this.target;
     let rate = 1;
-    if (lag > TARGET_LAG + 1.2) rate = 1.12;
-    else if (lag > TARGET_LAG + 0.5) rate = 1.05;
-    else if (lag < 0.7) rate = 0.95;
+    if (Math.abs(off) > 0.08) rate = Math.min(1.12, Math.max(0.95, 1 + off * 0.12));
+    rate = Math.round(rate * 100) / 100;
     if (Math.abs(v.playbackRate - rate) > 0.001) v.playbackRate = rate;
     if (v.paused && !this.userPaused && v.readyState >= 3) v.play().catch(() => {});
   }

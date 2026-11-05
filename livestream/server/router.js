@@ -6,7 +6,7 @@
  *   GET  /:id                      a live, with its product bag
  *   GET  /:id/events?v=&viewer=    news after version v (held until there is some)
  *   GET  /:id/init/:epoch.mp4      the video's set-up piece
- *   GET  /:id/seg/:seq.m4s         one piece of video (held a moment if it is next)
+ *   GET  /:id/seg/:seq.m4s         one second of video, streamed piece by piece while it is filled
  *   GET  /:id/live.m3u8            the same pieces as an HLS playlist
  *   GET  /:id/thumb.jpg            a still of the live, for lists
  *   GET  /mic-worklet.js           the seller page's microphone tap (see below)
@@ -32,6 +32,9 @@ const MAX_SEGMENT_BYTES = 3 * 1024 * 1024;
 const MAX_INIT_BYTES = 64 * 1024;
 const MAX_THUMB_BYTES = 300 * 1024;
 const SEG_WAIT_MS = 5000;
+// A group being streamed that has had nothing new for this long is ended
+// (the seller's connection dropped); the viewer asks for the next.
+const STREAM_IDLE_MS = 4000;
 const EVENTS_WAIT_MS = 20000;
 const MAX_BAG = 50;
 const MAX_TITLE = 80;
@@ -181,10 +184,37 @@ module.exports = function createLiveRouter({
       const seq = int(req.query.seq);
       const epoch = int(req.query.epoch);
       const dur = Math.min(10000, Math.max(1, int(req.query.dur, 1000)));
-      if (seq < 0 || epoch < 0) return fail(res, 400, 'Bad piece.');
+      // No part number: the whole group in one piece.
+      const whole = req.query.part == null;
+      const part = whole ? 0 : int(req.query.part);
+      const last = whole || req.query.last === '1';
+      if (seq < 0 || epoch < 0 || part < 0) return fail(res, 400, 'Bad piece.');
       const data = await readBody(req, MAX_SEGMENT_BYTES);
-      if (!lives.putSegment(req.live, {
-        seq, epoch, dur, data,
+      // Several pieces in one upload (the seller had fallen behind): their
+      // sizes and lengths say where each ends.
+      const sizes = String(req.query.sizes || '').split(',').filter(Boolean).map((n) => int(n));
+      const durs = String(req.query.durs || '').split(',').filter(Boolean).map((n) => int(n, 200));
+      if (sizes.length > 1) {
+        if (sizes.length > 12 || sizes.some((n) => n <= 0) || sizes.reduce((a, b) => a + b, 0) !== data.length) {
+          return fail(res, 400, 'Bad pieces.');
+        }
+        let at = 0;
+        for (let i = 0; i < sizes.length; i += 1) {
+          const ok1 = lives.putPart(req.live, {
+            seq,
+            part: part + i,
+            last: last && i === sizes.length - 1,
+            epoch,
+            dur: Math.min(10000, Math.max(1, durs[i] || 200)),
+            data: data.subarray(at, at + sizes[i]),
+          });
+          if (!ok1) return fail(res, 409, 'Send the init first.');
+          at += sizes[i];
+        }
+        return ok(res, { seq, viewers: lives.viewerCount(req.live) });
+      }
+      if (!lives.putPart(req.live, {
+        seq, part, last, epoch, dur, data,
       })) return fail(res, 409, 'Send the init first.');
       return ok(res, { seq, viewers: lives.viewerCount(req.live) });
     } catch (err) {
@@ -310,12 +340,36 @@ module.exports = function createLiveRouter({
     if (seg) {
       res.set({
         'Content-Type': 'video/mp4',
-        'Cache-Control': 'public, max-age=60, immutable',
         'X-Live-Epoch': String(seg.epoch),
-        'X-Live-Dur': String(seg.dur),
-        'Access-Control-Expose-Headers': 'X-Live-Epoch, X-Live-Dur, X-Live-Latest',
+        'Access-Control-Expose-Headers': 'X-Live-Epoch, X-Live-Latest',
       });
-      return res.end(seg.data);
+      // Complete: the same for everyone, so a cache may keep it.
+      if (seg.done) {
+        res.set('Cache-Control', 'public, max-age=60, immutable');
+        return res.end(seg.data);
+      }
+      // Still being filled: each piece goes out the moment it arrives, in
+      // one response, so the viewer sees it a fifth of a second after the
+      // seller does rather than a second. (A proxy that holds the response
+      // back until it ends only costs that second, not the video.)
+      res.set({ 'Cache-Control': 'no-store', 'X-Accel-Buffering': 'no' });
+      res.flushHeaders();
+      let sent = 0;
+      let lastNewAt = Date.now();
+      while (!res.destroyed && !req.socket?.destroyed) {
+        while (sent < seg.parts.length) {
+          res.write(seg.parts[sent]);
+          sent += 1;
+          lastNewAt = Date.now();
+        }
+        if (seg.done || live.status === 'ENDED' || Date.now() - lastNewAt > STREAM_IDLE_MS) break;
+        // eslint-disable-next-line no-await-in-loop
+        const woke = await lives.waitFor(live, 'seg', 1000);
+        // Too many waiting already: look again shortly instead.
+        // eslint-disable-next-line no-await-in-loop
+        if (!woke) await new Promise((r) => { setTimeout(r, 150); });
+      }
+      return res.end();
     }
     res.set({
       'Cache-Control': 'no-store',
@@ -325,7 +379,13 @@ module.exports = function createLiveRouter({
     if (live.status === 'ENDED') return fail(res, 404, 'This live has ended.', { status: 'ENDED' });
     // Too old (the viewer fell behind) or too far ahead: start again from now.
     if (seq < (live.segments[0]?.seq ?? 0) || seq > live.latestSeq + 3) {
-      return fail(res, 410, 'Jump to now.', { latestSeq: live.latestSeq });
+      return fail(res, 410, 'Jump to now.', { latestSeq: live.latestSeq, nextSeq: live.latestSeq });
+    }
+    // A second that never came (the seller's upload fell behind and its
+    // start was dropped): on to the next one there is.
+    if (seq <= live.latestSeq) {
+      const next = live.segments.find((s) => s.seq > seq);
+      return fail(res, 410, 'Skip ahead.', { latestSeq: live.latestSeq, nextSeq: next ? next.seq : live.latestSeq });
     }
     return res.status(204).end();
   });
