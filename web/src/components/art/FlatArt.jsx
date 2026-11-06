@@ -42,18 +42,17 @@
  * from the mark itself (FlatArt.css says which shapes count in which
  * mask). The seller's tools and the Home shortcuts use it.
  *
- * pop: the same marks as chunky, glossy 3D toys (a super admin chooses
- * between glass and pop: App settings, shortcutArtStyle).
+ * pop: the same marks as solid 3D objects, each posed at its own angle
+ * (POSES, below): turned left or right, seen a little from above, leaning,
+ * thick or thin as the thing would be. A super admin chooses between glass
+ * and pop: App settings, shortcutArtStyle.
  *
- *   - a raised side under every shape, in a darker, richer value of the
- *     mark's colour: copies of the shapes stepped down and a little right.
- *   - the face in a bright gradient top to bottom, running from a light
- *     value through the colour into its neighbouring hue (orange into
- *     rose, green into teal), the tint parts lighter than the deep.
- *   - gloss over the top half of the shapes and a thin light edge along
- *     their top, where the face turns into the side. No shadow on the page.
- *
- * The mark is drawn a little smaller inside its box so the side has room.
+ *   - the face turned by its pose, its body running back from it so a side
+ *     and the underside show; the body darkens towards its far edge.
+ *   - the face lit from its near edge, through the colour, into the
+ *     neighbouring hue as it turns away; the tint parts lighter.
+ *   - gloss over the top and a light bevel on the edges facing away from
+ *     the body. No shadow on the page.
  */
 
 import { useId } from 'react';
@@ -113,50 +112,156 @@ function useInk(tone, look) {
   };
 }
 
-/** Pop: the side's offsets, nearest the face last so it is drawn on top. */
-const POP_STEPS = [[1.4, 3.8], [1.05, 2.85], [0.7, 1.9], [0.35, 0.95]];
+/*
+ * Pop is drawn as solid objects, each posed at its own angle the way real
+ * things sit on a shelf: one turned to the left, the next to the right, one
+ * seen more from above, a flat one (a map, a sparkle) thin and a box thick.
+ *
+ * A pose is [turn, look, tilt, depth]:
+ *   turn   degrees the object is turned about its upright axis (negative:
+ *          its right side turns away and the body shows on the right;
+ *          positive: the other way)
+ *   look   degrees it tips back, so its underside shows below its face
+ *   tilt   degrees it leans, in the picture
+ *   depth  how thick it is, in grid units
+ *
+ * The face is the mark turned by that pose, drawn as an orthographic view
+ * of a plane: foreshortened across by cos(turn) and down by cos(look), and
+ * sheared by sin(turn) sin(look) as it turns. The body runs back from it
+ * along the direction its back faces, (-sin turn, cos turn sin look), in
+ * POP_STEPS copies, the farthest first and darkest.
+ */
+const POSES = {
+  Pot: [-26, 22, -4, 6],
+  Spark: [30, 14, 9, 3],
+  Trend: [-20, 26, 3, 6],
+  Piggy: [30, 18, -6, 6],
+  Grid: [-34, 30, 0, 5],
+  Town: [24, 20, 3, 7],
+  Map: [-32, 34, -7, 3],
+  Camera: [22, 16, -5, 7],
+  Shop: [-24, 22, 0, 7],
+  Heart: [28, 10, 10, 5],
+  Parcel: [-34, 26, 0, 8],
+  Tag: [32, 22, -12, 3],
+  Return: [-22, 18, 5, 6],
+  Star: [20, 14, -10, 4],
+  Pin: [-16, 26, 7, 5],
+  Qr: [34, 32, 0, 3],
+  Buoy: [-28, 14, 8, 5],
+  Headset: [26, 18, -4, 6],
+  Bubble: [-30, 16, 6, 5],
+  Megaphone: [30, 16, -8, 6],
+  Live: [-24, 20, 4, 6],
+  Package: [30, 26, -3, 8],
+  Receipt: [-30, 28, 6, 3],
+  Chart: [24, 22, -4, 6],
+  Wallet: [-26, 18, -3, 7],
+  Plus: [22, 20, 6, 5],
+  Brush: [-20, 16, -10, 5],
+  Gear: [30, 30, 0, 5],
+  IdCard: [-32, 26, 5, 3],
+  Chat: [26, 14, -6, 5],
+  Question: [-22, 18, 4, 5],
+  Truck: [-30, 18, 0, 8],
+  Bell: [24, 16, 8, 6],
+};
+const DEFAULT_POSE = [-26, 20, 0, 5];
+const POP_STEPS = 9;
+const rad = (deg) => (deg * Math.PI) / 180;
 
-/** A mark as a glossy 3D toy: its side, its face, gloss, a light top edge. */
-function PopMark({ size, ink, children }) {
+/** How a pose draws: the face's transform and one step of the body. */
+function poseOf(name) {
+  const [turn, look, tilt, depth] = POSES[name] || DEFAULT_POSE;
+  const t = rad(turn);
+  const l = rad(look);
+  const r = rad(tilt);
+  // The turned plane, then the lean.
+  const fa = Math.cos(t);
+  const fb = Math.sin(t) * Math.sin(l);
+  const fd = Math.cos(l);
+  const [cr, sr] = [Math.cos(r), Math.sin(r)];
+  const m = [fa * cr - fb * sr, fa * sr + fb * cr, -fd * sr, fd * cr];
+  // The direction its back faces, leaned with it.
+  const bx = -Math.sin(t);
+  const by = Math.cos(t) * Math.sin(l);
+  const back = [bx * cr - by * sr, bx * sr + by * cr];
+  // Fit: the face and its body inside the 48 box, centred together.
+  const scale = 0.8;
+  const run = [back[0] * depth * scale, back[1] * depth * scale];
+  const cx = 24 - run[0] / 2;
+  const cy = 24 - run[1] / 2;
+  const n = (v) => Number(v.toFixed(4));
+  const face = `translate(${n(cx)} ${n(cy)}) matrix(${m.map((v) => n(v * scale)).join(' ')} 0 0) translate(-24 -24)`;
+  return {
+    face,
+    step: [run[0] / POP_STEPS, run[1] / POP_STEPS],
+    // The light falls on the edge nearer the viewer: the left one when the
+    // body shows on the right, and the other way round.
+    lightFromLeft: run[0] >= 0,
+    // The bevel sits on the face's edges away from the body.
+    bevel: [run[0] >= 0 ? 0.9 : -0.9, run[1] >= 0 ? 1.2 : -1.2],
+  };
+}
+
+/** A mark as a solid 3D object, posed at its own angle. */
+function PopMark({
+  size, ink, pose, children,
+}) {
   const { id, tone: [tint, deep] } = ink;
   const [via] = HUE_PATH[deep.toUpperCase()] || [mix(deep, '#000000', 0.15)];
   const url = (k) => `url(#${id}${k})`;
-  // The side: the colour between the deep and its neighbour, darkened.
-  const side = mix(mix(deep, via, 0.6), '#000000', 0.34);
+  const {
+    face, step, lightFromLeft, bevel,
+  } = poseOf(pose);
+  const body = mix(deep, via, 0.55);
+  const far = mix(body, '#000000', 0.46);
+  const near = mix(body, '#000000', 0.15);
+  const steps = Array.from({ length: POP_STEPS }, (_, i) => POP_STEPS - i);
+  // The face's light runs from its near edge across it.
+  const [x1, x2] = lightFromLeft ? [4, 44] : [44, 4];
   return (
     <svg {...box(size)}>
       <defs>
-        <linearGradient id={`${id}d`} gradientUnits="userSpaceOnUse" x1="10" y1="2" x2="26" y2="46">
-          <stop offset="0" stopColor={mix(deep, '#FFFFFF', 0.3)} />
-          <stop offset="0.42" stopColor={deep} />
-          <stop offset="1" stopColor={via} />
+        <linearGradient id={`${id}d`} gradientUnits="userSpaceOnUse" x1={x1} y1="6" x2={x2} y2="40">
+          <stop offset="0" stopColor={mix(deep, '#FFFFFF', 0.34)} />
+          <stop offset="0.45" stopColor={deep} />
+          <stop offset="1" stopColor={mix(via, '#000000', 0.08)} />
         </linearGradient>
-        <linearGradient id={`${id}t`} gradientUnits="userSpaceOnUse" x1="10" y1="2" x2="26" y2="46">
-          <stop offset="0" stopColor={mix(tint, '#FFFFFF', 0.6)} />
-          <stop offset="1" stopColor={mix(tint, deep, 0.3)} />
+        <linearGradient id={`${id}t`} gradientUnits="userSpaceOnUse" x1={x1} y1="6" x2={x2} y2="40">
+          <stop offset="0" stopColor={mix(tint, '#FFFFFF', 0.62)} />
+          <stop offset="1" stopColor={mix(tint, deep, 0.32)} />
         </linearGradient>
-        <linearGradient id={`${id}s`} gradientUnits="userSpaceOnUse" x1="0" y1="0" x2="0" y2="48">
-          <stop offset="0" stopColor="#FFFFFF" stopOpacity="0.62" />
-          <stop offset="0.4" stopColor="#FFFFFF" stopOpacity="0.14" />
-          <stop offset="0.5" stopColor="#FFFFFF" stopOpacity="0" />
+        <linearGradient id={`${id}s`} gradientUnits="userSpaceOnUse" x1="10" y1="0" x2="18" y2="46">
+          <stop offset="0" stopColor="#FFFFFF" stopOpacity="0.6" />
+          <stop offset="0.38" stopColor="#FFFFFF" stopOpacity="0.12" />
+          <stop offset="0.48" stopColor="#FFFFFF" stopOpacity="0" />
         </linearGradient>
         <mask id={`${id}m`} maskUnits="userSpaceOnUse" x="-4" y="-4" width="56" height="56">
-          <g className="fa-silhouette">{children}</g>
+          <g transform={face}><g className="fa-silhouette">{children}</g></g>
         </mask>
-        {/* The top edge: the shapes, less the same shapes a step lower. */}
+        {/* The bevel: the face's edges away from the body, where light
+            catches the corner between the face and the body. */}
         <mask id={`${id}r`} maskUnits="userSpaceOnUse" x="-4" y="-4" width="56" height="56">
-          <g className="fa-silhouette">{children}</g>
-          <g className="fa-silhouette-cut" transform="translate(0 1.1)">{children}</g>
+          <g transform={face}>
+            <g className="fa-silhouette">{children}</g>
+            <g className="fa-silhouette-cut" transform={`translate(${bevel[0]} ${bevel[1]})`}>{children}</g>
+          </g>
         </mask>
       </defs>
-      <g transform="translate(2.6 0.4) scale(0.88)">
-        {POP_STEPS.map(([x, y]) => (
-          <g key={y} className="fa-depth" transform={`translate(${x} ${y})`} style={{ '--fa-depth': side }}>{children}</g>
-        ))}
-        <g>{children}</g>
-        <rect x="-4" y="-4" width="56" height="56" fill={url('s')} mask={url('m')} />
-        <rect x="-4" y="-4" width="56" height="56" fill="#FFFFFF" opacity="0.7" mask={url('r')} />
-      </g>
+      {steps.map((i) => (
+        <g
+          key={i}
+          className="fa-depth"
+          transform={`translate(${(step[0] * i).toFixed(2)} ${(step[1] * i).toFixed(2)})`}
+          style={{ '--fa-depth': mix(near, far, i / POP_STEPS) }}
+        >
+          <g transform={face}>{children}</g>
+        </g>
+      ))}
+      <g transform={face}>{children}</g>
+      <rect x="-4" y="-4" width="56" height="56" fill={url('s')} mask={url('m')} />
+      <rect x="-4" y="-4" width="56" height="56" fill="#FFFFFF" opacity="0.75" mask={url('r')} />
     </svg>
   );
 }
@@ -169,9 +274,11 @@ function PopMark({ size, ink, children }) {
  *   glass   a pale wash of the tint over that, then a light rim on its edge
  *   sheen   light over the top of every shape and along its bottom
  */
-function Mark({ size, ink, children }) {
+function Mark({
+  size, ink, pose, children,
+}) {
   if (!ink.id) return <svg {...box(size)}>{children}</svg>;
-  if (ink.pop) return <PopMark size={size} ink={ink}>{children}</PopMark>;
+  if (ink.pop) return <PopMark size={size} ink={ink} pose={pose}>{children}</PopMark>;
   const { id, tone: [tint, deep] } = ink;
   const [via, touch] = HUE_PATH[deep.toUpperCase()] || [mix(deep, '#000000', 0.15), mix(deep, '#000000', 0.3)];
   const url = (k) => `url(#${id}${k})`;
@@ -230,7 +337,7 @@ export function PotArt({ size = 34, tone, glass = false, look }) {
   const ink = useInk(tone || ORANGE, look || glass);
   const { tint, deep } = ink;
   return (
-    <Mark size={size} ink={ink}>
+    <Mark size={size} ink={ink} pose="Pot">
       <g fill="none" stroke={tint} strokeWidth="3" strokeLinecap="round">
         <path d="M17 11c0-3 3-3.5 3-6.5" />
         <path d="M24 10c0-3 3-3.5 3-6.5" />
@@ -266,7 +373,7 @@ export function SparkArt({ size = 34, tone, glass = false, look }) {
     'Z',
   ].join(' ');
   return (
-    <Mark size={size} ink={ink}>
+    <Mark size={size} ink={ink} pose="Spark">
       <path d={star(20, 20, 17)} fill={deep} />
       <path d={star(37, 34, 9.5)} fill={tint} />
       <path d={star(10, 38, 7)} fill={tint} />
@@ -279,7 +386,7 @@ export function TrendArt({ size = 34, tone, glass = false, look }) {
   const ink = useInk(tone || RED, look || glass);
   const { tint, deep } = ink;
   return (
-    <Mark size={size} ink={ink}>
+    <Mark size={size} ink={ink} pose="Trend">
       <rect x="3" y="4" width="42" height="40" rx="10" fill={deep} />
       <g fill={tint}>
         <rect x="10" y="26" width="6.5" height="11" rx="2.6" />
@@ -297,7 +404,7 @@ export function PiggyArt({ size = 34, tone, glass = false, look }) {
   const ink = useInk(tone || VIOLET, look || glass);
   const { tint, deep } = ink;
   return (
-    <Mark size={size} ink={ink}>
+    <Mark size={size} ink={ink} pose="Piggy">
       {/* The coin, the ear and the snout all have to break the body's
           outline to be seen at all -- tucked inside it they read as one
           lump. The ear clears the back, the snout clears the right. */}
@@ -325,7 +432,7 @@ export function GridArt({ size = 34, tone, glass = false, look }) {
   const ink = useInk(tone || SKY, look || glass);
   const { tint, deep } = ink;
   return (
-    <Mark size={size} ink={ink}>
+    <Mark size={size} ink={ink} pose="Grid">
       <rect x="4" y="4" width="18.5" height="18.5" rx="5.5" fill={deep} />
       <rect x="25.5" y="4" width="18.5" height="18.5" rx="5.5" fill={tint} />
       <rect x="4" y="25.5" width="18.5" height="18.5" rx="5.5" fill={tint} />
@@ -339,7 +446,7 @@ export function TownArt({ size = 34, tone, glass = false, look }) {
   const ink = useInk(tone || GREEN, look || glass);
   const { tint, deep } = ink;
   return (
-    <Mark size={size} ink={ink}>
+    <Mark size={size} ink={ink} pose="Town">
       <rect x="4" y="8" width="20" height="35" rx="4" fill={tint} />
       <rect x="25" y="18" width="19" height="25" rx="4" fill={deep} />
       <g fill={CUT}>
@@ -362,7 +469,7 @@ export function MapArt({ size = 34, tone, glass = false, look }) {
   const ink = useInk(tone || BLUE, look || glass);
   const { tint, deep } = ink;
   return (
-    <Mark size={size} ink={ink}>
+    <Mark size={size} ink={ink} pose="Map">
       <polygon points="3,11 17,6 17,37 3,42" fill={tint} />
       <polygon points="31,11 45,6 45,37 31,42" fill={tint} />
       <polygon points="17,6 31,11 31,42 17,37" fill={deep} />
@@ -377,7 +484,7 @@ export function CameraArt({ size = 34, tone, glass = false, look }) {
   const ink = useInk(tone || PINK, look || glass);
   const { tint, deep } = ink;
   return (
-    <Mark size={size} ink={ink}>
+    <Mark size={size} ink={ink} pose="Camera">
       <rect x="15" y="6" width="17" height="9" rx="3.5" fill={tint} />
       <rect x="3" y="12" width="42" height="31" rx="8" fill={deep} />
       <rect x="3" y="12" width="42" height="7" rx="3.5" fill={tint} />
@@ -393,7 +500,7 @@ export function ShopArt({ size = 34, tone, glass = false, look }) {
   const ink = useInk(tone || EMERALD, look || glass);
   const { tint, deep } = ink;
   return (
-    <Mark size={size} ink={ink}>
+    <Mark size={size} ink={ink} pose="Shop">
       <rect x="7" y="18" width="34" height="25" rx="4" fill={deep} />
       <path d="M4 7h40v7a5 5 0 0 1-5 5H9a5 5 0 0 1-5-5z" fill={tint} />
       <g fill={CUT}>
@@ -411,7 +518,7 @@ export function HeartArt({ size = 34, tone, glass = false, look }) {
   const ink = useInk(tone || ROSE, look || glass);
   const { tint, deep } = ink;
   return (
-    <Mark size={size} ink={ink}>
+    <Mark size={size} ink={ink} pose="Heart">
       <path d="M24 43.5S3.5 30.5 3.5 17.6A11.8 11.8 0 0 1 24 10 11.8 11.8 0 0 1 44.5 17.6C44.5 30.5 24 43.5 24 43.5z" fill={deep} />
       <path d="M14.5 6.5A12 12 0 0 1 24 10a13.4 13.4 0 0 0-5.4 8.9C17.3 27 22 34.6 29 41.3 26 43 24 43.5 24 43.5S3.5 30.5 3.5 17.6A11.8 11.8 0 0 1 14.5 6.5z" fill={tint} />
       <path d="M12 14.6a8.4 8.4 0 0 0-3.8 5.3 2.6 2.6 0 0 0 5 1.4 3.3 3.3 0 0 1 1.5-2.1 2.6 2.6 0 0 0-2.7-4.6z" fill={CUT} />
@@ -424,7 +531,7 @@ export function ParcelArt({ size = 34, tone, glass = false, look }) {
   const ink = useInk(tone || EMERALD, look || glass);
   const { tint, deep } = ink;
   return (
-    <Mark size={size} ink={ink}>
+    <Mark size={size} ink={ink} pose="Parcel">
       <path d="M5 19h38v19a5 5 0 0 1-5 5H10a5 5 0 0 1-5-5z" fill={deep} />
       <rect x="3" y="8" width="42" height="12" rx="4" fill={tint} />
       <g fill={CUT}>
@@ -440,7 +547,7 @@ export function TagArt({ size = 34, tone, glass = false, look }) {
   const ink = useInk(tone || AMBER, look || glass);
   const { tint, deep } = ink;
   return (
-    <Mark size={size} ink={ink}>
+    <Mark size={size} ink={ink} pose="Tag">
       <path d="M25 3.5h15.5A4 4 0 0 1 44.5 7.5V23a5 5 0 0 1-1.5 3.6L26.6 43a5 5 0 0 1-7.1 0L5 28.5a5 5 0 0 1 0-7.1L21.4 5a5 5 0 0 1 3.6-1.5z" fill={deep} />
       <path d="M25 3.5h15.5A4 4 0 0 1 44.5 7.5V23a5 5 0 0 1-1.5 3.6l-6 6L13 8.6 21.4 5A5 5 0 0 1 25 3.5z" fill={tint} />
       <circle cx="35.5" cy="12.5" r="4.4" fill={CUT} />
@@ -454,7 +561,7 @@ export function ReturnArt({ size = 34, tone, glass = false, look }) {
   const ink = useInk(tone || ORANGE, look || glass);
   const { tint, deep } = ink;
   return (
-    <Mark size={size} ink={ink}>
+    <Mark size={size} ink={ink} pose="Return">
       <path d="M5 19h38v19a5 5 0 0 1-5 5H10a5 5 0 0 1-5-5z" fill={deep} />
       <rect x="3" y="8" width="42" height="12" rx="4" fill={tint} />
       {/* A plain arrow turning back: a loop drawn at this size is a smudge. */}
@@ -478,7 +585,7 @@ export function StarArt({ size = 34, tone, glass = false, look }) {
     return pts.join(' ');
   };
   return (
-    <Mark size={size} ink={ink}>
+    <Mark size={size} ink={ink} pose="Star">
       <polygon points={star(21, 21, 18)} fill={deep} />
       <polygon points={star(38, 36, 9)} fill={tint} />
       <polygon points={star(21, 21, 7.2)} fill={CUT} />
@@ -491,7 +598,7 @@ export function PinArt({ size = 34, tone, glass = false, look }) {
   const ink = useInk(tone || SKY, look || glass);
   const { tint, deep } = ink;
   return (
-    <Mark size={size} ink={ink}>
+    <Mark size={size} ink={ink} pose="Pin">
       <ellipse cx="24" cy="42" rx="9.5" ry="3.4" fill={tint} />
       <path d="M24 3a14.5 14.5 0 0 1 14.5 14.5C38.5 28.5 24 40.5 24 40.5S9.5 28.5 9.5 17.5A14.5 14.5 0 0 1 24 3z" fill={deep} />
       <path d="M24 3v37.5S9.5 28.5 9.5 17.5A14.5 14.5 0 0 1 24 3z" fill={tint} />
@@ -511,7 +618,7 @@ export function QrArt({ size = 34, tone, glass = false, look }) {
     </g>
   );
   return (
-    <Mark size={size} ink={ink}>
+    <Mark size={size} ink={ink} pose="Qr">
       {corner(3, 3)}
       {corner(30, 3)}
       {corner(3, 30)}
@@ -531,7 +638,7 @@ export function BuoyArt({ size = 34, tone, glass = false, look }) {
   const ink = useInk(tone || BLUE, look || glass);
   const { tint, deep } = ink;
   return (
-    <Mark size={size} ink={ink}>
+    <Mark size={size} ink={ink} pose="Buoy">
       <circle cx="24" cy="24" r="21" fill={deep} />
       {/* The four breaks are the pale tone, not white: white here is the
           same colour as the page, so on a light background the ring stops
@@ -552,7 +659,7 @@ export function HeadsetArt({ size = 34, tone, glass = false, look }) {
   const ink = useInk(tone || VIOLET, look || glass);
   const { tint, deep } = ink;
   return (
-    <Mark size={size} ink={ink}>
+    <Mark size={size} ink={ink} pose="Headset">
       <path d="M8 26v-4a16 16 0 0 1 32 0v4" stroke={tint} strokeWidth="7" strokeLinecap="round" fill="none" />
       <g fill={deep}>
         <rect x="2.5" y="20" width="12" height="18" rx="6" />
@@ -569,7 +676,7 @@ export function BubbleArt({ size = 34, tone, glass = false, look }) {
   const ink = useInk(tone || PINK, look || glass);
   const { tint, deep } = ink;
   return (
-    <Mark size={size} ink={ink}>
+    <Mark size={size} ink={ink} pose="Bubble">
       <path d="M19 16h22a5 5 0 0 1 5 5v12a5 5 0 0 1-5 5H29l-8 7v-7h-2a5 5 0 0 1-5-5V21a5 5 0 0 1 5-5z" fill={tint} />
       <path d="M7 4h22a5 5 0 0 1 5 5v12a5 5 0 0 1-5 5H17l-8 7v-7H7a5 5 0 0 1-5-5V9a5 5 0 0 1 5-5z" fill={deep} />
       <g fill={CUT}>
@@ -586,7 +693,7 @@ export function MegaphoneArt({ size = 34, tone, glass = false, look }) {
   const ink = useInk(tone || ORANGE, look || glass);
   const { tint, deep } = ink;
   return (
-    <Mark size={size} ink={ink}>
+    <Mark size={size} ink={ink} pose="Megaphone">
       <path d="M37 9v32L14 32.5v-17z" fill={deep} />
       <path d="M37 9v32l-7-2.6V11.6z" fill={tint} />
       <rect x="3" y="16" width="11" height="16" rx="4.5" fill={deep} />
@@ -605,7 +712,7 @@ export function LiveArt({ size = 34, tone, glass = false, look }) {
   const ink = useInk(tone || ROSE, look || glass);
   const { tint, deep } = ink;
   return (
-    <Mark size={size} ink={ink}>
+    <Mark size={size} ink={ink} pose="Live">
       <rect x="4" y="12" width="30" height="24" rx="7" fill={deep} />
       <path d="M34 21.5 44 15v18l-10-6.5z" fill={tint} />
       <circle cx="19" cy="24" r="6.5" fill={tint} />
@@ -629,7 +736,7 @@ export function PackageArt({ size = 34, tone, glass = false, look }) {
   const ink = useInk(tone || ORANGE, look || glass);
   const { tint, deep } = ink;
   return (
-    <Mark size={size} ink={ink}>
+    <Mark size={size} ink={ink} pose="Package">
       <rect x="3" y="21" width="14.5" height="23" rx="3.5" fill={tint} />
       <rect x="30.5" y="17" width="14.5" height="27" rx="3.5" fill={tint} />
       <rect x="15.5" y="10" width="17" height="34" rx="3.5" fill={deep} />
@@ -648,7 +755,7 @@ export function ReceiptArt({ size = 34, tone, glass = false, look }) {
   const ink = useInk(tone || BLUE, look || glass);
   const { tint, deep } = ink;
   return (
-    <Mark size={size} ink={ink}>
+    <Mark size={size} ink={ink} pose="Receipt">
       <path d="M8 3h32a3 3 0 0 1 3 3v39l-5.8-3.5L31.4 45l-5.8-3.5L19.8 45 14 41.5 8.2 45 5 43V6a3 3 0 0 1 3-3z" fill={deep} />
       <path d="M8 3h32a3 3 0 0 1 3 3v8H5V6a3 3 0 0 1 3-3z" fill={tint} />
       <g fill={CUT}>
@@ -665,7 +772,7 @@ export function ChartArt({ size = 34, tone, glass = false, look }) {
   const ink = useInk(tone || VIOLET, look || glass);
   const { tint, deep } = ink;
   return (
-    <Mark size={size} ink={ink}>
+    <Mark size={size} ink={ink} pose="Chart">
       <rect x="4" y="4" width="40" height="40" rx="10" fill={deep} />
       <g fill={tint}>
         <rect x="11" y="27" width="7" height="11" rx="2.8" />
@@ -682,7 +789,7 @@ export function WalletArt({ size = 34, tone, glass = false, look }) {
   const ink = useInk(tone || GREEN, look || glass);
   const { tint, deep } = ink;
   return (
-    <Mark size={size} ink={ink}>
+    <Mark size={size} ink={ink} pose="Wallet">
       {/* The note has to clear the wallet's mouth to be seen as a note. */}
       <rect x="11" y="3" width="26" height="14" rx="3" fill={tint} />
       <rect x="16" y="8" width="16" height="3.4" rx="1.7" fill={CUT} />
@@ -698,7 +805,7 @@ export function PlusArt({ size = 34, tone, glass = false, look }) {
   const ink = useInk(tone || TEAL, look || glass);
   const { tint, deep } = ink;
   return (
-    <Mark size={size} ink={ink}>
+    <Mark size={size} ink={ink} pose="Plus">
       <circle cx="24" cy="24" r="21" fill={deep} />
       <path d="M24 3a21 21 0 0 0-14.8 35.8l29.6-29.6A20.9 20.9 0 0 0 24 3z" fill={tint} />
       <g fill={CUT}>
@@ -716,7 +823,7 @@ export function BrushArt({ size = 34, tone, glass = false, look }) {
   const ink = useInk(tone || PINK, look || glass);
   const { tint, deep } = ink;
   return (
-    <Mark size={size} ink={ink}>
+    <Mark size={size} ink={ink} pose="Brush">
       <path d="M30.5 4.6l12.9 12.9a3 3 0 0 1 0 4.3L26 39.2l-17.2-17.2L26 4.6a3 3 0 0 1 4.5 0z" fill={tint} />
       <path d="M43.4 17.5a3 3 0 0 1 0 4.3L26 39.2l-8.6-8.6 17.2-17.2z" fill={deep} />
       <path d="M12 24.5l11.5 11.5-6.9 6.9a8.1 8.1 0 0 1-11.5-11.5z" fill={deep} />
@@ -749,7 +856,7 @@ export function GearArt({ size = 34, tone, glass = false, look }) {
     );
   }
   return (
-    <Mark size={size} ink={ink}>
+    <Mark size={size} ink={ink} pose="Gear">
       {teeth}
       <circle cx="24" cy="24" r="16" fill={deep} />
       <circle cx="24" cy="24" r="6.5" fill={CUT} />
@@ -762,7 +869,7 @@ export function IdCardArt({ size = 34, tone, glass = false, look }) {
   const ink = useInk(tone || SKY, look || glass);
   const { tint, deep } = ink;
   return (
-    <Mark size={size} ink={ink}>
+    <Mark size={size} ink={ink} pose="IdCard">
       <rect x="3" y="8" width="42" height="32" rx="6" fill={deep} />
       <rect x="3" y="8" width="42" height="8" rx="4" fill={tint} />
       <circle cx="17" cy="26" r="5.5" fill={CUT} />
@@ -780,7 +887,7 @@ export function ChatArt({ size = 34, tone, glass = false, look }) {
   const ink = useInk(tone || GREEN, look || glass);
   const { tint, deep } = ink;
   return (
-    <Mark size={size} ink={ink}>
+    <Mark size={size} ink={ink} pose="Chat">
       <path d="M20 14h21a5 5 0 0 1 5 5v11a5 5 0 0 1-5 5h-8l-7 6v-6h-6a5 5 0 0 1-5-5V19a5 5 0 0 1 5-5z" fill={tint} />
       <path d="M7 4h20a5 5 0 0 1 5 5v10a5 5 0 0 1-5 5h-8l-7 6v-6H7a5 5 0 0 1-5-5V9a5 5 0 0 1 5-5z" fill={deep} />
       <g fill={CUT}>
@@ -796,7 +903,7 @@ export function QuestionArt({ size = 34, tone, glass = false, look }) {
   const ink = useInk(tone || BLUE, look || glass);
   const { tint, deep } = ink;
   return (
-    <Mark size={size} ink={ink}>
+    <Mark size={size} ink={ink} pose="Question">
       <path d="M8 4h32a6 6 0 0 1 6 6v20a6 6 0 0 1-6 6H24l-11 8v-8H8a6 6 0 0 1-6-6V10a6 6 0 0 1 6-6z" fill={deep} />
       <path d="M8 4h32a6 6 0 0 1 6 6v6H2v-6a6 6 0 0 1 6-6z" fill={tint} />
       <path d="M24 22.5a3.5 3.5 0 1 0-3.5-3.5" stroke={CUT} strokeWidth="4" strokeLinecap="round" fill="none" />
@@ -811,7 +918,7 @@ export function TruckArt({ size = 34, tone, glass = false, look }) {
   const ink = useInk(tone || ORANGE, look || glass);
   const { tint, deep } = ink;
   return (
-    <Mark size={size} ink={ink}>
+    <Mark size={size} ink={ink} pose="Truck">
       <rect x="2" y="12" width="25" height="21" rx="4" fill={deep} />
       <path d="M27 17h8.5a4 4 0 0 1 3.3 1.8l5.5 8.2a4 4 0 0 1 .7 2.2V29a4 4 0 0 1-4 4H27z" fill={tint} />
       <rect x="31" y="21" width="8" height="6" rx="2" fill={CUT} />
@@ -832,7 +939,7 @@ export function BellArt({ size = 34, tone, glass = false, look }) {
   const ink = useInk(tone || AMBER, look || glass);
   const { tint, deep } = ink;
   return (
-    <Mark size={size} ink={ink}>
+    <Mark size={size} ink={ink} pose="Bell">
       <path d="M24 4a13 13 0 0 1 13 13v8l4 6.5a2 2 0 0 1-1.7 3H8.7a2 2 0 0 1-1.7-3L11 25v-8A13 13 0 0 1 24 4z" fill={deep} />
       <path d="M24 4a13 13 0 0 0-13 13v8l-4 6.5a2 2 0 0 0-.3 1H24z" fill={tint} />
       <path d="M18.5 38h11a5.5 5.5 0 0 1-11 0z" fill={deep} />
