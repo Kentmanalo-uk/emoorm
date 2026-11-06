@@ -17,6 +17,7 @@ const { estimate } = require('../utils/eta');
 const { normalizePin } = require('../utils/mapPin');
 const { detect, inspectImageFile, ALLOWED_IMAGE_TYPES } = require('../utils/fileType');
 const { optimizeUpload } = require('../utils/imageOptimizer');
+const { firstImage: firstImageOf } = require('../utils/notificationPicture');
 
 /*
  * MoorMove riders deliver E-MOORM orders.
@@ -742,7 +743,14 @@ const riderCash = async (storeOwnerId, { status = 'all' } = {}) => {
         riderPhone: true,
         deliveredAt: true,
         codReturnedAt: true,
-        order: { select: { orderNumber: true } },
+        // The first product, which is how the seller knows the order.
+        order: {
+          select: {
+            orderNumber: true,
+            items: { take: 1, select: { productName: true, product: { select: { images: true } } } },
+            _count: { select: { items: true } },
+          },
+        },
       },
     }),
     prisma.riderDelivery.aggregate({ where: { ...base, codReturnedAt: null }, _sum: { codAmount: true } }),
@@ -752,6 +760,9 @@ const riderCash = async (storeOwnerId, { status = 'all' } = {}) => {
     items: rows.map((r) => ({
       orderId: r.orderId,
       orderNumber: r.order?.orderNumber || null,
+      productName: r.order?.items?.[0]?.productName || null,
+      productImage: firstImageOf(r.order?.items?.[0]?.product?.images),
+      itemCount: r.order?._count?.items || 0,
       amount: Number(r.codAmount),
       riderName: r.riderName,
       riderPhone: r.riderPhone,

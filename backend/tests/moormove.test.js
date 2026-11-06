@@ -648,6 +648,9 @@ test('cash received tells MoorMove and marks the rider cash as back with the sho
   assert.equal(held.body.data.items.length, 1);
   assert.equal(held.body.data.items[0].orderNumber, o.orderNumber);
   assert.equal(held.body.data.items[0].riderName, 'Ci Rider');
+  // The order is shown by what was sold: its first product's name.
+  assert.ok(held.body.data.items[0].productName, 'the first product is named');
+  assert.ok(held.body.data.items[0].itemCount >= 1);
 
   const res = await h.api('POST', `/orders/${o.id}/rider/cash-received`, { token: h.token(ctx.seller) });
   assert.equal(res.status, 200, res.body?.message);

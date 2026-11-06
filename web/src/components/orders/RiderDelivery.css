@@ -470,7 +470,7 @@
 
 .rider-cash-list li {
   display: grid;
-  grid-template-columns: minmax(0, 1fr) auto;
+  grid-template-columns: auto minmax(0, 1fr) auto;
   align-items: center;
   gap: 8px 12px;
   padding: 12px 18px;
@@ -488,11 +488,26 @@
   min-width: 0;
 }
 
+/* The order's product photo (OrderLook.jsx) leads the row. */
+.rider-cash-thumb {
+  width: 40px;
+  height: 40px;
+}
+
 .rider-cash-order {
+  overflow: hidden;
   color: var(--t-neutral-900, #111827);
   font-size: 14px;
-  font-weight: 700;
+  font-weight: 600;
   text-decoration: none;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.rider-cash-order small {
+  color: var(--t-neutral-500, #6b7280);
+  font-size: 12px;
+  font-weight: 500;
 }
 
 .rider-cash-order:hover {

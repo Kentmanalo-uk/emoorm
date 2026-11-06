@@ -17,6 +17,8 @@ import Skeleton from '../components/ui/Skeleton';
 import ConfirmDialog from '../components/ui/ConfirmDialog';
 import { resolveImg, srcSetFor } from '../lib/media';
 import { lineImage } from '../lib/variationImage';
+import { orderLook, orderRef } from '../lib/orderLook';
+import { OrderThumb, OrderState } from '../components/orders/OrderLook';
 import EmptyArt from '../components/ui/EmptyArt';
 import SellerPageHead from '../components/seller/SellerPageHead';
 import ReportModal from '../components/ReportModal';
@@ -1077,8 +1079,7 @@ export default function SellerOrders() {
                     <th className="so-col-pick">
                       <input type="checkbox" checked={allPicked} onChange={pickAll} aria-label="Tick every order on this page" />
                     </th>
-                    <th className="so-col-num">Order #</th>
-                    <th>Products</th>
+                    <th className="so-col-order">Order</th>
                     <th className="so-col-buyer">Buyer</th>
                     <th className="so-col-total">Total</th>
                     <th className="so-col-status">Status</th>
@@ -1093,12 +1094,7 @@ export default function SellerOrders() {
                     const riderLine = isRiderOrder(order) && order.riderDelivery ? riderStatus(order.riderDelivery, 'seller', order) : null;
                     const isUpdating = updatingId === order.id;
                     const items = order.items || [];
-                    const totalQty = items.reduce((sum, it) => sum + (Number(it.quantity) || 0), 0);
-                    const orderDate = order.createdAt
-                      ? new Date(order.createdAt).toLocaleDateString('en-PH', {
-                        month: 'short', day: 'numeric', year: 'numeric',
-                      })
-                      : '';
+                    const { photo, name, more, qty: totalQty } = orderLook(order);
                     return (
                       <tr
                         key={order.id}
@@ -1113,54 +1109,24 @@ export default function SellerOrders() {
                             aria-label={`Tick order #${order.orderNumber}`}
                           />
                         </td>
-                        <td className="order-num">
-                          <div title={`#${order.orderNumber || order.id.slice(-6).toUpperCase()}`}>#{order.orderNumber || order.id.slice(-6).toUpperCase()}</div>
-                          {orderDate && <div className="so-order-date">{orderDate}</div>}
-                          <TodayTag order={order} />
-                          <ConfirmByTag order={order} />
-                          <CookTag order={order} />
-                        </td>
-                        <td>
+                        {/* What was sold leads, as on the phone's cards: the
+                            order number is a reference under it. */}
+                        <td className="so-col-order">
                           <div className="so-products">
-                            <div className="so-product-thumbs">
-                              {items.slice(0, 3).map((it) => {
-                                const src = resolveImg(lineImage(it.product, it.selectedVariations));
-                                return (
-                                  <div key={it.id} className="so-product-thumb" title={it.product?.name}>
-                                    {src ? (
-                                      <img
-                                        src={src}
-                                        alt={it.product?.name || 'Product'}
-                                        onError={(e) => { e.currentTarget.hidden = true; }}
-                                      />
-                                    ) : (
-                                      <span className="so-product-thumb-fallback">
-                                        <Package size={14} />
-                                      </span>
-                                    )}
-                                  </div>
-                                );
-                              })}
-                              {items.length > 3 && (
-                                <div className="so-product-thumb so-product-more">+{items.length - 3}</div>
-                              )}
-                            </div>
+                            <OrderThumb photo={photo} status={order.status} className="so-order-thumb" />
                             <div className="so-product-summary">
-                              {items.length === 0 ? (
-                                <span className="so-product-name">No items</span>
-                              ) : (
-                                <>
-                                  <span className="so-product-name">
-                                    {items[0].product?.name || 'Product'}
-                                    {items.length > 1 && (
-                                      <span className="so-product-extra"> +{items.length - 1} more</span>
-                                    )}
-                                  </span>
-                                  <span className="so-product-meta">
-                                    {items.length} {items.length === 1 ? 'item' : 'items'} · {items.length === 1 && ['LIVESTOCK', 'PACKAGE'].includes(lineKind(items[0])) ? countLabel(items[0]) : `Qty ${totalQty}`}
-                                  </span>
-                                </>
-                              )}
+                              <span className="so-product-name" title={items.length ? name : undefined}>
+                                {items.length === 0 ? 'No items' : name}
+                                {more > 0 && <span className="so-product-extra"> + {more} more</span>}
+                              </span>
+                              <span className="so-product-meta">
+                                {items.length === 1 && ['LIVESTOCK', 'PACKAGE'].includes(lineKind(items[0])) ? countLabel(items[0]) : `Qty ${totalQty}`}
+                                {' · '}{shortDate(order.createdAt)}
+                                <span className="so-product-ref"> · {orderRef(order)}</span>
+                              </span>
+                              <TodayTag order={order} />
+                              <ConfirmByTag order={order} />
+                              <CookTag order={order} />
                             </div>
                           </div>
                         </td>
@@ -1183,9 +1149,7 @@ export default function SellerOrders() {
                         </td>
                         <td className="so-col-total">{peso(order.total)}</td>
                         <td className="so-col-status">
-                          <span className={`seller-badge seller-badge--solid ${s.cls}`}>
-                            {s.label}
-                          </span>
+                          <OrderState status={order.status} label={s.label} className="so-state" />
                           {proofToCheck(order) && <span className="so-pay-chip">Payment to check</span>}
                           {riderLine?.title && !['COMPLETED', 'CANCELLED'].includes(order.status) && (
                             <span className={`so-next so-rider-line is-${riderLine.tone}`}>{riderLine.title}</span>

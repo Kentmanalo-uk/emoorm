@@ -202,4 +202,4 @@ const attachPictures = async (notifications) => {
   }
 };
 
-module.exports = { attachPictures };
+module.exports = { attachPictures, firstImage };

@@ -4,6 +4,7 @@ import { Money, Phone } from '../../lib/icons';
 import axios from '../../lib/axios';
 import RiderActionSheet from '../orders/RiderActionSheet';
 import { peso } from '../../lib/format';
+import { OrderThumb } from '../orders/OrderLook';
 import '../orders/RiderDelivery.css';
 
 const when = (d) => (d
@@ -82,9 +83,15 @@ export default function RiderCashCard({ ridersOn, onHeld }) {
         <ul className="rider-cash-list">
           {items.map((it) => (
             <li key={it.orderId}>
+              {/* The order by what was sold; its number a reference below. */}
+              <OrderThumb photo={it.productImage} className="rider-cash-thumb" />
               <div className="rider-cash-main">
-                <Link to={`/seller/orders?id=${it.orderId}`} className="rider-cash-order">#{it.orderNumber}</Link>
+                <Link to={`/seller/orders?id=${it.orderId}`} className="rider-cash-order">
+                  {it.productName || `Order #${it.orderNumber}`}
+                  {it.itemCount > 1 && <small> + {it.itemCount - 1} more</small>}
+                </Link>
                 <span className="rider-cash-meta">
+                  {it.productName && `#${it.orderNumber} · `}
                   {it.riderName || 'Rider'}
                   {it.deliveredAt ? ` · delivered ${when(it.deliveredAt)}` : ''}
                   {it.codReturnedAt ? ` · received ${when(it.codReturnedAt)}` : ''}

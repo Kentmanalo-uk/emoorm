@@ -797,11 +797,8 @@
     text-align: center;
   }
 
-  /* Orders: the number on one line (the full number on hover). */
-  .sc-shell:not(.is-phone) .sc-content .so-orders-table th.so-col-num {
-    width: 190px !important;
-  }
-
+  /* Orders: the product leads the row (its photo and name), the order
+     number a reference under it. */
   .sc-shell:not(.is-phone) .sc-content .so-orders-table th.so-col-status {
     width: 150px !important;
   }
@@ -809,26 +806,6 @@
   .sc-shell:not(.is-phone) .sc-content .so-orders-table th:last-child {
     width: 230px !important;
     text-align: right;
-  }
-
-  .sc-shell:not(.is-phone) .sc-content .so-orders-table td.order-num {
-    font-family: inherit;
-  }
-
-  .sc-shell:not(.is-phone) .sc-content .so-orders-table td.order-num > div:first-child {
-    max-width: 170px;
-    overflow: hidden;
-    color: var(--t-neutral-900, #111827);
-    font-family: inherit;
-    font-size: 13px;
-    font-weight: 600;
-    text-overflow: ellipsis;
-    white-space: nowrap;
-  }
-
-  .sc-shell:not(.is-phone) .sc-content .so-orders-table td.order-num .so-order-date {
-    font-family: inherit;
-    font-size: 12px;
   }
 
   .sc-shell:not(.is-phone) .sc-content .so-orders-table .so-buyer-name.profile-link {
@@ -973,16 +950,12 @@
     padding-right: 12px;
   }
 
-  .sc-shell:not(.is-phone) .sc-content .orders-layout:not(.is-single) .so-orders-table th.so-col-num {
-    width: 160px !important;
-  }
-
   .sc-shell:not(.is-phone) .sc-content .orders-layout:not(.is-single) .so-orders-table th.so-col-status {
     width: auto !important;
   }
 
-  .sc-shell:not(.is-phone) .sc-content .orders-layout:not(.is-single) .so-orders-table td.order-num > div:first-child {
-    max-width: 140px;
+  .sc-shell:not(.is-phone) .sc-content .orders-layout:not(.is-single) .so-product-name {
+    max-width: 200px;
   }
 
   .sc-shell:not(.is-phone) .sc-content .orders-layout:not(.is-single) .so-buyer-name {

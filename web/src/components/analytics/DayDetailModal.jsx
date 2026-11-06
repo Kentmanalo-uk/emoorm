@@ -5,6 +5,8 @@ import { resolveImg } from '../../lib/media';
 import { peso, num } from './format';
 import { riderFeeNote, shopTotalOf } from '../../lib/moormove';
 import useFocusTrap from '../../hooks/useFocusTrap';
+import { statusLabel } from '../../lib/orderProgress';
+import { OrderState } from '../orders/OrderLook';
 import './analytics.css';
 
 const DayDetailModal = ({ date, onClose }) => {
@@ -61,15 +63,18 @@ const DayDetailModal = ({ date, onClose }) => {
 
             {data.orders.map((o) => (
               <div key={o.id} className="an-day-order">
+                {/* Who ordered and when lead; the order number is a reference. */}
                 <div className="an-day-order-head">
-                  <div>
-                    <strong>{o.orderNumber}</strong>
-                    <span className={`an-badge an-badge-${o.status.toLowerCase()}`}>{o.status.toLowerCase()}</span>
+                  <div className="an-day-order-who">
+                    <strong>{o.buyer?.name || 'Guest'}</strong>
+                    <span className="an-toplist-sub">
+                      {o.createdAt ? `${new Date(o.createdAt).toLocaleTimeString('en-PH', { hour: 'numeric', minute: '2-digit' })} · ` : ''}#{o.orderNumber}
+                    </span>
                   </div>
-                  <div>
-                    <span className="an-kpi-label">{o.buyer?.name || 'Guest'}</span>
-                    <div style={{ textAlign: 'right', fontWeight: 600, color: 'var(--t-primary-600, #059669)' }}>{peso(shopTotalOf(o))}</div>
-                    {riderFeeNote(o) && <div className="an-toplist-sub" style={{ textAlign: 'right' }}>{riderFeeNote(o)}</div>}
+                  <div className="an-day-order-side">
+                    <div className="an-day-order-total">{peso(shopTotalOf(o))}</div>
+                    <OrderState status={o.status} label={o.status === 'PENDING' ? 'New' : statusLabel(o.status, o.fulfillmentMethod)} />
+                    {riderFeeNote(o) && <div className="an-toplist-sub">{riderFeeNote(o)}</div>}
                   </div>
                 </div>
                 <ul className="an-day-order-items">

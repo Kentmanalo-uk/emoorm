@@ -13,6 +13,8 @@ import DateRangePicker from '../components/analytics/DateRangePicker';
 import RiderCashCard from '../components/seller/RiderCashCard';
 import { riderFeeNote, shopTotalOf, useMoormove } from '../lib/moormove';
 import { paymentStatus as paymentStatusLabel } from '../lib/labels';
+import { orderLook } from '../lib/orderLook';
+import { OrderThumb } from '../components/orders/OrderLook';
 import './SellerDashboard.css';
 import '../components/analytics/analytics.css';
 import './SellerFinance.css';
@@ -79,6 +81,8 @@ const toRow = (o) => ({
   id: o.id,
   date: o.createdAt,
   number: (o.orderNumber || o.id).toString(),
+  // What was sold, which is how a seller knows the order (lib/orderLook).
+  look: orderLook(o),
   buyer: o.buyer?.fullName || o.buyer?.email || '—',
   items: o.items?.length || 0,
   // The shop's sale: a MoorMove rider's delivery fee is the rider's.
@@ -400,7 +404,18 @@ export default function SellerFinance() {
                       {orders.map((o) => (
                         <tr key={o.id}>
                           <td>{shortDate(o.date)}</td>
-                          <td><Link to={`/seller/orders?id=${o.id}`}>#{o.number.slice(-8)}</Link></td>
+                          <td className="sfi-order">
+                            <Link to={`/seller/orders?id=${o.id}`} className="sfi-order-link">
+                              <OrderThumb photo={o.look.photo} className="sfi-order-thumb" />
+                              <span className="sfi-order-text">
+                                <strong>
+                                  {o.look.name}
+                                  {o.look.more > 0 && <small> + {o.look.more} more</small>}
+                                </strong>
+                                <span>#{o.number.slice(-8)}</span>
+                              </span>
+                            </Link>
+                          </td>
                           <td>{o.buyer}</td>
                           <td className="sfi-num" data-label="Items">{o.items}</td>
                           <td data-label="Paid by">

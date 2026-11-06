@@ -143,6 +143,54 @@
   text-align: right;
 }
 
+/* An order by what was sold: the photo, the name, the number under it. */
+.sfi-order-link {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  min-width: 0;
+  color: inherit;
+  text-decoration: none;
+}
+
+.sfi-order-thumb {
+  width: 40px;
+  height: 40px;
+}
+
+.sfi-order-text {
+  display: flex;
+  flex-direction: column;
+  gap: 1px;
+  min-width: 0;
+}
+
+.sfi-order-text strong {
+  max-width: 260px;
+  overflow: hidden;
+  color: var(--t-neutral-900, #0f172a);
+  font-size: 13.5px;
+  font-weight: 600;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.sfi-order-text strong small {
+  color: var(--t-neutral-500, #64748b);
+  font-size: 12px;
+  font-weight: 500;
+}
+
+.sfi-order-text > span {
+  color: var(--t-neutral-500, #64748b);
+  font-size: 12px;
+  font-weight: 400;
+}
+
+.sfi-order-link:hover strong {
+  color: var(--t-primary-700, #047857);
+}
+
 .sfi-rider-note {
   display: block;
   font-size: 11.5px;

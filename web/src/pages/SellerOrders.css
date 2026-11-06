@@ -478,63 +478,28 @@
   vertical-align: middle;
 }
 
-.so-order-date {
-  font-size: 11px;
-  color: var(--t-neutral-500, #636b78);
-  font-weight: 400;
-  margin-top: 2px;
-}
-
+/* The order as the seller knows it: the product's photo (with where it
+   stands on its corner, OrderLook.jsx), its name, then the count, the day
+   and the order number as a small reference. */
 .so-products {
   display: flex;
   align-items: center;
-  gap: 10px;
+  gap: 14px;
   min-width: 0;
 }
 
-.so-product-thumbs {
-  display: flex;
-  align-items: center;
-  flex-shrink: 0;
+.so-order-thumb {
+  width: 48px;
+  height: 48px;
 }
 
-.so-product-thumbs>*+* {
-  margin-left: -8px;
+.so-orders-table tr:hover .so-order-thumb,
+.so-orders-table tr.row-selected .so-order-thumb {
+  --ord-ring: var(--t-neutral-50, #f8fafc);
 }
 
-.so-product-thumb {
-  width: 38px;
-  height: 38px;
-  border-radius: 8px;
-  background: var(--t-neutral-100, #f1f5f9);
-  border: 2px solid var(--t-neutral-0, #fff);
-  overflow: hidden;
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  color: var(--t-neutral-500, #636b78);
-  box-shadow: var(--elev-card);
-}
-
-.so-product-thumb img {
-  width: 100%;
-  height: 100%;
-  object-fit: cover;
-}
-
-.so-product-thumb-fallback {
-  display: flex;
-  width: 100%;
-  height: 100%;
-  align-items: center;
-  justify-content: center;
-}
-
-.so-product-more {
-  background: var(--t-neutral-200, #e2e8f0);
-  color: var(--t-neutral-600, #475569);
-  font-size: 11px;
-  font-weight: 600;
+.so-product-ref {
+  color: var(--t-neutral-400, #94a3b8);
 }
 
 .so-product-summary {
@@ -545,9 +510,9 @@
 }
 
 .so-product-name {
-  font-size: 13px;
+  font-size: 14px;
   color: var(--t-neutral-900, #0f172a);
-  font-weight: 500;
+  font-weight: 600;
   white-space: nowrap;
   overflow: hidden;
   text-overflow: ellipsis;
@@ -561,7 +526,7 @@
 }
 
 .so-product-meta {
-  font-size: 11.5px;
+  font-size: 12px;
   color: var(--t-neutral-500, #636b78);
 }
 
@@ -1450,7 +1415,7 @@ tr.is-moved { box-shadow: inset 3px 0 0 var(--t-primary-600, #059669); }
   cursor: pointer;
 }
 
-.so-col-num { width: 110px; }
+.so-col-order { min-width: 280px; }
 .so-col-buyer { width: 180px; }
 .so-col-total { width: 110px; white-space: nowrap; }
 .so-col-status { width: 130px; }
@@ -1649,17 +1614,4 @@ tr.is-moved { box-shadow: inset 3px 0 0 var(--t-primary-600, #059669); }
     padding: 6px 0;
   }
 
-  .sc-content .so-orders-table .so-product-thumb {
-    width: 36px;
-    height: 36px;
-  }
-
-  .sc-content .so-orders-table .so-order-date {
-    display: inline;
-    margin-left: 6px;
-  }
-
-  .sc-content .so-orders-table td.order-num > div:first-child {
-    display: inline;
-  }
 }
