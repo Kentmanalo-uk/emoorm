@@ -367,6 +367,13 @@ export function CategoryStyleSettings() {
 
 /* ── Shortcut icons: the look of Home's shortcuts and the seller's tools ── */
 
+const SHORTCUT_SIZES = [
+  { value: 85, title: 'Small' },
+  { value: 100, title: 'Medium' },
+  { value: 115, title: 'Large' },
+  { value: 130, title: 'Extra large' },
+];
+
 const SHORTCUT_LOOKS = [
   { value: 'GLASS', look: 'glass', title: 'Glass', text: 'Coloured glass, light and clear' },
   { value: 'POP', look: 'pop', title: '3D', text: 'Chunky, glossy and raised' },
@@ -376,6 +383,7 @@ export function ShortcutArtSettings() {
   const { settings } = useAppSettings();
   const { save, saving } = useSaveSettings();
   const current = settings.shortcutArtStyle === 'POP' ? 'POP' : 'GLASS';
+  const scale = SHORTCUT_SIZES.some((s) => s.value === Number(settings.shortcutIconScale)) ? Number(settings.shortcutIconScale) : 100;
   return (
     <SettingsCard id="shortcut-art" title="Shortcut icons">
       <SettingRow
@@ -404,6 +412,30 @@ export function ShortcutArtSettings() {
                 <strong>{title}{value === 'GLASS' && <em className="ps-choice-default"> (default)</em>}</strong>
                 <span>{text}</span>
               </span>
+            </label>
+          ))}
+        </div>
+      </SettingRow>
+      <SettingRow
+        label="Icon size"
+        help="How large those icons are, on phones and computers alike. Medium is the standard size."
+      >
+        <div className="ps-sizes" role="radiogroup" aria-label="Shortcut icon size">
+          {SHORTCUT_SIZES.map(({ value, title }) => (
+            <label key={value} className={`ps-size${scale === value ? ' is-on' : ''}`}>
+              <input
+                type="radio"
+                name="shortcutIconScale"
+                value={value}
+                checked={scale === value}
+                disabled={saving}
+                onChange={() => save({ shortcutIconScale: value }, `Shortcut icons are now ${title.toLowerCase()}`)}
+              />
+              <span className="ps-size-art" aria-hidden="true">
+                <TrendArt size={Math.round(30 * (value / 100))} look={current === 'POP' ? 'pop' : 'glass'} />
+              </span>
+              <strong>{title}</strong>
+              <span>{value}%</span>
             </label>
           ))}
         </div>

@@ -32,7 +32,7 @@ import './SellerDashboard.css';
 import './Profile.css';
 import { readCache, writeCache } from '../lib/pageCache';
 import { ShopLogoArt } from '../components/shop/ShopArt';
-import useShortcutLook from '../hooks/useShortcutLook';
+import useShortcutLook, { useShortcutScale } from '../hooks/useShortcutLook';
 
 /** Where an order stands, in the words the seller's home uses. */
 const STATUS_LABEL = {
@@ -1101,6 +1101,7 @@ function PhoneHome({
 }) {
   const { share, shareSheet } = useShare();
   const artLook = useShortcutLook();
+  const artScale = useShortcutScale();
   const notice = homeNotice(store, setup);
   const live = liveProducts(stats);
   const name = store?.name || 'My shop';
@@ -1202,7 +1203,7 @@ function PhoneHome({
             <h2>Shop tools</h2>
             <Link to="/seller/tools">All tools <CaretRight size={14} /></Link>
           </div>
-          <div className="sh-tools">
+          <div className="sh-tools" style={{ '--sc-scale': artScale }}>
             {tools.map(({
               to, label, Art, tone, tour,
             }) => (

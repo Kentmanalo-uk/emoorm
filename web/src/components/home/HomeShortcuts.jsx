@@ -4,7 +4,7 @@ import {
   BubbleArt, BuoyArt, CameraArt, GridArt, HeadsetArt, HeartArt, MapArt, MegaphoneArt, ParcelArt,
   PiggyArt, PinArt, PotArt, QrArt, ReturnArt, ShopArt, SparkArt, StarArt, TagArt, TownArt, TrendArt,
 } from '../art/FlatArt';
-import useShortcutLook from '../../hooks/useShortcutLook';
+import useShortcutLook, { useShortcutScale } from '../../hooks/useShortcutLook';
 import './HomeShortcuts.css';
 
 /**
@@ -56,6 +56,7 @@ const pages = Array.from({ length: PAGES }, (_, p) => ENTRIES.slice(p * PER_PAGE
 
 export default function HomeShortcuts() {
   const look = useShortcutLook();
+  const scale = useShortcutScale();
   const thumbRef = useRef(null);
   const dragRef = useRef(null);
 
@@ -95,7 +96,7 @@ export default function HomeShortcuts() {
   };
 
   return (
-    <section className="hsc" aria-label="Shortcuts">
+    <section className="hsc" aria-label="Shortcuts" style={{ '--sc-scale': scale }}>
       <div className="container">
         <div
           className="hsc-pages"

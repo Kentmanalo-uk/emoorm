@@ -1149,8 +1149,8 @@
     display: grid;
     place-items: center;
     flex-shrink: 0;
-    width: 42px;
-    height: 42px;
+    width: calc(42px * var(--sc-scale, 1));
+    height: calc(42px * var(--sc-scale, 1));
   }
 
   .sst-hub-icon.is-green { color: #059669; }
@@ -1234,8 +1234,8 @@
   }
 
   .sc-shell.sc-shell:not(.is-phone) .sc-content .sh-tool-icon svg {
-    width: 34px;
-    height: 34px;
+    width: calc(34px * var(--sc-scale, 1));
+    height: calc(34px * var(--sc-scale, 1));
   }
 
   /* ── Date choices: chips, the open one in green ───────────────────── */

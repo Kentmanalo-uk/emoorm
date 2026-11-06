@@ -18,6 +18,7 @@ const DEFAULT_SETTINGS = {
   requireBuyerVerification: true,
   categoryStyle: 'IMAGE',
   shortcutArtStyle: 'GLASS',
+  shortcutIconScale: 100,
   availableTodayEnabled: true,
   adminTeamMax: 5,
   orderConfirmHours: 48,
@@ -32,6 +33,9 @@ const CATEGORY_STYLES = ['IMAGE', 'ICON'];
 
 // How the shortcut marks are drawn: coloured glass, or chunky glossy 3D.
 const SHORTCUT_ART_STYLES = ['GLASS', 'POP'];
+
+// Their size, as a percent of the standard one: a few steps, nothing between.
+const SHORTCUT_ICON_SCALES = [85, 100, 115, 130];
 
 // A switch is a boolean. "yes", 1 and "" are rejected rather than guessed
 // at, because a mis-set checkout gate is not something to be lenient about.
@@ -230,6 +234,14 @@ const sanitize = (input = {}, current = null) => {
       throw new ApiError('shortcutArtStyle must be GLASS or POP', 400);
     }
     data.shortcutArtStyle = look;
+  }
+
+  if (input.shortcutIconScale !== undefined) {
+    const scale = Number(input.shortcutIconScale);
+    if (input.shortcutIconScale === null || input.shortcutIconScale === '' || !SHORTCUT_ICON_SCALES.includes(scale)) {
+      throw new ApiError(`shortcutIconScale must be one of ${SHORTCUT_ICON_SCALES.join(', ')}`, 400);
+    }
+    data.shortcutIconScale = scale;
   }
 
   if (input.availableTodayEnabled !== undefined) {

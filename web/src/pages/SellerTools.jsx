@@ -1,6 +1,6 @@
 import { Link } from 'react-router-dom';
 import { TOOL_SECTIONS } from '../components/seller/sellerTools';
-import useShortcutLook from '../hooks/useShortcutLook';
+import useShortcutLook, { useShortcutScale } from '../hooks/useShortcutLook';
 
 /**
  * /seller/tools: every tool in the Seller Center, grouped.
@@ -13,12 +13,13 @@ import useShortcutLook from '../hooks/useShortcutLook';
  */
 export default function SellerTools() {
   const look = useShortcutLook();
+  const scale = useShortcutScale();
   return (
     <div className="seller-dashboard sh">
       {TOOL_SECTIONS.map((section) => (
         <section className="sh-card" key={section.key}>
           <div className="sh-card-head"><h2>{section.title}</h2></div>
-          <div className="sh-tools">
+          <div className="sh-tools" style={{ '--sc-scale': scale }}>
             {section.tools.map(({
               key, to, label, Art, tone,
             }) => (

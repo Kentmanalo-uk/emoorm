@@ -262,3 +262,62 @@
   font-style: normal;
   font-weight: 500;
 }
+
+/* Shortcut icon size: four small cards, each showing a mark at its size. */
+.ps-sizes {
+  display: grid;
+  grid-template-columns: repeat(4, minmax(0, 1fr));
+  gap: 8px;
+  max-width: 440px;
+}
+
+.ps-size {
+  position: relative;
+  display: grid;
+  justify-items: center;
+  gap: 2px;
+  padding: 10px 6px 8px;
+  border: 1px solid var(--t-neutral-200, #e5e7eb);
+  border-radius: 10px;
+  background: var(--t-neutral-0, #fff);
+  color: var(--t-neutral-500, #64748b);
+  font-size: 12px;
+  text-align: center;
+  cursor: pointer;
+}
+
+.ps-size.is-on {
+  border-color: var(--t-primary-600, #059669);
+  box-shadow: 0 0 0 1px var(--t-primary-600, #059669);
+}
+
+/* The radio stays for the keyboard and screen readers, out of sight. */
+.ps-size input {
+  position: absolute;
+  opacity: 0;
+  pointer-events: none;
+}
+
+.ps-size:has(input:focus-visible) {
+  outline: 2px solid var(--t-primary-600, #059669);
+  outline-offset: 2px;
+}
+
+/* Room for the largest mark, so the cards stay the same height. */
+.ps-size-art {
+  display: grid;
+  place-items: center;
+  height: 42px;
+}
+
+.ps-size strong {
+  color: var(--t-neutral-800, #1f2937);
+  font-size: 12.5px;
+  font-weight: 600;
+}
+
+@media (max-width: 480px) {
+  .ps-sizes {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+  }
+}

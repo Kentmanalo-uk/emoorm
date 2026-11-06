@@ -362,8 +362,15 @@
 .sh-tool-icon {
   display: grid;
   place-items: center;
-  height: 36px;
+  height: calc(44px * var(--sc-scale, 1));
   color: var(--tone, var(--sa-green));
+}
+
+/* The marks themselves, a size larger than they are drawn on computers;
+   --sc-scale is the size a super admin chose (1 is standard). */
+.sh-tool-icon > svg {
+  width: calc(44px * var(--sc-scale, 1));
+  height: calc(44px * var(--sc-scale, 1));
 }
 
 .sh-tool:active .sh-tool-icon {

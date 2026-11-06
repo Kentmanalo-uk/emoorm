@@ -23,6 +23,8 @@ export const DEFAULT_APP_SETTINGS = {
   categoryStyle: 'IMAGE',
   // Home's shortcuts and the seller's tools: 'GLASS' or 'POP' (glossy 3D).
   shortcutArtStyle: 'GLASS',
+  // Their size, as a percent of the standard one: 85, 100, 115 or 130.
+  shortcutIconScale: 100,
   // MoorMove rider delivery, switched on by the super admin.
   moormoveEnabled: false,
   // 3D / AR product views, switched on by the super admin.

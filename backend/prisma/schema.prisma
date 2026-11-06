@@ -43,6 +43,10 @@ model AppSetting {
   /// way; a super admin picks the look.
   shortcutArtStyle String @default("GLASS") @db.VarChar(10) @map("shortcut_art_style")
 
+  /// How large those marks are drawn, as a percent of their standard size
+  /// (100). A super admin picks it from a few sizes, 85 to 130.
+  shortcutIconScale Int @default(100) @map("shortcut_icon_scale")
+
   /// Available Today (fresh food and produce sold for a limited time). A
   /// super admin can switch the whole feature off; listings stay stored.
   availableTodayEnabled Boolean @default(true) @map("available_today_enabled")

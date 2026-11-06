@@ -49,9 +49,10 @@
   transition: background 0.15s ease;
 }
 
+/* --sc-scale: the size a super admin chose (1 is standard), set on .hsc. */
 .hsc-tile svg {
-  width: 52px;
-  height: 52px;
+  width: calc(52px * var(--sc-scale, 1));
+  height: calc(52px * var(--sc-scale, 1));
 }
 
 /* The same little bar on every screen, in place of a scrollbar. */
@@ -100,15 +101,15 @@
   .hsc-tile {
     flex: none;
     gap: 6px;
-    height: 78px;
+    height: calc(44px * var(--sc-scale, 1) + 44px);
     padding: 6px 2px 0;
     font-size: 10.5px;
     line-height: 13px;
   }
 
   .hsc-tile svg {
-    width: 36px;
-    height: 36px;
+    width: calc(44px * var(--sc-scale, 1));
+    height: calc(44px * var(--sc-scale, 1));
   }
 
   .hsc-tile:active {

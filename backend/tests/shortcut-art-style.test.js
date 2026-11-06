@@ -8,7 +8,7 @@ const appSettingService = require('../src/services/appSetting.service');
 
 // Every test here changes a global setting, so it is put back afterwards.
 after(async () => {
-  await appSettingService.update({ shortcutArtStyle: 'GLASS' }).catch(() => {});
+  await appSettingService.update({ shortcutArtStyle: 'GLASS', shortcutIconScale: 100 }).catch(() => {});
   await h.cleanup();
 });
 
@@ -46,4 +46,24 @@ test('only a super admin may change it, and only to a look that exists', async (
   }
   const saved = await appSettingService.get();
   assert.equal(saved.shortcutArtStyle, 'GLASS', 'nothing bad got through');
+});
+
+test('their size: standard unless chosen, and only from the sizes offered', async () => {
+  await appSettingService.update({ shortcutIconScale: 100 });
+  assert.equal((await h.api('GET', '/app-settings')).body?.data?.shortcutIconScale, 100);
+
+  const admin = await h.user('SUPER_ADMIN');
+  const put = (value, who = admin) => h.api('PUT', '/app-settings', { token: h.token(who), body: { shortcutIconScale: value } });
+
+  const larger = await put(130);
+  assert.equal(larger.status, 200);
+  assert.equal(larger.body?.data?.shortcutIconScale, 130);
+
+  const seller = await h.user('SELLER');
+  assert.equal((await put(85, seller)).status, 403, 'a seller cannot resize them for everyone');
+
+  for (const bad of [0, 50, 101, 200, '', null, 'large']) {
+    assert.equal((await put(bad)).status, 400, `${JSON.stringify(bad)} is refused`);
+  }
+  assert.equal((await appSettingService.get()).shortcutIconScale, 130, 'nothing bad got through');
 });
