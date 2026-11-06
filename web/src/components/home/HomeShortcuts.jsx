@@ -109,7 +109,7 @@ export default function HomeShortcuts() {
                 key, label, Art, to,
               }) => (
                 <Link key={key} to={to} className="hsc-tile" draggable={false}>
-                  <Art size={36} />
+                  <Art size={36} glass />
                   <span>{label}</span>
                 </Link>
               ))}

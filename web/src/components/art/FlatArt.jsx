@@ -24,7 +24,17 @@
  * filled shape is white whatever is behind it.
  *
  * Everything is on a 48 x 48 grid.
+ *
+ * glass: the same marks, lit. Each value becomes a gradient on one sweep
+ * across the mark, light at the top left into the colour and on into a
+ * neighbouring hue (orange into rose, sky into blue); a glassy sheen lies
+ * over the top of the shapes and a thin light along their bottom, clipped
+ * to the mark itself (a mask of its own silhouette, FlatArt.css). No
+ * shadow. The seller's tools use it.
  */
+
+import { useId } from 'react';
+import './FlatArt.css';
 
 const box = (size) => ({
   width: size, height: size, viewBox: '0 0 48 48', 'aria-hidden': true, focusable: false,
@@ -44,6 +54,75 @@ const ROSE = ['#FDA4AF', '#F43F5E'];
 const AMBER = ['#FCD34D', '#F59E0B'];
 const TEAL = ['#5EEAD4', '#0D9488'];
 
+/* Glass: the hue each colour runs on into, so a gradient is colourful
+   rather than just darker. Keyed by the deep value. */
+const NEXT_HUE = {
+  '#F97316': '#F43F5E', // orange into rose
+  '#EC4899': '#A855F7', // pink into purple
+  '#EF4444': '#DB2777', // red into raspberry
+  '#8B5CF6': '#6366F1', // violet into indigo
+  '#0EA5E9': '#3B82F6', // sky into blue
+  '#3B82F6': '#6366F1', // blue into indigo
+  '#10B981': '#0D9488', // green into teal
+  '#059669': '#0E7490', // emerald into cyan
+  '#F43F5E': '#DB2777', // rose into raspberry
+  '#F59E0B': '#F97316', // amber into orange
+  '#0D9488': '#0369A1', // teal into ocean
+};
+
+/** a mixed t of the way to b, both #RRGGBB. */
+const mix = (a, b, t) => {
+  const p = (h) => [1, 3, 5].map((i) => parseInt(h.slice(i, i + 2), 16));
+  const [x, y] = [p(a), p(b)];
+  return `#${x.map((v, i) => Math.round(v + (y[i] - v) * t).toString(16).padStart(2, '0')).join('')}`;
+};
+
+/**
+ * The two values a mark paints with: the flat pair, or, for glass,
+ * references to its gradients (drawn by Mark).
+ */
+function useInk(tone, glass) {
+  const id = `fa${useId().replace(/[^a-zA-Z0-9]/g, '')}`;
+  if (!glass) return { tint: tone[0], deep: tone[1] };
+  return {
+    tint: `url(#${id}t)`, deep: `url(#${id}d)`, id, tone,
+  };
+}
+
+/** A mark's svg; for glass, with its gradients and the sheen over it. */
+function Mark({ size, ink, children }) {
+  if (!ink.id) return <svg {...box(size)}>{children}</svg>;
+  const { id, tone: [tint, deep] } = ink;
+  const next = NEXT_HUE[deep.toUpperCase()] || mix(deep, '#000000', 0.18);
+  return (
+    <svg {...box(size)}>
+      <defs>
+        <linearGradient id={`${id}t`} gradientUnits="userSpaceOnUse" x1="6" y1="2" x2="40" y2="46">
+          <stop offset="0" stopColor={mix(tint, '#FFFFFF', 0.6)} />
+          <stop offset="1" stopColor={tint} />
+        </linearGradient>
+        <linearGradient id={`${id}d`} gradientUnits="userSpaceOnUse" x1="4" y1="2" x2="44" y2="46">
+          <stop offset="0" stopColor={mix(tint, '#FFFFFF', 0.25)} />
+          <stop offset="0.5" stopColor={deep} />
+          <stop offset="1" stopColor={next} />
+        </linearGradient>
+        <linearGradient id={`${id}s`} gradientUnits="userSpaceOnUse" x1="0" y1="0" x2="0" y2="48">
+          <stop offset="0" stopColor="#FFFFFF" stopOpacity="0.75" />
+          <stop offset="0.4" stopColor="#FFFFFF" stopOpacity="0.22" />
+          <stop offset="0.48" stopColor="#FFFFFF" stopOpacity="0" />
+          <stop offset="0.86" stopColor="#FFFFFF" stopOpacity="0" />
+          <stop offset="1" stopColor="#FFFFFF" stopOpacity="0.35" />
+        </linearGradient>
+        <mask id={`${id}m`} maskUnits="userSpaceOnUse" x="0" y="0" width="48" height="48">
+          <g className="fa-silhouette">{children}</g>
+        </mask>
+      </defs>
+      {children}
+      <rect width="48" height="48" fill={`url(#${id}s)`} mask={`url(#${id}m)`} />
+    </svg>
+  );
+}
+
 /** The pairs by name, for callers that want a mark in a different hue. */
 // eslint-disable-next-line react-refresh/only-export-components
 export const TONES = {
@@ -52,10 +131,11 @@ export const TONES = {
 };
 
 /** Today's Menu: a pot, lid catching the light, a fork and spoon on it. */
-export function PotArt({ size = 34, tone }) {
-  const [tint, deep] = tone || ORANGE;
+export function PotArt({ size = 34, tone, glass = false }) {
+  const ink = useInk(tone || ORANGE, glass);
+  const { tint, deep } = ink;
   return (
-    <svg {...box(size)}>
+    <Mark size={size} ink={ink}>
       <g fill="none" stroke={tint} strokeWidth="3" strokeLinecap="round">
         <path d="M17 11c0-3 3-3.5 3-6.5" />
         <path d="M24 10c0-3 3-3.5 3-6.5" />
@@ -72,13 +152,14 @@ export function PotArt({ size = 34, tone }) {
         <rect x="20.8" y="26" width="2.2" height="6" rx="1.1" />
         <path d="M28 26h3.4a2.6 2.6 0 0 1 2.6 2.6v3.4a2.6 2.6 0 0 1-2.6 2.6h-.7v3.9a1.65 1.65 0 0 1-3.3 0z" />
       </g>
-    </svg>
+    </Mark>
   );
 }
 
 /** New Arrivals: a sparkle, its two smaller ones in the paler pink. */
-export function SparkArt({ size = 34, tone }) {
-  const [tint, deep] = tone || PINK;
+export function SparkArt({ size = 34, tone, glass = false }) {
+  const ink = useInk(tone || PINK, glass);
+  const { tint, deep } = ink;
   // Four points pulled in towards the middle: each arm is one quadratic
   // curve bending through the centre, which gives a sparkle its waist.
   const star = (cx, cy, r) => [
@@ -90,19 +171,20 @@ export function SparkArt({ size = 34, tone }) {
     'Z',
   ].join(' ');
   return (
-    <svg {...box(size)}>
+    <Mark size={size} ink={ink}>
       <path d={star(20, 20, 17)} fill={deep} />
       <path d={star(37, 34, 9.5)} fill={tint} />
       <path d={star(10, 38, 7)} fill={tint} />
-    </svg>
+    </Mark>
   );
 }
 
 /** Best Sellers: a chart whose bars climb. */
-export function TrendArt({ size = 34, tone }) {
-  const [tint, deep] = tone || RED;
+export function TrendArt({ size = 34, tone, glass = false }) {
+  const ink = useInk(tone || RED, glass);
+  const { tint, deep } = ink;
   return (
-    <svg {...box(size)}>
+    <Mark size={size} ink={ink}>
       <rect x="3" y="4" width="42" height="40" rx="10" fill={deep} />
       <g fill={tint}>
         <rect x="10" y="26" width="6.5" height="11" rx="2.6" />
@@ -111,15 +193,16 @@ export function TrendArt({ size = 34, tone }) {
       </g>
       <path d="M11 20l9.5-6.5 6.5 4 9.5-7.5" stroke={CUT} strokeWidth="3" strokeLinecap="round" strokeLinejoin="round" fill="none" />
       <polygon points="39,7 39,16 30.5,11" fill={CUT} />
-    </svg>
+    </Mark>
   );
 }
 
 /** Budget Finds: a piggy bank taking a coin. */
-export function PiggyArt({ size = 34, tone }) {
-  const [tint, deep] = tone || VIOLET;
+export function PiggyArt({ size = 34, tone, glass = false }) {
+  const ink = useInk(tone || VIOLET, glass);
+  const { tint, deep } = ink;
   return (
-    <svg {...box(size)}>
+    <Mark size={size} ink={ink}>
       {/* The coin, the ear and the snout all have to break the body's
           outline to be seen at all -- tucked inside it they read as one
           lump. The ear clears the back, the snout clears the right. */}
@@ -138,28 +221,30 @@ export function PiggyArt({ size = 34, tone }) {
         <circle cx="39" cy="26.5" r="1.5" />
         <circle cx="41.8" cy="29.2" r="1.5" />
       </g>
-    </svg>
+    </Mark>
   );
 }
 
 /** All Products: four tiles, two of each tone. */
-export function GridArt({ size = 34, tone }) {
-  const [tint, deep] = tone || SKY;
+export function GridArt({ size = 34, tone, glass = false }) {
+  const ink = useInk(tone || SKY, glass);
+  const { tint, deep } = ink;
   return (
-    <svg {...box(size)}>
+    <Mark size={size} ink={ink}>
       <rect x="4" y="4" width="18.5" height="18.5" rx="5.5" fill={deep} />
       <rect x="25.5" y="4" width="18.5" height="18.5" rx="5.5" fill={tint} />
       <rect x="4" y="25.5" width="18.5" height="18.5" rx="5.5" fill={tint} />
       <rect x="25.5" y="25.5" width="18.5" height="18.5" rx="5.5" fill={deep} />
-    </svg>
+    </Mark>
   );
 }
 
 /** Municipals: two blocks of a town, the nearer one deeper. */
-export function TownArt({ size = 34, tone }) {
-  const [tint, deep] = tone || GREEN;
+export function TownArt({ size = 34, tone, glass = false }) {
+  const ink = useInk(tone || GREEN, glass);
+  const { tint, deep } = ink;
   return (
-    <svg {...box(size)}>
+    <Mark size={size} ink={ink}>
       <rect x="4" y="8" width="20" height="35" rx="4" fill={tint} />
       <rect x="25" y="18" width="19" height="25" rx="4" fill={deep} />
       <g fill={CUT}>
@@ -173,44 +258,47 @@ export function TownArt({ size = 34, tone }) {
         <rect x="29" y="32.5" width="4.4" height="4.4" rx="1.3" />
         <rect x="35.5" y="32.5" width="4.4" height="4.4" rx="1.3" />
       </g>
-    </svg>
+    </Mark>
   );
 }
 
 /** Store Map: a folded map, the middle panel turned away. */
-export function MapArt({ size = 34, tone }) {
-  const [tint, deep] = tone || BLUE;
+export function MapArt({ size = 34, tone, glass = false }) {
+  const ink = useInk(tone || BLUE, glass);
+  const { tint, deep } = ink;
   return (
-    <svg {...box(size)}>
+    <Mark size={size} ink={ink}>
       <polygon points="3,11 17,6 17,37 3,42" fill={tint} />
       <polygon points="31,11 45,6 45,37 31,42" fill={tint} />
       <polygon points="17,6 31,11 31,42 17,37" fill={deep} />
       <path d="M24 13.5a7.8 7.8 0 0 1 7.8 7.8c0 5.6-7.8 13-7.8 13s-7.8-7.4-7.8-13A7.8 7.8 0 0 1 24 13.5z" fill={CUT} />
       <circle cx="24" cy="21" r="3.1" fill={deep} />
-    </svg>
+    </Mark>
   );
 }
 
 /** Photo Search: a camera, its top plate lit. */
-export function CameraArt({ size = 34, tone }) {
-  const [tint, deep] = tone || PINK;
+export function CameraArt({ size = 34, tone, glass = false }) {
+  const ink = useInk(tone || PINK, glass);
+  const { tint, deep } = ink;
   return (
-    <svg {...box(size)}>
+    <Mark size={size} ink={ink}>
       <rect x="15" y="6" width="17" height="9" rx="3.5" fill={tint} />
       <rect x="3" y="12" width="42" height="31" rx="8" fill={deep} />
       <rect x="3" y="12" width="42" height="7" rx="3.5" fill={tint} />
       <circle cx="24" cy="29" r="10.5" fill={CUT} />
       <circle cx="24" cy="29" r="6" fill={tint} />
       <circle cx="38.5" cy="27" r="2.4" fill={tint} />
-    </svg>
+    </Mark>
   );
 }
 
 /** Following: a shop, its awning out. */
-export function ShopArt({ size = 34, tone }) {
-  const [tint, deep] = tone || EMERALD;
+export function ShopArt({ size = 34, tone, glass = false }) {
+  const ink = useInk(tone || EMERALD, glass);
+  const { tint, deep } = ink;
   return (
-    <svg {...box(size)}>
+    <Mark size={size} ink={ink}>
       <rect x="7" y="18" width="34" height="25" rx="4" fill={deep} />
       <path d="M4 7h40v7a5 5 0 0 1-5 5H9a5 5 0 0 1-5-5z" fill={tint} />
       <g fill={CUT}>
@@ -219,67 +307,72 @@ export function ShopArt({ size = 34, tone }) {
         <rect x="17.5" y="26" width="13" height="17" rx="2.5" />
       </g>
       <circle cx="27" cy="35" r="1.6" fill={deep} />
-    </svg>
+    </Mark>
   );
 }
 
 /** Wishlist: a heart with a glint on its lit lobe. */
-export function HeartArt({ size = 34, tone }) {
-  const [tint, deep] = tone || ROSE;
+export function HeartArt({ size = 34, tone, glass = false }) {
+  const ink = useInk(tone || ROSE, glass);
+  const { tint, deep } = ink;
   return (
-    <svg {...box(size)}>
+    <Mark size={size} ink={ink}>
       <path d="M24 43.5S3.5 30.5 3.5 17.6A11.8 11.8 0 0 1 24 10 11.8 11.8 0 0 1 44.5 17.6C44.5 30.5 24 43.5 24 43.5z" fill={deep} />
       <path d="M14.5 6.5A12 12 0 0 1 24 10a13.4 13.4 0 0 0-5.4 8.9C17.3 27 22 34.6 29 41.3 26 43 24 43.5 24 43.5S3.5 30.5 3.5 17.6A11.8 11.8 0 0 1 14.5 6.5z" fill={tint} />
       <path d="M12 14.6a8.4 8.4 0 0 0-3.8 5.3 2.6 2.6 0 0 0 5 1.4 3.3 3.3 0 0 1 1.5-2.1 2.6 2.6 0 0 0-2.7-4.6z" fill={CUT} />
-    </svg>
+    </Mark>
   );
 }
 
 /** My Orders: a parcel, lid lit, taped. */
-export function ParcelArt({ size = 34, tone }) {
-  const [tint, deep] = tone || EMERALD;
+export function ParcelArt({ size = 34, tone, glass = false }) {
+  const ink = useInk(tone || EMERALD, glass);
+  const { tint, deep } = ink;
   return (
-    <svg {...box(size)}>
+    <Mark size={size} ink={ink}>
       <path d="M5 19h38v19a5 5 0 0 1-5 5H10a5 5 0 0 1-5-5z" fill={deep} />
       <rect x="3" y="8" width="42" height="12" rx="4" fill={tint} />
       <g fill={CUT}>
         <rect x="20.4" y="8" width="7.2" height="12" />
         <rect x="21.5" y="19" width="5" height="9" rx="2.5" />
       </g>
-    </svg>
+    </Mark>
   );
 }
 
 /** My Offers: a price tag. */
-export function TagArt({ size = 34, tone }) {
-  const [tint, deep] = tone || AMBER;
+export function TagArt({ size = 34, tone, glass = false }) {
+  const ink = useInk(tone || AMBER, glass);
+  const { tint, deep } = ink;
   return (
-    <svg {...box(size)}>
+    <Mark size={size} ink={ink}>
       <path d="M25 3.5h15.5A4 4 0 0 1 44.5 7.5V23a5 5 0 0 1-1.5 3.6L26.6 43a5 5 0 0 1-7.1 0L5 28.5a5 5 0 0 1 0-7.1L21.4 5a5 5 0 0 1 3.6-1.5z" fill={deep} />
       <path d="M25 3.5h15.5A4 4 0 0 1 44.5 7.5V23a5 5 0 0 1-1.5 3.6l-6 6L13 8.6 21.4 5A5 5 0 0 1 25 3.5z" fill={tint} />
       <circle cx="35.5" cy="12.5" r="4.4" fill={CUT} />
       <path d="M15 26l5.5 5.5 9.5-9.5" stroke={CUT} strokeWidth="3.6" strokeLinecap="round" strokeLinejoin="round" fill="none" />
-    </svg>
+    </Mark>
   );
 }
 
 /** Returns: a parcel with the arrow turning back. */
-export function ReturnArt({ size = 34, tone }) {
-  const [tint, deep] = tone || ORANGE;
+export function ReturnArt({ size = 34, tone, glass = false }) {
+  const ink = useInk(tone || ORANGE, glass);
+  const { tint, deep } = ink;
   return (
-    <svg {...box(size)}>
+    <Mark size={size} ink={ink}>
       <path d="M5 19h38v19a5 5 0 0 1-5 5H10a5 5 0 0 1-5-5z" fill={deep} />
       <rect x="3" y="8" width="42" height="12" rx="4" fill={tint} />
       {/* A plain arrow turning back: a loop drawn at this size is a smudge. */}
       <path d="M23 27h7.5a5.5 5.5 0 0 1 0 11H25" stroke={CUT} strokeWidth="3.4" strokeLinecap="round" strokeLinejoin="round" fill="none" />
       <polygon points="24,22.5 24,31.5 16.5,27" fill={CUT} />
-    </svg>
+    </Mark>
   );
 }
 
 /** My Reviews: a star, its smaller one paler. */
-export function StarArt({ size = 34, tone }) {
-  const [tint, deep] = tone || AMBER;
+export function StarArt({ size = 34, tone, glass = false }) {
+  const ink = useInk(tone || AMBER, glass);
+  const { tint, deep } = ink;
   const star = (cx, cy, r) => {
     const pts = [];
     for (let i = 0; i < 10; i += 1) {
@@ -290,30 +383,32 @@ export function StarArt({ size = 34, tone }) {
     return pts.join(' ');
   };
   return (
-    <svg {...box(size)}>
+    <Mark size={size} ink={ink}>
       <polygon points={star(21, 21, 18)} fill={deep} />
       <polygon points={star(38, 36, 9)} fill={tint} />
       <polygon points={star(21, 21, 7.2)} fill={CUT} />
-    </svg>
+    </Mark>
   );
 }
 
 /** Addresses: a pin, lit down one side. */
-export function PinArt({ size = 34, tone }) {
-  const [tint, deep] = tone || SKY;
+export function PinArt({ size = 34, tone, glass = false }) {
+  const ink = useInk(tone || SKY, glass);
+  const { tint, deep } = ink;
   return (
-    <svg {...box(size)}>
+    <Mark size={size} ink={ink}>
       <ellipse cx="24" cy="42" rx="9.5" ry="3.4" fill={tint} />
       <path d="M24 3a14.5 14.5 0 0 1 14.5 14.5C38.5 28.5 24 40.5 24 40.5S9.5 28.5 9.5 17.5A14.5 14.5 0 0 1 24 3z" fill={deep} />
       <path d="M24 3v37.5S9.5 28.5 9.5 17.5A14.5 14.5 0 0 1 24 3z" fill={tint} />
       <circle cx="24" cy="17.2" r="5.8" fill={CUT} />
-    </svg>
+    </Mark>
   );
 }
 
 /** Scan QR: the code's corners, its loose squares paler. */
-export function QrArt({ size = 34, tone }) {
-  const [tint, deep] = tone || SKY;
+export function QrArt({ size = 34, tone, glass = false }) {
+  const ink = useInk(tone || SKY, glass);
+  const { tint, deep } = ink;
   const corner = (x, y) => (
     <g key={`${x}-${y}`}>
       <rect x={x} y={y} width="15" height="15" rx="4.5" fill={deep} />
@@ -321,7 +416,7 @@ export function QrArt({ size = 34, tone }) {
     </g>
   );
   return (
-    <svg {...box(size)}>
+    <Mark size={size} ink={ink}>
       {corner(3, 3)}
       {corner(30, 3)}
       {corner(3, 30)}
@@ -332,15 +427,16 @@ export function QrArt({ size = 34, tone }) {
         <rect x="39" y="39" width="6" height="6" rx="2" />
         <rect x="20.5" y="20.5" width="7" height="7" rx="2.2" />
       </g>
-    </svg>
+    </Mark>
   );
 }
 
 /** Help Centre: a lifebuoy. */
-export function BuoyArt({ size = 34, tone }) {
-  const [tint, deep] = tone || BLUE;
+export function BuoyArt({ size = 34, tone, glass = false }) {
+  const ink = useInk(tone || BLUE, glass);
+  const { tint, deep } = ink;
   return (
-    <svg {...box(size)}>
+    <Mark size={size} ink={ink}>
       <circle cx="24" cy="24" r="21" fill={deep} />
       {/* The four breaks are the pale tone, not white: white here is the
           same colour as the page, so on a light background the ring stops
@@ -352,15 +448,16 @@ export function BuoyArt({ size = 34, tone }) {
         <rect x="33" y="20.4" width="11.6" height="7.2" />
       </g>
       <circle cx="24" cy="24" r="9.5" fill={CUT} />
-    </svg>
+    </Mark>
   );
 }
 
 /** Customer Care: a headset, the band lit. */
-export function HeadsetArt({ size = 34, tone }) {
-  const [tint, deep] = tone || VIOLET;
+export function HeadsetArt({ size = 34, tone, glass = false }) {
+  const ink = useInk(tone || VIOLET, glass);
+  const { tint, deep } = ink;
   return (
-    <svg {...box(size)}>
+    <Mark size={size} ink={ink}>
       <path d="M8 26v-4a16 16 0 0 1 32 0v4" stroke={tint} strokeWidth="7" strokeLinecap="round" fill="none" />
       <g fill={deep}>
         <rect x="2.5" y="20" width="12" height="18" rx="6" />
@@ -368,15 +465,16 @@ export function HeadsetArt({ size = 34, tone }) {
         <circle cx="26.5" cy="44" r="3.6" />
       </g>
       <path d="M39.5 38v1.5a4.5 4.5 0 0 1-4.5 4.5h-5.5" stroke={deep} strokeWidth="3.6" strokeLinecap="round" fill="none" />
-    </svg>
+    </Mark>
   );
 }
 
 /** Feedback: two speech bubbles. */
-export function BubbleArt({ size = 34, tone }) {
-  const [tint, deep] = tone || PINK;
+export function BubbleArt({ size = 34, tone, glass = false }) {
+  const ink = useInk(tone || PINK, glass);
+  const { tint, deep } = ink;
   return (
-    <svg {...box(size)}>
+    <Mark size={size} ink={ink}>
       <path d="M19 16h22a5 5 0 0 1 5 5v12a5 5 0 0 1-5 5H29l-8 7v-7h-2a5 5 0 0 1-5-5V21a5 5 0 0 1 5-5z" fill={tint} />
       <path d="M7 4h22a5 5 0 0 1 5 5v12a5 5 0 0 1-5 5H17l-8 7v-7H7a5 5 0 0 1-5-5V9a5 5 0 0 1 5-5z" fill={deep} />
       <g fill={CUT}>
@@ -384,15 +482,16 @@ export function BubbleArt({ size = 34, tone }) {
         <circle cx="18" cy="15" r="3" />
         <circle cx="25" cy="15" r="3" />
       </g>
-    </svg>
+    </Mark>
   );
 }
 
 /** Start Selling: a megaphone. */
-export function MegaphoneArt({ size = 34, tone }) {
-  const [tint, deep] = tone || ORANGE;
+export function MegaphoneArt({ size = 34, tone, glass = false }) {
+  const ink = useInk(tone || ORANGE, glass);
+  const { tint, deep } = ink;
   return (
-    <svg {...box(size)}>
+    <Mark size={size} ink={ink}>
       <path d="M37 9v32L14 32.5v-17z" fill={deep} />
       <path d="M37 9v32l-7-2.6V11.6z" fill={tint} />
       <rect x="3" y="16" width="11" height="16" rx="4.5" fill={deep} />
@@ -402,21 +501,22 @@ export function MegaphoneArt({ size = 34, tone }) {
         <rect x="19" y="20" width="9" height="3.2" rx="1.6" />
         <rect x="19" y="26" width="6" height="3.2" rx="1.6" />
       </g>
-    </svg>
+    </Mark>
   );
 }
 
 /** Go live: a video camera, its lens lit, the red "on air" dot. */
-export function LiveArt({ size = 34, tone }) {
-  const [tint, deep] = tone || ROSE;
+export function LiveArt({ size = 34, tone, glass = false }) {
+  const ink = useInk(tone || ROSE, glass);
+  const { tint, deep } = ink;
   return (
-    <svg {...box(size)}>
+    <Mark size={size} ink={ink}>
       <rect x="4" y="12" width="30" height="24" rx="7" fill={deep} />
       <path d="M34 21.5 44 15v18l-10-6.5z" fill={tint} />
       <circle cx="19" cy="24" r="6.5" fill={tint} />
       <circle cx="19" cy="24" r="3" fill={CUT} />
       <circle cx="10.5" cy="17.5" r="2.2" fill={CUT} />
-    </svg>
+    </Mark>
   );
 }
 
@@ -430,10 +530,11 @@ export function LiveArt({ size = 34, tone }) {
  * tiles away in the same grid. Each carries a white label band rather
  * than a notch out of its top edge, which read as a bite taken out.
  */
-export function PackageArt({ size = 34, tone }) {
-  const [tint, deep] = tone || ORANGE;
+export function PackageArt({ size = 34, tone, glass = false }) {
+  const ink = useInk(tone || ORANGE, glass);
+  const { tint, deep } = ink;
   return (
-    <svg {...box(size)}>
+    <Mark size={size} ink={ink}>
       <rect x="3" y="21" width="14.5" height="23" rx="3.5" fill={tint} />
       <rect x="30.5" y="17" width="14.5" height="27" rx="3.5" fill={tint} />
       <rect x="15.5" y="10" width="17" height="34" rx="3.5" fill={deep} />
@@ -443,15 +544,16 @@ export function PackageArt({ size = 34, tone }) {
         <rect x="18" y="17" width="12" height="3.8" rx="1.9" />
         <rect x="18" y="24" width="7.5" height="3.8" rx="1.9" />
       </g>
-    </svg>
+    </Mark>
   );
 }
 
 /** My orders: a receipt with its torn foot. */
-export function ReceiptArt({ size = 34, tone }) {
-  const [tint, deep] = tone || BLUE;
+export function ReceiptArt({ size = 34, tone, glass = false }) {
+  const ink = useInk(tone || BLUE, glass);
+  const { tint, deep } = ink;
   return (
-    <svg {...box(size)}>
+    <Mark size={size} ink={ink}>
       <path d="M8 3h32a3 3 0 0 1 3 3v39l-5.8-3.5L31.4 45l-5.8-3.5L19.8 45 14 41.5 8.2 45 5 43V6a3 3 0 0 1 3-3z" fill={deep} />
       <path d="M8 3h32a3 3 0 0 1 3 3v8H5V6a3 3 0 0 1 3-3z" fill={tint} />
       <g fill={CUT}>
@@ -459,15 +561,16 @@ export function ReceiptArt({ size = 34, tone }) {
         <rect x="11" y="27" width="26" height="3.4" rx="1.7" />
         <rect x="11" y="34" width="16" height="3.4" rx="1.7" />
       </g>
-    </svg>
+    </Mark>
   );
 }
 
 /** Performance: bars with the newest one tallest. */
-export function ChartArt({ size = 34, tone }) {
-  const [tint, deep] = tone || VIOLET;
+export function ChartArt({ size = 34, tone, glass = false }) {
+  const ink = useInk(tone || VIOLET, glass);
+  const { tint, deep } = ink;
   return (
-    <svg {...box(size)}>
+    <Mark size={size} ink={ink}>
       <rect x="4" y="4" width="40" height="40" rx="10" fill={deep} />
       <g fill={tint}>
         <rect x="11" y="27" width="7" height="11" rx="2.8" />
@@ -475,58 +578,62 @@ export function ChartArt({ size = 34, tone }) {
         <rect x="30" y="14" width="7" height="24" rx="2.8" />
       </g>
       <circle cx="33.5" cy="10" r="4.2" fill={CUT} />
-    </svg>
+    </Mark>
   );
 }
 
 /** Finance: a wallet with a card showing. */
-export function WalletArt({ size = 34, tone }) {
-  const [tint, deep] = tone || GREEN;
+export function WalletArt({ size = 34, tone, glass = false }) {
+  const ink = useInk(tone || GREEN, glass);
+  const { tint, deep } = ink;
   return (
-    <svg {...box(size)}>
+    <Mark size={size} ink={ink}>
       {/* The note has to clear the wallet's mouth to be seen as a note. */}
       <rect x="11" y="3" width="26" height="14" rx="3" fill={tint} />
       <rect x="16" y="8" width="16" height="3.4" rx="1.7" fill={CUT} />
       <rect x="3" y="13" width="42" height="31" rx="7" fill={deep} />
       <path d="M29 22h16v13H29a6.5 6.5 0 0 1 0-13z" fill={tint} />
       <circle cx="34" cy="28.5" r="3.4" fill={CUT} />
-    </svg>
+    </Mark>
   );
 }
 
 /** Add product: a plus. */
-export function PlusArt({ size = 34, tone }) {
-  const [tint, deep] = tone || TEAL;
+export function PlusArt({ size = 34, tone, glass = false }) {
+  const ink = useInk(tone || TEAL, glass);
+  const { tint, deep } = ink;
   return (
-    <svg {...box(size)}>
+    <Mark size={size} ink={ink}>
       <circle cx="24" cy="24" r="21" fill={deep} />
       <path d="M24 3a21 21 0 0 0-14.8 35.8l29.6-29.6A20.9 20.9 0 0 0 24 3z" fill={tint} />
       <g fill={CUT}>
         <rect x="20.6" y="12" width="6.8" height="24" rx="3.4" />
         <rect x="12" y="20.6" width="24" height="6.8" rx="3.4" />
       </g>
-    </svg>
+    </Mark>
   );
 }
 
 /* ── The rest of the Seller Center ───────────────────────────────────── */
 
 /** Decorate my shop: a brush with paint on it. */
-export function BrushArt({ size = 34, tone }) {
-  const [tint, deep] = tone || PINK;
+export function BrushArt({ size = 34, tone, glass = false }) {
+  const ink = useInk(tone || PINK, glass);
+  const { tint, deep } = ink;
   return (
-    <svg {...box(size)}>
+    <Mark size={size} ink={ink}>
       <path d="M30.5 4.6l12.9 12.9a3 3 0 0 1 0 4.3L26 39.2l-17.2-17.2L26 4.6a3 3 0 0 1 4.5 0z" fill={tint} />
       <path d="M43.4 17.5a3 3 0 0 1 0 4.3L26 39.2l-8.6-8.6 17.2-17.2z" fill={deep} />
       <path d="M12 24.5l11.5 11.5-6.9 6.9a8.1 8.1 0 0 1-11.5-11.5z" fill={deep} />
       <circle cx="12.5" cy="35.5" r="3.4" fill={CUT} />
-    </svg>
+    </Mark>
   );
 }
 
 /** Settings: a cog. */
-export function GearArt({ size = 34, tone }) {
-  const [tint, deep] = tone || VIOLET;
+export function GearArt({ size = 34, tone, glass = false }) {
+  const ink = useInk(tone || VIOLET, glass);
+  const { tint, deep } = ink;
   // Eight teeth, each a rounded bar on its own spoke.
   const teeth = [];
   for (let i = 0; i < 8; i += 1) {
@@ -547,19 +654,20 @@ export function GearArt({ size = 34, tone }) {
     );
   }
   return (
-    <svg {...box(size)}>
+    <Mark size={size} ink={ink}>
       {teeth}
       <circle cx="24" cy="24" r="16" fill={deep} />
       <circle cx="24" cy="24" r="6.5" fill={CUT} />
-    </svg>
+    </Mark>
   );
 }
 
 /** Verify identity: an ID card. */
-export function IdCardArt({ size = 34, tone }) {
-  const [tint, deep] = tone || SKY;
+export function IdCardArt({ size = 34, tone, glass = false }) {
+  const ink = useInk(tone || SKY, glass);
+  const { tint, deep } = ink;
   return (
-    <svg {...box(size)}>
+    <Mark size={size} ink={ink}>
       <rect x="3" y="8" width="42" height="32" rx="6" fill={deep} />
       <rect x="3" y="8" width="42" height="8" rx="4" fill={tint} />
       <circle cx="17" cy="26" r="5.5" fill={CUT} />
@@ -568,44 +676,47 @@ export function IdCardArt({ size = 34, tone }) {
         <rect x="28" y="22" width="13" height="3.2" rx="1.6" />
         <rect x="28" y="29" width="9" height="3.2" rx="1.6" />
       </g>
-    </svg>
+    </Mark>
   );
 }
 
 /** Chat: a bubble with a reply behind it. */
-export function ChatArt({ size = 34, tone }) {
-  const [tint, deep] = tone || GREEN;
+export function ChatArt({ size = 34, tone, glass = false }) {
+  const ink = useInk(tone || GREEN, glass);
+  const { tint, deep } = ink;
   return (
-    <svg {...box(size)}>
+    <Mark size={size} ink={ink}>
       <path d="M20 14h21a5 5 0 0 1 5 5v11a5 5 0 0 1-5 5h-8l-7 6v-6h-6a5 5 0 0 1-5-5V19a5 5 0 0 1 5-5z" fill={tint} />
       <path d="M7 4h20a5 5 0 0 1 5 5v10a5 5 0 0 1-5 5h-8l-7 6v-6H7a5 5 0 0 1-5-5V9a5 5 0 0 1 5-5z" fill={deep} />
       <g fill={CUT}>
         <rect x="8" y="9" width="18" height="3" rx="1.5" />
         <rect x="8" y="15" width="11" height="3" rx="1.5" />
       </g>
-    </svg>
+    </Mark>
   );
 }
 
 /** Questions: a question mark in a bubble. */
-export function QuestionArt({ size = 34, tone }) {
-  const [tint, deep] = tone || BLUE;
+export function QuestionArt({ size = 34, tone, glass = false }) {
+  const ink = useInk(tone || BLUE, glass);
+  const { tint, deep } = ink;
   return (
-    <svg {...box(size)}>
+    <Mark size={size} ink={ink}>
       <path d="M8 4h32a6 6 0 0 1 6 6v20a6 6 0 0 1-6 6H24l-11 8v-8H8a6 6 0 0 1-6-6V10a6 6 0 0 1 6-6z" fill={deep} />
       <path d="M8 4h32a6 6 0 0 1 6 6v6H2v-6a6 6 0 0 1 6-6z" fill={tint} />
       <path d="M24 22.5a3.5 3.5 0 1 0-3.5-3.5" stroke={CUT} strokeWidth="4" strokeLinecap="round" fill="none" />
       <rect x="22" y="22.5" width="4" height="5" rx="2" fill={CUT} />
       <circle cx="24" cy="31" r="2.6" fill={CUT} />
-    </svg>
+    </Mark>
   );
 }
 
 /** Delivery: a van. */
-export function TruckArt({ size = 34, tone }) {
-  const [tint, deep] = tone || ORANGE;
+export function TruckArt({ size = 34, tone, glass = false }) {
+  const ink = useInk(tone || ORANGE, glass);
+  const { tint, deep } = ink;
   return (
-    <svg {...box(size)}>
+    <Mark size={size} ink={ink}>
       <rect x="2" y="12" width="25" height="21" rx="4" fill={deep} />
       <path d="M27 17h8.5a4 4 0 0 1 3.3 1.8l5.5 8.2a4 4 0 0 1 .7 2.2V29a4 4 0 0 1-4 4H27z" fill={tint} />
       <rect x="31" y="21" width="8" height="6" rx="2" fill={CUT} />
@@ -617,19 +728,20 @@ export function TruckArt({ size = 34, tone }) {
         <circle cx="13" cy="36" r="2.4" />
         <circle cx="36" cy="36" r="2.4" />
       </g>
-    </svg>
+    </Mark>
   );
 }
 
 /** Notifications: a bell. */
-export function BellArt({ size = 34, tone }) {
-  const [tint, deep] = tone || AMBER;
+export function BellArt({ size = 34, tone, glass = false }) {
+  const ink = useInk(tone || AMBER, glass);
+  const { tint, deep } = ink;
   return (
-    <svg {...box(size)}>
+    <Mark size={size} ink={ink}>
       <path d="M24 4a13 13 0 0 1 13 13v8l4 6.5a2 2 0 0 1-1.7 3H8.7a2 2 0 0 1-1.7-3L11 25v-8A13 13 0 0 1 24 4z" fill={deep} />
       <path d="M24 4a13 13 0 0 0-13 13v8l-4 6.5a2 2 0 0 0-.3 1H24z" fill={tint} />
       <path d="M18.5 38h11a5.5 5.5 0 0 1-11 0z" fill={deep} />
       <circle cx="24" cy="4" r="3.6" fill={tint} />
-    </svg>
+    </Mark>
   );
 }

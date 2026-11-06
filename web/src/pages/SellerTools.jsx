@@ -21,7 +21,7 @@ export default function SellerTools() {
               key, to, label, Art, tone,
             }) => (
               <Link key={key} to={to} className="sh-tool">
-                <span className="sh-tool-icon"><Art size={36} tone={tone} /></span>
+                <span className="sh-tool-icon"><Art size={36} tone={tone} glass /></span>
                 <span>{label}</span>
               </Link>
             ))}

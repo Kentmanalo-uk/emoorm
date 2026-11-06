@@ -678,10 +678,12 @@
   gap: 7px;
 }
 
-/* Four cards across, not four in a row of six with two holes after them. */
-@media (min-width: 769px) {
+/* Suggested for You: six cards, one full row of six like every other row.
+   Where the rows are four across (tablets), three across, so six still
+   fills its rows with no holes. */
+@media (min-width: 769px) and (max-width: 1024px) {
   .products-section .products-grid.is-suggested {
-    grid-template-columns: repeat(4, minmax(0, 1fr));
+    grid-template-columns: repeat(3, minmax(0, 1fr));
   }
 }
 

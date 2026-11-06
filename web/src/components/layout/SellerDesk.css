@@ -1055,8 +1055,7 @@
     outline-offset: 2px;
   }
 
-  .sst-hub-icon,
-  .sc-shell.sc-shell:not(.is-phone) .sc-content .sh-tool-icon {
+  .sst-hub-icon {
     display: grid;
     place-items: center;
     flex-shrink: 0;
@@ -1065,6 +1064,15 @@
     border-radius: 50%;
     background: var(--t-neutral-0, #fff);
     box-shadow: 0 2px 6px rgba(132, 152, 208, 0.18);
+  }
+
+  /* The tools' glass marks stand on their own: no disc, no shadow. */
+  .sc-shell.sc-shell:not(.is-phone) .sc-content .sh-tool-icon {
+    display: grid;
+    place-items: center;
+    flex-shrink: 0;
+    width: 42px;
+    height: 42px;
   }
 
   .sst-hub-icon.is-green { color: #059669; }
@@ -1148,8 +1156,8 @@
   }
 
   .sc-shell.sc-shell:not(.is-phone) .sc-content .sh-tool-icon svg {
-    width: 26px;
-    height: 26px;
+    width: 34px;
+    height: 34px;
   }
 
   /* ── Date choices: chips, the open one in green ───────────────────── */

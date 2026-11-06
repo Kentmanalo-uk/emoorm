@@ -48,7 +48,7 @@ const exploreColumns = () => {
 };
 
 // How many "Suggested for You" shows. A saved page may hold more, from before.
-const SUGGESTED = 4;
+const SUGGESTED = 6;
 
 const Home = () => {
   useSeo({

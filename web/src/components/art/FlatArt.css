@@ -1,0 +1,13 @@
+/*
+ * A glass mark's sheen is clipped to the mark's own shapes (FlatArt.jsx,
+ * Mark): the shapes are drawn again inside a mask, all white. Whatever
+ * colour a shape was painted (a gradient, the white glyph) turns white
+ * here; what was left unpainted (fill="none", a line's inside) stays out.
+ */
+.fa-silhouette [fill]:not([fill="none"]) {
+  fill: #fff !important;
+}
+
+.fa-silhouette [stroke]:not([stroke="none"]) {
+  stroke: #fff !important;
+}
