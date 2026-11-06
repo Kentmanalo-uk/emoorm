@@ -21,6 +21,8 @@ export const DEFAULT_APP_SETTINGS = {
   availableTodayEnabled: true,
   // Home's "Shop by Category": 'IMAGE' (pictures) or 'ICON' (gradient icons).
   categoryStyle: 'IMAGE',
+  // Home's shortcuts and the seller's tools: 'GLASS' or 'POP' (glossy 3D).
+  shortcutArtStyle: 'GLASS',
   // MoorMove rider delivery, switched on by the super admin.
   moormoveEnabled: false,
   // 3D / AR product views, switched on by the super admin.

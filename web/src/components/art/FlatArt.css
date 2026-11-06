@@ -66,3 +66,22 @@
   stroke-opacity: 0.85;
   stroke-width: 1.4px;
 }
+
+/* Pop (FlatArt.jsx, PopMark). The raised side: every shape in the side's
+   colour (--fa-depth), glyphs included, so the steps read as one solid. */
+.fa-depth [fill]:not([fill="none"]) {
+  fill: var(--fa-depth) !important;
+}
+
+.fa-depth [stroke]:not([stroke="none"]) {
+  stroke: var(--fa-depth) !important;
+}
+
+/* The top edge's mask: the shapes a step lower, cut away. */
+.fa-silhouette-cut [fill]:not([fill="none"]) {
+  fill: #000 !important;
+}
+
+.fa-silhouette-cut [stroke]:not([stroke="none"]) {
+  stroke: #000 !important;
+}

@@ -41,6 +41,19 @@
  * Each layer is clipped to the shapes it belongs to with a mask drawn
  * from the mark itself (FlatArt.css says which shapes count in which
  * mask). The seller's tools and the Home shortcuts use it.
+ *
+ * pop: the same marks as chunky, glossy 3D toys (a super admin chooses
+ * between glass and pop: App settings, shortcutArtStyle).
+ *
+ *   - a raised side under every shape, in a darker, richer value of the
+ *     mark's colour: copies of the shapes stepped down and a little right.
+ *   - the face in a bright gradient top to bottom, running from a light
+ *     value through the colour into its neighbouring hue (orange into
+ *     rose, green into teal), the tint parts lighter than the deep.
+ *   - gloss over the top half of the shapes and a thin light edge along
+ *     their top, where the face turns into the side. No shadow on the page.
+ *
+ * The mark is drawn a little smaller inside its box so the side has room.
  */
 
 import { useId } from 'react';
@@ -88,15 +101,64 @@ const mix = (a, b, t) => {
 };
 
 /**
- * The two values a mark paints with: the flat pair, or, for glass,
- * references to its gradients (drawn by Mark).
+ * The two values a mark paints with: the flat pair, or, for glass and pop,
+ * references to its gradients (drawn by Mark). `look` is false (flat),
+ * 'pop', or anything else true (glass).
  */
-function useInk(tone, glass) {
+function useInk(tone, look) {
   const id = `fa${useId().replace(/[^a-zA-Z0-9]/g, '')}`;
-  if (!glass) return { tint: tone[0], deep: tone[1] };
+  if (!look) return { tint: tone[0], deep: tone[1] };
   return {
-    tint: `url(#${id}t)`, deep: `url(#${id}d)`, id, tone,
+    tint: `url(#${id}t)`, deep: `url(#${id}d)`, id, tone, pop: look === 'pop',
   };
+}
+
+/** Pop: the side's offsets, nearest the face last so it is drawn on top. */
+const POP_STEPS = [[1.4, 3.8], [1.05, 2.85], [0.7, 1.9], [0.35, 0.95]];
+
+/** A mark as a glossy 3D toy: its side, its face, gloss, a light top edge. */
+function PopMark({ size, ink, children }) {
+  const { id, tone: [tint, deep] } = ink;
+  const [via] = HUE_PATH[deep.toUpperCase()] || [mix(deep, '#000000', 0.15)];
+  const url = (k) => `url(#${id}${k})`;
+  // The side: the colour between the deep and its neighbour, darkened.
+  const side = mix(mix(deep, via, 0.6), '#000000', 0.34);
+  return (
+    <svg {...box(size)}>
+      <defs>
+        <linearGradient id={`${id}d`} gradientUnits="userSpaceOnUse" x1="10" y1="2" x2="26" y2="46">
+          <stop offset="0" stopColor={mix(deep, '#FFFFFF', 0.3)} />
+          <stop offset="0.42" stopColor={deep} />
+          <stop offset="1" stopColor={via} />
+        </linearGradient>
+        <linearGradient id={`${id}t`} gradientUnits="userSpaceOnUse" x1="10" y1="2" x2="26" y2="46">
+          <stop offset="0" stopColor={mix(tint, '#FFFFFF', 0.6)} />
+          <stop offset="1" stopColor={mix(tint, deep, 0.3)} />
+        </linearGradient>
+        <linearGradient id={`${id}s`} gradientUnits="userSpaceOnUse" x1="0" y1="0" x2="0" y2="48">
+          <stop offset="0" stopColor="#FFFFFF" stopOpacity="0.62" />
+          <stop offset="0.4" stopColor="#FFFFFF" stopOpacity="0.14" />
+          <stop offset="0.5" stopColor="#FFFFFF" stopOpacity="0" />
+        </linearGradient>
+        <mask id={`${id}m`} maskUnits="userSpaceOnUse" x="-4" y="-4" width="56" height="56">
+          <g className="fa-silhouette">{children}</g>
+        </mask>
+        {/* The top edge: the shapes, less the same shapes a step lower. */}
+        <mask id={`${id}r`} maskUnits="userSpaceOnUse" x="-4" y="-4" width="56" height="56">
+          <g className="fa-silhouette">{children}</g>
+          <g className="fa-silhouette-cut" transform="translate(0 1.1)">{children}</g>
+        </mask>
+      </defs>
+      <g transform="translate(2.6 0.4) scale(0.88)">
+        {POP_STEPS.map(([x, y]) => (
+          <g key={y} className="fa-depth" transform={`translate(${x} ${y})`} style={{ '--fa-depth': side }}>{children}</g>
+        ))}
+        <g>{children}</g>
+        <rect x="-4" y="-4" width="56" height="56" fill={url('s')} mask={url('m')} />
+        <rect x="-4" y="-4" width="56" height="56" fill="#FFFFFF" opacity="0.7" mask={url('r')} />
+      </g>
+    </svg>
+  );
 }
 
 /**
@@ -109,6 +171,7 @@ function useInk(tone, glass) {
  */
 function Mark({ size, ink, children }) {
   if (!ink.id) return <svg {...box(size)}>{children}</svg>;
+  if (ink.pop) return <PopMark size={size} ink={ink}>{children}</PopMark>;
   const { id, tone: [tint, deep] } = ink;
   const [via, touch] = HUE_PATH[deep.toUpperCase()] || [mix(deep, '#000000', 0.15), mix(deep, '#000000', 0.3)];
   const url = (k) => `url(#${id}${k})`;
@@ -163,8 +226,8 @@ export const TONES = {
 };
 
 /** Today's Menu: a pot, lid catching the light, a fork and spoon on it. */
-export function PotArt({ size = 34, tone, glass = false }) {
-  const ink = useInk(tone || ORANGE, glass);
+export function PotArt({ size = 34, tone, glass = false, look }) {
+  const ink = useInk(tone || ORANGE, look || glass);
   const { tint, deep } = ink;
   return (
     <Mark size={size} ink={ink}>
@@ -189,8 +252,8 @@ export function PotArt({ size = 34, tone, glass = false }) {
 }
 
 /** New Arrivals: a sparkle, its two smaller ones in the paler pink. */
-export function SparkArt({ size = 34, tone, glass = false }) {
-  const ink = useInk(tone || PINK, glass);
+export function SparkArt({ size = 34, tone, glass = false, look }) {
+  const ink = useInk(tone || PINK, look || glass);
   const { tint, deep } = ink;
   // Four points pulled in towards the middle: each arm is one quadratic
   // curve bending through the centre, which gives a sparkle its waist.
@@ -212,8 +275,8 @@ export function SparkArt({ size = 34, tone, glass = false }) {
 }
 
 /** Best Sellers: a chart whose bars climb. */
-export function TrendArt({ size = 34, tone, glass = false }) {
-  const ink = useInk(tone || RED, glass);
+export function TrendArt({ size = 34, tone, glass = false, look }) {
+  const ink = useInk(tone || RED, look || glass);
   const { tint, deep } = ink;
   return (
     <Mark size={size} ink={ink}>
@@ -230,8 +293,8 @@ export function TrendArt({ size = 34, tone, glass = false }) {
 }
 
 /** Budget Finds: a piggy bank taking a coin. */
-export function PiggyArt({ size = 34, tone, glass = false }) {
-  const ink = useInk(tone || VIOLET, glass);
+export function PiggyArt({ size = 34, tone, glass = false, look }) {
+  const ink = useInk(tone || VIOLET, look || glass);
   const { tint, deep } = ink;
   return (
     <Mark size={size} ink={ink}>
@@ -258,8 +321,8 @@ export function PiggyArt({ size = 34, tone, glass = false }) {
 }
 
 /** All Products: four tiles, two of each tone. */
-export function GridArt({ size = 34, tone, glass = false }) {
-  const ink = useInk(tone || SKY, glass);
+export function GridArt({ size = 34, tone, glass = false, look }) {
+  const ink = useInk(tone || SKY, look || glass);
   const { tint, deep } = ink;
   return (
     <Mark size={size} ink={ink}>
@@ -272,8 +335,8 @@ export function GridArt({ size = 34, tone, glass = false }) {
 }
 
 /** Municipals: two blocks of a town, the nearer one deeper. */
-export function TownArt({ size = 34, tone, glass = false }) {
-  const ink = useInk(tone || GREEN, glass);
+export function TownArt({ size = 34, tone, glass = false, look }) {
+  const ink = useInk(tone || GREEN, look || glass);
   const { tint, deep } = ink;
   return (
     <Mark size={size} ink={ink}>
@@ -295,8 +358,8 @@ export function TownArt({ size = 34, tone, glass = false }) {
 }
 
 /** Store Map: a folded map, the middle panel turned away. */
-export function MapArt({ size = 34, tone, glass = false }) {
-  const ink = useInk(tone || BLUE, glass);
+export function MapArt({ size = 34, tone, glass = false, look }) {
+  const ink = useInk(tone || BLUE, look || glass);
   const { tint, deep } = ink;
   return (
     <Mark size={size} ink={ink}>
@@ -310,8 +373,8 @@ export function MapArt({ size = 34, tone, glass = false }) {
 }
 
 /** Photo Search: a camera, its top plate lit. */
-export function CameraArt({ size = 34, tone, glass = false }) {
-  const ink = useInk(tone || PINK, glass);
+export function CameraArt({ size = 34, tone, glass = false, look }) {
+  const ink = useInk(tone || PINK, look || glass);
   const { tint, deep } = ink;
   return (
     <Mark size={size} ink={ink}>
@@ -326,8 +389,8 @@ export function CameraArt({ size = 34, tone, glass = false }) {
 }
 
 /** Following: a shop, its awning out. */
-export function ShopArt({ size = 34, tone, glass = false }) {
-  const ink = useInk(tone || EMERALD, glass);
+export function ShopArt({ size = 34, tone, glass = false, look }) {
+  const ink = useInk(tone || EMERALD, look || glass);
   const { tint, deep } = ink;
   return (
     <Mark size={size} ink={ink}>
@@ -344,8 +407,8 @@ export function ShopArt({ size = 34, tone, glass = false }) {
 }
 
 /** Wishlist: a heart with a glint on its lit lobe. */
-export function HeartArt({ size = 34, tone, glass = false }) {
-  const ink = useInk(tone || ROSE, glass);
+export function HeartArt({ size = 34, tone, glass = false, look }) {
+  const ink = useInk(tone || ROSE, look || glass);
   const { tint, deep } = ink;
   return (
     <Mark size={size} ink={ink}>
@@ -357,8 +420,8 @@ export function HeartArt({ size = 34, tone, glass = false }) {
 }
 
 /** My Orders: a parcel, lid lit, taped. */
-export function ParcelArt({ size = 34, tone, glass = false }) {
-  const ink = useInk(tone || EMERALD, glass);
+export function ParcelArt({ size = 34, tone, glass = false, look }) {
+  const ink = useInk(tone || EMERALD, look || glass);
   const { tint, deep } = ink;
   return (
     <Mark size={size} ink={ink}>
@@ -373,8 +436,8 @@ export function ParcelArt({ size = 34, tone, glass = false }) {
 }
 
 /** My Offers: a price tag. */
-export function TagArt({ size = 34, tone, glass = false }) {
-  const ink = useInk(tone || AMBER, glass);
+export function TagArt({ size = 34, tone, glass = false, look }) {
+  const ink = useInk(tone || AMBER, look || glass);
   const { tint, deep } = ink;
   return (
     <Mark size={size} ink={ink}>
@@ -387,8 +450,8 @@ export function TagArt({ size = 34, tone, glass = false }) {
 }
 
 /** Returns: a parcel with the arrow turning back. */
-export function ReturnArt({ size = 34, tone, glass = false }) {
-  const ink = useInk(tone || ORANGE, glass);
+export function ReturnArt({ size = 34, tone, glass = false, look }) {
+  const ink = useInk(tone || ORANGE, look || glass);
   const { tint, deep } = ink;
   return (
     <Mark size={size} ink={ink}>
@@ -402,8 +465,8 @@ export function ReturnArt({ size = 34, tone, glass = false }) {
 }
 
 /** My Reviews: a star, its smaller one paler. */
-export function StarArt({ size = 34, tone, glass = false }) {
-  const ink = useInk(tone || AMBER, glass);
+export function StarArt({ size = 34, tone, glass = false, look }) {
+  const ink = useInk(tone || AMBER, look || glass);
   const { tint, deep } = ink;
   const star = (cx, cy, r) => {
     const pts = [];
@@ -424,8 +487,8 @@ export function StarArt({ size = 34, tone, glass = false }) {
 }
 
 /** Addresses: a pin, lit down one side. */
-export function PinArt({ size = 34, tone, glass = false }) {
-  const ink = useInk(tone || SKY, glass);
+export function PinArt({ size = 34, tone, glass = false, look }) {
+  const ink = useInk(tone || SKY, look || glass);
   const { tint, deep } = ink;
   return (
     <Mark size={size} ink={ink}>
@@ -438,8 +501,8 @@ export function PinArt({ size = 34, tone, glass = false }) {
 }
 
 /** Scan QR: the code's corners, its loose squares paler. */
-export function QrArt({ size = 34, tone, glass = false }) {
-  const ink = useInk(tone || SKY, glass);
+export function QrArt({ size = 34, tone, glass = false, look }) {
+  const ink = useInk(tone || SKY, look || glass);
   const { tint, deep } = ink;
   const corner = (x, y) => (
     <g key={`${x}-${y}`}>
@@ -464,8 +527,8 @@ export function QrArt({ size = 34, tone, glass = false }) {
 }
 
 /** Help Centre: a lifebuoy. */
-export function BuoyArt({ size = 34, tone, glass = false }) {
-  const ink = useInk(tone || BLUE, glass);
+export function BuoyArt({ size = 34, tone, glass = false, look }) {
+  const ink = useInk(tone || BLUE, look || glass);
   const { tint, deep } = ink;
   return (
     <Mark size={size} ink={ink}>
@@ -485,8 +548,8 @@ export function BuoyArt({ size = 34, tone, glass = false }) {
 }
 
 /** Customer Care: a headset, the band lit. */
-export function HeadsetArt({ size = 34, tone, glass = false }) {
-  const ink = useInk(tone || VIOLET, glass);
+export function HeadsetArt({ size = 34, tone, glass = false, look }) {
+  const ink = useInk(tone || VIOLET, look || glass);
   const { tint, deep } = ink;
   return (
     <Mark size={size} ink={ink}>
@@ -502,8 +565,8 @@ export function HeadsetArt({ size = 34, tone, glass = false }) {
 }
 
 /** Feedback: two speech bubbles. */
-export function BubbleArt({ size = 34, tone, glass = false }) {
-  const ink = useInk(tone || PINK, glass);
+export function BubbleArt({ size = 34, tone, glass = false, look }) {
+  const ink = useInk(tone || PINK, look || glass);
   const { tint, deep } = ink;
   return (
     <Mark size={size} ink={ink}>
@@ -519,8 +582,8 @@ export function BubbleArt({ size = 34, tone, glass = false }) {
 }
 
 /** Start Selling: a megaphone. */
-export function MegaphoneArt({ size = 34, tone, glass = false }) {
-  const ink = useInk(tone || ORANGE, glass);
+export function MegaphoneArt({ size = 34, tone, glass = false, look }) {
+  const ink = useInk(tone || ORANGE, look || glass);
   const { tint, deep } = ink;
   return (
     <Mark size={size} ink={ink}>
@@ -538,8 +601,8 @@ export function MegaphoneArt({ size = 34, tone, glass = false }) {
 }
 
 /** Go live: a video camera, its lens lit, the red "on air" dot. */
-export function LiveArt({ size = 34, tone, glass = false }) {
-  const ink = useInk(tone || ROSE, glass);
+export function LiveArt({ size = 34, tone, glass = false, look }) {
+  const ink = useInk(tone || ROSE, look || glass);
   const { tint, deep } = ink;
   return (
     <Mark size={size} ink={ink}>
@@ -562,8 +625,8 @@ export function LiveArt({ size = 34, tone, glass = false }) {
  * tiles away in the same grid. Each carries a white label band rather
  * than a notch out of its top edge, which read as a bite taken out.
  */
-export function PackageArt({ size = 34, tone, glass = false }) {
-  const ink = useInk(tone || ORANGE, glass);
+export function PackageArt({ size = 34, tone, glass = false, look }) {
+  const ink = useInk(tone || ORANGE, look || glass);
   const { tint, deep } = ink;
   return (
     <Mark size={size} ink={ink}>
@@ -581,8 +644,8 @@ export function PackageArt({ size = 34, tone, glass = false }) {
 }
 
 /** My orders: a receipt with its torn foot. */
-export function ReceiptArt({ size = 34, tone, glass = false }) {
-  const ink = useInk(tone || BLUE, glass);
+export function ReceiptArt({ size = 34, tone, glass = false, look }) {
+  const ink = useInk(tone || BLUE, look || glass);
   const { tint, deep } = ink;
   return (
     <Mark size={size} ink={ink}>
@@ -598,8 +661,8 @@ export function ReceiptArt({ size = 34, tone, glass = false }) {
 }
 
 /** Performance: bars with the newest one tallest. */
-export function ChartArt({ size = 34, tone, glass = false }) {
-  const ink = useInk(tone || VIOLET, glass);
+export function ChartArt({ size = 34, tone, glass = false, look }) {
+  const ink = useInk(tone || VIOLET, look || glass);
   const { tint, deep } = ink;
   return (
     <Mark size={size} ink={ink}>
@@ -615,8 +678,8 @@ export function ChartArt({ size = 34, tone, glass = false }) {
 }
 
 /** Finance: a wallet with a card showing. */
-export function WalletArt({ size = 34, tone, glass = false }) {
-  const ink = useInk(tone || GREEN, glass);
+export function WalletArt({ size = 34, tone, glass = false, look }) {
+  const ink = useInk(tone || GREEN, look || glass);
   const { tint, deep } = ink;
   return (
     <Mark size={size} ink={ink}>
@@ -631,8 +694,8 @@ export function WalletArt({ size = 34, tone, glass = false }) {
 }
 
 /** Add product: a plus. */
-export function PlusArt({ size = 34, tone, glass = false }) {
-  const ink = useInk(tone || TEAL, glass);
+export function PlusArt({ size = 34, tone, glass = false, look }) {
+  const ink = useInk(tone || TEAL, look || glass);
   const { tint, deep } = ink;
   return (
     <Mark size={size} ink={ink}>
@@ -649,8 +712,8 @@ export function PlusArt({ size = 34, tone, glass = false }) {
 /* ── The rest of the Seller Center ───────────────────────────────────── */
 
 /** Decorate my shop: a brush with paint on it. */
-export function BrushArt({ size = 34, tone, glass = false }) {
-  const ink = useInk(tone || PINK, glass);
+export function BrushArt({ size = 34, tone, glass = false, look }) {
+  const ink = useInk(tone || PINK, look || glass);
   const { tint, deep } = ink;
   return (
     <Mark size={size} ink={ink}>
@@ -663,8 +726,8 @@ export function BrushArt({ size = 34, tone, glass = false }) {
 }
 
 /** Settings: a cog. */
-export function GearArt({ size = 34, tone, glass = false }) {
-  const ink = useInk(tone || VIOLET, glass);
+export function GearArt({ size = 34, tone, glass = false, look }) {
+  const ink = useInk(tone || VIOLET, look || glass);
   const { tint, deep } = ink;
   // Eight teeth, each a rounded bar on its own spoke.
   const teeth = [];
@@ -695,8 +758,8 @@ export function GearArt({ size = 34, tone, glass = false }) {
 }
 
 /** Verify identity: an ID card. */
-export function IdCardArt({ size = 34, tone, glass = false }) {
-  const ink = useInk(tone || SKY, glass);
+export function IdCardArt({ size = 34, tone, glass = false, look }) {
+  const ink = useInk(tone || SKY, look || glass);
   const { tint, deep } = ink;
   return (
     <Mark size={size} ink={ink}>
@@ -713,8 +776,8 @@ export function IdCardArt({ size = 34, tone, glass = false }) {
 }
 
 /** Chat: a bubble with a reply behind it. */
-export function ChatArt({ size = 34, tone, glass = false }) {
-  const ink = useInk(tone || GREEN, glass);
+export function ChatArt({ size = 34, tone, glass = false, look }) {
+  const ink = useInk(tone || GREEN, look || glass);
   const { tint, deep } = ink;
   return (
     <Mark size={size} ink={ink}>
@@ -729,8 +792,8 @@ export function ChatArt({ size = 34, tone, glass = false }) {
 }
 
 /** Questions: a question mark in a bubble. */
-export function QuestionArt({ size = 34, tone, glass = false }) {
-  const ink = useInk(tone || BLUE, glass);
+export function QuestionArt({ size = 34, tone, glass = false, look }) {
+  const ink = useInk(tone || BLUE, look || glass);
   const { tint, deep } = ink;
   return (
     <Mark size={size} ink={ink}>
@@ -744,8 +807,8 @@ export function QuestionArt({ size = 34, tone, glass = false }) {
 }
 
 /** Delivery: a van. */
-export function TruckArt({ size = 34, tone, glass = false }) {
-  const ink = useInk(tone || ORANGE, glass);
+export function TruckArt({ size = 34, tone, glass = false, look }) {
+  const ink = useInk(tone || ORANGE, look || glass);
   const { tint, deep } = ink;
   return (
     <Mark size={size} ink={ink}>
@@ -765,8 +828,8 @@ export function TruckArt({ size = 34, tone, glass = false }) {
 }
 
 /** Notifications: a bell. */
-export function BellArt({ size = 34, tone, glass = false }) {
-  const ink = useInk(tone || AMBER, glass);
+export function BellArt({ size = 34, tone, glass = false, look }) {
+  const ink = useInk(tone || AMBER, look || glass);
   const { tint, deep } = ink;
   return (
     <Mark size={size} ink={ink}>

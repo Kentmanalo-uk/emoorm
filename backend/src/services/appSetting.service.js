@@ -17,6 +17,7 @@ const DEFAULT_SETTINGS = {
   freeDeliveryThreshold: 500,
   requireBuyerVerification: true,
   categoryStyle: 'IMAGE',
+  shortcutArtStyle: 'GLASS',
   availableTodayEnabled: true,
   adminTeamMax: 5,
   orderConfirmHours: 48,
@@ -28,6 +29,9 @@ const DEFAULT_SETTINGS = {
 
 // How the homepage shows its categories.
 const CATEGORY_STYLES = ['IMAGE', 'ICON'];
+
+// How the shortcut marks are drawn: coloured glass, or chunky glossy 3D.
+const SHORTCUT_ART_STYLES = ['GLASS', 'POP'];
 
 // A switch is a boolean. "yes", 1 and "" are rejected rather than guessed
 // at, because a mis-set checkout gate is not something to be lenient about.
@@ -218,6 +222,14 @@ const sanitize = (input = {}, current = null) => {
       throw new ApiError('categoryStyle must be IMAGE or ICON', 400);
     }
     data.categoryStyle = style;
+  }
+
+  if (input.shortcutArtStyle !== undefined) {
+    const look = String(input.shortcutArtStyle || '').toUpperCase();
+    if (!SHORTCUT_ART_STYLES.includes(look)) {
+      throw new ApiError('shortcutArtStyle must be GLASS or POP', 400);
+    }
+    data.shortcutArtStyle = look;
   }
 
   if (input.availableTodayEnabled !== undefined) {

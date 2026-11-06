@@ -38,6 +38,11 @@ model AppSetting {
   /// picture) or ICON (each category's icon, filled with a gradient).
   categoryStyle String @default("IMAGE") @db.VarChar(10) @map("category_style")
 
+  /// How the shortcut marks are drawn (Home's shortcuts, the seller's tools):
+  /// GLASS (coloured glass) or POP (chunky, glossy 3D). The same shapes either
+  /// way; a super admin picks the look.
+  shortcutArtStyle String @default("GLASS") @db.VarChar(10) @map("shortcut_art_style")
+
   /// Available Today (fresh food and produce sold for a limited time). A
   /// super admin can switch the whole feature off; listings stay stored.
   availableTodayEnabled Boolean @default(true) @map("available_today_enabled")

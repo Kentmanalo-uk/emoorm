@@ -250,3 +250,15 @@
 .ps-switch {
   position: relative;
 }
+
+/* Shortcut icons: three of the marks themselves, larger, on no tile. */
+.ps-choice-preview--art {
+  gap: 8px;
+  align-items: center;
+}
+
+.ps-choice-default {
+  color: var(--t-neutral-500, #64748b);
+  font-style: normal;
+  font-weight: 500;
+}

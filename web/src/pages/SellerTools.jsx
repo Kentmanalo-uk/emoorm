@@ -1,5 +1,6 @@
 import { Link } from 'react-router-dom';
 import { TOOL_SECTIONS } from '../components/seller/sellerTools';
+import useShortcutLook from '../hooks/useShortcutLook';
 
 /**
  * /seller/tools: every tool in the Seller Center, grouped.
@@ -11,6 +12,7 @@ import { TOOL_SECTIONS } from '../components/seller/sellerTools';
  * which Home picks its eight out of.
  */
 export default function SellerTools() {
+  const look = useShortcutLook();
   return (
     <div className="seller-dashboard sh">
       {TOOL_SECTIONS.map((section) => (
@@ -21,7 +23,7 @@ export default function SellerTools() {
               key, to, label, Art, tone,
             }) => (
               <Link key={key} to={to} className="sh-tool">
-                <span className="sh-tool-icon"><Art size={36} tone={tone} glass /></span>
+                <span className="sh-tool-icon"><Art size={36} tone={tone} glass look={look} /></span>
                 <span>{label}</span>
               </Link>
             ))}

@@ -7,6 +7,7 @@ import axios from '../../lib/axios';
 import { confirmAction } from '../../lib/confirm';
 import useAppSettings, { APP_SETTINGS_QUERY_KEY, DEFAULT_APP_SETTINGS } from '../../hooks/useAppSettings';
 import CategoryIcon from '../CategoryIcon';
+import { PotArt, TrendArt, ParcelArt } from '../art/FlatArt';
 import './PlatformSettings.css';
 
 /*
@@ -354,6 +355,53 @@ export function CategoryStyleSettings() {
               </span>
               <span className="ps-choice-text">
                 <strong>{title}</strong>
+                <span>{text}</span>
+              </span>
+            </label>
+          ))}
+        </div>
+      </SettingRow>
+    </SettingsCard>
+  );
+}
+
+/* ── Shortcut icons: the look of Home's shortcuts and the seller's tools ── */
+
+const SHORTCUT_LOOKS = [
+  { value: 'GLASS', look: 'glass', title: 'Glass', text: 'Coloured glass, light and clear' },
+  { value: 'POP', look: 'pop', title: '3D', text: 'Chunky, glossy and raised' },
+];
+
+export function ShortcutArtSettings() {
+  const { settings } = useAppSettings();
+  const { save, saving } = useSaveSettings();
+  const current = settings.shortcutArtStyle === 'POP' ? 'POP' : 'GLASS';
+  return (
+    <SettingsCard id="shortcut-art" title="Shortcut icons">
+      <SettingRow
+        label="Icon style"
+        help="How the icons are drawn on the homepage shortcuts and in the Seller Center's tools. The same icons either way."
+      >
+        <div className="ps-choices" role="radiogroup" aria-label="Shortcut icon style">
+          {SHORTCUT_LOOKS.map(({
+            value, look, title, text,
+          }) => (
+            <label key={value} className={`ps-choice${current === value ? ' is-on' : ''}`}>
+              <input
+                type="radio"
+                name="shortcutArtStyle"
+                value={value}
+                checked={current === value}
+                disabled={saving}
+                onChange={() => save({ shortcutArtStyle: value }, `Shortcut icons are now ${title}`)}
+              />
+              <span className="ps-choice-preview ps-choice-preview--art" aria-hidden="true">
+                <PotArt size={34} look={look} />
+                <TrendArt size={34} look={look} />
+                <ParcelArt size={34} look={look} />
+              </span>
+              <span className="ps-choice-text">
+                <strong>{title}{value === 'GLASS' && <em className="ps-choice-default"> (default)</em>}</strong>
                 <span>{text}</span>
               </span>
             </label>

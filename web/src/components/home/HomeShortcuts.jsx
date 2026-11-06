@@ -4,6 +4,7 @@ import {
   BubbleArt, BuoyArt, CameraArt, GridArt, HeadsetArt, HeartArt, MapArt, MegaphoneArt, ParcelArt,
   PiggyArt, PinArt, PotArt, QrArt, ReturnArt, ShopArt, SparkArt, StarArt, TagArt, TownArt, TrendArt,
 } from '../art/FlatArt';
+import useShortcutLook from '../../hooks/useShortcutLook';
 import './HomeShortcuts.css';
 
 /**
@@ -54,6 +55,7 @@ const PAGES = Math.ceil(ENTRIES.length / PER_PAGE);
 const pages = Array.from({ length: PAGES }, (_, p) => ENTRIES.slice(p * PER_PAGE, (p + 1) * PER_PAGE));
 
 export default function HomeShortcuts() {
+  const look = useShortcutLook();
   const thumbRef = useRef(null);
   const dragRef = useRef(null);
 
@@ -109,7 +111,7 @@ export default function HomeShortcuts() {
                 key, label, Art, to,
               }) => (
                 <Link key={key} to={to} className="hsc-tile" draggable={false}>
-                  <Art size={36} glass />
+                  <Art size={36} glass look={look} />
                   <span>{label}</span>
                 </Link>
               ))}
