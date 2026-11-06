@@ -1238,37 +1238,6 @@
     height: 34px;
   }
 
-  /* Under a mouse a tool grows a little, its mark more, and both shrink
-     back on leaving, on the shared ease-in-out curve (index.css). */
-  .sc-shell.sc-shell:not(.is-phone) .sc-content .sh-tool {
-    transition:
-      background-color .15s,
-      transform var(--pop-out) var(--pop-ease);
-  }
-
-  .sc-shell.sc-shell:not(.is-phone) .sc-content .sh-tool-icon svg {
-    transition: transform var(--pop-out) var(--pop-ease);
-  }
-
-  .sc-shell.sc-shell:not(.is-phone) .sc-content .sh-tool:hover {
-    transform: scale(1.03);
-    transition:
-      background-color .15s,
-      transform var(--pop-in) var(--pop-ease);
-  }
-
-  .sc-shell.sc-shell:not(.is-phone) .sc-content .sh-tool:hover .sh-tool-icon svg {
-    transform: scale(1.14) rotate(-4deg);
-    transition: transform var(--pop-in) var(--pop-ease);
-  }
-
-  @media (prefers-reduced-motion: reduce) {
-    .sc-shell.sc-shell:not(.is-phone) .sc-content .sh-tool:hover,
-    .sc-shell.sc-shell:not(.is-phone) .sc-content .sh-tool:hover .sh-tool-icon svg {
-      transform: none;
-    }
-  }
-
   /* ── Date choices: chips, the open one in green ───────────────────── */
   .sc-shell.sc-shell:not(.is-phone) .sc-content .an-daterange {
     gap: 8px;
