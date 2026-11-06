@@ -1,13 +1,68 @@
 /*
- * A glass mark's sheen is clipped to the mark's own shapes (FlatArt.jsx,
- * Mark): the shapes are drawn again inside a mask, all white. Whatever
- * colour a shape was painted (a gradient, the white glyph) turns white
- * here; what was left unpainted (fill="none", a line's inside) stays out.
+ * A glass mark is drawn in layers (FlatArt.jsx, Mark), each from the same
+ * shapes; these rules say which shapes count in which layer. A glass
+ * mark's tint is painted with url(#...t), its deep with url(#...d), so
+ * [fill$="t)"] picks the tint parts. Attributes lose to CSS, so these win
+ * over the shapes' own fill and stroke.
  */
+
+/* The sheen's mask: every painted shape, white. */
 .fa-silhouette [fill]:not([fill="none"]) {
   fill: #fff !important;
 }
 
 .fa-silhouette [stroke]:not([stroke="none"]) {
   stroke: #fff !important;
+}
+
+/* The glass's mask: the tint parts white, everything else black, so a
+   deep part or a glyph drawn over the tint still hides it. */
+.fa-tint-mask [fill]:not([fill="none"]):not([fill$="t)"]) {
+  fill: #000 !important;
+}
+
+.fa-tint-mask [fill$="t)"] {
+  fill: #fff !important;
+}
+
+.fa-tint-mask [stroke]:not([stroke="none"]):not([stroke$="t)"]) {
+  stroke: #000 !important;
+}
+
+.fa-tint-mask [stroke$="t)"] {
+  stroke: #fff !important;
+}
+
+/* Base and frost: the tint parts left out (the glass shows there). */
+.fa-base [fill$="t)"] {
+  fill-opacity: 0;
+}
+
+.fa-base [stroke$="t)"] {
+  stroke-opacity: 0;
+}
+
+/* The glass: only the tint parts, in their wash. */
+.fa-glass [fill]:not([fill$="t)"]) {
+  fill-opacity: 0;
+}
+
+.fa-glass [stroke]:not([stroke$="t)"]) {
+  stroke-opacity: 0;
+}
+
+/* Its rim: a light line along the tint parts' edges (the mask keeps the
+   inner half, which reads as light caught in the glass). */
+.fa-rim [fill] {
+  fill-opacity: 0;
+}
+
+.fa-rim [stroke] {
+  stroke-opacity: 0;
+}
+
+.fa-rim [fill$="t)"] {
+  stroke: #fff;
+  stroke-opacity: 0.85;
+  stroke-width: 1.4px;
 }

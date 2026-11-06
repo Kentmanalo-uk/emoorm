@@ -25,12 +25,22 @@
  *
  * Everything is on a 48 x 48 grid.
  *
- * glass: the same marks, lit. Each value becomes a gradient on one sweep
- * across the mark, light at the top left into the colour and on into a
- * neighbouring hue (orange into rose, sky into blue); a glassy sheen lies
- * over the top of the shapes and a thin light along their bottom, clipped
- * to the mark itself (a mask of its own silhouette, FlatArt.css). No
- * shadow. The seller's tools use it.
+ * glass: the same marks, as coloured glass.
+ *
+ *   - the DEEP value becomes a gradient on one sweep across the mark, light
+ *     at the top left, through the colour and a neighbouring hue, ending
+ *     on a touch of a contrasting one (orange, rose, a little indigo;
+ *     green, teal, a little sky). Through the neighbour, never straight
+ *     across: orange straight into blue goes grey in the middle.
+ *   - the TINT parts (a lid, the near face) become frosted glass: a
+ *     blurred copy of what lies behind them, a pale wash of their colour
+ *     over it, and a light rim along their edge.
+ *   - a sheen over the top of the shapes and a thin light along their
+ *     bottom. No shadow.
+ *
+ * Each layer is clipped to the shapes it belongs to with a mask drawn
+ * from the mark itself (FlatArt.css says which shapes count in which
+ * mask). The seller's tools and the Home shortcuts use it.
  */
 
 import { useId } from 'react';
@@ -54,20 +64,20 @@ const ROSE = ['#FDA4AF', '#F43F5E'];
 const AMBER = ['#FCD34D', '#F59E0B'];
 const TEAL = ['#5EEAD4', '#0D9488'];
 
-/* Glass: the hue each colour runs on into, so a gradient is colourful
-   rather than just darker. Keyed by the deep value. */
-const NEXT_HUE = {
-  '#F97316': '#F43F5E', // orange into rose
-  '#EC4899': '#A855F7', // pink into purple
-  '#EF4444': '#DB2777', // red into raspberry
-  '#8B5CF6': '#6366F1', // violet into indigo
-  '#0EA5E9': '#3B82F6', // sky into blue
-  '#3B82F6': '#6366F1', // blue into indigo
-  '#10B981': '#0D9488', // green into teal
-  '#059669': '#0E7490', // emerald into cyan
-  '#F43F5E': '#DB2777', // rose into raspberry
-  '#F59E0B': '#F97316', // amber into orange
-  '#0D9488': '#0369A1', // teal into ocean
+/* Glass: the hues each colour runs on through, keyed by the deep value:
+   [a neighbour, the contrasting touch it ends on]. */
+const HUE_PATH = {
+  '#F97316': ['#F43F5E', '#6366F1'], // orange, rose, a little indigo
+  '#F59E0B': ['#F97316', '#EC4899'], // amber, orange, a little pink
+  '#EC4899': ['#D946EF', '#6366F1'], // pink, fuchsia, a little indigo
+  '#F43F5E': ['#EC4899', '#8B5CF6'], // rose, pink, a little violet
+  '#EF4444': ['#F43F5E', '#A855F7'], // red, rose, a little purple
+  '#8B5CF6': ['#6366F1', '#0EA5E9'], // violet, indigo, a little sky
+  '#3B82F6': ['#6366F1', '#A855F7'], // blue, indigo, a little purple
+  '#0EA5E9': ['#3B82F6', '#8B5CF6'], // sky, blue, a little violet
+  '#10B981': ['#14B8A6', '#0EA5E9'], // green, teal, a little sky
+  '#059669': ['#0D9488', '#3B82F6'], // emerald, teal, a little blue
+  '#0D9488': ['#0891B2', '#6366F1'], // teal, cyan, a little indigo
 };
 
 /** a mixed t of the way to b, both #RRGGBB. */
@@ -89,36 +99,58 @@ function useInk(tone, glass) {
   };
 }
 
-/** A mark's svg; for glass, with its gradients and the sheen over it. */
+/**
+ * A mark's svg. For glass the mark is drawn in layers, each clipped to its
+ * shapes by a mask cut from the mark itself:
+ *   base    the deep parts and the white glyphs (the tint parts left out)
+ *   frost   the same, blurred, seen through the tint parts
+ *   glass   a pale wash of the tint over that, then a light rim on its edge
+ *   sheen   light over the top of every shape and along its bottom
+ */
 function Mark({ size, ink, children }) {
   if (!ink.id) return <svg {...box(size)}>{children}</svg>;
   const { id, tone: [tint, deep] } = ink;
-  const next = NEXT_HUE[deep.toUpperCase()] || mix(deep, '#000000', 0.18);
+  const [via, touch] = HUE_PATH[deep.toUpperCase()] || [mix(deep, '#000000', 0.15), mix(deep, '#000000', 0.3)];
+  const url = (k) => `url(#${id}${k})`;
   return (
     <svg {...box(size)}>
       <defs>
+        {/* The tint as glass is a wash, not paint: these are its stops. */}
         <linearGradient id={`${id}t`} gradientUnits="userSpaceOnUse" x1="6" y1="2" x2="40" y2="46">
-          <stop offset="0" stopColor={mix(tint, '#FFFFFF', 0.6)} />
-          <stop offset="1" stopColor={tint} />
+          <stop offset="0" stopColor={mix(tint, '#FFFFFF', 0.7)} stopOpacity="0.92" />
+          <stop offset="0.6" stopColor={tint} stopOpacity="0.72" />
+          <stop offset="1" stopColor={mix(tint, touch, 0.35)} stopOpacity="0.7" />
         </linearGradient>
         <linearGradient id={`${id}d`} gradientUnits="userSpaceOnUse" x1="4" y1="2" x2="44" y2="46">
-          <stop offset="0" stopColor={mix(tint, '#FFFFFF', 0.25)} />
-          <stop offset="0.5" stopColor={deep} />
-          <stop offset="1" stopColor={next} />
+          <stop offset="0" stopColor={mix(tint, '#FFFFFF', 0.2)} />
+          <stop offset="0.42" stopColor={deep} />
+          <stop offset="0.78" stopColor={via} />
+          <stop offset="1" stopColor={mix(via, touch, 0.75)} />
         </linearGradient>
         <linearGradient id={`${id}s`} gradientUnits="userSpaceOnUse" x1="0" y1="0" x2="0" y2="48">
-          <stop offset="0" stopColor="#FFFFFF" stopOpacity="0.75" />
-          <stop offset="0.4" stopColor="#FFFFFF" stopOpacity="0.22" />
-          <stop offset="0.48" stopColor="#FFFFFF" stopOpacity="0" />
+          <stop offset="0" stopColor="#FFFFFF" stopOpacity="0.7" />
+          <stop offset="0.38" stopColor="#FFFFFF" stopOpacity="0.18" />
+          <stop offset="0.46" stopColor="#FFFFFF" stopOpacity="0" />
           <stop offset="0.86" stopColor="#FFFFFF" stopOpacity="0" />
-          <stop offset="1" stopColor="#FFFFFF" stopOpacity="0.35" />
+          <stop offset="1" stopColor="#FFFFFF" stopOpacity="0.32" />
         </linearGradient>
+        <filter id={`${id}b`} x="-20%" y="-20%" width="140%" height="140%">
+          <feGaussianBlur stdDeviation="2.2" />
+        </filter>
         <mask id={`${id}m`} maskUnits="userSpaceOnUse" x="0" y="0" width="48" height="48">
           <g className="fa-silhouette">{children}</g>
         </mask>
+        <mask id={`${id}g`} maskUnits="userSpaceOnUse" x="0" y="0" width="48" height="48">
+          <g className="fa-tint-mask">{children}</g>
+        </mask>
       </defs>
-      {children}
-      <rect width="48" height="48" fill={`url(#${id}s)`} mask={`url(#${id}m)`} />
+      <g className="fa-base">{children}</g>
+      <g mask={url('g')}>
+        <g className="fa-base" filter={url('b')} opacity="0.9">{children}</g>
+        <g className="fa-glass">{children}</g>
+        <g className="fa-rim">{children}</g>
+      </g>
+      <rect width="48" height="48" fill={url('s')} mask={url('m')} />
     </svg>
   );
 }
