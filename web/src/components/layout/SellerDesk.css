@@ -190,10 +190,15 @@
     color: var(--t-neutral-900, #111827);
   }
 
+  .sc-head-btn > svg {
+    width: 25px;
+    height: 25px;
+  }
+
   .sc-head-badge {
     position: absolute;
-    top: 2px;
-    right: 1px;
+    top: -1px;
+    right: -6px;
     min-width: 16px;
     height: 16px;
     padding: 0 4px;
@@ -215,16 +220,89 @@
     background: var(--sc-line);
   }
 
-  /* The rail's notifications and language buttons, grey like the rest of
-     the bar (suite.css paints the rail's icons pink and blue). */
-  .sc-shell:not(.is-phone) .sc-topbar .sr-rail.sr-rail--bar .sr-btn > svg:not([data-variant="outline"]) :is(path, circle, rect, line, polyline, polygon):not([fill="none"]) {
-    fill: currentColor;
+  /* The bar's icons: filled, each in its own gradient (the site's set,
+     components/ui/IconGradients.jsx): chat blue, language violet,
+     notifications amber, help teal. Selectors spelled out, no :is() (the
+     build's minifier once dropped a rule rewriting one). */
+  .sc-head-btn.is-chat > svg,
+  .sc-head-btn.is-chat > svg path,
+  .sc-head-btn.is-chat > svg circle,
+  .sc-head-btn.is-chat > svg rect {
+    fill: url(#gi-blue);
   }
 
-  .sc-shell:not(.is-phone) .sc-topbar .sr-rail.sr-rail--bar :is(.sr-btn--notif, .sr-btn--lang),
-  .sc-shell:not(.is-phone) .sc-topbar .sr-rail.sr-rail--bar .sr-item:hover :is(.sr-btn--notif, .sr-btn--lang),
-  .sc-shell:not(.is-phone) .sc-topbar .sr-rail.sr-rail--bar .sr-item.is-open :is(.sr-btn--notif, .sr-btn--lang) {
-    color: var(--t-neutral-600, #4b5563);
+  .sc-head-btn.is-help > svg,
+  .sc-head-btn.is-help > svg path,
+  .sc-head-btn.is-help > svg circle,
+  .sc-head-btn.is-help > svg rect {
+    fill: url(#gi-teal);
+  }
+
+  .sc-shell:not(.is-phone) .sc-topbar .sr-rail.sr-rail--bar .sr-btn--notif > svg,
+  .sc-shell:not(.is-phone) .sc-topbar .sr-rail.sr-rail--bar .sr-btn--notif > svg path:not([fill="none"]),
+  .sc-shell:not(.is-phone) .sc-topbar .sr-rail.sr-rail--bar .sr-btn--notif > svg circle:not([fill="none"]),
+  .sc-shell:not(.is-phone) .sc-topbar .sr-rail.sr-rail--bar .sr-btn--notif > svg rect:not([fill="none"]) {
+    fill: url(#gi-amber);
+  }
+
+  .sc-shell:not(.is-phone) .sc-topbar .sr-rail.sr-rail--bar .sr-btn--lang > svg,
+  .sc-shell:not(.is-phone) .sc-topbar .sr-rail.sr-rail--bar .sr-btn--lang > svg path:not([fill="none"]),
+  .sc-shell:not(.is-phone) .sc-topbar .sr-rail.sr-rail--bar .sr-btn--lang > svg circle:not([fill="none"]),
+  .sc-shell:not(.is-phone) .sc-topbar .sr-rail.sr-rail--bar .sr-btn--lang > svg rect:not([fill="none"]) {
+    fill: url(#gi-violet);
+  }
+
+  .sc-shell:not(.is-phone) .sc-topbar .sr-rail.sr-rail--bar .sr-btn > svg {
+    width: 25px;
+    height: 25px;
+  }
+
+  /* The count sits off the bell's top right corner, clear of the bell. */
+  .sc-shell:not(.is-phone) .sc-topbar .sr-rail.sr-rail--bar .sr-badge {
+    top: -1px;
+    right: -6px;
+  }
+
+  /* Parts of a glyph drawn in the current colour or as lines (the language
+     mark is lines) take the same gradient; the button's colour is the
+     gradient's deep end, for anything left. */
+  .sc-shell:not(.is-phone) .sc-topbar .sr-rail.sr-rail--bar .sr-btn--notif,
+  .sc-shell:not(.is-phone) .sc-topbar .sr-rail.sr-rail--bar .sr-item:hover .sr-btn--notif,
+  .sc-shell:not(.is-phone) .sc-topbar .sr-rail.sr-rail--bar .sr-item.is-open .sr-btn--notif {
+    color: #d97706;
+  }
+
+  .sc-shell:not(.is-phone) .sc-topbar .sr-rail.sr-rail--bar .sr-btn--lang,
+  .sc-shell:not(.is-phone) .sc-topbar .sr-rail.sr-rail--bar .sr-item:hover .sr-btn--lang,
+  .sc-shell:not(.is-phone) .sc-topbar .sr-rail.sr-rail--bar .sr-item.is-open .sr-btn--lang {
+    color: #7c3aed;
+  }
+
+  .sc-shell:not(.is-phone) .sc-topbar .sr-rail.sr-rail--bar .sr-btn--lang > svg [stroke]:not([stroke="none"]),
+  .sc-shell:not(.is-phone) .sc-topbar .sr-rail.sr-rail--bar .sr-btn--lang > svg[stroke] {
+    stroke: url(#gi-violet);
+  }
+
+  .sc-shell:not(.is-phone) .sc-topbar .sr-rail.sr-rail--bar .sr-btn--notif > svg [stroke]:not([stroke="none"]) {
+    stroke: url(#gi-amber);
+  }
+
+  .sc-head-btn.is-chat,
+  .sc-head-btn.is-chat:hover {
+    color: #2563eb;
+  }
+
+  .sc-head-btn.is-help,
+  .sc-head-btn.is-help:hover {
+    color: #0f766e;
+  }
+
+  .sc-head-btn.is-chat > svg [stroke]:not([stroke="none"]) {
+    stroke: url(#gi-blue);
+  }
+
+  .sc-head-btn.is-help > svg [stroke]:not([stroke="none"]) {
+    stroke: url(#gi-teal);
   }
 
   .sc-shell:not(.is-phone) .sc-topbar .sr-rail.sr-rail--bar .sr-item:hover .sr-btn,

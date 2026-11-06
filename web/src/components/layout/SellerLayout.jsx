@@ -570,16 +570,16 @@ export default function SellerLayout() {
               <CreateMenu />
               <Link
                 to="/seller/messages"
-                className="sc-head-btn"
+                className="sc-head-btn is-chat"
                 title="Chat with buyers"
                 aria-label={chatUnread > 0 ? `Chat, ${chatUnread} unread` : 'Chat'}
               >
-                <ChatCircleDots size={21} />
+                <ChatCircleDots size={25} weight="fill" />
                 {chatUnread > 0 && <span className="sc-head-badge" aria-hidden="true">{chatUnread > 9 ? '9+' : chatUnread}</span>}
               </Link>
               <AppRail placement="bar" unreadCount={unreadCount} onLogout={handleLogout} />
-              <Link to="/sell/academy" className="sc-head-btn" title="Seller Academy and help" aria-label="Help">
-                <Lifebuoy size={21} />
+              <Link to="/sell/academy" className="sc-head-btn is-help" title="Seller Academy and help" aria-label="Help">
+                <Lifebuoy size={25} weight="fill" />
               </Link>
               <span className="sc-head-rule" aria-hidden="true" />
               {account}
