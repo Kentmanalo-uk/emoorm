@@ -20,6 +20,7 @@ import { useLanguageIntro, dismissLanguageTip } from '../../lib/languageIntro';
 import AppLogo from '../AppLogo';
 import ImageSearchModal from './ImageSearchModal';
 import InstallAppBar from './InstallAppBar';
+import { TopbarHelpCard } from './HeadCards';
 import './Header.css';
 import UserAvatar from '../ui/UserAvatar';
 import NotificationPicture from '../NotificationPicture';
@@ -313,7 +314,7 @@ const Header = () => {
               <Link to="/sell" className="topbar-link topbar-link-sell">SELL ON EMOORM</Link>
             )}
             <span className="topbar-divider">|</span>
-            <Link to="/help" className="topbar-link">HELP &amp; SUPPORT</Link>
+            <TopbarHelpCard signedIn={isAuthenticated} />
             <span className="topbar-divider">|</span>
             <button
               type="button"

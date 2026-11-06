@@ -74,6 +74,34 @@
   flex-wrap: wrap;
 }
 
+/* The header measures its own width, not the window's: beside the
+   sidebar and the inbox the thread is often narrow on a wide screen, and
+   the six actions then squeezed the name and its lines into a column a
+   word wide. Where the title and all the actions do not fit side by side,
+   the actions take a row of their own under the title. */
+.as-support .sc-thread-head {
+  container-type: inline-size;
+  flex-wrap: wrap;
+  row-gap: 10px;
+}
+
+.as-support .sc-thread-head .sc-thread-title {
+  flex: 1 1 240px;
+  min-width: 0;
+}
+
+.as-support .sc-thread-head.sc-thread-head .sc-thread-actions {
+  flex: 1 0 100%;
+  justify-content: flex-start;
+}
+
+@container (min-width: 1180px) {
+  .as-support .sc-thread-head.sc-thread-head .sc-thread-actions {
+    flex: 0 1 auto;
+    justify-content: flex-end;
+  }
+}
+
 @media (max-width: 768px) {
   .as-support .sc-search input {
     min-height: 42px;

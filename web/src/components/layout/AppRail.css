@@ -86,9 +86,9 @@
   transform: scale(0.12);
   transform-origin: calc(100% + 30px) 20px;
   transition:
-    transform 0.26s cubic-bezier(0.4, 0, 0.6, 1) 0.06s,
+    transform var(--pop-out) var(--pop-ease) 0.06s,
     opacity 0.18s ease 0.14s,
-    visibility 0s linear 0.32s;
+    visibility 0s linear calc(var(--pop-out) + 0.06s);
 }
 
 /* Invisible bridge so the pointer can cross the gap to the flyout. */
@@ -109,7 +109,7 @@
   pointer-events: auto;
   transform: none;
   transition:
-    transform 0.34s cubic-bezier(0.16, 1, 0.3, 1),
+    transform var(--pop-in) var(--pop-ease),
     opacity 0.16s ease,
     visibility 0s;
 }

@@ -2,6 +2,8 @@ import { useEffect, useRef, useState } from 'react';
 import { CaretDown as ChevronDown, Globe, Check } from '../lib/icons';
 import { LANGUAGES, getCurrentLanguage, setLanguage } from '../lib/googleTranslate';
 import LanguageTip from './LanguageTip';
+import useHoverMenu from '../hooks/useHoverMenu';
+import { useArrowAt } from '../hooks/useHeadCard';
 import './LanguageSwitcher.css';
 
 /**
@@ -11,15 +13,26 @@ import './LanguageSwitcher.css';
  *
  * `tip`: show the "change the language here" card under the button;
  * `onTipDone` hears when it is dismissed (Got it, or the menu opened).
+ *
+ * The list opens on hover (or a click) and grows out of the button, then
+ * shrinks back into it when it closes (LanguageSwitcher.css).
  */
 export default function LanguageSwitcher({ variant = 'topbar', tip = false, onTipDone }) {
   const [open, setOpen] = useState(false);
   const [current, setCurrent] = useState(() => getCurrentLanguage());
   const ref = useRef(null);
+  const { hoverProps, dismiss, hovering } = useHoverMenu(setOpen);
+  useArrowAt(ref, open);
 
   useEffect(() => {
     setCurrent(getCurrentLanguage());
   }, []);
+
+  // The tip makes way once the list opens, however it was opened.
+  useEffect(() => {
+    if (open && tip) onTipDone?.();
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [open]);
 
   useEffect(() => {
     if (!open) return;
@@ -38,18 +51,22 @@ export default function LanguageSwitcher({ variant = 'topbar', tip = false, onTi
   const active = LANGUAGES.find((l) => l.code === current) || LANGUAGES[0];
 
   const toggle = () => {
-    if (tip) onTipDone?.();
-    setOpen((v) => !v);
+    setOpen((v) => (hovering() ? true : !v));
   };
 
   const handlePick = (code) => {
-    setOpen(false);
+    dismiss();
     if (code === current) return;
     setLanguage(code);
   };
 
   return (
-    <div ref={ref} className={`lang-switch lang-switch--${variant} notranslate`} translate="no">
+    <div
+      ref={ref}
+      className={`lang-switch lang-switch--${variant} notranslate${open ? ' is-open' : ''}`}
+      translate="no"
+      {...hoverProps}
+    >
       <button
         type="button"
         className="lang-switch__trigger"
@@ -67,28 +84,26 @@ export default function LanguageSwitcher({ variant = 'topbar', tip = false, onTi
 
       {tip && !open && <LanguageTip variant="topbar" onDone={() => onTipDone?.()} />}
 
-      {open && (
-        <ul className="lang-switch__menu" role="listbox">
-          {LANGUAGES.map((l) => {
-            const isActive = l.code === current;
-            return (
-              <li key={l.code}>
-                <button
-                  type="button"
-                  role="option"
-                  aria-selected={isActive}
-                  className={`lang-switch__option ${isActive ? 'is-active' : ''}`}
-                  onClick={() => handlePick(l.code)}
-                >
-                  <span className="lang-switch__option-label">{l.label}</span>
-                  <span className="lang-switch__option-code">{l.short}</span>
-                  {isActive && <Check size={14} className="lang-switch__tick" />}
-                </button>
-              </li>
-            );
-          })}
-        </ul>
-      )}
+      <ul className="lang-switch__menu" role="listbox" aria-hidden={!open} inert={!open}>
+        {LANGUAGES.map((l) => {
+          const isActive = l.code === current;
+          return (
+            <li key={l.code}>
+              <button
+                type="button"
+                role="option"
+                aria-selected={isActive}
+                className={`lang-switch__option ${isActive ? 'is-active' : ''}`}
+                onClick={() => handlePick(l.code)}
+              >
+                <span className="lang-switch__option-label">{l.label}</span>
+                <span className="lang-switch__option-code">{l.short}</span>
+                {isActive && <Check size={14} className="lang-switch__tick" />}
+              </button>
+            </li>
+          );
+        })}
+      </ul>
     </div>
   );
 }

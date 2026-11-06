@@ -137,9 +137,9 @@
   /* Grows out of / shrinks into the trigger icon (same motion as the Messages panel).
      Closing waits briefly so moving the pointer across a small gap doesn't flicker. */
   transition:
-    transform 0.26s cubic-bezier(0.4, 0, 0.6, 1) 0.06s,
+    transform var(--pop-out) var(--pop-ease) 0.06s,
     opacity 0.18s ease 0.14s,
-    visibility 0s linear 0.32s;
+    visibility 0s linear calc(var(--pop-out) + 0.06s);
   will-change: opacity, transform;
   z-index: 1000;
   pointer-events: none;
@@ -152,7 +152,7 @@
   transform: none;
   pointer-events: auto;
   transition:
-    transform 0.34s cubic-bezier(0.16, 1, 0.3, 1),
+    transform var(--pop-in) var(--pop-ease),
     opacity 0.16s ease,
     visibility 0s linear 0s;
 }
@@ -343,9 +343,9 @@
   /* Grows out of / shrinks into the trigger icon (same motion as the Messages panel).
      Closing waits briefly so moving the pointer across a small gap doesn't flicker. */
   transition:
-    transform 0.26s cubic-bezier(0.4, 0, 0.6, 1) 0.06s,
+    transform var(--pop-out) var(--pop-ease) 0.06s,
     opacity 0.18s ease 0.14s,
-    visibility 0s linear 0.32s;
+    visibility 0s linear calc(var(--pop-out) + 0.06s);
   will-change: opacity, transform;
   z-index: 1000;
   pointer-events: none;
@@ -358,7 +358,7 @@
   transform: none;
   pointer-events: auto;
   transition:
-    transform 0.34s cubic-bezier(0.16, 1, 0.3, 1),
+    transform var(--pop-in) var(--pop-ease),
     opacity 0.16s ease,
     visibility 0s linear 0s;
 }

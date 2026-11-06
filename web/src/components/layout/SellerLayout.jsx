@@ -31,6 +31,9 @@ import SellerPageBoundary from '../seller/SellerPageBoundary';
 import MoormyDock from '../moormy/MoormyDock';
 import ConfirmDialog from '../ui/ConfirmDialog';
 import AppRail from './AppRail';
+import { ChatCard, HelpCard, CardLinks } from './HeadCards';
+import { useHeadCard, useArrowAt } from '../../hooks/useHeadCard';
+import useHoverMenu from '../../hooks/useHoverMenu';
 import './SellerLayout.css';
 import './SellerShellMobile.css';
 import './SellerPhoneFit.css';
@@ -114,6 +117,9 @@ export default function SellerLayout() {
   // Phone Chat header: "with Buyers ▾" menu.
   const [chatMenuOpen, setChatMenuOpen] = useState(false);
   const accountRef = useRef(null);
+  // On computers the account menu opens on hover, like the other header cards.
+  const accountHover = useHoverMenu(setAccountOpen);
+  useArrowAt(accountRef, accountOpen);
   // Set while signing out: the seller goes home, not to the Seller Login.
   const [signingOut, setSigningOut] = useState(false);
   const startAccountSwitch = useAccountSwitchStore((s) => s.start);
@@ -253,8 +259,12 @@ export default function SellerLayout() {
   // at the foot of the drawer on smaller screens (opening upwards).
   const accountHead = !isCompact;
   const account = (
-    <div className={`sc-account${accountHead ? ' sc-account--head' : ''}${accountOpen ? ' is-open' : ''}`} ref={accountRef}>
-      <div className="sc-account-menu" role="menu" aria-label="Account" aria-hidden={!accountOpen}>
+    <div
+      className={`sc-account${accountHead ? ' sc-account--head' : ''}${accountOpen ? ' is-open' : ''}`}
+      ref={accountRef}
+      {...(accountHead ? accountHover.hoverProps : {})}
+    >
+      <div className="sc-account-menu" role="menu" aria-label="Account" aria-hidden={!accountOpen} inert={!accountOpen}>
         <div className="sc-account-menu-head">
           {shopAvatar}
           <span className="sc-account-menu-meta">
@@ -313,7 +323,7 @@ export default function SellerLayout() {
         title={shopName}
         aria-haspopup="menu"
         aria-expanded={accountOpen}
-        onClick={() => setAccountOpen((open) => !open)}
+        onClick={() => setAccountOpen((open) => (accountHover.hovering() ? true : !open))}
       >
         {shopAvatar}
         <span className="sc-user-meta">
@@ -568,19 +578,9 @@ export default function SellerLayout() {
           {!isCompact && (
             <div className="sc-head-actions">
               <CreateMenu />
-              <Link
-                to="/seller/messages"
-                className="sc-head-btn is-chat"
-                title="Chat with buyers"
-                aria-label={chatUnread > 0 ? `Chat, ${chatUnread} unread` : 'Chat'}
-              >
-                <ChatCircleDots size={25} weight="fill" />
-                {chatUnread > 0 && <span className="sc-head-badge" aria-hidden="true">{chatUnread > 9 ? '9+' : chatUnread}</span>}
-              </Link>
+              <ChatCard unread={chatUnread} userId={user?.id} />
               <AppRail placement="bar" unreadCount={unreadCount} onLogout={handleLogout} />
-              <Link to="/sell/academy" className="sc-head-btn is-help" title="Seller Academy and help" aria-label="Help">
-                <Lifebuoy size={25} weight="fill" />
-              </Link>
+              <HelpCard />
               <span className="sc-head-rule" aria-hidden="true" />
               {account}
             </div>
@@ -782,45 +782,23 @@ function NavGroup({
 
 /** Things made most often, from the header's "+ Create". */
 const CREATE = [
-  { label: 'Product', note: 'Something to sell', to: '/seller/products/new', icon: Package },
-  { label: 'Package', note: 'Products sold together', to: '/seller/products/new?type=package', icon: Gift },
-  { label: 'Available today', note: 'A post on today’s menu', to: '/seller/today/new', icon: CalendarCheck },
-  { label: 'Announcement', note: 'News for your followers', to: '/seller/marketing', icon: Megaphone },
-  { label: 'Live', note: 'Sell on camera, now', to: '/seller/live', icon: VideoCamera },
+  { label: 'Product', note: 'Something to sell', to: '/seller/products/new', icon: Package, tone: 'green' },
+  { label: 'Package', note: 'Products sold together', to: '/seller/products/new?type=package', icon: Gift, tone: 'violet' },
+  { label: 'Available today', note: 'A post on today’s menu', to: '/seller/today/new', icon: CalendarCheck, tone: 'amber' },
+  { label: 'Announcement', note: 'News for your followers', to: '/seller/marketing', icon: Megaphone, tone: 'blue' },
+  { label: 'Live', note: 'Sell on camera, now', to: '/seller/live', icon: VideoCamera, tone: 'rose' },
 ];
 
 function CreateMenu() {
-  const [open, setOpen] = useState(false);
-  const ref = useRef(null);
-  useEffect(() => {
-    if (!open) return undefined;
-    const away = (e) => { if (!ref.current?.contains(e.target)) setOpen(false); };
-    const key = (e) => { if (e.key === 'Escape') setOpen(false); };
-    document.addEventListener('pointerdown', away);
-    document.addEventListener('keydown', key);
-    return () => {
-      document.removeEventListener('pointerdown', away);
-      document.removeEventListener('keydown', key);
-    };
-  }, [open]);
+  const { open, ref, hoverProps, dismiss, toggle } = useHeadCard();
   return (
-    <div className={`sc-create${open ? ' is-open' : ''}`} ref={ref}>
-      <button type="button" className="sc-create-btn" aria-haspopup="menu" aria-expanded={open} onClick={() => setOpen((v) => !v)}>
-        <Plus size={16} weight="bold" /> Create <ChevronDown size={13} weight="bold" />
+    <div className={`sc-create hc${open ? ' is-open' : ''}`} ref={ref} {...hoverProps}>
+      <button type="button" className="sc-create-btn" aria-haspopup="menu" aria-expanded={open} onClick={toggle}>
+        <Plus size={16} weight="bold" /> Create <ChevronDown size={13} weight="bold" className="sc-create-caret" />
       </button>
-      {open && (
-        <div className="sc-create-menu" role="menu">
-          {CREATE.map(({ label, note, to, icon: Icon }) => (
-            <Link key={label} to={to} role="menuitem" className="sc-create-item" onClick={() => setOpen(false)}>
-              <span className="sc-create-icon"><Icon size={18} weight="fill" /></span>
-              <span>
-                <strong>{label}</strong>
-                <small>{note}</small>
-              </span>
-            </Link>
-          ))}
-        </div>
-      )}
+      <div className="hc-pop sc-create-menu" role="menu" aria-label="Create" aria-hidden={!open} inert={!open}>
+        <CardLinks items={CREATE} onPick={dismiss} />
+      </div>
     </div>
   );
 }

@@ -1658,6 +1658,13 @@
   .profile-page .pf-m-purchase-icon svg { width: 27px; height: 27px; }
   .profile-page .pf-m-row { padding-top: 13px; padding-bottom: 13px; font-size: 16px; }
   .profile-page .pf-m-row-icon svg { width: 22px; height: 22px; }
+
+  /* The menu's icons filled in plain black, not the green gradient every
+     icon tile gets (styles/iconTiles.css paints with --gi). */
+  .profile-page .pf-m-row-icon {
+    --gi: currentColor;
+    color: var(--t-neutral-900, #111827);
+  }
   .profile-page .pf-m-row-hint { font-size: 14px; }
 }
 

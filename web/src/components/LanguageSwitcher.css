@@ -29,7 +29,7 @@
 }
 
 .lang-switch__caret {
-  transition: transform 0.15s ease;
+  transition: transform var(--pop-in) var(--pop-ease);
 }
 
 .lang-switch__caret.is-open {
@@ -40,7 +40,7 @@
 
 .lang-switch__menu {
   position: absolute;
-  top: calc(100% + 8px);
+  top: calc(100% + 12px);
   right: 0;
   min-width: 180px;
   margin: 0;
@@ -51,46 +51,76 @@
   border-radius: 10px;
   box-shadow: 0 10px 32px -8px rgba(15, 23, 42, 0.18);
   z-index: 1000;
-  transform-origin: calc(100% - 20px) -8px;
-  animation: langSwitchIn 0.34s cubic-bezier(0.16, 1, 0.3, 1);
+  transform-origin: calc(100% - var(--hc-x, 20px)) -18px;
+  /* Grows out of the button, small to full size, and shrinks back into it,
+     on the shared ease-in-out curve (index.css, --pop-ease). */
+  opacity: 0;
+  visibility: hidden;
+  pointer-events: none;
+  transform: scale(0.1);
+  transition:
+    transform var(--pop-out) var(--pop-ease),
+    opacity 0.16s var(--pop-ease) calc(var(--pop-out) - 0.16s),
+    visibility 0s linear var(--pop-out);
 }
 
+/* A bridge over the gap, so the mouse can cross from button to list. */
+.lang-switch__menu::before {
+  content: '';
+  position: absolute;
+  top: -14px;
+  right: 0;
+  left: 0;
+  height: 14px;
+}
+
+/* The arrow pointing at the button (--hc-x is its middle, set by
+   useArrowAt), as on the language tip. */
+.lang-switch__menu::after {
+  content: '';
+  position: absolute;
+  top: -7px;
+  right: calc(var(--hc-x, 20px) - 7px);
+  width: 12px;
+  height: 12px;
+  border: 1px solid var(--t-neutral-200, #e5e7eb);
+  border-right: 0;
+  border-bottom: 0;
+  border-top-left-radius: 3px;
+  background: var(--t-neutral-0, #fff);
+  transform: rotate(45deg);
+  pointer-events: none;
+}
+
+.lang-switch.is-open .lang-switch__menu {
+  opacity: 1;
+  visibility: visible;
+  pointer-events: auto;
+  transform: none;
+  transition:
+    transform var(--pop-in) var(--pop-ease),
+    opacity 0.14s var(--pop-ease),
+    visibility 0s;
+}
+
+/* The rows fade in once the list is nearly open, and out first. */
 .lang-switch__menu > * {
-  animation: langSwitchContentIn 0.3s ease both;
+  opacity: 0;
+  transition: opacity 0.1s ease;
 }
 
-/* Same motion as the Messages panel: grows out of the trigger. */
-@keyframes langSwitchIn {
-  from {
-    opacity: 0;
-    transform: scale(0.12);
-  }
-
-  45% {
-    opacity: 1;
-  }
-
-  to {
-    opacity: 1;
-    transform: none;
-  }
-}
-
-@keyframes langSwitchContentIn {
-  0%,
-  33% {
-    opacity: 0;
-  }
-
-  to {
-    opacity: 1;
-  }
+.lang-switch.is-open .lang-switch__menu > * {
+  opacity: 1;
+  transition: opacity 0.18s ease 0.14s;
 }
 
 @media (prefers-reduced-motion: reduce) {
   .lang-switch__menu,
-  .lang-switch__menu > * {
-    animation: none;
+  .lang-switch.is-open .lang-switch__menu,
+  .lang-switch__menu > *,
+  .lang-switch.is-open .lang-switch__menu > * {
+    transform: none;
+    transition: opacity 0.12s ease, visibility 0s;
   }
 }
 

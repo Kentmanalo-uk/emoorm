@@ -54,8 +54,57 @@
   height: 52px;
 }
 
-.hsc-tile:hover {
-  background: var(--t-neutral-100, #f3f4f6);
+/* Under a mouse, a card grows out from behind the mark, small to full
+   size, and the mark rises a little with it; both shrink back on leaving,
+   on the shared ease-in-out curve (index.css, --pop-ease). */
+.hsc-tile {
+  position: relative;
+  isolation: isolate;
+}
+
+.hsc-tile::before {
+  content: '';
+  position: absolute;
+  inset: 0;
+  z-index: -1;
+  border: 1px solid rgba(15, 23, 42, 0.06);
+  border-radius: 16px;
+  background: linear-gradient(180deg, #ffffff, #f8fafc);
+  box-shadow: 0 10px 26px rgba(15, 23, 42, 0.10), 0 2px 6px rgba(15, 23, 42, 0.05);
+  opacity: 0;
+  transform: scale(0.55);
+  transition:
+    transform var(--pop-out) var(--pop-ease),
+    opacity 0.2s var(--pop-ease);
+}
+
+.hsc-tile svg {
+  transition: transform var(--pop-out) var(--pop-ease);
+}
+
+@media (hover: hover) {
+  .hsc-tile:hover::before,
+  .hsc-tile:focus-visible::before {
+    opacity: 1;
+    transform: none;
+    transition:
+      transform var(--pop-in) var(--pop-ease),
+      opacity 0.16s var(--pop-ease);
+  }
+
+  .hsc-tile:hover svg,
+  .hsc-tile:focus-visible svg {
+    transform: translateY(-2px) scale(1.1);
+    transition: transform var(--pop-in) var(--pop-ease);
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .hsc-tile::before,
+  .hsc-tile svg {
+    transform: none !important;
+    transition: opacity 0.12s ease;
+  }
 }
 
 /* The same little bar on every screen, in place of a scrollbar. */

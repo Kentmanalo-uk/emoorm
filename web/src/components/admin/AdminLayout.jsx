@@ -14,6 +14,9 @@ import { useCompactLayout, useMobileNav, usePhoneLayout } from '../../hooks/useM
 import LanguageSwitcher from '../LanguageSwitcher';
 import AppLogo from '../AppLogo';
 import AppRail from '../layout/AppRail';
+import { CardLinks } from '../layout/HeadCards';
+import { useHeadCard, useArrowAt } from '../../hooks/useHeadCard';
+import useHoverMenu from '../../hooks/useHoverMenu';
 import NavBadge from '../layout/NavBadge';
 import {
   useAdminAttention, useAdminShellData, useRefreshAdminShell, waitingByLink,
@@ -116,6 +119,9 @@ export default function AdminLayout({ children }) {
   // Computers: the account menu at the header's right end.
   const [accountOpen, setAccountOpen] = useState(false);
   const accountRef = useRef(null);
+  // The account menu opens on hover, like the other header cards.
+  const accountHover = useHoverMenu(setAccountOpen);
+  useArrowAt(accountRef, accountOpen);
   useEffect(() => {
     if (!accountOpen) return undefined;
     const onDown = (event) => {
@@ -205,8 +211,8 @@ export default function AdminLayout({ children }) {
   // Computers: the admin's account at the header's right end: their
   // profile, Settings, the public site, and signing out.
   const account = (
-    <div className={`sc-account sc-account--head${accountOpen ? ' is-open' : ''}`} ref={accountRef}>
-      <div className="sc-account-menu" role="menu" aria-label="Account" aria-hidden={!accountOpen}>
+    <div className={`sc-account sc-account--head${accountOpen ? ' is-open' : ''}`} ref={accountRef} {...accountHover.hoverProps}>
+      <div className="sc-account-menu" role="menu" aria-label="Account" aria-hidden={!accountOpen} inert={!accountOpen}>
         <div className="sc-account-menu-head">
           <UserAvatar
             src={user?.profilePhoto}
@@ -246,7 +252,7 @@ export default function AdminLayout({ children }) {
         title={user?.fullName || 'Account'}
         aria-haspopup="menu"
         aria-expanded={accountOpen}
-        onClick={() => setAccountOpen((open) => !open)}
+        onClick={() => setAccountOpen((open) => (accountHover.hovering() ? true : !open))}
       >
         <UserAvatar
           src={user?.profilePhoto}
@@ -700,46 +706,24 @@ function AdminNavGroup({
 
 /** "+ Create": what an admin makes most, each a link to the page that does it. */
 const ADMIN_CREATE = [
-  { label: 'Announcement', note: 'News for sellers and buyers', to: '/admin/messages?tab=announcements', icon: Megaphone },
-  { label: 'Email', note: 'A message to many people', to: '/admin/email', icon: PaperPlaneTilt },
-  { label: 'Banner', note: 'A picture on the Home page', to: '/admin/banners/new', icon: ImageIcon, superOnly: true },
-  { label: 'Voucher', note: 'A discount code', to: '/admin/vouchers/new', icon: Ticket, superOnly: true },
-  { label: 'Category', note: 'A new aisle for products', to: '/admin/categories/new', icon: Tag, superOnly: true },
+  { label: 'Announcement', note: 'News for sellers and buyers', to: '/admin/messages?tab=announcements', icon: Megaphone, tone: 'blue' },
+  { label: 'Email', note: 'A message to many people', to: '/admin/email', icon: PaperPlaneTilt, tone: 'violet' },
+  { label: 'Banner', note: 'A picture on the Home page', to: '/admin/banners/new', icon: ImageIcon, tone: 'teal', superOnly: true },
+  { label: 'Voucher', note: 'A discount code', to: '/admin/vouchers/new', icon: Ticket, tone: 'rose', superOnly: true },
+  { label: 'Category', note: 'A new aisle for products', to: '/admin/categories/new', icon: Tag, tone: 'amber', superOnly: true },
 ];
 
 function AdminCreateMenu({ isSuperAdmin }) {
-  const [open, setOpen] = useState(false);
-  const ref = useRef(null);
-  useEffect(() => {
-    if (!open) return undefined;
-    const away = (e) => { if (!ref.current?.contains(e.target)) setOpen(false); };
-    const key = (e) => { if (e.key === 'Escape') setOpen(false); };
-    document.addEventListener('pointerdown', away);
-    document.addEventListener('keydown', key);
-    return () => {
-      document.removeEventListener('pointerdown', away);
-      document.removeEventListener('keydown', key);
-    };
-  }, [open]);
+  const { open, ref, hoverProps, dismiss, toggle } = useHeadCard();
   const items = ADMIN_CREATE.filter((c) => isSuperAdmin || !c.superOnly);
   return (
-    <div className={`sc-create${open ? ' is-open' : ''}`} ref={ref}>
-      <button type="button" className="sc-create-btn" aria-haspopup="menu" aria-expanded={open} onClick={() => setOpen((v) => !v)}>
-        <Plus size={16} weight="bold" /> Create <CaretDown size={13} weight="bold" />
+    <div className={`sc-create hc${open ? ' is-open' : ''}`} ref={ref} {...hoverProps}>
+      <button type="button" className="sc-create-btn" aria-haspopup="menu" aria-expanded={open} onClick={toggle}>
+        <Plus size={16} weight="bold" /> Create <CaretDown size={13} weight="bold" className="sc-create-caret" />
       </button>
-      {open && (
-        <div className="sc-create-menu" role="menu">
-          {items.map(({ label, note, to, icon: Icon }) => (
-            <Link key={label} to={to} role="menuitem" className="sc-create-item" onClick={() => setOpen(false)}>
-              <span className="sc-create-icon"><Icon size={18} weight="fill" /></span>
-              <span>
-                <strong>{label}</strong>
-                <small>{note}</small>
-              </span>
-            </Link>
-          ))}
-        </div>
-      )}
+      <div className="hc-pop sc-create-menu" role="menu" aria-label="Create" aria-hidden={!open} inert={!open}>
+        <CardLinks items={items} onPick={dismiss} />
+      </div>
     </div>
   );
 }

@@ -1,0 +1,424 @@
+/*
+ * Header cards (HeadCards.jsx). A card grows out of its button, small to
+ * full size, and shrinks back into it, on the shared ease-in-out curve
+ * (index.css: --pop-ease, --pop-in, --pop-out). Its contents fade in once
+ * it is nearly open and fade out first when it closes, so the text never
+ * squashes with the card.
+ */
+
+.hc {
+  position: relative;
+  display: inline-flex;
+}
+
+.hc-pop {
+  position: absolute;
+  top: calc(100% + 12px);
+  right: 0;
+  z-index: 40;
+  padding: 6px;
+  border-radius: 14px;
+  background: var(--t-neutral-0, #fff);
+  box-shadow: 0 14px 36px rgba(15, 23, 42, 0.14), 0 2px 6px rgba(15, 23, 42, 0.06);
+  color: var(--t-neutral-800, #1f2937);
+  text-align: left;
+  opacity: 0;
+  visibility: hidden;
+  pointer-events: none;
+  /* Out of the button: --hc-x is the button's middle, measured from the
+     card's right edge (the card lines up with the button's right side). */
+  transform: scale(0.1);
+  transform-origin: calc(100% - var(--hc-x, 19px)) -18px;
+  transition:
+    transform var(--pop-out) var(--pop-ease),
+    opacity 0.16s var(--pop-ease) calc(var(--pop-out) - 0.16s),
+    visibility 0s linear var(--pop-out);
+}
+
+/* Opening from the left edge instead (a button at the left of a bar). */
+.hc-pop.is-left {
+  right: auto;
+  left: 0;
+  transform-origin: var(--hc-x, 19px) -18px;
+}
+
+.hc-pop.is-left::after {
+  right: auto;
+  left: calc(var(--hc-x, 19px) - 7px);
+}
+
+/* A bridge over the gap, so the mouse can cross from button to card. */
+.hc-pop::before {
+  content: '';
+  position: absolute;
+  top: -14px;
+  right: 0;
+  left: 0;
+  height: 14px;
+}
+
+/* The arrow on top of the card, pointing at the button it opened from
+   (--hc-x, set by useArrowAt), as on the language tip. It is part of the
+   card, so it grows and shrinks with it. */
+.hc-pop::after,
+.sc-account--head .sc-account-menu::after,
+.sc-head-actions .sr-rail--bar .sr-flyout::before {
+  content: '';
+  position: absolute;
+  top: -6px;
+  right: calc(var(--hc-x, 19px) - 7px);
+  width: 14px;
+  height: 14px;
+  border-top-left-radius: 3px;
+  background: var(--t-neutral-0, #fff);
+  box-shadow: -1px -1px 0 rgba(15, 23, 42, 0.05);
+  transform: rotate(45deg);
+  pointer-events: none;
+}
+
+.is-open > .hc-pop {
+  opacity: 1;
+  visibility: visible;
+  pointer-events: auto;
+  transform: none;
+  transition:
+    transform var(--pop-in) var(--pop-ease),
+    opacity 0.14s var(--pop-ease),
+    visibility 0s;
+}
+
+.hc-pop > * {
+  opacity: 0;
+  transition: opacity 0.1s ease;
+}
+
+.is-open > .hc-pop > * {
+  opacity: 1;
+  transition: opacity 0.18s ease 0.14s;
+}
+
+/* What every card shares. */
+.hc-head {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 8px;
+  margin: 6px 8px 4px;
+}
+
+.hc-title {
+  margin: 0;
+  color: var(--t-neutral-500, #6b7280);
+  font-size: 11.5px;
+  font-weight: 700;
+  letter-spacing: 0.06em;
+  text-transform: uppercase;
+}
+
+.hc-title--solo {
+  margin: 6px 8px 4px;
+}
+
+.hc-pill {
+  padding: 2px 8px;
+  border-radius: 999px;
+  background: linear-gradient(135deg, #fb7185, #e11d48);
+  color: #fff;
+  font-size: 11px;
+  font-weight: 700;
+}
+
+.hc-item {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  padding: 9px 10px;
+  border-radius: 10px;
+  color: var(--t-neutral-800, #1f2937);
+  text-decoration: none;
+  letter-spacing: normal;
+  text-transform: none;
+  transition: background-color 0.12s;
+}
+
+.hc-item:hover,
+.hc-item:focus-visible {
+  background: var(--t-neutral-100, #f3f4f6);
+  color: var(--t-neutral-900, #111827);
+}
+
+.hc-item strong {
+  display: block;
+  font-size: 13.5px;
+  font-weight: 600;
+  line-height: 1.3;
+}
+
+.hc-item small {
+  display: block;
+  color: var(--t-neutral-500, #6b7280);
+  font-size: 12px;
+  font-weight: 400;
+  line-height: 1.35;
+}
+
+/* The icons: filled, in a gradient, no tile. */
+.hc-icon {
+  display: grid;
+  flex-shrink: 0;
+  place-items: center;
+  width: 32px;
+  height: 32px;
+}
+
+.hc-icon > svg {
+  width: 26px;
+  height: 26px;
+}
+
+.hc-icon.is-green { color: #059669; }
+.hc-icon.is-violet { color: #7c3aed; }
+.hc-icon.is-blue { color: #2563eb; }
+.hc-icon.is-teal { color: #0f766e; }
+.hc-icon.is-amber { color: #d97706; }
+.hc-icon.is-rose { color: #e11d48; }
+.hc-icon.is-orange { color: #ea580c; }
+.hc-icon.is-slate { color: #475569; }
+
+.hc-icon.is-green > svg [fill]:not([fill="none"]) { fill: url(#gi-green); }
+.hc-icon.is-violet > svg [fill]:not([fill="none"]) { fill: url(#gi-violet); }
+.hc-icon.is-blue > svg [fill]:not([fill="none"]) { fill: url(#gi-blue); }
+.hc-icon.is-teal > svg [fill]:not([fill="none"]) { fill: url(#gi-teal); }
+.hc-icon.is-amber > svg [fill]:not([fill="none"]) { fill: url(#gi-amber); }
+.hc-icon.is-rose > svg [fill]:not([fill="none"]) { fill: url(#gi-rose); }
+.hc-icon.is-orange > svg [fill]:not([fill="none"]) { fill: url(#gi-orange); }
+.hc-icon.is-slate > svg [fill]:not([fill="none"]) { fill: url(#gi-slate); }
+
+.hc-foot {
+  display: block;
+  margin-top: 4px;
+  padding: 10px;
+  border-top: 1px solid var(--t-neutral-100, #f3f4f6);
+  color: var(--t-primary-600, #047857);
+  font-size: 13px;
+  font-weight: 600;
+  text-align: center;
+  text-decoration: none;
+}
+
+.hc-foot:hover {
+  color: var(--t-primary-700, #065f46);
+  text-decoration: underline;
+}
+
+.hc-empty {
+  display: grid;
+  justify-items: center;
+  gap: 6px;
+  padding: 22px 12px 18px;
+  color: var(--t-neutral-500, #6b7280);
+  font-size: 13px;
+}
+
+.hc-empty > svg [fill]:not([fill="none"]) {
+  fill: url(#gi-blue);
+}
+
+.hc-empty p {
+  margin: 0;
+}
+
+.hc-pop--links {
+  width: 280px;
+}
+
+/* Chat */
+.hc-pop--chat {
+  width: 340px;
+}
+
+.hc-chat-list {
+  display: grid;
+  margin: 0;
+  padding: 0;
+  list-style: none;
+}
+
+.hc-chat-row {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  padding: 9px 10px;
+  border-radius: 10px;
+  color: var(--t-neutral-800, #1f2937);
+  text-decoration: none;
+  transition: background-color 0.12s;
+}
+
+.hc-chat-row:hover,
+.hc-chat-row:focus-visible {
+  background: var(--t-neutral-100, #f3f4f6);
+}
+
+.hc-chat-avatar {
+  display: grid;
+  flex-shrink: 0;
+  place-items: center;
+  width: 38px;
+  height: 38px;
+  overflow: hidden;
+  border-radius: 50%;
+}
+
+.hc-chat-avatar > img,
+.hc-chat-avatar > svg {
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+}
+
+.hc-chat-initial {
+  display: grid;
+  width: 100%;
+  height: 100%;
+  place-items: center;
+  background: linear-gradient(135deg, #93c5fd, #6366f1);
+  color: #fff;
+  font-weight: 700;
+}
+
+.hc-chat-text {
+  display: grid;
+  flex: 1;
+  min-width: 0;
+  gap: 2px;
+}
+
+.hc-chat-top {
+  display: flex;
+  align-items: baseline;
+  justify-content: space-between;
+  gap: 8px;
+}
+
+.hc-chat-top strong {
+  overflow: hidden;
+  font-size: 13.5px;
+  font-weight: 600;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.hc-chat-top small {
+  flex-shrink: 0;
+  color: var(--t-neutral-400, #9ca3af);
+  font-size: 11.5px;
+}
+
+.hc-chat-line {
+  overflow: hidden;
+  color: var(--t-neutral-500, #6b7280);
+  font-size: 12.5px;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.hc-chat-row.is-unread .hc-chat-top strong {
+  font-weight: 700;
+}
+
+.hc-chat-row.is-unread .hc-chat-line {
+  color: var(--t-neutral-800, #1f2937);
+  font-weight: 600;
+}
+
+.hc-chat-count {
+  display: grid;
+  flex-shrink: 0;
+  place-items: center;
+  min-width: 20px;
+  height: 20px;
+  padding: 0 6px;
+  border-radius: 999px;
+  background: linear-gradient(135deg, #60a5fa, #2563eb);
+  color: #fff;
+  font-size: 11px;
+  font-weight: 700;
+}
+
+.hc-chat-ghost {
+  height: 46px;
+  margin: 4px 6px;
+  border-radius: 10px;
+  background: linear-gradient(90deg, #f3f4f6 25%, #e5e7eb 50%, #f3f4f6 75%);
+  background-size: 200% 100%;
+  animation: hc-ghost 1.2s linear infinite;
+}
+
+@keyframes hc-ghost {
+  to { background-position: -200% 0; }
+}
+
+/* "+ Create" (Seller and Admin Centers): out of its wider button. */
+.sc-create-caret {
+  transition: transform var(--pop-in) var(--pop-ease);
+}
+
+.sc-create.is-open .sc-create-caret {
+  transform: rotate(180deg);
+}
+
+/* The account menu in the header opens on hover too: a bridge over its
+   gap, and it grows out of the middle of the shop's card. */
+.sc-account--head .sc-account-menu.sc-account-menu {
+  top: calc(100% + 12px);
+  transform-origin: calc(100% - var(--hc-x, 24px)) -18px;
+}
+
+.sc-account--head .sc-account-menu::before {
+  content: '';
+  position: absolute;
+  top: -14px;
+  right: 0;
+  left: 0;
+  height: 14px;
+}
+
+/* The notifications and language cards in the Seller and Admin Centers'
+   bar: their arrow points at the middle of their button. */
+.sc-head-actions .sr-rail--bar .sr-flyout {
+  --hc-x: 19px;
+}
+
+.sc-head-actions .sr-rail.sr-rail--bar .sr-flyout {
+  top: calc(100% + 12px);
+}
+
+.sc-head-actions .sr-rail.sr-rail--bar .sr-flyout::after {
+  top: -14px;
+  height: 14px;
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .hc-pop,
+  .is-open > .hc-pop,
+  .hc-pop > *,
+  .is-open > .hc-pop > * {
+    transform: none;
+    transition: opacity 0.12s ease, visibility 0s;
+  }
+
+  .hc-chat-ghost {
+    animation: none;
+  }
+}
+
+/* The buyer topbar's HELP & SUPPORT: its card opens from the link's left,
+   in normal type (the topbar's is small capitals). */
+.hc--topbar .hc-pop {
+  z-index: 1000;
+  font-size: 14px;
+  font-weight: 400;
+  letter-spacing: normal;
+  text-transform: none;
+}

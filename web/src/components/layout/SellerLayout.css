@@ -601,9 +601,9 @@
   transform: scale(0.12);
   transform-origin: 24px calc(100% + 28px);
   transition:
-    transform 0.26s cubic-bezier(0.4, 0, 0.6, 1),
+    transform var(--pop-out) var(--pop-ease),
     opacity 0.18s ease 0.08s,
-    visibility 0s linear 0.26s;
+    visibility 0s linear var(--pop-out);
 }
 
 .sc-account-menu > * {
@@ -621,7 +621,7 @@
   visibility: visible;
   transform: none;
   transition:
-    transform 0.34s cubic-bezier(0.16, 1, 0.3, 1),
+    transform var(--pop-in) var(--pop-ease),
     opacity 0.16s ease,
     visibility 0s;
 }
