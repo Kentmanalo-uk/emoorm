@@ -1,0 +1,382 @@
+/*
+ * Liquid glass on phones (≤768px), the iOS 26 look as far as CSS goes.
+ *
+ * A super admin chooses how much of it shows (Platform settings, "Liquid
+ * glass"); hooks/useTheme.js puts the answer on <html>:
+ *   data-glass="all"    everything below, the floating tab bar included
+ *   data-glass="menus"  menus, sheets, pills and pop-ups; the tab bar as before
+ *   data-glass="off"    nothing here applies: the solid look
+ *
+ * The material: what is behind is blurred and made a little more vivid
+ * (backdrop-filter), seen through a light tint, with a thin bright rim, a
+ * soft sheen along the top and a light shadow. Apple's real material also
+ * bends the light at its edges; a web page cannot (Safari ignores SVG
+ * filters in backdrop-filter), so this is frosted glass, done well.
+ *
+ * Cost: a blurred layer is redrawn whenever what is behind it moves, so
+ * only a few ever exist at once: the tab bar, the one open menu or sheet,
+ * a pill or a pop-up. Never cards, rows, or anything repeated in a list.
+ *
+ * Browsers that cannot blur, and people who asked their phone for less
+ * transparency, get the same shapes in solid colours.
+ */
+
+:root {
+  --glass-blur: 20px;
+  --glass-saturate: 180%;
+  --glass-filter: blur(var(--glass-blur)) saturate(var(--glass-saturate));
+  /* Bars and pills: the page shows through clearly. */
+  --glass-tint: rgb(255 255 255 / 0.68);
+  /* Menus and sheets carry more text: a denser tint. */
+  --glass-tint-strong: rgb(250 250 252 / 0.82);
+  /* The black pills (Switch to My Shop, offline): smoked glass. */
+  --glass-tint-dark: rgb(20 22 26 / 0.8);
+  --glass-sheen: linear-gradient(180deg, rgb(255 255 255 / 0.55) 0%, rgb(255 255 255 / 0.16) 34%, rgb(255 255 255 / 0) 62%);
+  --glass-sheen-dark: linear-gradient(180deg, rgb(255 255 255 / 0.16) 0%, rgb(255 255 255 / 0.04) 40%, rgb(255 255 255 / 0) 70%);
+  /* The rim: a bright hairline inside the edge, brightest along the top. */
+  --glass-rim: inset 0 1px 0 rgb(255 255 255 / 0.9), inset 0 0 0 0.5px rgb(255 255 255 / 0.6);
+  --glass-rim-dark: inset 0 1px 0 rgb(255 255 255 / 0.22), inset 0 0 0 0.5px rgb(255 255 255 / 0.14);
+  /* A faint dark hairline outside it, so white glass holds its shape on white. */
+  --glass-edge: 0 0 0 0.5px rgb(15 23 42 / 0.1);
+  --glass-shadow: 0 10px 30px rgb(15 23 42 / 0.13), 0 2px 6px rgb(15 23 42 / 0.06);
+  /* Pressed or picked rows on glass: a tint, never a solid fill. */
+  --glass-fill: rgb(15 23 42 / 0.07);
+  /* Words on glass over a busy photo need a step more ink than on white. */
+  --glass-ink-soft: var(--t-neutral-600, #4b5563);
+}
+
+:root[data-theme='dark'] {
+  --glass-tint: rgb(28 30 34 / 0.64);
+  --glass-tint-strong: rgb(30 32 36 / 0.84);
+  --glass-tint-dark: rgb(44 46 52 / 0.7);
+  --glass-sheen: linear-gradient(180deg, rgb(255 255 255 / 0.1) 0%, rgb(255 255 255 / 0.03) 36%, rgb(255 255 255 / 0) 62%);
+  --glass-rim: inset 0 1px 0 rgb(255 255 255 / 0.14), inset 0 0 0 0.5px rgb(255 255 255 / 0.09);
+  --glass-edge: 0 0 0 0.5px rgb(0 0 0 / 0.55);
+  --glass-shadow: 0 10px 30px rgb(0 0 0 / 0.42), 0 2px 6px rgb(0 0 0 / 0.3);
+  --glass-fill: rgb(255 255 255 / 0.1);
+  --glass-ink-soft: var(--t-neutral-600, #c0c4cc);
+}
+
+/* No blur, or less transparency asked for: the same shapes, solid. */
+@supports not ((backdrop-filter: blur(1px)) or (-webkit-backdrop-filter: blur(1px))) {
+  :root,
+  :root[data-theme='dark'] {
+    --glass-filter: none;
+    --glass-tint: var(--t-neutral-0, #fff);
+    --glass-tint-strong: var(--t-neutral-0, #fff);
+    --glass-tint-dark: #111827;
+    --glass-sheen: none;
+    --glass-sheen-dark: none;
+  }
+}
+
+@media (prefers-reduced-transparency: reduce) {
+  :root,
+  :root[data-theme='dark'] {
+    --glass-filter: none;
+    --glass-tint: var(--t-neutral-0, #fff);
+    --glass-tint-strong: var(--t-neutral-0, #fff);
+    --glass-tint-dark: #111827;
+    --glass-sheen: none;
+    --glass-sheen-dark: none;
+  }
+}
+
+/* ══ The floating tab bar (data-glass="all") ═══════════════════════════
+   The buyer bar, and the Seller Center's and admin's (both .sc-tabbar--app):
+   a glass pill 12px in from the sides, floating above the home indicator,
+   the page scrolling on under it. lib/native/tabBarScroll.js sets
+   data-tabbar="compact" on <html> while scrolling down; the pill then
+   shrinks to its icons, and grows back on the way up or at the top.
+
+   --tabbar-space is the room it takes from the bottom of the screen.
+   Whatever floats above the bar (the install bar, Cart's checkout bar,
+   Profile's Switch pill, the update card, the offline pill, Back to setup,
+   the live dock) is placed with var(--tabbar-space, <its own old value>),
+   so with glass off or menus-only they sit exactly where they always did. */
+@media (max-width: 768px) {
+  :root[data-glass='all'] {
+    --tabbar-h: 62px;
+    /* 22px over an iPhone's home indicator, 10px from a plain bottom edge. */
+    --tabbar-gap: max(10px, calc(env(safe-area-inset-bottom, 0px) - 12px));
+    --tabbar-space: calc(var(--tabbar-h) + var(--tabbar-gap));
+    --tabbar-ease: cubic-bezier(0.32, 0.72, 0, 1);
+  }
+
+  :root[data-glass='all'] :is(.mobile-bottom-nav, .sc-tabbar.sc-tabbar--app) {
+    /* The links' width as the pill draws in: (screen - 2 x 12px - 2 x 6px) / 5. */
+    --tabbar-col: calc((100vw - 36px) / 5);
+    right: 12px;
+    bottom: var(--tabbar-gap);
+    left: 12px;
+    isolation: isolate;
+    height: var(--tabbar-h);
+    min-height: 0;
+    padding: 4px 6px;
+    border: 0;
+    border-radius: calc(var(--tabbar-h) / 2);
+    background: none;
+    box-shadow: none;
+  }
+
+  /* The glass is a layer of its own, so shrinking it is a transform the
+     graphics card does, with no layout and the links left as they are. */
+  :root[data-glass='all'] :is(.mobile-bottom-nav, .sc-tabbar.sc-tabbar--app)::before {
+    content: '';
+    position: absolute;
+    inset: 0;
+    z-index: -1;
+    border-radius: inherit;
+    background-color: var(--glass-tint);
+    background-image: var(--glass-sheen);
+    -webkit-backdrop-filter: var(--glass-filter);
+    backdrop-filter: var(--glass-filter);
+    box-shadow: var(--glass-rim), var(--glass-edge), var(--glass-shadow);
+    transform-origin: 50% 100%;
+    transition: transform 0.42s var(--tabbar-ease);
+    pointer-events: none;
+  }
+
+  :root[data-glass='all'] .mobile-bottom-nav > a,
+  :root[data-glass='all'] .sc-tabbar--app > .sc-tab {
+    --tabbar-i: 0;
+    min-height: 0;
+    border-radius: 24px;
+    color: var(--glass-ink-soft);
+    /* The press look's own (styles/native-touch.css), kept beside the move. */
+    transition: transform 0.42s var(--tabbar-ease), background-color 0.2s ease, opacity 0.2s ease, scale 0.2s ease;
+  }
+
+  :root[data-glass='all'] .mobile-bottom-nav > a:nth-child(1),
+  :root[data-glass='all'] .sc-tabbar--app > .sc-tab:nth-child(1) { --tabbar-i: -2; }
+
+  :root[data-glass='all'] .mobile-bottom-nav > a:nth-child(2),
+  :root[data-glass='all'] .sc-tabbar--app > .sc-tab:nth-child(2) { --tabbar-i: -1; }
+
+  :root[data-glass='all'] .mobile-bottom-nav > a:nth-child(4),
+  :root[data-glass='all'] .sc-tabbar--app > .sc-tab:nth-child(4) { --tabbar-i: 1; }
+
+  :root[data-glass='all'] .mobile-bottom-nav > a:nth-child(5),
+  :root[data-glass='all'] .sc-tabbar--app > .sc-tab:nth-child(5) { --tabbar-i: 2; }
+
+  /* The open tab: its own colour as before, on a soft lozenge (iOS 26). */
+  :root[data-glass='all'] .mobile-bottom-nav > a.is-active,
+  :root[data-glass='all'] .sc-tabbar--app > .sc-tab.is-active {
+    background-color: var(--glass-fill);
+    color: var(--t-primary-600, #059669);
+  }
+
+  :root[data-glass='all'] .mobile-bottom-nav > a > span:last-child,
+  :root[data-glass='all'] .sc-tabbar--app > .sc-tab > span:last-child {
+    transition: opacity 0.24s ease;
+  }
+
+  /* ── Compact, while scrolling down ── */
+  :root[data-glass='all'][data-tabbar='compact'] :is(.mobile-bottom-nav, .sc-tabbar.sc-tabbar--app)::before {
+    transform: scale(0.9, 0.76);
+  }
+
+  /* Each tab follows the narrower pill in, drops to its middle and loses
+     its word; the badge goes along with the icon it belongs to. */
+  :root[data-glass='all'][data-tabbar='compact'] .mobile-bottom-nav > a,
+  :root[data-glass='all'][data-tabbar='compact'] .sc-tabbar--app > .sc-tab {
+    transform: translate(calc(var(--tabbar-i) * var(--tabbar-col) * -0.1), 12px) scale(0.9);
+  }
+
+  :root[data-glass='all'][data-tabbar='compact'] .mobile-bottom-nav > a.is-active,
+  :root[data-glass='all'][data-tabbar='compact'] .sc-tabbar--app > .sc-tab.is-active {
+    background-color: transparent;
+  }
+
+  :root[data-glass='all'][data-tabbar='compact'] .mobile-bottom-nav > a > span:last-child,
+  :root[data-glass='all'][data-tabbar='compact'] .sc-tabbar--app > .sc-tab > span:last-child {
+    opacity: 0;
+  }
+
+  /* Cart's checkout bar: a glass capsule just over the floating bar, the
+     way iOS 26 carries an accessory above its tab bar. */
+  :root[data-glass='all'] .cart-m-bar {
+    right: 12px;
+    bottom: calc(var(--tabbar-space) + 8px);
+    left: 12px;
+    overflow: hidden;
+    border-top: 0;
+    border-radius: 24px;
+    background-color: var(--glass-tint-strong);
+    background-image: var(--glass-sheen);
+    -webkit-backdrop-filter: var(--glass-filter);
+    backdrop-filter: var(--glass-filter);
+    box-shadow: var(--glass-rim), var(--glass-edge), var(--glass-shadow);
+  }
+
+  :root[data-glass='all'] .cart-m-bar-note {
+    background: color-mix(in srgb, var(--t-primary-50, #ecfdf5) 72%, transparent);
+  }
+
+  :root[data-glass='all'] .cart-m-bar-note.is-bad {
+    background: color-mix(in srgb, var(--t-danger-50, #fef2f2) 72%, transparent);
+  }
+}
+
+/* Reduced motion: compact all the same, without the shrinking. */
+@media (max-width: 768px) and (prefers-reduced-motion: reduce) {
+  :root[data-glass='all'] :is(.mobile-bottom-nav, .sc-tabbar.sc-tabbar--app)::before,
+  :root[data-glass='all'] .mobile-bottom-nav > a,
+  :root[data-glass='all'] .sc-tabbar--app > .sc-tab,
+  :root[data-glass='all'] .mobile-bottom-nav > a > span:last-child,
+  :root[data-glass='all'] .sc-tabbar--app > .sc-tab > span:last-child {
+    transition: none;
+  }
+}
+
+/* ══ Menus, sheets, pills and pop-ups (data-glass="all" or "menus") ═════ */
+@media (max-width: 768px) {
+  /* ── The ⋯ menus and other small pop-over menus ── */
+  :root:is([data-glass='all'], [data-glass='menus']) :is(
+    .more-menu-pop,
+    .shell-search-menu-pop,
+    .sp-rowmenu-list,
+    .am-menu-list,
+    .stw-menu,
+    .ui-select-menu
+  ) {
+    border-color: transparent;
+    background-color: var(--glass-tint-strong);
+    background-image: var(--glass-sheen);
+    -webkit-backdrop-filter: var(--glass-filter);
+    backdrop-filter: var(--glass-filter);
+    box-shadow: var(--glass-rim), var(--glass-edge), 0 16px 40px rgb(15 23 42 / 0.18), 0 2px 8px rgb(15 23 42 / 0.06);
+  }
+
+  :root[data-theme='dark']:is([data-glass='all'], [data-glass='menus']) :is(
+    .more-menu-pop,
+    .shell-search-menu-pop,
+    .sp-rowmenu-list,
+    .am-menu-list,
+    .stw-menu,
+    .ui-select-menu
+  ) {
+    box-shadow: var(--glass-rim), var(--glass-edge), 0 16px 40px rgb(0 0 0 / 0.45);
+  }
+
+  :root:is([data-glass='all'], [data-glass='menus']) .more-menu-pop {
+    border-radius: 18px;
+  }
+
+  :root:is([data-glass='all'], [data-glass='menus']) .more-menu-item {
+    border-radius: 12px;
+  }
+
+  :root:is([data-glass='all'], [data-glass='menus']) .more-menu-item:is(:hover, :active, :focus-visible) {
+    background: var(--glass-fill);
+  }
+
+  /* ── Bottom sheets ──
+     The shared sheet (.ui-sheet-panel: pickers, Switch account, the seller
+     and admin sheets, confirmations, reports, reviews...), Share, the
+     product's options, and the offers sheets. A denser tint than the bars:
+     they are for reading. */
+  :root:is([data-glass='all'], [data-glass='menus']) :is(
+    .ui-sheet-backdrop .ui-sheet-panel,
+    .share-root .share-sheet,
+    .pos-root .pos-sheet,
+    .of-backdrop.is-sheet .of-dialog
+  ) {
+    background-color: var(--glass-tint-strong);
+    background-image: var(--glass-sheen);
+    -webkit-backdrop-filter: var(--glass-filter);
+    backdrop-filter: var(--glass-filter);
+    box-shadow: var(--glass-rim), 0 -10px 40px rgb(15 23 42 / 0.16);
+  }
+
+  :root[data-theme='dark']:is([data-glass='all'], [data-glass='menus']) :is(
+    .ui-sheet-backdrop .ui-sheet-panel,
+    .share-root .share-sheet,
+    .pos-root .pos-sheet,
+    .of-backdrop.is-sheet .of-dialog
+  ) {
+    box-shadow: var(--glass-rim), 0 -10px 40px rgb(0 0 0 / 0.5);
+  }
+
+  /* The grab handles: a tint that shows on glass (the light greys vanish). */
+  :root:is([data-glass='all'], [data-glass='menus']) :is(
+    .share-grabber,
+    .ui-select-sheet-grip,
+    .scm-sheet-grip,
+    .sas-grip,
+    .of-grip,
+    .msgr-sheet-grabber
+  ) {
+    background: rgb(15 23 42 / 0.2);
+  }
+
+  :root[data-theme='dark']:is([data-glass='all'], [data-glass='menus']) :is(
+    .share-grabber,
+    .ui-select-sheet-grip,
+    .scm-sheet-grip,
+    .sas-grip,
+    .of-grip,
+    .msgr-sheet-grabber
+  ) {
+    background: rgb(255 255 255 / 0.28);
+  }
+
+  /* Picked rows in the phone picker: a tint on the glass. */
+  :root:is([data-glass='all'], [data-glass='menus']) .ui-select-sheet .ui-select-option:is(.is-selected, .is-active) {
+    background: var(--glass-fill);
+  }
+
+  /* ── Pop-ups (AppToaster): already frosted; the same glass as the rest ── */
+  :root:is([data-glass='all'], [data-glass='menus']) .app-toast-card {
+    border-color: transparent;
+    background-color: var(--glass-tint-strong);
+    background-image: var(--glass-sheen);
+    -webkit-backdrop-filter: var(--glass-filter);
+    backdrop-filter: var(--glass-filter);
+    box-shadow: var(--glass-rim), var(--glass-edge), 0 16px 38px rgb(15 23 42 / 0.16), 0 2px 8px rgb(15 23 42 / 0.05);
+  }
+
+  :root[data-theme='dark']:is([data-glass='all'], [data-glass='menus']) .app-toast-card {
+    box-shadow: var(--glass-rim), var(--glass-edge), 0 16px 38px rgb(0 0 0 / 0.4);
+  }
+
+  :root:is([data-glass='all'], [data-glass='menus']) .app-toast-commerce {
+    background-color: var(--glass-tint-dark);
+    background-image: var(--glass-sheen-dark);
+    -webkit-backdrop-filter: var(--glass-filter);
+    backdrop-filter: var(--glass-filter);
+    box-shadow: var(--glass-rim-dark), 0 18px 40px rgb(0 0 0 / 0.22);
+  }
+
+  /* ── Pills and floating cards ── */
+
+  /* Install the app, above the tab bar. */
+  :root:is([data-glass='all'], [data-glass='menus']) .install-bar {
+    border-color: transparent;
+    background-color: var(--glass-tint);
+    background-image: var(--glass-sheen);
+    -webkit-backdrop-filter: var(--glass-filter);
+    backdrop-filter: var(--glass-filter);
+    box-shadow: var(--glass-rim), var(--glass-edge), var(--glass-shadow);
+  }
+
+  /* A new version of the app. */
+  :root:is([data-glass='all'], [data-glass='menus']) .app-update {
+    border-color: transparent;
+    background-color: var(--glass-tint-strong);
+    background-image: var(--glass-sheen);
+    -webkit-backdrop-filter: var(--glass-filter);
+    backdrop-filter: var(--glass-filter);
+    box-shadow: var(--glass-rim), var(--glass-edge), var(--glass-shadow);
+  }
+
+  /* The black pills: Profile's Switch to My Shop, offline, Back to setup.
+     Smoked glass, white words. */
+  :root:is([data-glass='all'], [data-glass='menus']) :is(.pf-m-switch, .offline-banner, .srp) {
+    background-color: var(--glass-tint-dark);
+    background-image: var(--glass-sheen-dark);
+    -webkit-backdrop-filter: var(--glass-filter);
+    backdrop-filter: var(--glass-filter);
+    box-shadow: var(--glass-rim-dark), 0 0 0 0.5px rgb(0 0 0 / 0.2), 0 10px 26px rgb(15 23 42 / 0.26), 0 2px 6px rgb(15 23 42 / 0.14);
+  }
+}

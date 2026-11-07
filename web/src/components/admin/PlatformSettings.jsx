@@ -543,6 +543,47 @@ export function MobileHeaderSettings() {
   );
 }
 
+/* ── Liquid glass on phones (styles/glass.css) ────────────── */
+
+const GLASS_CHOICES = [
+  { value: 'ALL', title: 'Everywhere', text: 'A floating glass tab bar, glass menus and sheets' },
+  { value: 'MENUS', title: 'Menus and sheets', text: 'Glass menus, sheets and pills; the tab bar stays solid' },
+  { value: 'OFF', title: 'Off', text: 'Solid bars, menus and sheets, as before' },
+];
+
+export function MobileGlassSettings() {
+  const { settings } = useAppSettings();
+  const { save, saving } = useSaveSettings();
+  const current = GLASS_CHOICES.some((c) => c.value === settings.mobileGlass) ? settings.mobileGlass : 'ALL';
+  return (
+    <SettingsCard id="mobile-glass" title="Liquid glass on phones">
+      <SettingRow
+        label="Glass look"
+        help="Frosted glass, like iPhone's newest look: the page shows softly through the tab bar, menus and sheets. Phones that can't draw it, and people who turned on Reduce Transparency, keep the solid look. Computers are not affected."
+      >
+        <div className="ps-choices ps-choices--3" role="radiogroup" aria-label="Liquid glass on phones">
+          {GLASS_CHOICES.map(({ value, title, text }) => (
+            <label key={value} className={`ps-choice${current === value ? ' is-on' : ''}`}>
+              <input
+                type="radio"
+                name="mobileGlass"
+                value={value}
+                checked={current === value}
+                disabled={saving}
+                onChange={() => save({ mobileGlass: value }, value === 'OFF' ? 'Liquid glass is off' : `Liquid glass: ${title.toLowerCase()}`)}
+              />
+              <span className="ps-choice-text">
+                <strong>{title}{value === 'ALL' && <em className="ps-choice-default"> (default)</em>}</strong>
+                <span>{text}</span>
+              </span>
+            </label>
+          ))}
+        </div>
+      </SettingRow>
+    </SettingsCard>
+  );
+}
+
 /* ── Invites: switches and limits ─────────────────────────── */
 
 const INVITE_NUMBERS = [

@@ -16,7 +16,8 @@
 
 @media (max-width: 768px) {
   .layout-main {
-    padding-bottom: calc(80px + env(safe-area-inset-bottom));
+    /* Room for the tab bar (--tabbar-space: styles/glass.css). */
+    padding-bottom: calc(var(--tabbar-space, 68px + env(safe-area-inset-bottom)) + 12px);
   }
 }
 

@@ -51,6 +51,9 @@ model AppSetting {
   /// them): GLOW (the light pink-to-green wash), WHITE or GREEN. A super
   /// admin picks it; computers keep their own header.
   mobileHeaderStyle String @default("GLOW") @db.VarChar(10) @map("mobile_header_style")
+  // Liquid glass on phones: ALL (tab bar, menus, sheets, pills), MENUS (all
+  // but the tab bar) or OFF.
+  mobileGlass String @default("ALL") @db.VarChar(10) @map("mobile_glass")
 
   /// Sign-in methods a super admin switches on or off (email sign-in always
   /// stays on). Each still needs its keys on the server to work.

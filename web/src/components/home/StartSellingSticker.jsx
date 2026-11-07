@@ -83,7 +83,11 @@ const getBounds = () => {
   const header = document.querySelector('.header');
   const nav = document.querySelector('.mobile-bottom-nav');
   const top = (header ? header.offsetHeight : 60) + 14;
-  const navH = nav && getComputedStyle(nav).display !== 'none' ? nav.offsetHeight : 0;
+  // From the bar's top edge down: the floating glass bar (styles/glass.css)
+  // stands clear of the screen's bottom edge.
+  const navH = nav && getComputedStyle(nav).display !== 'none'
+    ? Math.max(0, height - nav.getBoundingClientRect().top)
+    : 0;
   const bottom = height - ITEM_H - navH - 14;
   return {
     left: EDGE,

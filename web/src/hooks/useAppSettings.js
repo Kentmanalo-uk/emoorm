@@ -27,6 +27,8 @@ export const DEFAULT_APP_SETTINGS = {
   shortcutIconScale: 100,
   // The header bars on phones: 'GLOW' (pink to green), 'WHITE' or 'GREEN'.
   mobileHeaderStyle: 'GLOW',
+  // Liquid glass on phones: 'ALL', 'MENUS' (not the tab bar) or 'OFF'.
+  mobileGlass: 'ALL',
   // Sign-in methods the super admin switches (email always on).
   loginGoogle: true,
   loginFacebook: true,

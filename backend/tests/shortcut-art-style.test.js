@@ -8,7 +8,7 @@ const appSettingService = require('../src/services/appSetting.service');
 
 // Every test here changes a global setting, so it is put back afterwards.
 after(async () => {
-  await appSettingService.update({ shortcutArtStyle: 'GLASS', shortcutIconScale: 100, mobileHeaderStyle: 'GLOW' }).catch(() => {});
+  await appSettingService.update({ shortcutArtStyle: 'GLASS', shortcutIconScale: 100, mobileHeaderStyle: 'GLOW', mobileGlass: 'ALL' }).catch(() => {});
   await h.cleanup();
 });
 
@@ -88,6 +88,28 @@ test('the header on phones: the wash unless chosen, then white or green', async 
     assert.equal((await put(bad)).status, 400, `${JSON.stringify(bad)} is refused`);
   }
   assert.equal((await appSettingService.get()).mobileHeaderStyle, 'GLOW', 'nothing bad got through');
+});
+
+test('liquid glass on phones: everywhere unless chosen, then menus only or off', async () => {
+  await appSettingService.update({ mobileGlass: 'ALL' });
+  assert.equal((await h.api('GET', '/app-settings')).body?.data?.mobileGlass, 'ALL');
+
+  const admin = await h.user('SUPER_ADMIN');
+  const put = (value, who = admin) => h.api('PUT', '/app-settings', { token: h.token(who), body: { mobileGlass: value } });
+
+  for (const [sent, stored] of [['menus', 'MENUS'], ['OFF', 'OFF'], ['All', 'ALL']]) {
+    const res = await put(sent);
+    assert.equal(res.status, 200);
+    assert.equal(res.body?.data?.mobileGlass, stored, `${sent} is stored as ${stored}`);
+  }
+
+  const seller = await h.user('SELLER');
+  assert.equal((await put('OFF', seller)).status, 403, 'a seller cannot change the look for everyone');
+
+  for (const bad of ['GLASSY', '', null, 1]) {
+    assert.equal((await put(bad)).status, 400, `${JSON.stringify(bad)} is refused`);
+  }
+  assert.equal((await appSettingService.get()).mobileGlass, 'ALL', 'nothing bad got through');
 });
 
 test('the sign-in method switches: true or false, and only a super admin sets them', async () => {

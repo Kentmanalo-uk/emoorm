@@ -46,7 +46,7 @@
 /* Phones: above the tab bar. */
 @media (max-width: 768px) {
   .srp {
-    bottom: calc(76px + env(safe-area-inset-bottom));
+    bottom: calc(var(--tabbar-space, 68px + env(safe-area-inset-bottom)) + 8px);
   }
 
   body.pf-open .srp {

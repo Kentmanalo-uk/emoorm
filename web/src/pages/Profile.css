@@ -1829,7 +1829,7 @@
    A black pill easing up into place above the tab bar (and above the
    Install the app bar, while that shows). */
 .pf-m-switch {
-  --pf-switch-bottom: calc(max(74px, 53px + env(safe-area-inset-bottom, 0px)) + 14px);
+  --pf-switch-bottom: calc(var(--tabbar-space, max(74px, 53px + env(safe-area-inset-bottom, 0px))) + 14px);
   position: fixed;
   left: 50%;
   bottom: var(--pf-switch-bottom);
@@ -1855,7 +1855,7 @@
 }
 
 body:has(.install-bar) .pf-m-switch {
-  --pf-switch-bottom: calc(max(74px, 53px + env(safe-area-inset-bottom, 0px)) + 8px + 54px + 18px);
+  --pf-switch-bottom: calc(var(--tabbar-space, max(74px, 53px + env(safe-area-inset-bottom, 0px))) + 8px + 54px + 18px);
 }
 
 .pf-m-switch:active {

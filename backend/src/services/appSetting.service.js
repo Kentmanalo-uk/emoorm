@@ -20,6 +20,7 @@ const DEFAULT_SETTINGS = {
   shortcutArtStyle: 'GLASS',
   shortcutIconScale: 100,
   mobileHeaderStyle: 'GLOW',
+  mobileGlass: 'ALL',
   // Sign-in methods (email always on): Continue with mobile number starts off.
   loginGoogle: true,
   loginFacebook: true,
@@ -44,6 +45,7 @@ const SHORTCUT_ICON_SCALES = [85, 100, 115, 130];
 
 // The header bars on phones: the pink-to-green wash, plain white, or green.
 const MOBILE_HEADER_STYLES = ['GLOW', 'WHITE', 'GREEN'];
+const MOBILE_GLASS = ['ALL', 'MENUS', 'OFF'];
 
 // A switch is a boolean. "yes", 1 and "" are rejected rather than guessed
 // at, because a mis-set checkout gate is not something to be lenient about.
@@ -258,6 +260,14 @@ const sanitize = (input = {}, current = null) => {
       throw new ApiError(`mobileHeaderStyle must be one of ${MOBILE_HEADER_STYLES.join(', ')}`, 400);
     }
     data.mobileHeaderStyle = style;
+  }
+
+  if (input.mobileGlass !== undefined) {
+    const glass = String(input.mobileGlass || '').toUpperCase();
+    if (!MOBILE_GLASS.includes(glass)) {
+      throw new ApiError(`mobileGlass must be one of ${MOBILE_GLASS.join(', ')}`, 400);
+    }
+    data.mobileGlass = glass;
   }
 
   for (const field of ['loginGoogle', 'loginFacebook', 'loginPhone']) {

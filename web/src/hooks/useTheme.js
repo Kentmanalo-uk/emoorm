@@ -9,6 +9,7 @@ import {
 import { DEFAULT_THEME } from '../lib/themePresets';
 
 const HEADER_STYLE_KEY = 'emoorm.headerStyle';
+const GLASS_KEY = 'emoorm.glass';
 
 /** The phone header's colour on <html>: data-header-style white or green;
     none for the wash, the default. */
@@ -17,6 +18,13 @@ const applyHeaderStyle = (style) => {
   const root = document.documentElement;
   if (value === 'white' || value === 'green') root.dataset.headerStyle = value;
   else delete root.dataset.headerStyle;
+};
+
+/** Liquid glass on phones, on <html>: data-glass all, menus or off
+ *  (styles/glass.css). Anything else counts as all, the default. */
+const applyGlass = (value) => {
+  const v = String(value || 'ALL').toLowerCase();
+  document.documentElement.dataset.glass = v === 'menus' || v === 'off' ? v : 'all';
 };
 
 /**
@@ -67,6 +75,7 @@ export function ThemeRuntime() {
   const { settings, isLoading } = useAppSettings();
   const theme = settings?.theme ?? null;
   const headerStyle = settings?.mobileHeaderStyle;
+  const glass = settings?.mobileGlass;
 
   // The header's colour on phones (styles/phone-app.css), kept for the next
   // load like the palette.
@@ -77,6 +86,15 @@ export function ThemeRuntime() {
       localStorage.setItem(HEADER_STYLE_KEY, headerStyle || 'GLOW');
     } catch { /* private window: the next load starts from the wash */ }
   }, [headerStyle, isLoading]);
+
+  // Liquid glass on phones, kept for the next load the same way.
+  useEffect(() => {
+    if (isLoading) return;
+    applyGlass(glass);
+    try {
+      localStorage.setItem(GLASS_KEY, glass || 'ALL');
+    } catch { /* private window */ }
+  }, [glass, isLoading]);
 
   useEffect(() => {
     // Nothing to apply yet: bootTheme already put this browser's last
@@ -121,6 +139,7 @@ export const bootTheme = () => {
   if (cached) applyTheme(cached);
   try {
     applyHeaderStyle(localStorage.getItem(HEADER_STYLE_KEY));
+    applyGlass(localStorage.getItem(GLASS_KEY));
   } catch { /* storage blocked: the wash until the settings arrive */ }
 };
 

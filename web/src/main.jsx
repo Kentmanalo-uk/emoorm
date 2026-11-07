@@ -6,10 +6,12 @@ import './styles/phone-app.css';
 import './styles/motion.css';
 import './styles/iconTiles.css';
 import './styles/native-nav.css';
+import './styles/glass.css';
 import App from './App.jsx';
 import { resumeLastScreen } from './lib/native/resume';
 import { startEdgeSwipeBack } from './lib/native/edgeSwipeBack';
 import { startNoZoom } from './lib/native/noZoom';
+import { startTabBarScroll } from './lib/native/tabBarScroll';
 import { loadGoogleTranslate, getCurrentLanguage } from './lib/googleTranslate';
 import { startCuratedTagalog } from './lib/tagalog';
 import { keepOriginalText } from './lib/noTranslate';
@@ -63,6 +65,8 @@ setupPwaInstall();
 startEdgeSwipeBack();
 // ...and no pinch or double-tap zoom there (browser tabs still zoom).
 startNoZoom();
+// The floating glass tab bar shrinks while scrolling down (styles/glass.css).
+startTabBarScroll();
 // A product's data is fetched as soon as its link is touched (lib/prefetch).
 watchProductLinks();
 // A page open across a deploy (the Android app in the background) picks up
