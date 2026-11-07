@@ -890,3 +890,23 @@ input[type="radio"] {
   -webkit-user-select: none;
   user-select: none;
 }
+
+/* The home-screen app (data-standalone, set in main.jsx): the page itself
+   does not rubber-band, so pulling past the top or bottom leaves the header,
+   the tab bar and the status bar where they are, as in a native app. (Pull
+   to refresh is drawn by components/native/PullToRefresh, not the bounce.)
+   Older iPhones that bounce anyway show the header's own colour above the
+   page instead of the grey page behind it, so the status bar keeps its
+   colour too; below the page, the page's colour. */
+@media (max-width: 768px) {
+  :root[data-standalone] {
+    overscroll-behavior-y: none;
+    background:
+      linear-gradient(to bottom, transparent 50%, var(--color-bg-primary) 50%),
+      var(--header-glow-band, var(--color-bg-primary));
+  }
+
+  :root[data-standalone] body {
+    overscroll-behavior-y: none;
+  }
+}
