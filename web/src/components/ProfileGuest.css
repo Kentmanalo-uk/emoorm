@@ -1,17 +1,13 @@
 /* Signed-out Profile tab (phones). The page is the signed-in phone Profile
    (the .pf-m styles in Profile.css); this styles only the sign-in card that
    takes the place of the photo and name. */
-/* The sign-in line wraps; a real name and email stay on one line. */
-.pf-m-id-text.pf-guest-text span {
-  overflow: visible;
-  line-height: 1.45;
-  white-space: normal;
-}
-
-.pf-guest-actions {
+/* Log in and Sign up, side by side under "Welcome to E-MOORM". */
+.pf-m-id-text.pf-guest-text .pf-guest-actions {
   display: flex;
-  gap: 10px;
-  padding: 0 16px 16px;
+  gap: 8px;
+  margin-top: 8px;
+  overflow: visible;
+  white-space: nowrap;
 }
 
 .pf-guest-btn {
@@ -19,14 +15,32 @@
   flex: 1;
   align-items: center;
   justify-content: center;
-  height: 44px;
+  min-width: 0;
+  height: 38px;
+  padding: 0 12px;
   border: 1px solid var(--t-primary-600, #059669);
-  border-radius: 12px;
+  border-radius: 10px;
   background: var(--t-neutral-0, #fff);
   color: var(--t-primary-700, #047857);
-  font-size: 15px;
+  font-size: 14.5px;
   font-weight: 700;
+  line-height: 1;
   text-decoration: none;
+}
+
+/* Both read in true bold; Sign up is a quiet grey button with no outline.
+   The weight goes through a variable on purpose: the build turns a plain
+   600–900 into var(--phone-bold), medium on phones (vite.config.js), and
+   these two are meant to stay bold. */
+.pf-guest-actions .pf-guest-btn {
+  --pf-guest-weight: 700;
+  font-weight: var(--pf-guest-weight);
+}
+
+.pf-guest-actions .pf-guest-btn:not(.is-primary) {
+  border-color: transparent;
+  background: var(--t-neutral-100, #f3f4f6);
+  color: var(--t-neutral-900, #111827);
 }
 
 /* Log in: E-MOORM green with a touch of pink toward its end. */

@@ -58,12 +58,13 @@ export default function ProfileGuest() {
                     <span className="pf-m-avatar" aria-hidden="true"><GradientUserIcon size={64} /></span>
                     <span className="pf-m-id-text pf-guest-text">
                       <strong>Welcome to E-MOORM</strong>
-                      <span>Log in to track orders, save favourites and chat with local sellers.</span>
+                      {/* The two doors sit under the welcome, where a
+                          signed-in person's email is. */}
+                      <span className="pf-guest-actions">
+                        <Link {...needsLogin('/profile')} className="pf-guest-btn is-primary">Log in</Link>
+                        <Link to="/register" className="pf-guest-btn">Sign up</Link>
+                      </span>
                     </span>
-                  </div>
-                  <div className="pf-guest-actions">
-                    <Link {...needsLogin('/profile')} className="pf-guest-btn is-primary">Log in</Link>
-                    <Link to="/register" className="pf-guest-btn">Sign up</Link>
                   </div>
                 </section>
 
