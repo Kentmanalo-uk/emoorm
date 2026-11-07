@@ -142,10 +142,12 @@ test('hidden products never show, even when asked for by id or search', async ()
   assert.ok(store.id);
 });
 
-test('a seller is not shown their own products', async () => {
+test('a seller is shown their own products too, in the feed and the product list', async () => {
   const { seller, item } = await shopWith();
   const res = await feed({ viewed: item.id }, seller);
-  assert.equal(ids(res).includes(item.id), false);
+  assert.equal(ids(res).includes(item.id), true);
+  const list = await h.api('GET', '/products?pageSize=100&sortBy=createdAt&sortOrder=desc', { token: h.token(seller) });
+  assert.equal(list.body.data.some((p) => p.id === item.id), true);
 });
 
 test('pages do not repeat a product, and every product is in the feed', async () => {

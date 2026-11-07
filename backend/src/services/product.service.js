@@ -924,13 +924,10 @@ const getProducts = async (rawOptions) => {
     options.storeIsActive = true;
     options.storeIsSuspended = false;
     options.storeIsApproved = true;
-    // A seller's feed leaves out their own products. A shop's own page
-    // (storeId) lists all of that shop's products for everyone, its owner
-    // included; it showed the owner an empty shop. Buyers own no products,
-    // so their feed is the shared one (and comes from the cache).
-    options.excludeOwnerId = options.userRole === 'SELLER' && !options.storeId
-      ? options.userId
-      : undefined;
+    // Everyone gets the same list, a seller their own products too (they
+    // used to be left out, which on a small catalogue made Home look short).
+    // So every public list is the shared one, from the cache.
+    options.excludeOwnerId = undefined;
   }
 
   // Each product's store says whether it takes orders yet, so cards can hold

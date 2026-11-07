@@ -37,7 +37,6 @@ import { fetchForYou } from '../lib/forYou';
 const LiveNow = lazy(() => import('../components/live/LiveNow'));
 
 const EXPLORE_ROWS = 5;
-const EXPLORE_QUERY = { sortBy: 'createdAt', sortOrder: 'desc' };
 
 // Matches the .home-explore-grid columns in Home.css (6 / 4 / 2).
 const exploreColumns = () => {
@@ -212,6 +211,7 @@ const Home = () => {
     load(
       fetchForYou(user?.id, { page: 1, pageSize: exploreBatch, skip: SUGGESTED }),
       (res) => {
+        exploreSignals.current = res.signals;
         const fresh = res.data || [];
         if ((exploreSaved.explorePage || 1) > 1) {
           // More was loaded last time: the first batch is refreshed in
@@ -277,6 +277,9 @@ const Home = () => {
   const [exploreFailed, setExploreFailed] = useState(false);
   const exploreBusy = useRef(false);
   const exploreEndRef = useRef(null);
+  // What Explore's first batch was asked with; its later batches ask the same.
+  const exploreSignals = useRef(undefined);
+  const viewerId = user?.id;
   const loadMoreExplore = useCallback(async () => {
     if (exploreBusy.current || !exploreHasMore) return;
     exploreBusy.current = true;
@@ -284,8 +287,10 @@ const Home = () => {
     setExploreFailed(false);
     try {
       const nextPage = explorePage + 1;
-      const res = await axios.get('/products', {
-        params: { ...EXPLORE_QUERY, page: nextPage, pageSize: exploreBatch },
+      // The same feed as the first batch, asked the same way, so every
+      // product turns up once.
+      const res = await fetchForYou(viewerId, {
+        page: nextPage, pageSize: exploreBatch, skip: SUGGESTED, signals: exploreSignals.current,
       });
       const seen = new Set(exploreProducts.map((p) => p.id));
       const next = [...exploreProducts, ...(res.data || []).filter((p) => !seen.has(p.id))];
@@ -303,7 +308,7 @@ const Home = () => {
       exploreBusy.current = false;
       setExploreLoading(false);
     }
-  }, [exploreHasMore, explorePage, exploreProducts, exploreBatch]);
+  }, [exploreHasMore, explorePage, exploreProducts, exploreBatch, viewerId]);
 
   // About a screen and a half before the grid runs out: the next batch. A
   // fresh observer after each batch reports at once whether the end is still

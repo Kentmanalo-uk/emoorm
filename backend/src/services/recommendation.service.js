@@ -263,8 +263,10 @@ const getForYou = async ({
   const viewedIds = parseViewed(viewed);
   const words = parseTerms(terms);
   const userId = user?.id || null;
-  // A seller's feed leaves out their own products, as the public lists do.
-  const ownerId = user?.role === 'SELLER' ? user.id : null;
+  // Everyone sees every product, a seller their own shop's too: the
+  // catalogue is small, and a shop owner looking for their listings on Home
+  // found them missing.
+  const ownerId = null;
 
   const key = `${userId || 'guest'}|${viewedIds.join(',')}|${words.join('|')}`;
   const saved = cache.get(key);
