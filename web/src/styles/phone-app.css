@@ -431,17 +431,4 @@
   :root[data-header-style='green'] .header .header-logo-text {
     color: #fff;
   }
-
-  /* Home's search on green: the bar is all white, the green search button
-     set inside it behind a thin white frame, so it belongs to the bar
-     rather than running into the header's green. */
-  :root[data-header-style='green'] .header.is-home .header-search {
-    padding: 3px 3px 3px 0;
-    border-color: #fff;
-  }
-
-  :root[data-header-style='green'] .header.is-home .header-search-button {
-    width: 40px;
-    min-width: 40px;
-  }
 }
