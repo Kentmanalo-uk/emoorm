@@ -24,7 +24,6 @@ import { ProfileSkeleton } from '../components/ui/PageSkeletons';
 import { usePageCache } from '../lib/pageCache';
 import { countBuyerTabs } from '../lib/orderProgress';
 import PageMenu from '../components/layout/PageMenu';
-import ToolGradients from '../components/ui/ToolGradients';
 import RecentlyViewed from '../components/account/RecentlyViewed';
 import MoreProducts from '../components/product/MoreProducts';
 import {
@@ -211,12 +210,11 @@ const Profile = () => {
             <h2>My Purchase</h2>
             <Link to="/profile/orders">See all <ChevronRight size={13} weight="bold" /></Link>
           </div>
-          <ToolGradients />
           <div className="pf-m-purchase">
             {purchase.map(([label, Icon, to, count]) => (
               <Link key={label} to={to}>
                 <span className="pf-m-purchase-icon">
-                  <Icon size={24} weight="fill" />
+                  <Icon size={30} weight="light" />
                   {count > 0 && <b>{count > 99 ? '99+' : count}</b>}
                 </span>
                 <span>{label}</span>

@@ -1622,7 +1622,7 @@
 
   .pf-m-purchase-icon {
     width: auto;
-    height: 32px;
+    height: 36px;
     background: none;
   }
 
@@ -1655,7 +1655,7 @@
   .profile-page .pf-m-section h2 { font-size: 17px; }
   .profile-page .pf-m-section-head a { font-size: 14px; }
   .profile-page .pf-m-purchase a { gap: 7px; font-size: 13.5px; }
-  .profile-page .pf-m-purchase-icon svg { width: 27px; height: 27px; }
+  .profile-page .pf-m-purchase-icon svg { width: 31px; height: 31px; }
   .profile-page .pf-m-row { padding-top: 13px; padding-bottom: 13px; font-size: 16px; }
   .profile-page .pf-m-row-icon svg { width: 22px; height: 22px; }
 
@@ -1668,10 +1668,14 @@
   .profile-page .pf-m-row-hint { font-size: 14px; }
 }
 
-/* Phones: My Purchase icons in grey; the avatar circle behind the green-to-pink
+/* Phones: My Purchase icons as thin grey outlines, drawn larger (a
+   lighter --icon-ink than the phone default); the avatar circle behind the green-to-pink
    person icon (visitors, and accounts with no photo yet) gets a soft tint. */
 @media (max-width: 768px) {
-  .profile-page .pf-m-purchase-icon { color: var(--t-primary-600, #059669); }
+  .profile-page .pf-m-purchase-icon {
+    --icon-ink: 0.6;
+    color: var(--t-neutral-500, #6b7280);
+  }
   .profile-page .pf-m-avatar,
   .profile-page .pf-m-avatar .profile-avatar-placeholder { background: linear-gradient(135deg, #ecfdf5 0%, #fdf2f8 100%); }
 }
@@ -1686,18 +1690,11 @@
   }
 }
 
-/* My Purchase icons (signed in, and visitors): filled, in the green gradient
-   (ToolGradients' green; the solid green stays as the fallback). The
-   gradient definitions sit in a hidden SVG beside the icons. */
 .pf-m .sh-tool-gradients {
   position: absolute;
   width: 0;
   height: 0;
   overflow: hidden;
-}
-
-.pf-m-purchase-icon svg:not([data-variant="outline"]) {
-  fill: url(#sh-grad-green) var(--t-primary-600, #047857);
 }
 
 /* ── Phones: the shortcuts (ProfileTools), Home's marks in pages ──

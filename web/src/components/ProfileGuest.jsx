@@ -6,7 +6,6 @@ import {
 import Layout from './layout/Layout';
 import PageMenu from './layout/PageMenu';
 import GradientUserIcon from './ui/GradientUserIcon';
-import ToolGradients from './ui/ToolGradients';
 import RecentlyViewed from './account/RecentlyViewed';
 import { LanguageTile } from './account/LanguageRow';
 import ProfileTools from './account/ProfileTools';
@@ -73,11 +72,10 @@ export default function ProfileGuest() {
                     <h2>My Purchase</h2>
                     <Link {...needsLogin('/profile/orders')}>See all <ChevronRight size={13} weight="bold" /></Link>
                   </div>
-                  <ToolGradients />
                   <div className="pf-m-purchase">
                     {PURCHASE.map(([label, Icon, to]) => (
                       <Link key={label} {...needsLogin(to)}>
-                        <span className="pf-m-purchase-icon"><Icon size={24} weight="fill" /></span>
+                        <span className="pf-m-purchase-icon"><Icon size={30} weight="light" /></span>
                         <span>{label}</span>
                       </Link>
                     ))}
