@@ -84,9 +84,12 @@ const PLACEHOLDER_SUGGESTIONS = [
   'Coconut Oil',
 ];
 
-// Lines as thin as the other tabs' on the larger drawing (21 / 24).
-const NAV_BIG = { '--icon-ink': 0.875, translate: '0 -1.5px' };
-const NAV_BIG_PERSON = { '--icon-ink': 0.875 };
+// Lines as thin as the other tabs' on the larger drawing: the phone's ink
+// (index.css, 0.75) times 21 / 24. Setting --icon-ink here replaces the
+// phone's value rather than multiplying it, so both go in.
+const NAV_BIG_INK = 0.75 * (21 / 24);
+const NAV_BIG = { '--icon-ink': NAV_BIG_INK, translate: '0 -1.5px' };
+const NAV_BIG_PERSON = { '--icon-ink': NAV_BIG_INK };
 
 /**
  * Home's logo. On a phone with the green header (App settings,
