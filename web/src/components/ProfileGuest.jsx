@@ -53,7 +53,7 @@ export default function ProfileGuest() {
                   </div>
                 </div>
 
-                <section className="pf-m-card">
+                <section className="pf-m-card pf-guest-card">
                   <div className="pf-m-id">
                     <span className="pf-m-avatar" aria-hidden="true"><GradientUserIcon size={64} /></span>
                     <span className="pf-m-id-text pf-guest-text">
