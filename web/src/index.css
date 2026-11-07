@@ -879,3 +879,14 @@ input[type="radio"] {
   color: var(--t-neutral-500, #6b7280);
   font-weight: 400;
 }
+
+/* The tab bars (buyer, Seller Center, admin) behave like an app's: a long
+   press does not open the link preview or select the words, on iPhones
+   above all, where the home-screen app otherwise shows Safari's menu. */
+.mobile-bottom-nav,
+.sc-tabbar,
+.ac-tabbar {
+  -webkit-touch-callout: none;
+  -webkit-user-select: none;
+  user-select: none;
+}

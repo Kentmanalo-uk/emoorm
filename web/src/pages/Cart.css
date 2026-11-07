@@ -1201,7 +1201,9 @@
     top: auto !important;
     left: 0;
     right: 0;
-    bottom: 68px;
+    /* Tucked 6px under the tab bar, which is 74px tall, or 54px plus the
+       home-indicator inset on an iPhone (Header.css .mobile-bottom-nav). */
+    bottom: calc(max(74px, 54px + env(safe-area-inset-bottom, 0px)) - 6px);
     z-index: 105;
     display: block;
     height: 68px;
@@ -1344,7 +1346,7 @@
     left: 0;
     right: 0;
     top: auto !important;
-    bottom: 68px !important;
+    bottom: calc(max(74px, 54px + env(safe-area-inset-bottom, 0px)) - 6px) !important;
     top: auto !important;
     z-index: 105;
     display: block;
@@ -1481,7 +1483,7 @@
   .cart-summary-section {
     height: 72px;
     min-height: 72px;
-    bottom: 68px;
+    bottom: calc(max(74px, 54px + env(safe-area-inset-bottom, 0px)) - 6px);
     padding: 10px 14px;
   }
 
