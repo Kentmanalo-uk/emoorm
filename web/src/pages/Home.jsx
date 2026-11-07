@@ -33,9 +33,13 @@ import PullToRefresh from '../components/native/PullToRefresh';
 import useStorePeek from '../components/peek/useStorePeek';
 import { ShopCoverArt, ShopLogoArt } from '../components/shop/ShopArt';
 import { fetchForYou } from '../lib/forYou';
+import { markVisitorWelcomeSeen, visitorWelcomeSeen } from '../lib/welcome';
 
 // Shops selling live right now (hidden when none). Loaded after the page.
 const LiveNow = lazy(() => import('../components/live/LiveNow'));
+// The visitor's welcome (once per browser), loaded only when it shows.
+const WelcomePopup = lazy(() => import('../components/welcome/WelcomePopup'));
+const WELCOME_DELAY_MS = 1200;
 
 const EXPLORE_ROWS = 5;
 
@@ -73,6 +77,9 @@ const Home = () => {
   const [sideBannersReady, setSideBannersReady] = useState(() => Boolean(homeCache.sideBanners));
   const [promotionPopup, setPromotionPopup] = useState(null);
   const [popupOpen, setPopupOpen] = useState(false);
+  // The banners have answered (or failed) this visit: only then is it known
+  // whether the promotion opens, and the visitor's welcome may follow.
+  const [bannersSettled, setBannersSettled] = useState(false);
 
   // Pull to refresh (the home-screen app): each round makes every section
   // that has loaded ask again. Its requests are kept, so the spinner waits
@@ -128,7 +135,10 @@ const Home = () => {
       } catch {
         // keep fallback banners
       } finally {
-        if (!cancelled) setSideBannersReady(true);
+        if (!cancelled) {
+          setSideBannersReady(true);
+          setBannersSettled(true);
+        }
       }
     })());
     return () => { cancelled = true; };
@@ -146,6 +156,21 @@ const Home = () => {
   // session update.
   const addItem = useCartStore((st) => st.addItem);
   const user = useAuthStore((st) => st.user);
+
+  // A signed-out visitor's welcome: once per browser, a moment after Home
+  // has settled. Never while the first-visit language card or its pointer
+  // is up, and not on a visit the promotion opens (it waits for another).
+  const [welcomeOpen, setWelcomeOpen] = useState(false);
+  const welcomeWaits = Boolean(user) || !bannersSettled || Boolean(promotionPopup)
+    || languageIntro.asking || languageIntro.tip;
+  useEffect(() => {
+    if (welcomeWaits || visitorWelcomeSeen()) return undefined;
+    const timer = window.setTimeout(() => {
+      markVisitorWelcomeSeen();
+      setWelcomeOpen(true);
+    }, WELCOME_DELAY_MS);
+    return () => window.clearTimeout(timer);
+  }, [welcomeWaits]);
   // Hold a card: its preview with quick actions.
 
   const [featuredProducts, setFeaturedProducts] = useState(() => homeCache.featured || []);
@@ -369,6 +394,16 @@ const Home = () => {
       <h1 className="sr-only">Emoorm, Oriental Mindoro&apos;s local online marketplace</h1>
       {showPromotion && (
         <PromotionPopup banner={promotionPopup} onClose={() => setPopupOpen(false)} />
+      )}
+      {/* Gone the moment someone signs in (another tab). */}
+      {welcomeOpen && !user && (
+        <Suspense fallback={null}>
+          <WelcomePopup
+            variant="visitor"
+            onClose={() => setWelcomeOpen(false)}
+            onAction={() => { setWelcomeOpen(false); navigate('/register'); }}
+          />
+        </Suspense>
       )}
       <PullToRefresh onRefresh={refreshHome}>
       {isPhone && quickTerms.length > 0 && (

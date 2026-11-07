@@ -36,6 +36,7 @@ import ConfirmHost from './components/ui/ConfirmHost';
 import PeekHost from './components/peek/PeekHost';
 import OfflineBanner from './components/ui/OfflineBanner';
 import ErrorBoundary from './components/ErrorBoundary';
+import NewAccountWelcome from './components/welcome/NewAccountWelcome';
 
 // Every page but Home loads when first opened, so a phone's first visit
 // downloads only what the page in front of it needs. The pages shoppers
@@ -283,6 +284,8 @@ function AppRoutes() {
       <AppInstallPing />
       <AppUpdateBar />
       <LiveDockSlot />
+      {/* "Welcome, Ana!" once, on the first buyer page after signing up. */}
+      <NewAccountWelcome />
       {/* A page that crashes shows "Reload" in its place; another page clears it. */}
       <ErrorBoundary resetKey={(background || location).pathname}>
       <Suspense fallback={<RouteLoading />}>

@@ -6,7 +6,7 @@
       "emoorm",
       "shop.emoorm.app"
     ],
-    "version": "2.3.1",
+    "version": "2.5.0",
     "orientation": "portrait",
     "icon": "./assets/icon.png",
     "userInterfaceStyle": "automatic",
@@ -54,7 +54,7 @@
         "foregroundImage": "./assets/android-icon-foreground.png",
         "monochromeImage": "./assets/android-icon-monochrome.png"
       },
-      "versionCode": 20,
+      "versionCode": 22,
       "intentFilters": [
         {
           "action": "VIEW",

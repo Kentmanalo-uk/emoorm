@@ -24,6 +24,7 @@ import Footer from '../components/layout/Footer';
 import { BusyLabel } from '../components/ui/Spinner';
 import useAppSettings from '../hooks/useAppSettings';
 import { clearInvite, inviteFields, normalizeInviteCode, readInvite } from '../lib/invite';
+import { markNewAccount } from '../lib/welcome';
 import './AuthSheet.css';
 import './Register.css';
 
@@ -212,6 +213,8 @@ const Register = () => {
       if (token && userData) {
         clearInvite();
         storeLogin(userData, token, refreshToken);
+        // A new account: the welcome pop-up greets it on the next buyer page.
+        markNewAccount(userData);
         // A typed email gets a confirmation link in its welcome email.
         if (!googleProfile && userData.isVerified === false) {
           toast.success(`Welcome to Emoorm! We sent a link to ${userData.email} to confirm your email.`, { duration: 6000 });
