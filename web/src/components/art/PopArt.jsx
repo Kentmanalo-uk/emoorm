@@ -852,6 +852,32 @@ D.Bell = (k) => (
   </>
 );
 
+/** Invite friends: a gift box, lid on, tied with a gold ribbon and bow. */
+D.Gift = (k) => {
+  const gold = { fill: k.gold, stroke: k.gold, strokeWidth: 0.8, strokeLinejoin: 'round' };
+  return (
+    <>
+      {k.cube({
+        x: 6, y: 25, w: 28, h: 18, dx: 8, dy: -6, r: 1.8,
+      })}
+      {k.cube({
+        x: 4, y: 18, w: 32, h: 8, dx: 8, dy: -6, front: k.light, side: k.body, r: 1.8,
+      })}
+      <rect x="17" y="26" width="6" height="17" fill={k.gold} />
+      <rect x="16.5" y="18" width="7" height="8" fill={k.gold} />
+      <path d="M16.5 18h7l8-6h-7z" {...gold} />
+      <g filter={k.puff}>
+        <ellipse cx="18.6" cy="10.6" rx="5.6" ry="3.6" transform="rotate(-22 18.6 10.6)" fill={k.gold} />
+        <ellipse cx="29.4" cy="9.4" rx="5.6" ry="3.6" transform="rotate(18 29.4 9.4)" fill={k.gold} />
+      </g>
+      <ellipse cx="18.8" cy="10.6" rx="2.4" ry="1.3" transform="rotate(-22 18.8 10.6)" fill={k.goldSide} opacity="0.7" />
+      <ellipse cx="29.2" cy="9.4" rx="2.4" ry="1.3" transform="rotate(18 29.2 9.4)" fill={k.goldSide} opacity="0.7" />
+      <g filter={k.puff}><circle cx="24" cy="12.6" r="2.8" fill={k.gold} /></g>
+      {k.gloss('M9 29.5c0-1.6 1-2.6 2.4-2.8.8-.1 1 .9.4 1.2-.6.3-1 .9-1 1.6v6c0 .9-1.8.9-1.8 0z', 0.6)}
+    </>
+  );
+};
+
 /** A mark drawn as its 3D object. `name` is FlatArt's name for the mark. */
 export default function PopArt({ name, size, tone }) {
   const id = `pp${useId().replace(/[^a-zA-Z0-9]/g, '')}`;

@@ -773,6 +773,20 @@ export function TruckArt({ size = 34, tone, glass = false, look }) {
   );
 }
 
+/** Invite friends: a gift box, its bow on top, a ribbon down the middle. */
+export function GiftArt({ size = 34, tone, glass = false, look }) {
+  const ink = useInk(tone || ROSE, look || glass);
+  const { tint, deep } = ink;
+  return (
+    <Mark size={size} ink={ink} pose="Gift">
+      <path d="M24 14c-3.4-5.6-10.6-8.6-12.4-4.4C10.2 13 16.6 14 24 14zM24 14c3.4-5.6 10.6-8.6 12.4-4.4C37.8 13 31.4 14 24 14z" fill={tint} />
+      <path d="M6 24h36v15a5 5 0 0 1-5 5H11a5 5 0 0 1-5-5z" fill={deep} />
+      <rect x="3" y="14" width="42" height="11" rx="4" fill={tint} />
+      <rect x="20.5" y="14" width="7" height="30" fill={CUT} />
+    </Mark>
+  );
+}
+
 /** Notifications: a bell. */
 export function BellArt({ size = 34, tone, glass = false, look }) {
   const ink = useInk(tone || AMBER, look || glass);

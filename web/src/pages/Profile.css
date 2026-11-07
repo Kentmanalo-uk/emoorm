@@ -1699,3 +1699,127 @@
 .pf-m-purchase-icon svg:not([data-variant="outline"]) {
   fill: url(#sh-grad-green) var(--t-primary-600, #047857);
 }
+
+/* ── Phones: Orders & shopping as shortcuts (Home's marks, HomeShortcuts) ──
+   Four to a row, the mark uncased over its name. --sc-scale is the size a
+   super admin chose for the shortcuts (1 is standard). */
+.pf-m-tools {
+  display: grid;
+  grid-template-columns: repeat(4, minmax(0, 1fr));
+  row-gap: 6px;
+  margin-top: 10px;
+}
+
+.pf-m-tool {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 6px;
+  min-height: calc(44px * var(--sc-scale, 1) + 40px);
+  padding: 6px 2px 0;
+  color: var(--t-neutral-700, #374151);
+  font-size: 11.5px;
+  line-height: 14px;
+  text-align: center;
+  text-decoration: none;
+  -webkit-tap-highlight-color: transparent;
+}
+
+.pf-m-tool svg {
+  flex-shrink: 0;
+  width: calc(44px * var(--sc-scale, 1));
+  height: calc(44px * var(--sc-scale, 1));
+}
+
+.pf-m-tool:active {
+  opacity: 0.6;
+}
+
+/* ── Phones: a seller's shop, on a card of its own ── */
+.pf-m-shop {
+  padding-top: 4px;
+  padding-bottom: 4px;
+}
+
+.pf-m-shop-card {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  padding: 12px 12px 12px 12px;
+  border: 1px solid var(--t-primary-100, #d1fae5);
+  border-radius: 14px;
+  background:
+    radial-gradient(circle at 100% 0, var(--t-primary-100, #d1fae5), transparent 60%),
+    linear-gradient(135deg, var(--t-primary-50, #ecfdf5), var(--t-neutral-0, #fff));
+  color: var(--t-neutral-900, #111827);
+  text-decoration: none;
+  -webkit-tap-highlight-color: transparent;
+}
+
+.pf-m-shop-card:active {
+  opacity: 0.85;
+}
+
+.pf-m-shop-logo {
+  display: grid;
+  place-items: center;
+  flex-shrink: 0;
+  width: 46px;
+  height: 46px;
+  overflow: hidden;
+  border-radius: 12px;
+  background: var(--t-neutral-0, #fff);
+  box-shadow: 0 1px 3px rgba(15, 23, 42, 0.1);
+}
+
+.pf-m-shop-logo img {
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+}
+
+.pf-m-shop-text {
+  display: grid;
+  flex: 1;
+  min-width: 0;
+  gap: 1px;
+}
+
+.pf-m-shop-text small {
+  color: var(--t-primary-700, #047857);
+  font-size: 11.5px;
+  font-weight: 600;
+  letter-spacing: 0.02em;
+  text-transform: uppercase;
+}
+
+.pf-m-shop-text strong {
+  overflow: hidden;
+  font-size: 15.5px;
+  font-weight: 600;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.pf-m-shop-text span {
+  overflow: hidden;
+  color: var(--t-neutral-600, #4b5563);
+  font-size: 12.5px;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.pf-m-shop-go {
+  display: inline-flex;
+  align-items: center;
+  gap: 2px;
+  flex-shrink: 0;
+  height: 32px;
+  padding: 0 10px 0 14px;
+  border-radius: 999px;
+  background: var(--t-primary-600, #047857);
+  color: #fff;
+  font-size: 13px;
+  font-weight: 600;
+}
+

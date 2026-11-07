@@ -1,10 +1,11 @@
-import { useRef } from 'react';
+import { useMemo, useRef } from 'react';
 import { Link } from 'react-router-dom';
 import {
   BubbleArt, BuoyArt, CameraArt, GridArt, HeadsetArt, HeartArt, MapArt, MegaphoneArt, ParcelArt,
-  PiggyArt, PinArt, PotArt, QrArt, ReturnArt, ShopArt, SparkArt, StarArt, TagArt, TownArt, TrendArt,
+  PiggyArt, PinArt, PotArt, QrArt, ReturnArt, ShopArt, SparkArt, StarArt, TagArt, TownArt, TrendArt, TruckArt,
 } from '../art/FlatArt';
 import useShortcutLook, { useShortcutScale } from '../../hooks/useShortcutLook';
+import { usePhoneLayout } from '../../hooks/useMobileNav';
 import './HomeShortcuts.css';
 
 /**
@@ -51,12 +52,25 @@ const ENTRIES = [
   { key: 'feedback', label: 'Feedback', Art: BubbleArt, to: '/feedback' },
 ];
 
+/* Phones: the Wishlist lives in Profile, so Get the App takes its place on
+   the first page, and To Receive takes Get the App's on the second. */
+const APP = ENTRIES.find((e) => e.key === 'app');
+const PHONE_SWAPS = {
+  wishlist: APP,
+  app: {
+    key: 'receive', label: 'To Receive', Art: TruckArt, to: '/profile/orders?status=to_receive',
+  },
+};
+const PHONE_ENTRIES = ENTRIES.map((e) => PHONE_SWAPS[e.key] || e);
+
 const PAGES = Math.ceil(ENTRIES.length / PER_PAGE);
-const pages = Array.from({ length: PAGES }, (_, p) => ENTRIES.slice(p * PER_PAGE, (p + 1) * PER_PAGE));
+const paged = (entries) => Array.from({ length: PAGES }, (_, p) => entries.slice(p * PER_PAGE, (p + 1) * PER_PAGE));
 
 export default function HomeShortcuts() {
   const look = useShortcutLook();
   const scale = useShortcutScale();
+  const isPhone = usePhoneLayout();
+  const pages = useMemo(() => paged(isPhone ? PHONE_ENTRIES : ENTRIES), [isPhone]);
   const thumbRef = useRef(null);
   const dragRef = useRef(null);
 
