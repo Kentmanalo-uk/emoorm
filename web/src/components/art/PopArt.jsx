@@ -921,61 +921,114 @@ D.Globe = (k) => {
 };
 
 /*
- * Sign in on phones (Login.jsx): two app tiles leaning on each other, the
- * shop's bag on the green one in front; behind it, your account (a person)
- * for buyers, a shop (gold) for sellers. Gold sparkles around them.
+ * Sign in on phones (Login.jsx): a small scene rather than an icon. A
+ * glossy green shopping bag turned to show its side, pink handles, a soft
+ * orbit ring passing behind it and in front, a puffy pink heart and a gold
+ * coin floating round it, sparkles. Sellers get a little green shop with a
+ * pink and white awning in the bag's place. On a faint pink-to-mint disc,
+ * the header's wash.
  */
+const PINK_FACE = [[0, '#FFC6E4'], [0.5, '#F55DB3'], [1, '#D4409E']];
+const PINK_SIDE = '#B02C82';
+const HEART = 'M24 43S3.5 30.5 3.5 17.6A11 11 0 0 1 24 11a11 11 0 0 1 20.5 6.6C44.5 30.5 24 43 24 43z';
+
 const welcome = (k, seller) => {
-  const tile = 'M11 4h14a6 6 0 0 1 6 6v14a6 6 0 0 1-6 6H11a6 6 0 0 1-6-6V10a6 6 0 0 1 6-6z';
+  const pink = k.lin(PINK_FACE);
+  const pinkTube = k.lin([[0, '#FFD3EA'], [0.45, '#F46AB8'], [1, '#C93A93']], 0, 0, 0, 1);
+  const disc = k.lin([[0, '#FDECF5'], [1, '#E3F8EE']], 0, 0, 1, 1);
   const spark = (cx, cy, r) => {
     const c = r * 0.16;
     return `M${cx} ${cy - r}Q${cx + c} ${cy - c} ${cx + r} ${cy}Q${cx + c} ${cy + c} ${cx} ${cy + r}`
       + `Q${cx - c} ${cy + c} ${cx - r} ${cy}Q${cx - c} ${cy - c} ${cx} ${cy - r}Z`;
   };
-  const back = seller
-    ? { face: k.gold, near: k.goldSide, far: mix(k.goldSide, BLACK, 0.3) }
-    : { face: k.light, near: k.tintNear, far: k.tintFar };
+  const orbit = { cx: 24, cy: 31, rx: 21.5, ry: 6.4 };
+  const orbitClip = `${k.id}oc`;
+  const ring = (props) => (
+    <ellipse cx={orbit.cx} cy={orbit.cy} rx={orbit.rx} ry={orbit.ry} transform={`rotate(-9 ${orbit.cx} ${orbit.cy})`} fill="none" {...props} />
+  );
+
+  const bag = (
+    <g transform="rotate(-7 24 28)">
+      {/* The far handle, behind the bag's mouth. */}
+      <path d="M20.4 15.6C20.4 6.4 30.4 6.4 30.4 15.6" fill="none" stroke={PINK_SIDE} strokeWidth="2.3" strokeLinecap="round" />
+      {/* Its mouth: the dark inside. */}
+      <path d="M12 18H30L35 14.6H17z" fill={k.lin([[0, '#0A6B52'], [1, '#063F31']], 0, 0, 0, 1)} stroke="#063F31" strokeWidth="0.8" strokeLinejoin="round" />
+      {/* The side turned away. */}
+      <path d="M30 18L35 14.6 36.6 36.4a1.8 1.8 0 0 1-.7 1.6L31.6 41.4z" fill={k.side} stroke={k.side} strokeWidth="0.8" strokeLinejoin="round" />
+      {/* The front. */}
+      <g filter={k.puff}>
+        <path d="M12 18H30L31.5 39.6a2.2 2.2 0 0 1-2.2 2.4H12.7a2.2 2.2 0 0 1-2.2-2.4z" fill={k.body} />
+      </g>
+      <path d="M12.6 18.5H29.4" stroke={WHITE} strokeOpacity="0.75" strokeWidth="0.8" strokeLinecap="round" />
+      {/* The near handle, riveted to the front. */}
+      <g filter={k.puff}>
+        <path d="M15.8 19.4C15.8 9 26.2 9 26.2 19.4" fill="none" stroke={pinkTube} strokeWidth="2.5" strokeLinecap="round" />
+      </g>
+      <circle cx="15.8" cy="20.2" r="1.15" fill={PINK_SIDE} />
+      <circle cx="26.2" cy="20.2" r="1.15" fill={PINK_SIDE} />
+      {k.print((c) => <path d="M16.6 30.4c2.6 3 6.2 3 8.8 0" fill="none" stroke={c} strokeWidth="2" strokeLinecap="round" />)}
+      {k.gloss('M13.4 21.6c.7 0 1.1.5 1.1 1.1l-.3 13.4c0 1-1.8 1-1.9 0l-.4-13.3c0-.7.6-1.2 1.5-1.2z', 0.6)}
+    </g>
+  );
+
+  const shop = (
+    <g transform="rotate(-6 24 28)">
+      {k.cube({
+        x: 10, y: 21, w: 23, h: 20, dx: 6, dy: -4.5, r: 1.8,
+      })}
+      {/* The awning: its top in pink, the front in pink and white stripes. */}
+      <path d="M8 15H35L41 10.5H14z" fill={pink} stroke={pink} strokeWidth="1" strokeLinejoin="round" />
+      <path d="M35 15l6-4.5v6.2l-6 5.6z" fill={PINK_SIDE} />
+      <g filter={k.puff}>
+        {[0, 1, 2, 3, 4].map((i) => {
+          const w = 27 / 5;
+          return (
+            <path
+              key={i}
+              d={`M${n2(8 + i * w)} 15h${n2(w)}v4.4a${n2(w / 2)} ${n2(w / 2)} 0 0 1-${n2(w)} 0z`}
+              fill={i % 2 ? WHITE : pink}
+            />
+          );
+        })}
+      </g>
+      <rect x="13" y="28" width="7.4" height="13" rx="1.4" fill={k.glass} />
+      <circle cx="18.6" cy="35" r="0.7" fill={k.p.side} />
+      <rect x="23" y="28" width="7" height="6.4" rx="1.4" fill={k.glass} />
+      <path d="M24.2 33.2l4-4" stroke={WHITE} strokeOpacity="0.8" strokeWidth="0.9" strokeLinecap="round" />
+    </g>
+  );
+
   return (
-    <g transform="translate(24 24) scale(0.86) translate(-24 -24)">
-      <g transform="translate(17.5 6) rotate(11 18 17)">
-        {k.solid((f) => <path d={tile} fill={f} />, { dx: 1.6, dy: 2.4, ...back })}
-        {seller
-          ? k.print((c) => (
-            <g fill={c}>
-              <path d="M10 10.5h16l1.6 4.2c.4 1.2-.5 2.4-1.8 2.4-1 0-1.8-.7-2-1.6-.2.9-1 1.6-2 1.6s-1.8-.7-2-1.6c-.2.9-1 1.6-2 1.6s-1.8-.7-2-1.6c-.2.9-1 1.6-2 1.6s-1.8-.7-2-1.6c-.2.9-1 1.6-2 1.6-1.3 0-2.2-1.2-1.8-2.4z" />
-              <path d="M11.4 18.8h13.2V27H11.4z" />
-            </g>
-          ), k.goldSide)
-          : null}
-        {seller
-          ? <rect x="16" y="21.4" width="4" height="5.6" rx="0.8" fill={k.goldSide} />
-          : (
-            <g fill={k.p.mid}>
-              <circle cx="18" cy="13.6" r="4" />
-              <path d="M10.6 25.6c.8-4.2 3.6-6.2 7.4-6.2s6.6 2 7.4 6.2z" />
-            </g>
-          )}
-        {k.gloss('M9.4 6.6h7c1 0 1 1.4 0 1.5-2.4.3-4.2 1.3-5.4 3-.6.9-2.1.5-2.1-.6V8.4c0-1 .8-1.8 1.8-1.8z', 0.65)}
+    <g transform="translate(24 24) scale(0.94) translate(-24 -24)">
+      <defs>
+        <clipPath id={orbitClip}><rect x="-4" y={orbit.cy} width="56" height="30" /></clipPath>
+      </defs>
+      <circle cx="24" cy="26" r="20" fill={disc} />
+      {ring({ stroke: '#9BE7C4', strokeWidth: 0.9 })}
+      {/* The coin, floating at the back left. */}
+      <g transform="rotate(-22 7 19)">
+        {k.solid((f) => <ellipse cx="7" cy="19" rx="4" ry="5" fill={f} />, {
+          dx: 1.6, dy: 0, face: k.gold, near: k.goldSide, far: mix(k.goldSide, BLACK, 0.25), steps: 5,
+        })}
+        <ellipse cx="7" cy="19" rx="2.2" ry="3" fill="none" stroke="#FFF6CF" strokeWidth="0.9" />
       </g>
-      <g transform="translate(-3 7) rotate(-12 18 17)">
-        {k.solid((f) => <path d={tile} fill={f} />, { dx: 2, dy: 2.8 })}
-        {k.print((c) => (
-          <g>
-            <path d="M11.2 13.4h13.6l1.4 11.2a2.2 2.2 0 0 1-2.2 2.5H12a2.2 2.2 0 0 1-2.2-2.5z" fill={c} />
-            <path d="M14.4 15.4v-3a3.6 3.6 0 0 1 7.2 0v3" fill="none" stroke={c} strokeWidth="1.9" strokeLinecap="round" />
-          </g>
-        ))}
-        <path d="M15.2 22.4c.9 1.2 2 1.8 2.8 1.8s1.9-.6 2.8-1.8" fill="none" stroke={k.p.mid} strokeWidth="1.5" strokeLinecap="round" />
-        {k.gloss('M9.4 6.6h7c1 0 1 1.4 0 1.5-2.4.3-4.2 1.3-5.4 3-.6.9-2.1.5-2.1-.6V8.4c0-1 .8-1.8 1.8-1.8z', 0.7)}
+      {seller ? shop : bag}
+      {/* The ring's near half, in front of the bag. */}
+      <g clipPath={`url(#${orbitClip})`}>{ring({ stroke: '#C9F5E0', strokeWidth: 0.9, strokeOpacity: 0.9 })}</g>
+      <g filter={k.puff}><circle cx="42.6" cy="29.4" r="2.2" fill={pink} /></g>
+      {/* The heart, floating at the top right. */}
+      <g transform="translate(32.5 1.5) rotate(16 6.5 6.5) scale(0.29)">
+        {k.solid((f) => <path d={HEART} fill={f} />, {
+          dx: 2.6, dy: 3, face: pink, near: PINK_SIDE, far: mix(PINK_SIDE, BLACK, 0.3),
+        })}
+        <path d="M9.6 13.6c2.4-2.2 5.6-2.5 8-1.4.9.4.6 1.7-.4 1.7-2.6 0-4.8 1.1-6.3 3.2-1.2 1.6-3.5-1.3-1.3-3.5z" fill={WHITE} opacity="0.85" />
       </g>
-      {k.solid((f) => <path d={spark(41, 7.5, 4.2)} fill={f} />, {
-        dx: 0.6, dy: 0.8, face: k.gold, near: k.goldSide, far: k.goldSide, steps: 3,
+      {k.solid((f) => <path d={spark(7.5, 6.5, 3.4)} fill={f} />, {
+        dx: 0.5, dy: 0.7, face: k.gold, near: k.goldSide, far: k.goldSide, steps: 3,
       })}
-      {k.solid((f) => <path d={spark(4.5, 41, 3.2)} fill={f} />, {
-        dx: 0.5, dy: 0.6, face: k.gold, near: k.goldSide, far: k.goldSide, steps: 3,
-      })}
-      <circle cx="44" cy="40" r="1.4" fill={k.p.hi} />
-      <circle cx="9" cy="5" r="1.1" fill={k.p.hi} />
+      <path d={spark(42, 41, 2.4)} fill={pink} />
+      <circle cx="38.5" cy="21" r="0.9" fill="#F9A8D4" />
+      <circle cx="4" cy="33" r="0.9" fill="#6EE7B7" />
     </g>
   );
 };
