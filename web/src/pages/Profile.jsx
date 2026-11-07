@@ -6,10 +6,10 @@ import {
   Package, Heart, ChatText as MessageSquare, Bell, Storefront as Store,
   ShoppingBag, Truck, Gear as Settings, QrCode, CaretRight as ChevronRight, Star,
   ShieldCheck, ShieldWarning, Question, EnvelopeSimple,
-  Eye, Lifebuoy, Flag,
+  Eye, Lifebuoy, Headset, Info,
 } from '../lib/icons';
 import useAppSettings from '../hooks/useAppSettings';
-import LanguageRow from '../components/account/LanguageRow';
+import { LanguageTile } from '../components/account/LanguageRow';
 import axios from '../lib/axios';
 import useAuthStore from '../store/authStore';
 import useAccountSwitchStore from '../store/accountSwitchStore';
@@ -28,11 +28,10 @@ import ToolGradients from '../components/ui/ToolGradients';
 import RecentlyViewed from '../components/account/RecentlyViewed';
 import MoreProducts from '../components/product/MoreProducts';
 import {
-  GiftArt, HeartArt, ParcelArt, PinArt, ReturnArt, ShopArt, StarArt, TagArt,
+  FlagArt, GiftArt, GlobeArt, HeartArt, ParcelArt, PinArt, ReturnArt, ShopArt, StarArt, TagArt,
 } from '../components/art/FlatArt';
 import useShortcutLook, { useShortcutScale } from '../hooks/useShortcutLook';
-import useAttention from '../hooks/useAttention';
-import { resolveImg } from '../lib/media';
+import ProfileTools from '../components/account/ProfileTools';
 
 const IDENTITY_META = {
   NOT_VERIFIED: { label: 'Not Verified', tone: 'neutral', Icon: ShieldWarning, hint: 'Required before you can check out.', action: 'Verify Identity' },
@@ -41,18 +40,6 @@ const IDENTITY_META = {
   FAILED: { label: 'Verification Failed', tone: 'error', Icon: ShieldWarning, hint: 'Please retry with a valid ID.', action: 'Retry Verification' },
 };
 
-// Phones: one line in the account lists.
-function Row({ to, icon: Icon, label, hint }) {
-  return (
-    <Link to={to} className="pf-m-row">
-      <span className="pf-m-row-icon"><Icon size={19} weight="fill" /></span>
-      <span className="pf-m-row-label">{label}</span>
-      {hint != null && <span className="pf-m-row-hint">{hint}</span>}
-      <ChevronRight size={16} className="pf-m-row-chev" />
-    </Link>
-  );
-}
-
 const Profile = () => {
   const navigate = useNavigate();
   const { user, isAuthenticated } = useAuthStore();
@@ -60,32 +47,15 @@ const Profile = () => {
   const { settings: appSettings } = useAppSettings();
   const wishlistCount = useWishlistStore((st) => st.items.length);
 
-  // Phones: "My shop" switches to the Seller Center with the same animation
-  // as the header's Seller Center links. Modified clicks keep the browser's
-  // default (new tab etc.).
+  // Phones: the pill switches to the Seller Center with the same animation
+  // as the header's Seller Center links.
   const startAccountSwitch = useAccountSwitchStore((s) => s.start);
-  const cachedShop = useAccountSwitchStore((s) => s.shop);
-  const setShop = useAccountSwitchStore((s) => s.setShop);
-  const shop = cachedShop && (!cachedShop.ownerId || cachedShop.ownerId === user?.id) ? cachedShop : null;
-  const enterShop = (event) => {
-    if (event.defaultPrevented || event.button !== 0 || event.metaKey || event.ctrlKey || event.shiftKey || event.altKey) return;
-    event.preventDefault();
-    startAccountSwitch('seller', '/seller');
-  };
 
   useEffect(() => {
     if (!isAuthenticated) navigate('/login');
   }, [isAuthenticated, navigate]);
 
-  // Phones: the shop's own card. Its name and logo come from the account
-  // switch's cache, fetched here the first time; what needs the seller comes
-  // from the Seller Center's attention counts.
   const isSeller = user?.role === 'SELLER';
-  useEffect(() => {
-    if (!isPhone || !isSeller || shop) return;
-    axios.get('/stores/my/store').then((res) => { if (res.data) setShop(res.data); }).catch(() => {});
-  }, [isPhone, isSeller, shop, setShop]);
-  const { total: shopWaiting } = useAttention(isPhone && isSeller ? '/stores/my/attention' : null);
   const look = useShortcutLook();
   const scale = useShortcutScale();
 
@@ -240,33 +210,6 @@ const Profile = () => {
           </div>
         </section>
 
-        {/* A seller's shop: its own card near the top, so it is found at a
-            glance rather than in a list. Opens the Seller Center. */}
-        {isSeller && (
-          <section className="pf-m-section pf-m-shop">
-            <Link to="/seller" className="pf-m-shop-card" onClick={enterShop}>
-              <span className="pf-m-shop-logo">
-                {shop?.logo
-                  ? <img src={resolveImg(shop.logo)} alt="" />
-                  : <ShopArt size={30} glass look={look} />}
-              </span>
-              <span className="pf-m-shop-text">
-                <small>My shop</small>
-                <strong>{shop?.name || 'Your shop'}</strong>
-                <span>
-                  {shopWaiting > 0
-                    ? `${shopWaiting} ${shopWaiting === 1 ? 'thing needs' : 'things need'} you`
-                    : 'Products, orders and earnings'}
-                </span>
-              </span>
-              <span className="pf-m-shop-go">
-                Open
-                <ChevronRight size={14} weight="bold" />
-              </span>
-            </Link>
-          </section>
-        )}
-
         {/* Verify your identity lives in Settings (Security). */}
         <section className="pf-m-section">
           <div className="pf-m-section-head">
@@ -290,10 +233,9 @@ const Profile = () => {
         <RecentlyViewed userId={user?.id} />
 
         {/* The same marks as Home's shortcuts, in the look and size a super
-            admin chose for them. */}
-        <section className="pf-m-section pf-m-tools-sec">
-          <h2>Orders &amp; shopping</h2>
-          <div className="pf-m-tools" style={{ '--sc-scale': scale }}>
+            admin chose for them, in pages swiped sideways. */}
+        <section className="pf-m-section pf-m-tools-sec" aria-label="Orders and shopping">
+          <ProfileTools scale={scale}>
             {[
               ['orders', '/profile/orders', 'My Orders', ParcelArt],
               ['returns', '/profile/returns', 'Returns & Refunds', ReturnArt],
@@ -303,31 +245,46 @@ const Profile = () => {
               ['reviews', '/profile/reviews', 'My Reviews', StarArt],
               ['offers', '/profile/offers', 'My Offers', TagArt],
               appSettings.referralSettings?.enabled && ['invite', '/profile/invite', 'Invite Friends', GiftArt],
+              ['reports', '/profile/reports', 'My Reports', FlagArt],
             ].filter(Boolean).map(([key, to, label, Art]) => (
               <Link key={key} to={to} className="pf-m-tool">
                 <Art size={36} glass look={look} />
                 <span>{label}</span>
               </Link>
             ))}
-          </div>
+            <LanguageTile key="language" Art={GlobeArt} look={look} className="pf-m-tool" />
+          </ProfileTools>
         </section>
 
-        <section className="pf-m-section pf-m-list">
-          <h2>Inbox</h2>
-          <Row to="/profile/messages" icon={MessageSquare} label="Messages" />
-          <Row to="/profile/notifications" icon={Bell} label="Notifications" />
-        </section>
-
-        <section className="pf-m-section pf-m-list">
-          <h2>More</h2>
-          {!isSeller && <Row to="/sell" icon={ShoppingBag} label="Sell on Emoorm" />}
-          <Row to="/profile/support" icon={Lifebuoy} label="Help & Support" />
-          <Row to="/profile/reports" icon={Flag} label="My Reports" />
-          <LanguageRow />
-          <Row to="/profile/settings" icon={Settings} label="Settings" />
+        {/* Help and the rest, on one strip: an icon and a word each, divided
+            by hairlines, swiped sideways when they do not fit. */}
+        <section className="pf-m-section pf-m-links-sec">
+          <nav className="pf-m-links" aria-label="Help and more">
+            {[
+              ['/help', Lifebuoy, 'Help Centre'],
+              ['/profile/support', Headset, 'Help & Support'],
+              ['/about', Info, 'About E-MOORM'],
+              !isSeller && ['/sell', Store, 'Sell on E-MOORM'],
+            ].filter(Boolean).map(([to, Icon, label]) => (
+              <Link key={to} to={to} className="pf-m-link">
+                <Icon size={20} />
+                <span>{label}</span>
+              </Link>
+            ))}
+          </nav>
         </section>
 
         <MoreProducts />
+
+        {/* A seller's way to their shop: a black pill easing in above the
+            tab bar. Switches to the Seller Center with the account switch's
+            animation. */}
+        {isSeller && (
+          <button type="button" className="pf-m-switch" onClick={() => startAccountSwitch('seller', '/seller')}>
+            <Store size={18} weight="fill" />
+            Switch to My Shop
+          </button>
+        )}
       </div>
     );
   }

@@ -787,6 +787,39 @@ export function GiftArt({ size = 34, tone, glass = false, look }) {
   );
 }
 
+/** My Reports: a flag on its pole, an exclamation mark on it. */
+export function FlagArt({ size = 34, tone, glass = false, look }) {
+  const ink = useInk(tone || RED, look || glass);
+  const { tint, deep } = ink;
+  return (
+    <Mark size={size} ink={ink} pose="Flag">
+      <rect x="6" y="4" width="4.6" height="40" rx="2.3" fill={tint} />
+      <path d="M10.6 8c6-3 11.4-2 15.8 0s9.8 3 15.6 0v18c-5.8 3-11.2 2-15.6 0s-9.8-3-15.8 0z" fill={deep} />
+      <g fill={CUT}>
+        <rect x="24.4" y="10.5" width="3.8" height="9" rx="1.9" />
+        <circle cx="26.3" cy="23.4" r="2.1" />
+      </g>
+    </Mark>
+  );
+}
+
+/** Language: a globe, a speech bubble with a letter in it. */
+export function GlobeArt({ size = 34, tone, glass = false, look }) {
+  const ink = useInk(tone || SKY, look || glass);
+  const { tint, deep } = ink;
+  return (
+    <Mark size={size} ink={ink} pose="Globe">
+      <circle cx="21" cy="21" r="18" fill={deep} />
+      <g fill="none" stroke={tint} strokeWidth="2.4">
+        <ellipse cx="21" cy="21" rx="7.5" ry="18" />
+        <path d="M3 21h36M6 12h30M6 30h30" />
+      </g>
+      <path d="M32 26h11a3 3 0 0 1 3 3v8a3 3 0 0 1-3 3h-4l-4 3.5V40h-3a3 3 0 0 1-3-3v-8a3 3 0 0 1 3-3z" fill={tint} />
+      <path d="M34.6 37l3-7.6 3 7.6M35.6 34.6h4" fill="none" stroke={CUT} strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round" />
+    </Mark>
+  );
+}
+
 /** Notifications: a bell. */
 export function BellArt({ size = 34, tone, glass = false, look }) {
   const ink = useInk(tone || AMBER, look || glass);

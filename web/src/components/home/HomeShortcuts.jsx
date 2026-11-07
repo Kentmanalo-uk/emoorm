@@ -2,7 +2,7 @@ import { useMemo, useRef } from 'react';
 import { Link } from 'react-router-dom';
 import {
   BubbleArt, BuoyArt, CameraArt, GridArt, HeadsetArt, HeartArt, MapArt, MegaphoneArt, ParcelArt,
-  PiggyArt, PinArt, PotArt, QrArt, ReturnArt, ShopArt, SparkArt, StarArt, TagArt, TownArt, TrendArt, TruckArt,
+  PiggyArt, PinArt, PotArt, QrArt, ReturnArt, ShopArt, SparkArt, StarArt, TagArt, TownArt, TrendArt,
 } from '../art/FlatArt';
 import useShortcutLook, { useShortcutScale } from '../../hooks/useShortcutLook';
 import { usePhoneLayout } from '../../hooks/useMobileNav';
@@ -52,25 +52,29 @@ const ENTRIES = [
   { key: 'feedback', label: 'Feedback', Art: BubbleArt, to: '/feedback' },
 ];
 
-/* Phones: the Wishlist lives in Profile, so Get the App takes its place on
-   the first page, and To Receive takes Get the App's on the second. */
+/* Phones: what the Profile tab already offers is left out here -- your
+   orders, offers, followed shops, returns, reviews, addresses and wishlist
+   are its shortcuts, help is on its strip (Customer Care and Feedback open
+   the Help Centre too) -- so Home keeps the ways to shop, with Get the App
+   where the Wishlist was: one page of ten. (Start Selling stays: Profile
+   only offers it to a signed-in buyer, Home to everyone.) */
+const IN_PROFILE = ['orders', 'offers', 'following', 'returns', 'reviews', 'addresses', 'help', 'care', 'feedback'];
 const APP = ENTRIES.find((e) => e.key === 'app');
-const PHONE_SWAPS = {
-  wishlist: APP,
-  app: {
-    key: 'receive', label: 'To Receive', Art: TruckArt, to: '/profile/orders?status=to_receive',
-  },
-};
-const PHONE_ENTRIES = ENTRIES.map((e) => PHONE_SWAPS[e.key] || e);
+const PHONE_ENTRIES = ENTRIES
+  .filter((e) => e.key !== 'app' && !IN_PROFILE.includes(e.key))
+  .map((e) => (e.key === 'wishlist' ? APP : e));
 
-const PAGES = Math.ceil(ENTRIES.length / PER_PAGE);
-const paged = (entries) => Array.from({ length: PAGES }, (_, p) => entries.slice(p * PER_PAGE, (p + 1) * PER_PAGE));
+const paged = (entries) => Array.from(
+  { length: Math.ceil(entries.length / PER_PAGE) },
+  (_, p) => entries.slice(p * PER_PAGE, (p + 1) * PER_PAGE),
+);
 
 export default function HomeShortcuts() {
   const look = useShortcutLook();
   const scale = useShortcutScale();
   const isPhone = usePhoneLayout();
   const pages = useMemo(() => paged(isPhone ? PHONE_ENTRIES : ENTRIES), [isPhone]);
+  const count = pages.length;
   const thumbRef = useRef(null);
   const dragRef = useRef(null);
 
@@ -81,7 +85,7 @@ export default function HomeShortcuts() {
     const { scrollLeft, scrollWidth, clientWidth } = e.currentTarget;
     const travel = scrollWidth - clientWidth;
     if (thumbRef.current && travel > 0) {
-      thumbRef.current.style.transform = `translateX(${(scrollLeft / travel) * (PAGES - 1) * 100}%)`;
+      thumbRef.current.style.transform = `translateX(${(scrollLeft / travel) * (count - 1) * 100}%)`;
     }
   };
 
@@ -133,9 +137,11 @@ export default function HomeShortcuts() {
             </div>
           ))}
         </div>
-        <div className="hsc-track" aria-hidden="true">
-          <span ref={thumbRef} style={{ width: `${100 / PAGES}%` }} />
-        </div>
+        {count > 1 && (
+          <div className="hsc-track" aria-hidden="true">
+            <span ref={thumbRef} style={{ width: `${100 / count}%` }} />
+          </div>
+        )}
       </div>
     </section>
   );

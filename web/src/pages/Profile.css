@@ -1700,17 +1700,38 @@
   fill: url(#sh-grad-green) var(--t-primary-600, #047857);
 }
 
-/* ── Phones: Orders & shopping as shortcuts (Home's marks, HomeShortcuts) ──
-   Four to a row, the mark uncased over its name. --sc-scale is the size a
-   super admin chose for the shortcuts (1 is standard). */
-.pf-m-tools {
+/* ── Phones: the shortcuts (ProfileTools), Home's marks in pages ──
+   Four across and two down a page, swiped sideways with a little bar
+   under them, as on Home. --sc-scale is the size a super admin chose for
+   the shortcuts (1 is standard). */
+.pf-m-tools-sec {
+  padding: 12px 0 10px;
+}
+
+.pf-m-tools-pages {
+  display: flex;
+  overflow-x: auto;
+  scroll-snap-type: x mandatory;
+  overscroll-behavior-x: contain;
+  scrollbar-width: none;
+}
+
+.pf-m-tools-pages::-webkit-scrollbar {
+  display: none;
+}
+
+.pf-m-tools-page {
+  flex: 0 0 100%;
   display: grid;
   grid-template-columns: repeat(4, minmax(0, 1fr));
+  align-content: start;
   row-gap: 6px;
-  margin-top: 10px;
+  padding: 0 8px;
+  scroll-snap-align: start;
 }
 
 .pf-m-tool {
+  position: relative;
   display: flex;
   flex-direction: column;
   align-items: center;
@@ -1722,6 +1743,7 @@
   line-height: 14px;
   text-align: center;
   text-decoration: none;
+  cursor: pointer;
   -webkit-tap-highlight-color: transparent;
 }
 
@@ -1735,91 +1757,133 @@
   opacity: 0.6;
 }
 
-/* ── Phones: a seller's shop, on a card of its own ── */
-.pf-m-shop {
-  padding-top: 4px;
-  padding-bottom: 4px;
+.pf-m-tools-track {
+  width: 34px;
+  height: 3px;
+  margin: 8px auto 0;
+  overflow: hidden;
+  border-radius: 2px;
+  background: var(--t-neutral-200, #e5e7eb);
 }
 
-.pf-m-shop-card {
+.pf-m-tools-track span {
+  display: block;
+  height: 100%;
+  border-radius: 2px;
+  background: var(--t-primary-500, #10b981);
+  transition: transform 0.05s linear;
+}
+
+/* ── Phones: help and the rest, on one strip ──
+   An outline icon in the brand colour and a word, the items divided by
+   short hairlines; swiped sideways when they do not all fit. */
+.pf-m-links {
   display: flex;
   align-items: center;
-  gap: 12px;
-  padding: 12px 12px 12px 12px;
-  border: 1px solid var(--t-primary-100, #d1fae5);
-  border-radius: 14px;
-  background:
-    radial-gradient(circle at 100% 0, var(--t-primary-100, #d1fae5), transparent 60%),
-    linear-gradient(135deg, var(--t-primary-50, #ecfdf5), var(--t-neutral-0, #fff));
-  color: var(--t-neutral-900, #111827);
+  overflow-x: auto;
+  margin: 0;
+  padding: 14px 6px;
+  scrollbar-width: none;
+}
+
+.pf-m-links::-webkit-scrollbar {
+  display: none;
+}
+
+/* Its section: the grey band under it, no padding of its own. */
+.pf-m-links-sec {
+  padding: 0;
+}
+
+.pf-m-link {
+  position: relative;
+  display: inline-flex;
+  align-items: center;
+  flex-shrink: 0;
+  gap: 7px;
+  padding: 4px 12px;
+  color: var(--t-neutral-700, #374151);
+  font-size: 14.5px;
+  white-space: nowrap;
   text-decoration: none;
   -webkit-tap-highlight-color: transparent;
 }
 
-.pf-m-shop-card:active {
-  opacity: 0.85;
-}
-
-.pf-m-shop-logo {
-  display: grid;
-  place-items: center;
+.pf-m-link svg {
   flex-shrink: 0;
-  width: 46px;
-  height: 46px;
-  overflow: hidden;
-  border-radius: 12px;
-  background: var(--t-neutral-0, #fff);
-  box-shadow: 0 1px 3px rgba(15, 23, 42, 0.1);
+  color: var(--t-primary-600, #047857);
 }
 
-.pf-m-shop-logo img {
-  width: 100%;
-  height: 100%;
-  object-fit: cover;
+.pf-m-link + .pf-m-link::before {
+  content: '';
+  position: absolute;
+  left: 0;
+  top: 50%;
+  height: 22px;
+  border-left: 1px solid var(--t-neutral-200, #e5e7eb);
+  transform: translateY(-50%);
 }
 
-.pf-m-shop-text {
-  display: grid;
-  flex: 1;
-  min-width: 0;
-  gap: 1px;
+.pf-m-link:active {
+  opacity: 0.6;
 }
 
-.pf-m-shop-text small {
-  color: var(--t-primary-700, #047857);
-  font-size: 11.5px;
-  font-weight: 600;
-  letter-spacing: 0.02em;
-  text-transform: uppercase;
-}
-
-.pf-m-shop-text strong {
-  overflow: hidden;
-  font-size: 15.5px;
-  font-weight: 600;
-  text-overflow: ellipsis;
-  white-space: nowrap;
-}
-
-.pf-m-shop-text span {
-  overflow: hidden;
-  color: var(--t-neutral-600, #4b5563);
-  font-size: 12.5px;
-  text-overflow: ellipsis;
-  white-space: nowrap;
-}
-
-.pf-m-shop-go {
+/* ── Phones: a seller's way to their shop ──
+   A black pill easing up into place above the tab bar (and above the
+   Install the app bar, while that shows). */
+.pf-m-switch {
+  --pf-switch-bottom: calc(max(74px, 53px + env(safe-area-inset-bottom, 0px)) + 14px);
+  position: fixed;
+  left: 50%;
+  bottom: var(--pf-switch-bottom);
+  z-index: 118;
   display: inline-flex;
   align-items: center;
-  gap: 2px;
-  flex-shrink: 0;
-  height: 32px;
-  padding: 0 10px 0 14px;
+  gap: 8px;
+  height: 44px;
+  padding: 0 20px 0 16px;
+  border: 0;
   border-radius: 999px;
-  background: var(--t-primary-600, #047857);
+  background: #111827;
   color: #fff;
-  font-size: 13px;
+  font: inherit;
+  font-size: 14.5px;
   font-weight: 600;
+  white-space: nowrap;
+  box-shadow: 0 10px 24px rgba(15, 23, 42, 0.28), 0 2px 6px rgba(15, 23, 42, 0.18);
+  cursor: pointer;
+  transform: translateX(-50%);
+  animation: pf-switch-in 0.5s var(--pop-ease, cubic-bezier(0.65, 0, 0.35, 1)) 0.25s both;
+  -webkit-tap-highlight-color: transparent;
 }
 
+body:has(.install-bar) .pf-m-switch {
+  --pf-switch-bottom: calc(max(74px, 53px + env(safe-area-inset-bottom, 0px)) + 8px + 54px + 18px);
+}
+
+.pf-m-switch:active {
+  transform: translateX(-50%) scale(0.96);
+}
+
+@keyframes pf-switch-in {
+  from {
+    opacity: 0;
+    transform: translateX(-50%) translateY(18px) scale(0.86);
+  }
+
+  to {
+    opacity: 1;
+    transform: translateX(-50%);
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .pf-m-switch {
+    animation: none;
+  }
+}
+
+/* Room at the end of the page so the pill never covers the last row. */
+.pf-m:has(.pf-m-switch) {
+  padding-bottom: 64px;
+}

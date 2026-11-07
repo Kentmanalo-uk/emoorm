@@ -878,6 +878,110 @@ D.Gift = (k) => {
   );
 };
 
+/** My Reports: a flag waving from a metal pole with a gold knob. */
+D.Flag = (k) => {
+  const flag = 'M11.6 9c6-3 11.4-2 15.8 0s9.8 3 15.6 0v18c-5.8 3-11.2 2-15.6 0s-9.8-3-15.8 0z';
+  return (
+    <>
+      <ellipse cx="9.4" cy="44" rx="6" ry="1.8" fill={k.paperSide} />
+      <g filter={k.puff}>
+        <rect x="7" y="5" width="4.8" height="39" rx="2.4" fill={k.lin([[0, '#F2F4F7'], [0.45, '#C3CAD5'], [1, '#848E9C']], 0, 0, 1, 0)} />
+      </g>
+      <g filter={k.puff}><circle cx="9.4" cy="5" r="3.1" fill={k.gold} /></g>
+      {k.solid((f) => <path d={flag} fill={f} />, { dx: 1.6, dy: 2.4 })}
+      {k.print((c) => (
+        <g fill={c}>
+          <rect x="25.4" y="11.5" width="3.8" height="9" rx="1.9" />
+          <circle cx="27.3" cy="24.4" r="2.1" />
+        </g>
+      ))}
+      {k.gloss('M14 11.6c3.4-1.4 6.6-1.4 9.4-.4.9.3.6 1.5-.3 1.4-2.8-.3-5.6.1-8.2 1.2-1 .4-1.9-1.8-.9-2.2z', 0.75)}
+    </>
+  );
+};
+
+/** Language: a shiny globe, a gold speech bubble with a letter in it. */
+D.Globe = (k) => {
+  const clip = `${k.id}gc`;
+  return (
+    <>
+      <defs><clipPath id={clip}><circle cx="21" cy="21" r="18" /></clipPath></defs>
+      <g filter={k.puff}><circle cx="21" cy="21" r="18" fill={k.ball} /></g>
+      <g clipPath={`url(#${clip})`} fill="none" stroke={WHITE} strokeOpacity="0.6" strokeWidth="1.6">
+        <ellipse cx="21" cy="21" rx="7.5" ry="18" />
+        <path d="M3 21h36M4 12.5h34M4 29.5h34" />
+      </g>
+      {k.gloss('M8.4 13.4c2.2-4.4 6.4-7.2 11-7.8.9-.1 1.2 1.1.3 1.4-3.8 1.2-7 3.6-8.8 7-.5 1-2.9.4-2.5-.6z', 0.8)}
+      {k.solid((f) => <path d="M32 26h11a3 3 0 0 1 3 3v8a3 3 0 0 1-3 3h-4l-4 3.5V40h-3a3 3 0 0 1-3-3v-8a3 3 0 0 1 3-3z" fill={f} />, {
+        dx: 1, dy: 1.4, face: k.gold, near: k.goldSide, far: mix(k.goldSide, BLACK, 0.25), steps: 4,
+      })}
+      <path d="M34.6 37l3-7.6 3 7.6M35.6 34.6h4" fill="none" stroke={WHITE} strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round" />
+    </>
+  );
+};
+
+/*
+ * Sign in on phones (Login.jsx): two app tiles leaning on each other, the
+ * shop's bag on the green one in front; behind it, your account (a person)
+ * for buyers, a shop (gold) for sellers. Gold sparkles around them.
+ */
+const welcome = (k, seller) => {
+  const tile = 'M11 4h14a6 6 0 0 1 6 6v14a6 6 0 0 1-6 6H11a6 6 0 0 1-6-6V10a6 6 0 0 1 6-6z';
+  const spark = (cx, cy, r) => {
+    const c = r * 0.16;
+    return `M${cx} ${cy - r}Q${cx + c} ${cy - c} ${cx + r} ${cy}Q${cx + c} ${cy + c} ${cx} ${cy + r}`
+      + `Q${cx - c} ${cy + c} ${cx - r} ${cy}Q${cx - c} ${cy - c} ${cx} ${cy - r}Z`;
+  };
+  const back = seller
+    ? { face: k.gold, near: k.goldSide, far: mix(k.goldSide, BLACK, 0.3) }
+    : { face: k.light, near: k.tintNear, far: k.tintFar };
+  return (
+    <g transform="translate(24 24) scale(0.86) translate(-24 -24)">
+      <g transform="translate(17.5 6) rotate(11 18 17)">
+        {k.solid((f) => <path d={tile} fill={f} />, { dx: 1.6, dy: 2.4, ...back })}
+        {seller
+          ? k.print((c) => (
+            <g fill={c}>
+              <path d="M10 10.5h16l1.6 4.2c.4 1.2-.5 2.4-1.8 2.4-1 0-1.8-.7-2-1.6-.2.9-1 1.6-2 1.6s-1.8-.7-2-1.6c-.2.9-1 1.6-2 1.6s-1.8-.7-2-1.6c-.2.9-1 1.6-2 1.6s-1.8-.7-2-1.6c-.2.9-1 1.6-2 1.6-1.3 0-2.2-1.2-1.8-2.4z" />
+              <path d="M11.4 18.8h13.2V27H11.4z" />
+            </g>
+          ), k.goldSide)
+          : null}
+        {seller
+          ? <rect x="16" y="21.4" width="4" height="5.6" rx="0.8" fill={k.goldSide} />
+          : (
+            <g fill={k.p.mid}>
+              <circle cx="18" cy="13.6" r="4" />
+              <path d="M10.6 25.6c.8-4.2 3.6-6.2 7.4-6.2s6.6 2 7.4 6.2z" />
+            </g>
+          )}
+        {k.gloss('M9.4 6.6h7c1 0 1 1.4 0 1.5-2.4.3-4.2 1.3-5.4 3-.6.9-2.1.5-2.1-.6V8.4c0-1 .8-1.8 1.8-1.8z', 0.65)}
+      </g>
+      <g transform="translate(-3 7) rotate(-12 18 17)">
+        {k.solid((f) => <path d={tile} fill={f} />, { dx: 2, dy: 2.8 })}
+        {k.print((c) => (
+          <g>
+            <path d="M11.2 13.4h13.6l1.4 11.2a2.2 2.2 0 0 1-2.2 2.5H12a2.2 2.2 0 0 1-2.2-2.5z" fill={c} />
+            <path d="M14.4 15.4v-3a3.6 3.6 0 0 1 7.2 0v3" fill="none" stroke={c} strokeWidth="1.9" strokeLinecap="round" />
+          </g>
+        ))}
+        <path d="M15.2 22.4c.9 1.2 2 1.8 2.8 1.8s1.9-.6 2.8-1.8" fill="none" stroke={k.p.mid} strokeWidth="1.5" strokeLinecap="round" />
+        {k.gloss('M9.4 6.6h7c1 0 1 1.4 0 1.5-2.4.3-4.2 1.3-5.4 3-.6.9-2.1.5-2.1-.6V8.4c0-1 .8-1.8 1.8-1.8z', 0.7)}
+      </g>
+      {k.solid((f) => <path d={spark(41, 7.5, 4.2)} fill={f} />, {
+        dx: 0.6, dy: 0.8, face: k.gold, near: k.goldSide, far: k.goldSide, steps: 3,
+      })}
+      {k.solid((f) => <path d={spark(4.5, 41, 3.2)} fill={f} />, {
+        dx: 0.5, dy: 0.6, face: k.gold, near: k.goldSide, far: k.goldSide, steps: 3,
+      })}
+      <circle cx="44" cy="40" r="1.4" fill={k.p.hi} />
+      <circle cx="9" cy="5" r="1.1" fill={k.p.hi} />
+    </g>
+  );
+};
+D.Welcome = (k) => welcome(k, false);
+D.WelcomeSeller = (k) => welcome(k, true);
+
 /** A mark drawn as its 3D object. `name` is FlatArt's name for the mark. */
 export default function PopArt({ name, size, tone }) {
   const id = `pp${useId().replace(/[^a-zA-Z0-9]/g, '')}`;
