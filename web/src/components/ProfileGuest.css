@@ -21,7 +21,7 @@
 .pf-m-id-text.pf-guest-text .pf-guest-actions {
   display: flex;
   gap: 8px;
-  margin-top: 8px;
+  margin-top: 4px;
   overflow: visible;
   white-space: nowrap;
 }
