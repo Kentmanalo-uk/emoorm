@@ -53,8 +53,9 @@ const n2 = (v) => Number(v.toFixed(2));
 function rampOf([tint, deep]) {
   const known = RAMPS[deep.toUpperCase()];
   const [hi, mid, lo, side] = known || [mix(tint, WHITE, 0.2), deep, mix(deep, BLACK, 0.15), mix(deep, BLACK, 0.32)];
+  // Sides lifted a little toward the colour itself: in shade, never near black.
   return {
-    hi, mid, lo, side,
+    hi, mid, lo, side: mix(side, mid, 0.22),
   };
 }
 
@@ -80,7 +81,10 @@ function kit(id, p) {
     return `url(#${gid})`;
   };
 
-  const sideFar = mix(p.side, BLACK, 0.32);
+  // A side darkens only a little away from the light, and its far edge catches
+  // a soft light from behind (rim), so no face reads as a dark slab.
+  const sideFar = mix(p.side, BLACK, 0.1);
+  const rim = mix(p.side, p.hi, 0.34);
   const k = {
     p,
     lin,
@@ -91,7 +95,7 @@ function kit(id, p) {
     body: lin([[0, p.hi], [0.5, p.mid], [1, p.lo]]),
     light: lin([[0, mix(p.hi, WHITE, 0.45)], [0.6, p.hi], [1, mix(p.hi, p.mid, 0.45)]]),
     top: lin([[0, mix(p.hi, WHITE, 0.55)], [1, p.hi]]),
-    side: lin([[0, p.side], [1, sideFar]]),
+    side: lin([[0, p.side], [0.62, sideFar], [1, rim]]),
     cyl: lin([[0, p.mid], [0.26, p.hi], [0.62, p.mid], [1, p.lo]], 0, 0, 1, 0),
     cone: lin([[0, p.hi], [0.5, p.mid], [1, p.lo]], 0, 0, 0, 1),
     ball: rad([[0, mix(p.hi, WHITE, 0.5)], [0.45, p.mid], [1, p.lo]]),
@@ -108,7 +112,7 @@ function kit(id, p) {
     lens: rad([[0, '#64759A'], [0.55, '#262C3D'], [1, '#11141D']], 0.38, 0.32, 0.75),
     // Solid colours for an extruded side.
     near: p.side,
-    far: sideFar,
+    far: mix(p.side, p.hi, 0.16),
     tintNear: mix(p.hi, p.mid, 0.5),
     tintFar: p.mid,
   };
