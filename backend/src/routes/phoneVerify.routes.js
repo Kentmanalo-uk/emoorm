@@ -7,7 +7,7 @@ const { asyncHandler } = require('../middleware/errorHandler');
 const { successResponse } = require('../utils/response');
 
 // Proving a mobile number by SMS (off until an SMS key is set).
-router.get('/config', (req, res) => successResponse(res, phone.config()));
+router.get('/config', asyncHandler(async (req, res) => successResponse(res, await phone.config())));
 router.post('/send', authenticate, asyncHandler(async (req, res) => {
   successResponse(res, await phone.sendCode(req.user.id, req.body?.number), 'Code sent');
 }));

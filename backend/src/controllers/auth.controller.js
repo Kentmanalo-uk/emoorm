@@ -562,7 +562,7 @@ const facebookLogin = asyncHandler(async (req, res) => {
  * @route GET /api/auth/facebook/config
  * @access Public
  */
-const facebookConfig = (req, res) => successResponse(res, facebookService.publicConfig());
+const facebookConfig = asyncHandler(async (req, res) => successResponse(res, await facebookService.publicConfig()));
 
 /**
  * Complete a first-time Google sign-in with name/address/contact/password.

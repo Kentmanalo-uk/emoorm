@@ -8,6 +8,7 @@ process.env.FACEBOOK_APP_SECRET = 'ci-fb-secret';
 const { test, before, after } = require('node:test');
 const assert = require('node:assert/strict');
 const h = require('./helpers');
+const appSettingService = require('../src/services/appSetting.service');
 
 const RETURN = 'http://localhost:3000/facebook-return';
 let person = null; // what the stubbed Facebook says the code belongs to
@@ -129,4 +130,21 @@ test('a code Facebook rejects is a failed sign-in, not a crash', async () => {
   } finally {
     graphFails = false;
   }
+});
+
+test('switched off by the super admin: hidden and refused, Google too', async () => {
+  await appSettingService.update({ loginFacebook: false, loginGoogle: false });
+  try {
+    assert.deepEqual((await h.api('GET', '/auth/facebook/config')).body.data, { enabled: false });
+    person = { id: 'fb-off', name: 'Off', email: `ci-fb-off-${h.RUN}@example.test` };
+    const fb = await login('code-off');
+    assert.equal(fb.status, 403);
+    assert.match(fb.body.message, /Facebook is turned off/);
+    const google = await h.api('POST', '/auth/google', { body: { code: 'x' } });
+    assert.equal(google.status, 403, 'refused before Google is even asked');
+    assert.match(google.body.message, /Google is turned off/);
+  } finally {
+    await appSettingService.update({ loginFacebook: true, loginGoogle: true });
+  }
+  assert.equal((await h.api('GET', '/auth/facebook/config')).body.data.enabled, true);
 });

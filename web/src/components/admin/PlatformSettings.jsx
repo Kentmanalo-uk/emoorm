@@ -444,6 +444,60 @@ export function ShortcutArtSettings() {
   );
 }
 
+/* ── Sign-in methods: which ways in the sign-in screens offer ── */
+
+const SIGN_IN_METHODS = [
+  {
+    field: 'loginGoogle',
+    label: 'Continue with Google',
+    on: 'On: buyers and sellers can sign in and sign up with their Google account.',
+    off: 'Off: the Google button is hidden and Google sign-ins are refused.',
+  },
+  {
+    field: 'loginFacebook',
+    label: 'Continue with Facebook',
+    on: 'On: the Facebook button shows once the Meta app keys are on the server.',
+    off: 'Off: the Facebook button is hidden and Facebook sign-ins are refused.',
+  },
+  {
+    field: 'loginPhone',
+    label: 'Continue with mobile number',
+    on: 'On: a 6-digit code by text signs people in. Each text uses the SMS service (httpSMS or Semaphore).',
+    off: 'Off: the mobile number button is hidden and no sign-in codes are sent. Number checks in Settings still work.',
+  },
+];
+
+export function SignInMethodsSettings() {
+  const { settings } = useAppSettings();
+  const { save, saving } = useSaveSettings();
+  return (
+    <SettingsCard id="sign-in-methods" title="Sign-in methods" hint="Email and password always work, so nobody is locked out.">
+      {SIGN_IN_METHODS.map(({
+        field, label, on, off,
+      }) => {
+        const checked = settings[field] === true;
+        return (
+          <SwitchRow
+            key={field}
+            label={label}
+            help={checked ? on : off}
+            checked={checked}
+            disabled={saving}
+            text={`Offer ${label.replace('Continue with ', '')}`}
+            confirm={(v) => ({
+              title: v ? `Turn on ${label}?` : `Turn off ${label}?`,
+              message: v
+                ? 'The button appears on the sign-in and sign-up screens.'
+                : 'The button disappears, and anyone who used it signs in with their email and password instead.',
+            })}
+            onChange={(v) => save({ [field]: v }, `${label} is now ${v ? 'on' : 'off'}`)}
+          />
+        );
+      })}
+    </SettingsCard>
+  );
+}
+
 /* ── The header's colour on phones (and the status bar over it) ── */
 
 const HEADER_STYLES = [

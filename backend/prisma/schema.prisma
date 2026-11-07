@@ -52,6 +52,12 @@ model AppSetting {
   /// admin picks it; computers keep their own header.
   mobileHeaderStyle String @default("GLOW") @db.VarChar(10) @map("mobile_header_style")
 
+  /// Sign-in methods a super admin switches on or off (email sign-in always
+  /// stays on). Each still needs its keys on the server to work.
+  loginGoogle   Boolean @default(true) @map("login_google")
+  loginFacebook Boolean @default(true) @map("login_facebook")
+  loginPhone    Boolean @default(false) @map("login_phone")
+
   /// Available Today (fresh food and produce sold for a limited time). A
   /// super admin can switch the whole feature off; listings stay stored.
   availableTodayEnabled Boolean @default(true) @map("available_today_enabled")

@@ -12,6 +12,7 @@ const addressService = require('./address.service');
 const googleService = require('./google.service');
 const facebookService = require('./facebook.service');
 const phoneVerifyService = require('./phoneVerify.service');
+const appSettingService = require('./appSetting.service');
 const { hashPassword, comparePassword } = require('../utils/password');
 const {
   generateTokens,
@@ -1630,6 +1631,7 @@ const resetPassword = async (token, newPassword) => {
  * E-MOORM user, links the Google account, and issues the existing JWTs.
  */
 const loginWithGoogle = async ({ code, idToken }) => {
+  await assertLoginMethodOn('google');
   const profile = code
     ? await googleService.exchangeCodeForProfile(code)
     : await googleService.verifyIdToken(idToken);
@@ -1648,6 +1650,7 @@ const loginWithGoogleProfile = (profile) => loginWithSocialProfile(profile, 'goo
  * back to (/facebook-return), then the same steps as Google.
  */
 const loginWithFacebook = async ({ code, redirectUri }) => {
+  await assertLoginMethodOn('facebook');
   const profile = await facebookService.exchangeCodeForProfile(code, redirectUri);
   if (!profile.email) {
     throw new ApiError('Your Facebook account has no email address we can use. Please continue with your email instead.', 400);
@@ -1721,6 +1724,15 @@ const loginWithPhone = async ({ number, code }) => {
   };
 };
 
+const LOGIN_NAMES = { google: 'Google', facebook: 'Facebook', phone: 'a mobile number' };
+
+/** A sign-in method the super admin has switched off is refused. */
+const assertLoginMethodOn = async (method) => {
+  if (!(await appSettingService.isLoginMethodOn(method))) {
+    throw new ApiError(`Signing in with ${LOGIN_NAMES[method]} is turned off right now. Please use your email.`, 403);
+  }
+};
+
 const SOCIAL = {
   google: { field: 'googleId', find: (id) => userRepository.findByGoogleId(id), name: 'Google' },
   facebook: { field: 'facebookId', find: (id) => userRepository.findByFacebookId(id), name: 'Facebook' },
@@ -1733,6 +1745,7 @@ const SOCIAL = {
  */
 const loginWithSocialProfile = async (profile, provider) => {
   const { field, find, name } = SOCIAL[provider];
+  await assertLoginMethodOn(provider);
   const socialId = profile[field];
 
   // 1) Existing linked account.

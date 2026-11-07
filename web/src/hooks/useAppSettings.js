@@ -27,6 +27,10 @@ export const DEFAULT_APP_SETTINGS = {
   shortcutIconScale: 100,
   // The header bars on phones: 'GLOW' (pink to green), 'WHITE' or 'GREEN'.
   mobileHeaderStyle: 'GLOW',
+  // Sign-in methods the super admin switches (email always on).
+  loginGoogle: true,
+  loginFacebook: true,
+  loginPhone: false,
   // MoorMove rider delivery, switched on by the super admin.
   moormoveEnabled: false,
   // 3D / AR product views, switched on by the super admin.

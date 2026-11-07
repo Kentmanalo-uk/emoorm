@@ -9,6 +9,7 @@ import {
 import toast from 'react-hot-toast';
 import AdminLayout from '../components/admin/AdminLayout';
 import ThemePanel from '../components/admin/theme/ThemePanel';
+import { SignInMethodsSettings } from '../components/admin/PlatformSettings';
 import '../components/admin/AdminLayout.css';
 import axios from '../lib/axios';
 import { uploadImage } from '../lib/upload';
@@ -346,6 +347,7 @@ export default function AdminSettings() {
   const sections = [
     isSuperAdmin && { key: 'branding', label: 'App branding', hint: 'Logo and placeholder', icon: Palette },
     isSuperAdmin && { key: 'appearance', label: 'Theme & colours', hint: 'Palette for every screen', icon: PaintBrushBroad },
+    isSuperAdmin && { key: 'signin', label: 'Sign-in methods', hint: 'Google, Facebook, mobile number', icon: KeyRound },
     isMunicipalAdmin && { key: 'municipality', label: 'Municipality page', hint: 'Public showcase', icon: MapPin },
     { key: 'profile', label: 'Profile', hint: 'Name and contact', icon: User },
     { key: 'password', label: 'Password', hint: 'Change your password', icon: KeyRound },
@@ -715,6 +717,8 @@ export default function AdminSettings() {
     // Only ever reachable by a super admin: the tab is left out of the
     // sections list for anyone else, so activeTab cannot resolve to it.
     appearance: <ThemePanel />,
+    // Super admin only, like appearance.
+    signin: <SignInMethodsSettings />,
     municipality: municipalityPanel,
     profile: profilePanel,
     password: passwordPanel,

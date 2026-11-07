@@ -10,6 +10,7 @@
 const crypto = require('crypto');
 const config = require('../config/env');
 const { ApiError } = require('../middleware/errorHandler');
+const appSettingService = require('./appSetting.service');
 
 const GRAPH = 'https://graph.facebook.com/v21.0';
 const RETURN_PATH = '/facebook-return';
@@ -100,8 +101,13 @@ const exchangeCodeForProfile = async (code, redirectUri) => {
   };
 };
 
-/** What the website needs to send people to Facebook (nothing secret). */
-const publicConfig = () => (enabled() ? { enabled: true, appId: config.facebook.appId } : { enabled: false });
+/**
+ * What the website needs to send people to Facebook (nothing secret): on
+ * when the Meta app's keys are set and the super admin has it switched on.
+ */
+const publicConfig = async () => (enabled() && await appSettingService.isLoginMethodOn('facebook')
+  ? { enabled: true, appId: config.facebook.appId }
+  : { enabled: false });
 
 module.exports = {
   enabled, exchangeCodeForProfile, publicConfig, isReturnUri, RETURN_PATH,

@@ -17,6 +17,7 @@ import PopArt from '../components/art/PopArt';
 import FacebookButton from '../components/auth/FacebookButton';
 import PhoneSignIn from '../components/auth/PhoneSignIn';
 import { usePhoneLogin } from '../lib/phoneLogin';
+import useAppSettings from '../hooks/useAppSettings';
 import { facebookReturnUri, startFacebookLogin, useFacebookLogin } from '../lib/facebookLogin';
 import { TONES } from '../components/art/FlatArt';
 import Footer from '../components/layout/Footer';
@@ -308,6 +309,9 @@ const Login = ({ seller = false }) => {
   // Continue with mobile number: on while the server can send texts. Sign up
   // sends people here with it open (openPhone).
   const phoneEnabled = usePhoneLogin();
+  // Continue with Google, unless the super admin switched it off.
+  const { settings: appSettings } = useAppSettings();
+  const googleOn = appSettings.loginGoogle !== false;
   const [phoneOpen, setPhoneOpen] = useState(() => Boolean(location.state?.openPhone));
   const [facebookLoading, setFacebookLoading] = useState(() => Boolean(location.state?.facebookReturn?.code));
 
@@ -490,7 +494,7 @@ const Login = ({ seller = false }) => {
     </div>
   );
 
-  const googleButton = (
+  const googleButton = googleOn ? (
     <button
       type="button"
       className="login-form-google"
@@ -505,7 +509,7 @@ const Login = ({ seller = false }) => {
       </svg>
       {googleLoading ? 'Signing in…' : 'Sign in with Google'}
     </button>
-  );
+  ) : null;
 
   const phoneButton = phoneEnabled ? (
     <button type="button" className="login-form-google" onClick={() => { setApiError(''); setPhoneOpen(true); }}>
@@ -743,10 +747,12 @@ const Login = ({ seller = false }) => {
                     <div className="login-form-error-message">{errors.submit}</div>
                   )}
 
-                  {/* Divider */}
-                  <div className="login-form-divider">
-                    <span className="login-form-divider-text">or</span>
-                  </div>
+                  {/* Divider: only when another way in follows */}
+                  {(googleButton || facebookButton || phoneButton) && (
+                    <div className="login-form-divider">
+                      <span className="login-form-divider-text">or</span>
+                    </div>
+                  )}
 
                   {/* Google Sign In */}
                   {googleButton}

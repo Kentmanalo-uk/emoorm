@@ -74,6 +74,8 @@ const Register = () => {
   const [loadingMunicipalities, setLoadingMunicipalities] = useState(true);
   // Invites: the code of whoever invited them, filled in from an invite link.
   const { settings } = useAppSettings();
+  // Continue with Google, unless the super admin switched it off.
+  const googleOn = settings.loginGoogle !== false;
   const invitesOn = settings.referralSettings?.enabled === true;
   const [inviteCode, setInviteCode] = useState(() => readInvite()?.code || '');
 
@@ -358,7 +360,7 @@ const Register = () => {
     </button>
   ) : null;
 
-  const googleButton = (
+  const googleButton = googleOn ? (
   <button
     type="button"
     className="register-form-google"
@@ -373,7 +375,7 @@ const Register = () => {
     </svg>
     {googleLoading ? 'Signing up…' : 'Sign up with Google'}
   </button>
-  );
+  ) : null;
 
   return (
     <div
@@ -637,10 +639,12 @@ const Register = () => {
 
                 {!googleProfile && (
                   <>
-                    {/* Divider */}
-                    <div className="register-form-divider">
-                      <span className="register-form-divider-text">or</span>
-                    </div>
+                    {/* Divider: only when another way in follows */}
+                    {(googleButton || facebookButton || phoneButton) && (
+                      <div className="register-form-divider">
+                        <span className="register-form-divider-text">or</span>
+                      </div>
+                    )}
 
                     {/* Google Sign Up */}
                     {googleButton}

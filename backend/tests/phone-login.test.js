@@ -4,10 +4,13 @@
 // to the log here (SMS_DEV_LOG), and read back from it.
 process.env.SMS_DEV_LOG = '1';
 process.env.SEMAPHORE_API_KEY = '';
+process.env.HTTPSMS_API_KEY = '';
+process.env.HTTPSMS_FROM = '';
 
 const { test, before, after } = require('node:test');
 const assert = require('node:assert/strict');
 const h = require('./helpers');
+const appSettingService = require('../src/services/appSetting.service');
 
 const texts = [];
 const realWarn = console.warn;
@@ -31,6 +34,7 @@ const freshNumber = () => {
 // The sign-in steps allow 20 requests a quarter hour from one address
 // (app.js authLimiter, counted in memory in tests): this file stays under it.
 // Every file signs in from one address: start this one's hourly count afresh.
+before(() => appSettingService.update({ loginPhone: true }));
 before(() => h.prisma.securityCounter.deleteMany({
   where: { OR: [{ name: { contains: 'sms-login-ip' } }, { name: { contains: 'auth-phone/login' } }] },
 }));
@@ -38,6 +42,7 @@ before(() => h.prisma.securityCounter.deleteMany({
 const madeEmails = [];
 after(async () => {
   console.warn = realWarn;
+  await appSettingService.update({ loginPhone: false }).catch(() => {});
   const users = await h.prisma.user.findMany({ where: { email: { in: madeEmails } }, select: { id: true } });
   const ids = users.map((u) => u.id);
   await h.prisma.address.deleteMany({ where: { userId: { in: ids } } });
@@ -50,6 +55,21 @@ after(async () => {
 
 const send = (number) => h.api('POST', '/auth/phone/login/send', { body: { number } });
 const login = (number, code) => h.api('POST', '/auth/phone/login', { body: { number, code } });
+
+test('off unless the super admin switches it on (texts still work for number checks)', async () => {
+  await appSettingService.update({ loginPhone: false });
+  try {
+    const config = (await h.api('GET', '/auth/phone/config')).body.data;
+    assert.equal(config.enabled, true);
+    assert.equal(config.login, false);
+    const sent = await send('09171234567');
+    assert.equal(sent.status, 403);
+    assert.match(sent.body.message, /turned off/);
+  } finally {
+    await appSettingService.update({ loginPhone: true });
+  }
+  assert.equal((await h.api('GET', '/auth/phone/config')).body.data.login, true);
+});
 
 test('only a Philippine mobile number gets a code', async () => {
   for (const bad of ['12345', 'not a number']) {

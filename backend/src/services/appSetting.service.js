@@ -20,6 +20,10 @@ const DEFAULT_SETTINGS = {
   shortcutArtStyle: 'GLASS',
   shortcutIconScale: 100,
   mobileHeaderStyle: 'GLOW',
+  // Sign-in methods (email always on): Continue with mobile number starts off.
+  loginGoogle: true,
+  loginFacebook: true,
+  loginPhone: false,
   availableTodayEnabled: true,
   adminTeamMax: 5,
   orderConfirmHours: 48,
@@ -256,6 +260,10 @@ const sanitize = (input = {}, current = null) => {
     data.mobileHeaderStyle = style;
   }
 
+  for (const field of ['loginGoogle', 'loginFacebook', 'loginPhone']) {
+    if (input[field] !== undefined) data[field] = booleanField(input[field], field);
+  }
+
   if (input.availableTodayEnabled !== undefined) {
     data.availableTodayEnabled = booleanField(input.availableTodayEnabled, 'availableTodayEnabled');
   }
@@ -367,6 +375,17 @@ const update = async (input) => {
   return { ...settings, referralSettings: referralSettings.read(settings.referralSettings) };
 };
 
+/**
+ * Whether a sign-in method is switched on: 'google', 'facebook' or 'phone'.
+ * (Email sign-in has no switch: it always works.)
+ */
+const isLoginMethodOn = async (method) => {
+  const field = { google: 'loginGoogle', facebook: 'loginFacebook', phone: 'loginPhone' }[method];
+  if (!field) return false;
+  const value = (await get())[field];
+  return typeof value === 'boolean' ? value : Boolean(DEFAULT_SETTINGS[field]);
+};
+
 module.exports = {
-  get, update, getCheckoutPricing, isBuyerVerificationRequired, getOrderConfirmHours,
+  get, update, getCheckoutPricing, isBuyerVerificationRequired, getOrderConfirmHours, isLoginMethodOn,
 };

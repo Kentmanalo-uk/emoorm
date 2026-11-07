@@ -4,6 +4,7 @@ const { ApiError } = require('../middleware/errorHandler');
 const sms = require('../utils/sms');
 const manila = require('../utils/manilaTime');
 const counters = require('../lib/securityCounters');
+const appSettingService = require('./appSetting.service');
 
 /**
  * Proving a mobile number with a 6-digit code by SMS, so shops can trust a
@@ -40,7 +41,18 @@ const PH_MOBILE = /^09\d{9}$/;
 const hash = (code) => crypto.createHash('sha256').update(String(code)).digest('hex');
 const cleanNumber = (n) => String(n || '').replace(/[\s-]/g, '').replace(/^\+63/, '0');
 
-const config = () => ({ enabled: sms.enabled() });
+// enabled: texts can be sent (number checks in Settings); login: and
+// Continue with mobile number is switched on by the super admin.
+const config = async () => ({
+  enabled: sms.enabled(),
+  login: sms.enabled() && await appSettingService.isLoginMethodOn('phone'),
+});
+
+const assertPhoneLoginOn = async () => {
+  if (!sms.enabled() || !(await appSettingService.isLoginMethodOn('phone'))) {
+    throw new ApiError('Sign-in by mobile number is turned off right now. Please use your email.', 403);
+  }
+};
 
 const sendCode = async (userId, rawNumber) => {
   if (!sms.enabled()) throw new ApiError('Number verification is not available yet', 503);
@@ -109,7 +121,7 @@ const verifyCode = async (userId, code) => {
 const LOGIN_PER_ADDRESS_PER_HOUR = 10;
 
 const sendLoginCode = async (rawNumber, ip) => {
-  if (!sms.enabled()) throw new ApiError('Sign-in by mobile number is not available yet', 503);
+  await assertPhoneLoginOn();
   const number = cleanNumber(rawNumber);
   if (!PH_MOBILE.test(number)) throw new ApiError('Enter a mobile number like 09171234567', 400);
   if ((await counters.hit(`sms-login-wait:${number}`, RESEND_AFTER)).hits > 1) {
@@ -139,6 +151,7 @@ const sendLoginCode = async (rawNumber, ip) => {
 
 /** The number, once its sign-in code is right (the code is used up). */
 const takeLoginCode = async (rawNumber, code) => {
+  await assertPhoneLoginOn();
   const number = cleanNumber(rawNumber);
   if (!PH_MOBILE.test(number)) throw new ApiError('Enter a mobile number like 09171234567', 400);
   const name = `sms-login:${number}`;

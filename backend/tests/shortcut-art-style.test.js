@@ -89,3 +89,15 @@ test('the header on phones: the wash unless chosen, then white or green', async 
   }
   assert.equal((await appSettingService.get()).mobileHeaderStyle, 'GLOW', 'nothing bad got through');
 });
+
+test('the sign-in method switches: true or false, and only a super admin sets them', async () => {
+  const admin = await h.user('SUPER_ADMIN');
+  const seller = await h.user('SELLER');
+  const put = (body, who) => h.api('PUT', '/app-settings', { token: h.token(who), body });
+  assert.equal((await put({ loginPhone: true }, seller)).status, 403, 'a seller cannot');
+  assert.equal((await put({ loginGoogle: 'yes' }, admin)).status, 400, 'a switch is true or false');
+  const ok = await put({ loginGoogle: true }, admin);
+  assert.equal(ok.status, 200);
+  assert.equal(ok.body.data.loginGoogle, true);
+  assert.equal(typeof ok.body.data.loginPhone, 'boolean');
+});
