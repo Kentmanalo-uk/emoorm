@@ -1102,6 +1102,82 @@ D.AuthSell = (k) => {
   );
 };
 
+/* ── The admins' tools ── */
+
+/** Buyers, users, a team: two round little people, the nearer one deeper. */
+D.People = (k) => (
+  <>
+    <g filter={k.puff}>
+      <path d="M20 40c.6-8.4 5.2-13 11-13s10.4 4.6 11 13a2.6 2.6 0 0 1-2.6 2.6H22.6A2.6 2.6 0 0 1 20 40z" fill={k.light} />
+    </g>
+    <g filter={k.puff}><circle cx="31" cy="15" r="6.2" fill={k.light} /></g>
+    {k.gloss('M27.6 12.2c.8-1.6 2.2-2.4 3.6-2.6.8-.1 1 .9.3 1.2-1 .4-1.7 1.1-2.1 2-.4.8-2.1.3-1.8-.6z', 0.8)}
+    <g filter={k.puff}>
+      <path d="M5 41.4c.7-9.6 6.2-15 13-15s12.3 5.4 13 15A2.8 2.8 0 0 1 28.2 44H7.8A2.8 2.8 0 0 1 5 41.4z" fill={k.body} />
+    </g>
+    <g filter={k.puff}><circle cx="18" cy="17.4" r="7.2" fill={k.ball} /></g>
+    {k.gloss('M13.4 14.6c1-2 2.8-3 4.6-3.2.9-.1 1.1 1 .3 1.3-1.2.5-2.2 1.4-2.7 2.6-.4.9-2.6.3-2.2-.7z', 0.85)}
+  </>
+);
+
+/** Email: an envelope tipped toward you, a pink seal on its flap. */
+D.Envelope = (k) => {
+  const pink = k.lin(PINK_FACE);
+  return (
+    <g transform="rotate(-7 24 25)">
+      {k.solid((f) => <rect x="3" y="10" width="42" height="29" rx="6" fill={f} />, { dx: 1.8, dy: 2.6 })}
+      <path d="M5 37.2L19 24.6M43 37.2L29 24.6" stroke={k.p.side} strokeOpacity="0.45" strokeWidth="1.2" strokeLinecap="round" />
+      <g filter={k.puff}><path d="M4.2 12.6A5 5 0 0 1 9 10h30a5 5 0 0 1 4.8 2.6L24 28z" fill={k.light} /></g>
+      <g filter={k.puff}><circle cx="24" cy="25.6" r="3.8" fill={pink} /></g>
+      <path d="M22.4 25.4l1.2 1.2 2.2-2.4" fill="none" stroke="#fff" strokeWidth="1.1" strokeLinecap="round" strokeLinejoin="round" />
+      {k.gloss('M7.6 14.6c2.6-.4 5.2.6 7.2 2.4.7.6 0 1.6-.8 1.2-2-.9-4-1.3-6-1.1-1 .1-1.4-2.3-.4-2.5z', 0.6)}
+    </g>
+  );
+};
+
+/** Audit log: a round clock standing a little turned. */
+D.Clock = (k) => (
+  <>
+    {k.solid((f) => <circle cx="23" cy="23" r="19" fill={f} />, { dx: 2.4, dy: 2.4, face: k.ball })}
+    <g filter={k.puff}><circle cx="23" cy="23" r="13.6" fill={k.paper} /></g>
+    {[0, 90, 180, 270].map((a) => (
+      <rect key={a} x="22.2" y="11" width="1.6" height="3" rx="0.8" fill={k.p.hi} transform={`rotate(${a} 23 23)`} />
+    ))}
+    <path d="M23 14.6V23l5.6 3.8" stroke={k.p.mid} strokeWidth="2.6" strokeLinecap="round" strokeLinejoin="round" fill="none" />
+    <circle cx="23" cy="23" r="2.2" fill={k.p.side} />
+    {k.gloss('M8.6 15.6c1.8-4.2 5.4-7.2 9.6-8.2.9-.2 1.3 1 .4 1.4-3.8 1.4-6.6 4-8.2 7.6-.5.9-2.2.2-1.8-.8z', 0.8)}
+  </>
+);
+
+/** Town admins: a glossy shield with a person on it. */
+D.Shield = (k) => (
+  <>
+    {k.solid((f) => <path d="M24 3l17 6v13c0 11-7.4 19.4-17 23C14.4 41.4 7 33 7 22V9z" fill={f} />, { dx: 1.8, dy: 2.4 })}
+    <path d="M24 3v42C14.4 41.4 7 33 7 22V9z" fill="#fff" opacity="0.14" />
+    {k.print((c) => (
+      <g fill={c}>
+        <circle cx="24" cy="19" r="5" />
+        <path d="M15.5 33c1-5.2 4.4-8 8.5-8s7.5 2.8 8.5 8a1.2 1.2 0 0 1-1.2 1.4H16.7a1.2 1.2 0 0 1-1.2-1.4z" />
+      </g>
+    ))}
+    {k.gloss('M10 11.4l6.6-2.4c.9-.3 1.4 1 .6 1.5-2.4 1.2-4.4 2.8-5.8 4.8-.6.8-2.4.3-2.2-.7z', 0.75)}
+  </>
+);
+
+/** Banners: a picture in a white frame, gold sun, green hills. */
+D.Picture = (k) => (
+  <g transform="rotate(-6 24 24)">
+    {k.solid((f) => <rect x="3" y="7" width="42" height="34" rx="6" fill={f} />, {
+      dx: 1.8, dy: 2.4, face: k.paper, near: k.paperSide, far: mix(k.paperSide, BLACK, 0.2),
+    })}
+    <rect x="7.5" y="11.5" width="33" height="25" rx="3.4" fill={k.lin([[0, '#FDE7F2'], [1, '#FBCFE8']], 0, 0, 0, 1)} />
+    <g filter={k.puff}><circle cx="31.5" cy="19" r="3.8" fill={k.gold} /></g>
+    <path d="M7.5 32l9.5-9.5 7.5 7.5 4-4L40.5 37v-1.5H11A3.5 3.5 0 0 1 7.5 32z" fill={k.lin([[0, '#6EE7B7'], [1, '#059669']], 0, 0, 0, 1)} />
+    <path d="M7.5 33l9.5-9.5 7.5 7.5 4-4 12 11.5v1a3.4 3.4 0 0 1-3.4 3H10.9a3.4 3.4 0 0 1-3.4-3.4z" fill={k.lin([[0, '#34D399'], [1, '#047857']], 0, 0, 0, 1)} />
+    {k.gloss('M5.6 12.4c0-2 1.2-3.4 3.2-3.8.8-.1 1.1 1 .4 1.3-1 .5-1.7 1.3-1.8 2.6v18c0 1-1.8 1-1.8 0z', 0.6)}
+  </g>
+);
+
 /** A mark drawn as its 3D object. `name` is FlatArt's name for the mark. */
 export default function PopArt({ name, size, tone }) {
   const id = `pp${useId().replace(/[^a-zA-Z0-9]/g, '')}`;

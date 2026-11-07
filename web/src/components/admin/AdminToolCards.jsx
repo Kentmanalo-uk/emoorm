@@ -1,47 +1,49 @@
 import { Link } from 'react-router-dom';
+import { CaretRight } from '../../lib/icons';
 import {
-  IdentificationBadge, Storefront, Users, Package, Receipt, Star, ArrowCounterClockwise, Flag,
-  ChatsCircle, EnvelopeSimple, Bell, ChatCircleDots, ChartPie, UsersThree, SquaresFour,
-  MapPin, UserGear, Image as ImageIcon, Ticket, CaretRight, Truck, DeviceMobile, PaperPlaneTilt,
-  ClockCounterClockwise, Gear,
-} from '../../lib/icons';
-import ToolGradients from '../ui/ToolGradients';
+  BellArt, BubbleArt, ChartArt, ChatArt, ClockArt, EnvelopeArt, FlagArt, GearArt, GiftArt, GridArt,
+  HeadsetArt, IdCardArt, MapArt, PackageArt, PeopleArt, PictureArt, QrArt, ReceiptArt, ReturnArt,
+  ShieldArt, ShopArt, StarArt, TONES, TownArt, TruckArt,
+} from '../art/FlatArt';
+import useShortcutLook, { useShortcutScale } from '../../hooks/useShortcutLook';
 import { useAdminShell } from './adminShell';
 
 /*
- * The admin's tools as the seller app's tool grid: filled icons in gradient
- * colours, a small pink count when something is waiting. The Tools tab shows
- * every card; Home shows the quick ones.
+ * The admin's tools as the seller app's tool grid: the shortcut marks
+ * (FlatArt), in the look and size the super admin chose for them (glass or
+ * 3D), a small pink count when something is waiting. The Tools tab shows
+ * every card; Home shows the quick ones. `tone` only where two tools would
+ * otherwise share a mark's colour side by side.
  */
 
 const TOOL = {
-  applications: { to: '/admin/sellers', label: 'Applications', Icon: IdentificationBadge, tone: 'orange' },
-  sellers: { to: '/admin/all-sellers', label: 'Sellers', Icon: Storefront, tone: 'blue' },
-  buyers: { to: '/admin/buyers', label: 'Buyers', Icon: Users, tone: 'violet' },
-  products: { to: '/admin/products', label: 'Products', Icon: Package, tone: 'green' },
-  orders: { to: '/admin/orders', label: 'Orders', Icon: Receipt, tone: 'amber' },
-  reviews: { to: '/admin/reviews', label: 'Reviews', Icon: Star, tone: 'rose' },
-  returns: { to: '/admin/returns', label: 'Returns', Icon: ArrowCounterClockwise, tone: 'pink' },
-  reports: { to: '/admin/reports', label: 'Reports', Icon: Flag, tone: 'teal' },
-  support: { to: '/admin/support', label: 'Support', Icon: ChatsCircle, tone: 'green' },
-  messages: { to: '/admin/messages', label: 'Messages', Icon: EnvelopeSimple, tone: 'blue', badge: 'messages' },
-  email: { to: '/admin/email', label: 'Email', Icon: PaperPlaneTilt, tone: 'teal' },
-  alerts: { to: '/admin/notifications', label: 'Notifications', Icon: Bell, tone: 'amber', badge: 'notifications' },
-  feedback: { to: '/admin/feedback', label: 'Feedback', Icon: ChatCircleDots, tone: 'pink', badge: 'feedback', superOnly: true },
-  analytics: { to: '/admin/analytics', label: 'Analytics', Icon: ChartPie, tone: 'teal' },
-  auditLogs: { to: '/admin/audit-logs', label: 'Audit log', Icon: ClockCounterClockwise, tone: 'violet' },
-  users: { to: '/admin/users', label: 'All users', Icon: UsersThree, tone: 'violet', superOnly: true },
-  categories: { to: '/admin/categories', label: 'Categories', Icon: SquaresFour, tone: 'orange', superOnly: true },
-  municipalities: { to: '/admin/municipalities', label: 'Municipalities', Icon: MapPin, tone: 'teal', superOnly: true },
-  admins: { to: '/admin/junior-admins', label: 'Town admins', Icon: UserGear, tone: 'blue', superOnly: true },
-  banners: { to: '/admin/banners', label: 'Banners', Icon: ImageIcon, tone: 'pink', superOnly: true },
-  vouchers: { to: '/admin/vouchers', label: 'Vouchers', Icon: Ticket, tone: 'rose', superOnly: true },
-  couriers: { to: '/admin/couriers', label: 'Couriers', Icon: Truck, tone: 'amber', superOnly: true },
-  appUsers: { to: '/admin/app-users', label: 'App users', Icon: DeviceMobile, tone: 'green', superOnly: true },
-  team: { to: '/admin/team', label: 'Admin team', Icon: UsersThree, tone: 'blue', municipalOnly: true },
+  applications: { to: '/admin/sellers', label: 'Applications', Art: IdCardArt, tone: TONES.orange },
+  sellers: { to: '/admin/all-sellers', label: 'Sellers', Art: ShopArt },
+  buyers: { to: '/admin/buyers', label: 'Buyers', Art: PeopleArt },
+  products: { to: '/admin/products', label: 'Products', Art: PackageArt },
+  orders: { to: '/admin/orders', label: 'Orders', Art: ReceiptArt },
+  reviews: { to: '/admin/reviews', label: 'Reviews', Art: StarArt },
+  returns: { to: '/admin/returns', label: 'Returns', Art: ReturnArt, tone: TONES.rose },
+  reports: { to: '/admin/reports', label: 'Reports', Art: FlagArt },
+  support: { to: '/admin/support', label: 'Support', Art: HeadsetArt },
+  messages: { to: '/admin/messages', label: 'Messages', Art: ChatArt, badge: 'messages' },
+  email: { to: '/admin/email', label: 'Email', Art: EnvelopeArt },
+  alerts: { to: '/admin/notifications', label: 'Notifications', Art: BellArt, badge: 'notifications' },
+  feedback: { to: '/admin/feedback', label: 'Feedback', Art: BubbleArt, badge: 'feedback', superOnly: true },
+  analytics: { to: '/admin/analytics', label: 'Analytics', Art: ChartArt },
+  auditLogs: { to: '/admin/audit-logs', label: 'Audit log', Art: ClockArt, tone: TONES.teal },
+  users: { to: '/admin/users', label: 'All users', Art: PeopleArt, tone: TONES.blue, superOnly: true },
+  categories: { to: '/admin/categories', label: 'Categories', Art: GridArt, superOnly: true },
+  municipalities: { to: '/admin/municipalities', label: 'Municipalities', Art: TownArt, superOnly: true },
+  admins: { to: '/admin/junior-admins', label: 'Town admins', Art: ShieldArt, superOnly: true },
+  banners: { to: '/admin/banners', label: 'Banners', Art: PictureArt, superOnly: true },
+  vouchers: { to: '/admin/vouchers', label: 'Vouchers', Art: GiftArt, superOnly: true },
+  couriers: { to: '/admin/couriers', label: 'Couriers', Art: TruckArt, superOnly: true },
+  appUsers: { to: '/admin/app-users', label: 'App users', Art: QrArt, tone: TONES.green, superOnly: true },
+  team: { to: '/admin/team', label: 'Admin team', Art: PeopleArt, tone: TONES.blue, municipalOnly: true },
   // Settings: the town's page for a municipal admin; the platform's for the super admin.
-  settings: { to: '/admin/settings', label: 'Settings', Icon: Gear, tone: 'violet' },
-  townPage: { to: '/admin/settings?tab=municipality', label: 'Town page', Icon: MapPin, tone: 'teal', municipalOnly: true },
+  settings: { to: '/admin/settings', label: 'Settings', Art: GearArt },
+  townPage: { to: '/admin/settings?tab=municipality', label: 'Town page', Art: MapArt, municipalOnly: true },
 };
 
 /** Every card on the Tools tab. */
@@ -73,15 +75,19 @@ function useToolCount() {
 
 function ToolGrid({ tools }) {
   const countOf = useToolCount();
+  const look = useShortcutLook();
+  const scale = useShortcutScale();
   return (
-    <div className="sh-tools">
+    <div className="sh-tools" style={{ '--sc-scale': scale }}>
       {tools.map((tool) => {
-        const { to, label, Icon, tone } = tool;
+        const {
+          to, label, Art, tone,
+        } = tool;
         const waitingCount = countOf(tool);
         return (
           <Link key={to} to={to} className="sh-tool" aria-label={waitingCount > 0 ? `${label}, ${waitingCount} waiting` : label}>
-            <span className={`sh-tool-icon is-${tone}`}>
-              <Icon size={30} weight="fill" />
+            <span className="sh-tool-icon">
+              <Art size={36} tone={tone} glass look={look} />
               {waitingCount > 0 && <b className="ah-tool-badge">{waitingCount > 99 ? '99+' : waitingCount}</b>}
             </span>
             <span>{label}</span>
@@ -98,7 +104,6 @@ export function QuickToolsCard() {
   const tools = (isSuperAdmin ? QUICK.SUPER : QUICK.MUNICIPAL).map((key) => TOOL[key]);
   return (
     <section className="sh-card">
-      <ToolGradients />
       <div className="sh-card-head">
         <h2>Quick tools</h2>
         <Link to="/admin/tools">All tools <CaretRight size={13} weight="bold" /></Link>
@@ -117,7 +122,6 @@ export function AllToolCards() {
     .filter((card) => card.tools.length > 0);
   return (
     <>
-      <ToolGradients />
       {cards.map((card) => (
         <section key={card.title} className="sh-card">
           <div className="sh-card-head"><h2>{card.title}</h2></div>

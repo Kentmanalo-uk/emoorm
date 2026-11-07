@@ -820,6 +820,77 @@ export function GlobeArt({ size = 34, tone, glass = false, look }) {
   );
 }
 
+/* ── The admins' tools ────────────────────────────────────────────────── */
+
+/** Buyers, users, a team: two people, the nearer one deeper. */
+export function PeopleArt({ size = 34, tone, glass = false, look }) {
+  const ink = useInk(tone || VIOLET, look || glass);
+  const { tint, deep } = ink;
+  return (
+    <Mark size={size} ink={ink} pose="People">
+      <circle cx="31" cy="14.5" r="6" fill={tint} />
+      <path d="M19.5 40c.6-8.4 5.4-13 11.5-13s10.9 4.6 11.5 13z" fill={tint} />
+      <circle cx="18" cy="17" r="7" fill={deep} />
+      <path d="M4.5 42c.7-9.6 6.3-15 13.5-15s12.8 5.4 13.5 15z" fill={deep} />
+    </Mark>
+  );
+}
+
+/** Email: an envelope, its flap lit. */
+export function EnvelopeArt({ size = 34, tone, glass = false, look }) {
+  const ink = useInk(tone || BLUE, look || glass);
+  const { tint, deep } = ink;
+  return (
+    <Mark size={size} ink={ink} pose="Envelope">
+      <rect x="3" y="10" width="42" height="29" rx="6" fill={deep} />
+      <path d="M4.2 12.6A5 5 0 0 1 9 10h30a5 5 0 0 1 4.8 2.6L24 28z" fill={tint} />
+      <circle cx="24" cy="25" r="3.2" fill={CUT} />
+    </Mark>
+  );
+}
+
+/** Audit log: a clock, its hands telling the time back. */
+export function ClockArt({ size = 34, tone, glass = false, look }) {
+  const ink = useInk(tone || VIOLET, look || glass);
+  const { tint, deep } = ink;
+  return (
+    <Mark size={size} ink={ink} pose="Clock">
+      <circle cx="24" cy="24" r="20" fill={deep} />
+      <circle cx="24" cy="24" r="14" fill={tint} />
+      <path d="M24 15v9l6 4" stroke={CUT} strokeWidth="3.6" strokeLinecap="round" strokeLinejoin="round" fill="none" />
+      <circle cx="24" cy="24" r="2.4" fill={CUT} />
+    </Mark>
+  );
+}
+
+/** Town admins: a shield with a person on it. */
+export function ShieldArt({ size = 34, tone, glass = false, look }) {
+  const ink = useInk(tone || BLUE, look || glass);
+  const { tint, deep } = ink;
+  return (
+    <Mark size={size} ink={ink} pose="Shield">
+      <path d="M24 3l17 6v13c0 11-7.4 19.4-17 23C14.4 41.4 7 33 7 22V9z" fill={deep} />
+      <path d="M24 3v42C14.4 41.4 7 33 7 22V9z" fill={tint} />
+      <circle cx="24" cy="19" r="5" fill={CUT} />
+      <path d="M15.5 33c1-5.2 4.4-8 8.5-8s7.5 2.8 8.5 8z" fill={CUT} />
+    </Mark>
+  );
+}
+
+/** Banners: a picture, sun and hills in its frame. */
+export function PictureArt({ size = 34, tone, glass = false, look }) {
+  const ink = useInk(tone || PINK, look || glass);
+  const { tint, deep } = ink;
+  return (
+    <Mark size={size} ink={ink} pose="Picture">
+      <rect x="3" y="7" width="42" height="34" rx="7" fill={deep} />
+      <rect x="8" y="12" width="32" height="24" rx="3.5" fill={tint} />
+      <circle cx="31" cy="19" r="3.6" fill={CUT} />
+      <path d="M8 31l9-9 7 7 4-4 12 11H11.5A3.5 3.5 0 0 1 8 32.5z" fill={deep} />
+    </Mark>
+  );
+}
+
 /** Notifications: a bell. */
 export function BellArt({ size = 34, tone, glass = false, look }) {
   const ink = useInk(tone || AMBER, look || glass);
