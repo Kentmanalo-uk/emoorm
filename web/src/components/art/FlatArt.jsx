@@ -42,20 +42,13 @@
  * from the mark itself (FlatArt.css says which shapes count in which
  * mask). The seller's tools and the Home shortcuts use it.
  *
- * pop: the same marks as solid 3D objects, each posed at its own angle
- * (POSES, below): turned left or right, seen a little from above, leaning,
- * thick or thin as the thing would be. A super admin chooses between glass
- * and pop: App settings, shortcutArtStyle.
- *
- *   - the face turned by its pose, its body running back from it so a side
- *     and the underside show; the body darkens towards its far edge.
- *   - the face lit from its near edge, through the colour, into the
- *     neighbouring hue as it turns away; the tint parts lighter.
- *   - gloss over the top and a light bevel on the edges facing away from
- *     the body. No shadow on the page.
+ * pop: the same marks drawn again as small glossy 3D objects (PopArt.jsx),
+ * each seen from its own angle. A super admin chooses between glass and pop:
+ * App settings, shortcutArtStyle. Each mark's `pose` is its name there.
  */
 
 import { useId } from 'react';
+import PopArt from './PopArt';
 import './FlatArt.css';
 
 const box = (size) => ({
@@ -112,160 +105,6 @@ function useInk(tone, look) {
   };
 }
 
-/*
- * Pop is drawn as solid objects, each posed at its own angle the way real
- * things sit on a shelf: one turned to the left, the next to the right, one
- * seen more from above, a flat one (a map, a sparkle) thin and a box thick.
- *
- * A pose is [turn, look, tilt, depth]:
- *   turn   degrees the object is turned about its upright axis (negative:
- *          its right side turns away and the body shows on the right;
- *          positive: the other way)
- *   look   degrees it tips back, so its underside shows below its face
- *   tilt   degrees it leans, in the picture
- *   depth  how thick it is, in grid units
- *
- * The face is the mark turned by that pose, drawn as an orthographic view
- * of a plane: foreshortened across by cos(turn) and down by cos(look), and
- * sheared by sin(turn) sin(look) as it turns. The body runs back from it
- * along the direction its back faces, (-sin turn, cos turn sin look), in
- * POP_STEPS copies, the farthest first and darkest.
- */
-const POSES = {
-  Pot: [-26, 22, -4, 6],
-  Spark: [30, 14, 9, 3],
-  Trend: [-20, 26, 3, 6],
-  Piggy: [30, 18, -6, 6],
-  Grid: [-34, 30, 0, 5],
-  Town: [24, 20, 3, 7],
-  Map: [-32, 34, -7, 3],
-  Camera: [22, 16, -5, 7],
-  Shop: [-24, 22, 0, 7],
-  Heart: [28, 10, 10, 5],
-  Parcel: [-34, 26, 0, 8],
-  Tag: [32, 22, -12, 3],
-  Return: [-22, 18, 5, 6],
-  Star: [20, 14, -10, 4],
-  Pin: [-16, 26, 7, 5],
-  Qr: [34, 32, 0, 3],
-  Buoy: [-28, 14, 8, 5],
-  Headset: [26, 18, -4, 6],
-  Bubble: [-30, 16, 6, 5],
-  Megaphone: [30, 16, -8, 6],
-  Live: [-24, 20, 4, 6],
-  Package: [30, 26, -3, 8],
-  Receipt: [-30, 28, 6, 3],
-  Chart: [24, 22, -4, 6],
-  Wallet: [-26, 18, -3, 7],
-  Plus: [22, 20, 6, 5],
-  Brush: [-20, 16, -10, 5],
-  Gear: [30, 30, 0, 5],
-  IdCard: [-32, 26, 5, 3],
-  Chat: [26, 14, -6, 5],
-  Question: [-22, 18, 4, 5],
-  Truck: [-30, 18, 0, 8],
-  Bell: [24, 16, 8, 6],
-};
-const DEFAULT_POSE = [-26, 20, 0, 5];
-const POP_STEPS = 9;
-const rad = (deg) => (deg * Math.PI) / 180;
-
-/** How a pose draws: the face's transform and one step of the body. */
-function poseOf(name) {
-  const [turn, look, tilt, depth] = POSES[name] || DEFAULT_POSE;
-  const t = rad(turn);
-  const l = rad(look);
-  const r = rad(tilt);
-  // The turned plane, then the lean.
-  const fa = Math.cos(t);
-  const fb = Math.sin(t) * Math.sin(l);
-  const fd = Math.cos(l);
-  const [cr, sr] = [Math.cos(r), Math.sin(r)];
-  const m = [fa * cr - fb * sr, fa * sr + fb * cr, -fd * sr, fd * cr];
-  // The direction its back faces, leaned with it.
-  const bx = -Math.sin(t);
-  const by = Math.cos(t) * Math.sin(l);
-  const back = [bx * cr - by * sr, bx * sr + by * cr];
-  // Fit: the face and its body inside the 48 box, centred together.
-  const scale = 0.8;
-  const run = [back[0] * depth * scale, back[1] * depth * scale];
-  const cx = 24 - run[0] / 2;
-  const cy = 24 - run[1] / 2;
-  const n = (v) => Number(v.toFixed(4));
-  const face = `translate(${n(cx)} ${n(cy)}) matrix(${m.map((v) => n(v * scale)).join(' ')} 0 0) translate(-24 -24)`;
-  return {
-    face,
-    step: [run[0] / POP_STEPS, run[1] / POP_STEPS],
-    // The light falls on the edge nearer the viewer: the left one when the
-    // body shows on the right, and the other way round.
-    lightFromLeft: run[0] >= 0,
-    // The bevel sits on the face's edges away from the body.
-    bevel: [run[0] >= 0 ? 0.9 : -0.9, run[1] >= 0 ? 1.2 : -1.2],
-  };
-}
-
-/** A mark as a solid 3D object, posed at its own angle. */
-function PopMark({
-  size, ink, pose, children,
-}) {
-  const { id, tone: [tint, deep] } = ink;
-  const [via] = HUE_PATH[deep.toUpperCase()] || [mix(deep, '#000000', 0.15)];
-  const url = (k) => `url(#${id}${k})`;
-  const {
-    face, step, lightFromLeft, bevel,
-  } = poseOf(pose);
-  const body = mix(deep, via, 0.55);
-  const far = mix(body, '#000000', 0.46);
-  const near = mix(body, '#000000', 0.15);
-  const steps = Array.from({ length: POP_STEPS }, (_, i) => POP_STEPS - i);
-  // The face's light runs from its near edge across it.
-  const [x1, x2] = lightFromLeft ? [4, 44] : [44, 4];
-  return (
-    <svg {...box(size)}>
-      <defs>
-        <linearGradient id={`${id}d`} gradientUnits="userSpaceOnUse" x1={x1} y1="6" x2={x2} y2="40">
-          <stop offset="0" stopColor={mix(deep, '#FFFFFF', 0.34)} />
-          <stop offset="0.45" stopColor={deep} />
-          <stop offset="1" stopColor={mix(via, '#000000', 0.08)} />
-        </linearGradient>
-        <linearGradient id={`${id}t`} gradientUnits="userSpaceOnUse" x1={x1} y1="6" x2={x2} y2="40">
-          <stop offset="0" stopColor={mix(tint, '#FFFFFF', 0.62)} />
-          <stop offset="1" stopColor={mix(tint, deep, 0.32)} />
-        </linearGradient>
-        <linearGradient id={`${id}s`} gradientUnits="userSpaceOnUse" x1="10" y1="0" x2="18" y2="46">
-          <stop offset="0" stopColor="#FFFFFF" stopOpacity="0.6" />
-          <stop offset="0.38" stopColor="#FFFFFF" stopOpacity="0.12" />
-          <stop offset="0.48" stopColor="#FFFFFF" stopOpacity="0" />
-        </linearGradient>
-        <mask id={`${id}m`} maskUnits="userSpaceOnUse" x="-4" y="-4" width="56" height="56">
-          <g transform={face}><g className="fa-silhouette">{children}</g></g>
-        </mask>
-        {/* The bevel: the face's edges away from the body, where light
-            catches the corner between the face and the body. */}
-        <mask id={`${id}r`} maskUnits="userSpaceOnUse" x="-4" y="-4" width="56" height="56">
-          <g transform={face}>
-            <g className="fa-silhouette">{children}</g>
-            <g className="fa-silhouette-cut" transform={`translate(${bevel[0]} ${bevel[1]})`}>{children}</g>
-          </g>
-        </mask>
-      </defs>
-      {steps.map((i) => (
-        <g
-          key={i}
-          className="fa-depth"
-          transform={`translate(${(step[0] * i).toFixed(2)} ${(step[1] * i).toFixed(2)})`}
-          style={{ '--fa-depth': mix(near, far, i / POP_STEPS) }}
-        >
-          <g transform={face}>{children}</g>
-        </g>
-      ))}
-      <g transform={face}>{children}</g>
-      <rect x="-4" y="-4" width="56" height="56" fill={url('s')} mask={url('m')} />
-      <rect x="-4" y="-4" width="56" height="56" fill="#FFFFFF" opacity="0.75" mask={url('r')} />
-    </svg>
-  );
-}
-
 /**
  * A mark's svg. For glass the mark is drawn in layers, each clipped to its
  * shapes by a mask cut from the mark itself:
@@ -278,7 +117,7 @@ function Mark({
   size, ink, pose, children,
 }) {
   if (!ink.id) return <svg {...box(size)}>{children}</svg>;
-  if (ink.pop) return <PopMark size={size} ink={ink} pose={pose}>{children}</PopMark>;
+  if (ink.pop) return <PopArt name={pose} size={size} tone={ink.tone} />;
   const { id, tone: [tint, deep] } = ink;
   const [via, touch] = HUE_PATH[deep.toUpperCase()] || [mix(deep, '#000000', 0.15), mix(deep, '#000000', 0.3)];
   const url = (k) => `url(#${id}${k})`;
