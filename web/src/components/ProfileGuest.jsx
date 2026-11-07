@@ -1,14 +1,20 @@
 import { Link } from 'react-router-dom';
 import {
-  Package, Heart, ChatText as MessageSquare, Bell, Storefront as Store, ShoppingBag, Truck,
-  CaretRight as ChevronRight, Star, Question, MapPin, ArrowCounterClockwise, Lifebuoy,
+  Package, Storefront as Store, ShoppingBag, Truck,
+  CaretRight as ChevronRight, Question, Lifebuoy, Headset, Info,
 } from '../lib/icons';
 import Layout from './layout/Layout';
 import PageMenu from './layout/PageMenu';
 import GradientUserIcon from './ui/GradientUserIcon';
 import ToolGradients from './ui/ToolGradients';
 import RecentlyViewed from './account/RecentlyViewed';
-import LanguageRow from './account/LanguageRow';
+import { LanguageTile } from './account/LanguageRow';
+import ProfileTools from './account/ProfileTools';
+import MoreProducts from './product/MoreProducts';
+import {
+  FlagArt, GlobeArt, HeartArt, ParcelArt, PinArt, ReturnArt, ShopArt, StarArt, TagArt,
+} from './art/FlatArt';
+import useShortcutLook, { useShortcutScale } from '../hooks/useShortcutLook';
 import '../pages/Profile.css';
 import './ProfileGuest.css';
 
@@ -23,23 +29,14 @@ const PURCHASE = [
   ['To Pick Up', Store, '/profile/orders?status=to_pickup'],
 ];
 
-// One line in the lists, as on the signed-in Profile.
-function Row({ link, icon: Icon, label }) {
-  return (
-    <Link {...link} className="pf-m-row">
-      <span className="pf-m-row-icon"><Icon size={19} weight="fill" /></span>
-      <span className="pf-m-row-label">{label}</span>
-      <ChevronRight size={16} className="pf-m-row-chev" />
-    </Link>
-  );
-}
-
 /**
  * The Profile tab for a signed-out visitor on a phone: the same page a
  * signed-in shopper sees (Profile.jsx, phone layout), with the account card
  * replaced by a sign-in card and Log in / Sign up buttons.
  */
 export default function ProfileGuest() {
+  const look = useShortcutLook();
+  const scale = useShortcutScale();
   return (
     <Layout showFooter={false}>
       <div className="profile-page profile-guest">
@@ -89,29 +86,47 @@ export default function ProfileGuest() {
 
                 <RecentlyViewed />
 
-                <section className="pf-m-section pf-m-list">
-                  <h2>Orders &amp; shopping</h2>
-                  <Row link={needsLogin('/profile/orders')} icon={Package} label="My Orders" />
-                  <Row link={needsLogin('/profile/returns')} icon={ArrowCounterClockwise} label="Returns & refunds" />
-                  <Row link={needsLogin('/profile/addresses')} icon={MapPin} label="My Addresses" />
-                  <Row link={needsLogin('/profile/wishlist')} icon={Heart} label="Wishlist" />
-                  <Row link={needsLogin('/profile/followed-stores')} icon={Store} label="Followed Stores" />
-                  <Row link={needsLogin('/profile/reviews')} icon={Star} label="My Reviews" />
+                {/* The signed-in Profile's shortcuts and strip; what needs an
+                    account asks for one first. */}
+                <section className="pf-m-section pf-m-tools-sec" aria-label="Orders and shopping">
+                  <ProfileTools scale={scale}>
+                    {[
+                      ['orders', '/profile/orders', 'My Orders', ParcelArt],
+                      ['returns', '/profile/returns', 'Returns & Refunds', ReturnArt],
+                      ['addresses', '/profile/addresses', 'My Addresses', PinArt],
+                      ['wishlist', '/profile/wishlist', 'Wishlist', HeartArt],
+                      ['following', '/profile/followed-stores', 'Followed Stores', ShopArt],
+                      ['reviews', '/profile/reviews', 'My Reviews', StarArt],
+                      ['offers', '/profile/offers', 'My Offers', TagArt],
+                      ['reports', '/profile/reports', 'My Reports', FlagArt],
+                    ].map(([key, to, label, Art]) => (
+                      <Link key={key} {...needsLogin(to)} className="pf-m-tool">
+                        <Art size={36} glass look={look} />
+                        <span>{label}</span>
+                      </Link>
+                    ))}
+                    {/* Guests too: the first-visit tip points here. */}
+                    <LanguageTile key="language" Art={GlobeArt} look={look} className="pf-m-tool" />
+                  </ProfileTools>
                 </section>
 
-                <section className="pf-m-section pf-m-list">
-                  <h2>Inbox</h2>
-                  <Row link={needsLogin('/profile/messages')} icon={MessageSquare} label="Messages" />
-                  <Row link={needsLogin('/profile/notifications')} icon={Bell} label="Notifications" />
+                <section className="pf-m-section pf-m-links-sec">
+                  <nav className="pf-m-links" aria-label="Help and more">
+                    {[
+                      [{ to: '/help' }, Lifebuoy, 'Help Centre'],
+                      [needsLogin('/profile/support'), Headset, 'Help & Support'],
+                      [{ to: '/about' }, Info, 'About E-MOORM'],
+                      [{ to: '/sell' }, Store, 'Sell on E-MOORM'],
+                    ].map(([link, Icon, label]) => (
+                      <Link key={label} {...link} className="pf-m-link">
+                        <Icon size={20} />
+                        <span>{label}</span>
+                      </Link>
+                    ))}
+                  </nav>
                 </section>
 
-                <section className="pf-m-section pf-m-list">
-                  <h2>More</h2>
-                  <Row link={{ to: '/sell' }} icon={ShoppingBag} label="Sell on Emoorm" />
-                  <Row link={{ to: '/help' }} icon={Lifebuoy} label="Help & Support" />
-                  {/* Guests too: the first-visit tip points here. */}
-                  <LanguageRow />
-                </section>
+                <MoreProducts />
               </div>
             </div>
           </div>

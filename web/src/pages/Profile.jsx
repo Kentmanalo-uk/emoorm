@@ -203,11 +203,6 @@ const Profile = () => {
               </button>
             </div>
           )}
-          <div className="pf-m-stats">
-            <Link to="/profile/followed-stores"><strong>{followedStores.length}</strong><span>Following</span></Link>
-            <Link to="/profile/wishlist"><strong>{wishlistCount}</strong><span>Wishlist</span></Link>
-            <Link to="/profile/reviews"><strong>{reviewCount}</strong><span>Reviews</span></Link>
-          </div>
         </section>
 
         {/* Verify your identity lives in Settings (Security). */}
