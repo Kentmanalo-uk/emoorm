@@ -1,9 +1,20 @@
 /* Signed-out Profile tab (phones). The page is the signed-in phone Profile
    (the .pf-m styles in Profile.css); this styles only the sign-in card that
    takes the place of the photo and name. */
-/* The welcome card: soft pink at the top fading to white below. */
+/* The welcome card: strong pink at the top, deep enough for the white
+   welcome, fading through light pink to white below the buttons. */
 .pf-m-card.pf-guest-card {
-  background: linear-gradient(to bottom, var(--t-accent-200, #fde4f0) 0%, var(--t-neutral-0, #fff) 100%);
+  background: linear-gradient(
+    to bottom,
+    var(--t-accent-600, #db2777) 0%,
+    var(--t-accent-500, #ec4899) 50%,
+    var(--t-accent-200, #fde4f0) 84%,
+    var(--t-neutral-0, #fff) 100%
+  );
+}
+
+.pf-m-card.pf-guest-card .pf-m-id-text strong {
+  color: #fff;
 }
 
 /* Log in and Sign up, side by side under "Welcome to E-MOORM". */
