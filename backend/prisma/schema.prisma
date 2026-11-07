@@ -356,6 +356,9 @@ model User {
 
   // Google OAuth linkage (nullable — populated when the user signs in via Google).
   googleId      String?   @unique @map("google_id")
+  /// Continue with Facebook: the person's id for this app (app-scoped), linked
+  /// like googleId. Never sent to clients (hasFacebook instead).
+  facebookId    String?   @unique @db.VarChar(64) @map("facebook_id")
 
   // Location (Philippine address hierarchy)
   province      String?  @default("Oriental Mindoro")

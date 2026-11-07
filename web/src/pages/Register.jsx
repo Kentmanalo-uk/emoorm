@@ -16,6 +16,8 @@ import useFocusTrap from '../hooks/useFocusTrap';
 import AuthSheetBar from '../components/AuthSheetBar';
 import AuthHero from '../components/auth/AuthHero';
 import PopArt from '../components/art/PopArt';
+import FacebookButton from '../components/auth/FacebookButton';
+import { startFacebookLogin, useFacebookLogin } from '../lib/facebookLogin';
 import { TONES } from '../components/art/FlatArt';
 import Footer from '../components/layout/Footer';
 import { BusyLabel } from '../components/ui/Spinner';
@@ -59,6 +61,8 @@ const Register = () => {
   // Phones: the sheet opens on a choice -- Google, or email -- and the form
   // is one tap away.
   const [emailOpen, setEmailOpen] = useState(false);
+  // Continue with Facebook: finished on the Log in page it comes back to.
+  const facebook = useFacebookLogin();
   const [showConfirmPassword, setShowConfirmPassword] = useState(false);
   const [errors, setErrors] = useState({});
   const [isLoading, setIsLoading] = useState(false);
@@ -330,6 +334,13 @@ const Register = () => {
     </div>
   );
 
+  const facebookButton = facebook.enabled ? (
+    <FacebookButton
+      className="register-form-google"
+      onClick={() => startFacebookLogin(facebook.appId, { seller: forSelling, from: safeRedirect })}
+    />
+  ) : null;
+
   const googleButton = (
   <button
     type="button"
@@ -395,6 +406,7 @@ const Register = () => {
                   <div className="auth-choose-body">
                     <div className="auth-choose-buttons">
                       {googleButton}
+                      {facebookButton}
                       <button type="button" className="register-form-google" onClick={() => setEmailOpen(true)}>
                         <EnvelopeSimple size={21} />
                         Continue with Email
@@ -614,6 +626,7 @@ const Register = () => {
 
                     {/* Google Sign Up */}
                     {googleButton}
+                    {facebookButton}
                   </>
                 )}
 

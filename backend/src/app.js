@@ -395,8 +395,8 @@ if (config.nodeEnv === 'development') {
 // ============================================
 
 // Mount API routes with prefix
-for (const step of ['login', 'register', 'forgot-password', 'qr/create', 'google/app/exchange', 'google', 'change-password']) {
-  // Google sign-in steps (one of them hashes a new password), changing the
+for (const step of ['login', 'register', 'forgot-password', 'qr/create', 'google/app/exchange', 'google', 'facebook', 'change-password']) {
+  // Google and Facebook sign-in steps (one of them hashes a new password), changing the
   // password (a stolen session guessing the current one).
   app.use(`${config.apiPrefix}/auth/${step}`, authLimiter(step));
 }

@@ -45,7 +45,7 @@ const blockersFor = async (user) => {
 const loadSelf = async (userId) => {
   const user = await prisma.user.findUnique({
     where: { id: userId },
-    select: { id: true, email: true, fullName: true, role: true, password: true, googleId: true, deletedAt: true },
+    select: { id: true, email: true, fullName: true, role: true, password: true, googleId: true, facebookId: true, deletedAt: true },
   });
   if (!user || user.deletedAt) throw new ApiError('Account not found', 404);
   return user;
@@ -65,9 +65,9 @@ const deletionCheck = async (userId) => {
   return {
     allowed: !adminRole,
     blockers: adminRole ? [] : await blockersFor(user),
-    // A Google-made account has no password its owner knows: they type
-    // their email instead.
-    confirmWith: user.googleId ? 'email' : 'password',
+    // A Google- or Facebook-made account has no password its owner may
+    // know: they type their email instead.
+    confirmWith: user.googleId || user.facebookId ? 'email' : 'password',
     eraseAfterDays: ERASE_AFTER_DAYS,
   };
 };
@@ -108,7 +108,7 @@ const requestDeletion = async (userId, proof = {}, req) => {
   const user = await loadSelf(userId);
   assertCanClose(user);
 
-  if (user.googleId) {
+  if (user.googleId || user.facebookId) {
     if (String(proof.email || '').trim().toLowerCase() !== user.email.toLowerCase()) {
       throw new ApiError('Type your email address exactly to confirm', 400);
     }

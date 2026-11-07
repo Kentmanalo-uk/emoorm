@@ -177,6 +177,15 @@ const config = {
     appCallbackUrl: process.env.GOOGLE_APP_CALLBACK_URL || '',
   },
 
+  // Continue with Facebook (a Meta app, developers.facebook.com). Off until
+  // both are set; the secret is backend-only. The site sends people to
+  // Facebook and back to /facebook-return, which must be listed as a valid
+  // OAuth redirect URI in the Meta app.
+  facebook: {
+    appId: process.env.FACEBOOK_APP_ID || '',
+    appSecret: process.env.FACEBOOK_APP_SECRET || '',
+  },
+
   // Pagination Configuration
   pagination: {
     defaultPageSize: parseInt(process.env.DEFAULT_PAGE_SIZE || '20', 10),

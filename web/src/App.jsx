@@ -38,6 +38,7 @@ import ErrorBoundary from './components/ErrorBoundary';
 // downloads only what the page in front of it needs. The pages shoppers
 // move to next are fetched once the first page has loaded (preloadPages).
 const Login = lazy(() => import('./pages/Login'));
+const FacebookReturn = lazy(() => import('./pages/FacebookReturn'));
 const Register = lazy(() => import('./pages/Register'));
 const ForgotPassword = lazy(() => import('./pages/ForgotPassword'));
 const ResetPassword = lazy(() => import('./pages/ResetPassword'));
@@ -290,6 +291,7 @@ function AppRoutes() {
         {/* The phone app's Go live screen shows this in its web view. */}
         <Route path="/app-live" element={<SellerLive inApp />} />
         <Route path="/login" element={<Login />} />
+        <Route path="/facebook-return" element={<FacebookReturn />} />
         <Route path="/seller/login" element={<Login seller />} />
         <Route path="/register" element={<Register />} />
         <Route path="/forgot-password" element={<ForgotPassword />} />
@@ -462,6 +464,7 @@ function AppRoutes() {
         <Suspense fallback={null}>
         <Routes>
           <Route path="/login" element={<Login />} />
+        <Route path="/facebook-return" element={<FacebookReturn />} />
           <Route path="/seller/login" element={<Login seller />} />
           <Route path="/register" element={<Register />} />
           <Route path="/forgot-password" element={<ForgotPassword />} />

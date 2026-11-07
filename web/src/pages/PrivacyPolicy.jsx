@@ -70,12 +70,38 @@ const PrivacyPolicy = () => (
         If you choose to sign in with Google, Google will share your basic account information
         (name and email) with Emoorm, in line with Google's own privacy practices.
       </p>
+      <p>
+        If you choose to sign in with Facebook, Facebook will share your public profile (your
+        name and profile picture) and your email address with Emoorm, in line with Meta's own
+        privacy practices. We use them only to create and sign in to your Emoorm account, and we
+        never post to Facebook for you.
+      </p>
 
       <h2>Data retention and your choices</h2>
       <p>
         We keep your account information for as long as your account is active. You can update
-        your profile information at any time from your account settings. To request deletion of
-        your account or data, contact us using the details below.
+        your profile information at any time from your account settings.
+      </p>
+
+      <h2 id="delete-your-data">Deleting your account and data</h2>
+      <p>
+        You can delete your Emoorm account yourself at any time, whether you signed up with an
+        email address, Google or Facebook:
+      </p>
+      <ol>
+        <li>Sign in to Emoorm and open <strong>Profile</strong>.</li>
+        <li>Tap the <strong>Settings</strong> (gear) button, then <strong>Your data</strong>.</li>
+        <li>Choose <strong>Delete account</strong> and confirm.</li>
+      </ol>
+      <p>
+        You are signed out everywhere at once, and after 30 days your account is erased for
+        good, with your orders, messages and reviews. On the same page you can also download a
+        copy of your data first. If you can no longer sign in, contact us using the
+        details below and we will delete your account for you.
+      </p>
+      <p>
+        If you signed in with Facebook, you can also remove Emoorm from your Facebook account
+        under Settings &amp; privacy &rarr; Settings &rarr; Apps and websites.
       </p>
 
       <h2>Security</h2>

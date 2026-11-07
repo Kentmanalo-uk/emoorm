@@ -180,10 +180,13 @@ const verifyMfaToken = (token, expectedType) => {
  * "complete your profile" step, without persisting the user until they
  * submit the rest of their details.
  */
+// The "complete your profile" step of a first sign-in with Google or with
+// Facebook (whichever id is set says which): 15 minutes to fill it in.
 const generateGoogleProfileToken = (profile) => {
   return jwt.sign(
     {
-      googleId: profile.googleId,
+      googleId: profile.googleId || undefined,
+      facebookId: profile.facebookId || undefined,
       email: profile.email,
       fullName: profile.fullName,
       profilePhoto: profile.profilePhoto,

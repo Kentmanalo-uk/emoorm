@@ -10,6 +10,7 @@ const identityVerificationService = require('./identityVerification.service');
 const identityVerificationRepository = require('../repositories/identityVerification.repository');
 const addressService = require('./address.service');
 const googleService = require('./google.service');
+const facebookService = require('./facebook.service');
 const { hashPassword, comparePassword } = require('../utils/password');
 const {
   generateTokens,
@@ -376,8 +377,8 @@ const getProfile = async (userId) => {
   // The apps mark a Google account on the profile picture. They are told
   // that it is one, not which one: the Google subject id is an identifier
   // for this person at Google and there is no reason for it to travel.
-  const { googleId, ...rest } = user;
-  return { ...rest, hasGoogle: Boolean(googleId) };
+  const { googleId, facebookId, ...rest } = user;
+  return { ...rest, hasGoogle: Boolean(googleId), hasFacebook: Boolean(facebookId) };
 };
 
 /**
@@ -1639,11 +1640,38 @@ const loginWithGoogle = async ({ code, idToken }) => {
  * profile (the website's pop-up, or the Android app's browser sign-in).
  * @param {{ googleId, email, fullName, profilePhoto }} profile - Verified by Google
  */
-const loginWithGoogleProfile = async (profile) => {
-  // 1) Existing Google-linked account.
-  let user = await userRepository.findByGoogleId(profile.googleId);
+const loginWithGoogleProfile = (profile) => loginWithSocialProfile(profile, 'google');
 
-  // 2) Fall back to email match, then link Google to that account.
+/**
+ * Continue with Facebook: Facebook's code from the page it sent the person
+ * back to (/facebook-return), then the same steps as Google.
+ */
+const loginWithFacebook = async ({ code, redirectUri }) => {
+  const profile = await facebookService.exchangeCodeForProfile(code, redirectUri);
+  if (!profile.email) {
+    throw new ApiError('Your Facebook account has no email address we can use. Please continue with your email instead.', 400);
+  }
+  return loginWithSocialProfile(profile, 'facebook');
+};
+
+const SOCIAL = {
+  google: { field: 'googleId', find: (id) => userRepository.findByGoogleId(id), name: 'Google' },
+  facebook: { field: 'facebookId', find: (id) => userRepository.findByFacebookId(id), name: 'Facebook' },
+};
+
+/**
+ * Signing in with an account Google or Facebook has vouched for.
+ * @param {{ googleId?, facebookId?, email, fullName, profilePhoto }} profile
+ * @param {'google'|'facebook'} provider
+ */
+const loginWithSocialProfile = async (profile, provider) => {
+  const { field, find, name } = SOCIAL[provider];
+  const socialId = profile[field];
+
+  // 1) Existing linked account.
+  let user = await find(socialId);
+
+  // 2) Fall back to email match, then link the account to it.
   if (!user) {
     const byEmail = await userRepository.findByEmail(profile.email, true);
     if (byEmail) {
@@ -1653,14 +1681,14 @@ const loginWithGoogleProfile = async (profile) => {
       if (!byEmail.isActive) {
         throw new ApiError(await suspendedMessage(byEmail.id), 403);
       }
-      // Google has just proved who owns this email. If the account's email
+      // Google (or Facebook) has just proved who owns this email. If the account's email
       // was never confirmed, whoever chose its password may not be that
       // person (someone can sign up with another's address first), so the
       // old password stops working and every session it opened ends; the
       // owner can set a password of their own with "Forgot password".
       const unconfirmed = !byEmail.isVerified;
       await userRepository.updateUser(byEmail.id, {
-        googleId: profile.googleId,
+        [field]: socialId,
         isVerified: true,
         profilePhoto: byEmail.profilePhoto || profile.profilePhoto || null,
         ...(unconfirmed ? {
@@ -1670,8 +1698,8 @@ const loginWithGoogleProfile = async (profile) => {
           passwordResetExpiry: null,
         } : {}),
       });
-      if (unconfirmed) console.warn(`[auth] Google sign-in took over unconfirmed account ${byEmail.id}: old password and sessions revoked`);
-      user = await userRepository.findByGoogleId(profile.googleId);
+      if (unconfirmed) console.warn(`[auth] ${name} sign-in took over unconfirmed account ${byEmail.id}: old password and sessions revoked`);
+      user = await find(socialId);
     }
   }
 
@@ -1874,13 +1902,16 @@ const completeGoogleSignup = async (googleToken, data) => {
     throw new ApiError(err.message || 'Invalid Google sign-in session', 401);
   }
 
-  const { googleId, email, profilePhoto } = decoded;
+  const { googleId, facebookId, email, profilePhoto } = decoded;
+  const provider = facebookId ? SOCIAL.facebook : SOCIAL.google;
+  const socialId = facebookId || googleId;
+  if (!socialId) throw new ApiError('Invalid sign-in session', 401);
 
   // Guard against a duplicate account being created while the profile form
   // was open (e.g. registered separately, or completed in another tab).
-  const existingByGoogle = await userRepository.findByGoogleId(googleId);
-  if (existingByGoogle) {
-    throw new ApiError('This Google account is already linked to an E-MOORM account', 409);
+  const existingLinked = await provider.find(socialId);
+  if (existingLinked) {
+    throw new ApiError(`This ${provider.name} account is already linked to an E-MOORM account`, 409);
   }
   const existingByEmail = await userRepository.findByEmail(email);
   if (existingByEmail) {
@@ -1908,7 +1939,7 @@ const completeGoogleSignup = async (googleToken, data) => {
     username: await allocateUsername(String(fullName).trim(), email),
     contactNumber: contactNumber || null,
     profilePhoto: profilePhoto || null,
-    googleId,
+    [provider.field]: socialId,
     municipalityId,
     province: province || 'Oriental Mindoro',
     barangay: barangay || null,
@@ -1918,9 +1949,9 @@ const completeGoogleSignup = async (googleToken, data) => {
     isVerified: true,
   });
 
-  const user = await userRepository.findByGoogleId(googleId);
+  const user = await provider.find(socialId);
   if (!user) {
-    throw new ApiError('Unable to complete Google sign-in', 500);
+    throw new ApiError(`Unable to complete ${provider.name} sign-in`, 500);
   }
 
   // A full address is also the first delivery address (My Addresses, checkout).
@@ -1940,6 +1971,7 @@ module.exports = {
   loginWithGoogleProfile,
   login,
   loginWithGoogle,
+  loginWithFacebook,
   googleAppStartUrl,
   googleAppFinishUrl,
   googleAppTicketFromWeb,

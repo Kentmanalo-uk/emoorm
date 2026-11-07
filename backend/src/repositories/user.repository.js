@@ -128,6 +128,7 @@ const findById = async (id) => {
       // itself never leaves the server: getProfile turns it into the
       // hasGoogle flag the apps read.
       googleId: true,
+      facebookId: true,
       municipality: {
         select: {
           id: true,
@@ -733,36 +734,36 @@ const findKycRecordById = async (id) => {
   });
 };
 
+// An account found by its Google or Facebook link (Continue with ...).
+const SOCIAL_SELECT = {
+  id: true,
+  email: true,
+  fullName: true,
+  contactNumber: true,
+  profilePhoto: true,
+  avatarKey: true,
+  googleId: true,
+  facebookId: true,
+  municipalityId: true,
+  municipality: { select: { id: true, name: true, code: true } },
+  barangay: true,
+  address: true,
+  province: true,
+  role: true,
+  isActive: true,
+  isVerified: true,
+  mfaEnabled: true,
+  tokenVersion: true,
+  deletedAt: true,
+  createdAt: true,
+};
+
 module.exports = {
   updateSellerDetails,
   createUser,
   findByEmail,
-  findByGoogleId: async (googleId) => {
-    return prisma.user.findUnique({
-      where: { googleId },
-      select: {
-        id: true,
-        email: true,
-        fullName: true,
-        contactNumber: true,
-        profilePhoto: true,
-        avatarKey: true,
-        googleId: true,
-        municipalityId: true,
-        municipality: { select: { id: true, name: true, code: true } },
-        barangay: true,
-        address: true,
-        province: true,
-        role: true,
-        isActive: true,
-        isVerified: true,
-        mfaEnabled: true,
-        tokenVersion: true,
-        deletedAt: true,
-        createdAt: true,
-      },
-    });
-  },
+  findByGoogleId: (googleId) => prisma.user.findUnique({ where: { googleId }, select: SOCIAL_SELECT }),
+  findByFacebookId: (facebookId) => prisma.user.findUnique({ where: { facebookId }, select: SOCIAL_SELECT }),
   findById,
   updateUser,
   softDeleteUser,

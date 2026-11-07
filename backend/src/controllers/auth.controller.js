@@ -1,4 +1,5 @@
 const authService = require('../services/auth.service');
+const facebookService = require('../services/facebook.service');
 const sessionService = require('../services/session.service');
 const sessionCookie = require('../lib/sessionCookie');
 const userPurgeService = require('../services/userPurge.service');
@@ -545,6 +546,25 @@ const googleLogin = asyncHandler(async (req, res) => {
 });
 
 /**
+ * Continue with Facebook: the code Facebook sent back to /facebook-return.
+ * Answers like POST /auth/google (signed in, MFA, or complete-your-profile).
+ * @route POST /api/auth/facebook
+ * @access Public
+ */
+const facebookLogin = asyncHandler(async (req, res) => {
+  const { code, redirectUri } = req.body || {};
+  const result = await authService.loginWithFacebook({ code, redirectUri });
+  successResponse(res, result, 'Facebook sign-in successful');
+});
+
+/**
+ * Whether Continue with Facebook is on, and the app id to start it with.
+ * @route GET /api/auth/facebook/config
+ * @access Public
+ */
+const facebookConfig = (req, res) => successResponse(res, facebookService.publicConfig());
+
+/**
  * Complete a first-time Google sign-in with name/address/contact/password.
  * @route POST /api/auth/google/complete
  * @access Public
@@ -683,6 +703,8 @@ module.exports = {
   register,
   login,
   googleLogin,
+  facebookLogin,
+  facebookConfig,
   completeGoogleSignup,
   googleAppStart,
   googleAppCallback,

@@ -14,6 +14,8 @@ import useFocusTrap from '../hooks/useFocusTrap';
 import AuthSheetBar from '../components/AuthSheetBar';
 import AuthHero from '../components/auth/AuthHero';
 import PopArt from '../components/art/PopArt';
+import FacebookButton from '../components/auth/FacebookButton';
+import { facebookReturnUri, startFacebookLogin, useFacebookLogin } from '../lib/facebookLogin';
 import { TONES } from '../components/art/FlatArt';
 import Footer from '../components/layout/Footer';
 import './AuthSheet.css';
@@ -296,6 +298,10 @@ const Login = ({ seller = false }) => {
   };
 
   const [googleLoading, setGoogleLoading] = useState(false);
+  // Continue with Facebook: on when the server has a Meta app; Facebook's
+  // answer comes back here from /facebook-return (pages/FacebookReturn).
+  const facebook = useFacebookLogin();
+  const [facebookLoading, setFacebookLoading] = useState(() => Boolean(location.state?.facebookReturn?.code));
 
   // Google's answer, from the pop-up here or from the Android app's browser.
   const applyGoogleAnswer = (data) => {
@@ -363,6 +369,29 @@ const Login = ({ seller = false }) => {
     }
     startGoogleLogin();
   };
+
+  const handleFacebookLogin = () => {
+    setApiError('');
+    startFacebookLogin(facebook.appId, { seller, from: safeRedirect || location.state?.from?.pathname || null });
+  };
+
+  // Back from Facebook: finish the sign-in the way a Google one finishes.
+  useEffect(() => {
+    const answer = location.state?.facebookReturn;
+    if (!answer) return;
+    // Once: a reload must not send the same code again.
+    navigate(`${location.pathname}${location.search}`, { replace: true, state: {} });
+    if (answer.error) {
+      if (!answer.cancelled) setApiError(answer.error);
+      setFacebookLoading(false);
+      return;
+    }
+    axios.post('/auth/facebook', { code: answer.code, redirectUri: facebookReturnUri() })
+      .then((res) => applyGoogleAnswer(res.data))
+      .catch((err) => setApiError(err?.response?.data?.message || err?.message || 'Facebook sign-in failed.'))
+      .finally(() => setFacebookLoading(false));
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, []);
 
   const handleGoogleFormChange = (name, value) => {
     setGoogleForm((prev) => ({ ...prev, [name]: value }));
@@ -465,6 +494,10 @@ const Login = ({ seller = false }) => {
       {googleLoading ? 'Signing in…' : 'Sign in with Google'}
     </button>
   );
+
+  const facebookButton = facebook.enabled ? (
+    <FacebookButton className="login-form-google" onClick={handleFacebookLogin} busy={facebookLoading} />
+  ) : null;
 
   // Phones: the sheet's first step, the choice.
   const choosing = isPhone && !emailOpen;
@@ -578,6 +611,7 @@ const Login = ({ seller = false }) => {
                   <div className="auth-choose-body">
                     <div className="auth-choose-buttons">
                       {googleButton}
+                      {facebookButton}
                       <button type="button" className="login-form-google" onClick={() => setEmailOpen(true)}>
                         <EnvelopeSimple size={21} />
                         Continue with Email
@@ -690,6 +724,7 @@ const Login = ({ seller = false }) => {
 
                   {/* Google Sign In */}
                   {googleButton}
+                  {facebookButton}
 
                   {/* Computers only: approve the sign-in from the phone app */}
                   {!seller && (

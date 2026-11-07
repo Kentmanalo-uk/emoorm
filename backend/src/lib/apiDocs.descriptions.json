@@ -8,6 +8,8 @@
   "POST /api/auth/register": "Create an account (201 \"Registration successful\").",
   "POST /api/auth/login": "Email + password sign-in; tokens, or an MFA step-up.",
   "POST /api/auth/google": "\"Continue with Google\" from the website popup (auth code / ID token); signs in, or asks to complete sign-up for a new person.",
+  "POST /api/auth/facebook": "\"Continue with Facebook\": the code Facebook sent back to /facebook-return; signs in, or asks to complete sign-up for a new person (finished at /auth/google/complete).",
+  "GET /api/auth/facebook/config": "Whether Continue with Facebook is on, and the Meta app id to start it with.",
   "POST /api/auth/google/complete": "Finish a Google sign-up (details the new account still needs).",
   "GET /api/auth/google/app/start": "Android app: redirects the phone's browser to Google's consent.",
   "GET /api/auth/google/app/callback": "Google's redirect target for the app flow; hands a one-time ticket back to the app.",

@@ -51,6 +51,10 @@ router.post(
   authController.completeGoogleSignup
 );
 
+// Continue with Facebook (the site's /facebook-return page posts the code).
+router.get('/facebook/config', authController.facebookConfig);
+router.post('/facebook', authController.facebookLogin);
+
 // "Continue with Google" in the Android app (in the phone's browser; see
 // googleAppStartUrl in auth.service).
 router.get('/google/app/start', authController.googleAppStart);
