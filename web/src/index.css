@@ -5,6 +5,13 @@
 @import './styles/spacing.css';
 @import './styles/elevation.css';
 
+/* A screen's own status bar colour (components/StatusBarTint.jsx). Not
+   inherited, so only the element that sets it answers for it. */
+@property --status-bar {
+  syntax: '*';
+  inherits: false;
+}
+
 /* CSS Reset & Base */
 *,
 *::before,

@@ -99,6 +99,11 @@ function sampleTopColor() {
     if (el.getBoundingClientRect().width < window.innerWidth * 0.9) continue;
     const cs = getComputedStyle(el);
     if (cs.backgroundImage && cs.backgroundImage !== 'none' && /url\(/.test(cs.backgroundImage)) { base = rgbOf(OVER_MEDIA); break; }
+    // A screen that says what its status bar should be (--status-bar, not
+    // inherited: index.css @property), e.g. the sign-in band, whose many
+    // layers average to a grey nothing like its top edge.
+    const declared = cs.getPropertyValue('--status-bar').trim();
+    if (declared) { base = rgbOf(declared); break; }
     // A gradient header (the light pink-to-green wash, a shop's green): its
     // blended colour. (A see-through shade over a photo is not a header.)
     const washed = gradientColor(cs);
@@ -162,7 +167,13 @@ export default function StatusBarTint() {
     };
     window.addEventListener('scroll', onScroll, { passive: true });
     window.addEventListener('resize', schedule);
+    // A sheet that slides up (sign in, sign up) reaches the top when its
+    // animation ends: the bar takes its colour then, not at the next timer.
+    document.addEventListener('animationend', schedule, true);
+    document.addEventListener('transitionend', schedule, true);
     return () => {
+      document.removeEventListener('animationend', schedule, true);
+      document.removeEventListener('transitionend', schedule, true);
       clearTimeout(t1);
       clearTimeout(t2);
       clearTimeout(settleTimer);

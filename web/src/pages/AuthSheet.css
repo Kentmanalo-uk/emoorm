@@ -571,6 +571,9 @@
       radial-gradient(46% 28% at 88% 52%, rgba(251, 146, 60, 0.32), transparent 72%),
       radial-gradient(48% 28% at 14% 58%, rgba(16, 185, 129, 0.38), transparent 72%),
       linear-gradient(165deg, #ffb3d9 0%, #ffd0e6 28%, #ffe4cf 46%, #c6f4dd 72%, #9ee8c7 100%);
+    /* The status bar over it (StatusBarTint): the band's top edge, measured.
+       Averaging the whole band gave a muddy grey. */
+    --status-bar: #ffbede;
   }
 
   :is(.login-form-container, .register-form-container):has(.auth-choose) .auth-sheet-bar {
