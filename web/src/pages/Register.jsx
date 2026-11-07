@@ -1,6 +1,8 @@
 import { useState, useEffect } from 'react';
 import { Link, useLocation, useNavigate, useSearchParams } from 'react-router-dom';
-import { Eye, EyeSlash as EyeOff, Storefront } from '../lib/icons';
+import {
+  Eye, EyeSlash as EyeOff, Storefront, EnvelopeSimple,
+} from '../lib/icons';
 import { useGoogleLogin } from '@react-oauth/google';
 import withGoogle from '../lib/withGoogle';
 import toast from 'react-hot-toast';
@@ -13,6 +15,8 @@ import { usePhoneLayout } from '../hooks/useMobileNav';
 import useFocusTrap from '../hooks/useFocusTrap';
 import AuthSheetBar from '../components/AuthSheetBar';
 import AuthHero from '../components/auth/AuthHero';
+import PopArt from '../components/art/PopArt';
+import { TONES } from '../components/art/FlatArt';
 import Footer from '../components/layout/Footer';
 import { BusyLabel } from '../components/ui/Spinner';
 import useAppSettings from '../hooks/useAppSettings';
@@ -52,6 +56,9 @@ const Register = () => {
     street: '',
   });
   const [showPassword, setShowPassword] = useState(false);
+  // Phones: the sheet opens on a choice -- Google, or email -- and the form
+  // is one tap away.
+  const [emailOpen, setEmailOpen] = useState(false);
   const [showConfirmPassword, setShowConfirmPassword] = useState(false);
   const [errors, setErrors] = useState({});
   const [isLoading, setIsLoading] = useState(false);
@@ -306,6 +313,40 @@ const Register = () => {
     setApiError('');
   };
 
+  // Signing up to sell (on to the seller application): the shop's picture.
+  const forSelling = Boolean(safeRedirect?.startsWith('/seller'));
+  // Phones: the sheet's first step, the choice. Google sending a new email
+  // back opens the form to finish the account.
+  const choosing = isPhone && !emailOpen && !googleProfile;
+
+  const formHeader = (
+    <div className="register-form-header register-form-header-row">
+      <h2 className="register-form-title">Sign Up</h2>
+      {isPhone && (
+        <Link to={loginPath} replace state={{ ...location.state, fromSheet: true }} className="auth-switch-link">
+          Log in
+        </Link>
+      )}
+    </div>
+  );
+
+  const googleButton = (
+  <button
+    type="button"
+    className="register-form-google"
+    onClick={handleGoogleSignup}
+    disabled={isLoading || googleLoading}
+  >
+    <svg width="18" height="18" viewBox="0 0 18 18" fill="none">
+      <path d="M17.64 9.2c0-.637-.057-1.251-.164-1.84H9v3.481h4.844c-.209 1.125-.843 2.078-1.796 2.717v2.258h2.908c1.702-1.567 2.684-3.874 2.684-6.615z" fill="#4285F4" />
+      <path d="M9.003 18c2.43 0 4.467-.806 5.956-2.184l-2.908-2.258c-.806.54-1.837.86-3.048.86-2.344 0-4.328-1.584-5.036-3.711H.96v2.332C2.44 15.983 5.485 18 9.003 18z" fill="#34A853" />
+      <path d="M3.964 10.71c-.18-.54-.282-1.117-.282-1.71 0-.593.102-1.17.282-1.71V4.958H.957C.347 6.173 0 7.548 0 9c0 1.452.348 2.827.957 4.042l3.007-2.332z" fill="#FBBC05" />
+      <path d="M9.003 3.58c1.321 0 2.508.454 3.44 1.345l2.582-2.58C13.464.891 11.426 0 9.003 0 5.485 0 2.44 2.017.96 4.958L3.967 7.29c.708-2.127 2.692-3.71 5.036-3.71z" fill="#EA4335" />
+    </svg>
+    {googleLoading ? 'Signing up…' : 'Sign up with Google'}
+  </button>
+  );
+
   return (
     <div
       ref={sheetRef}
@@ -338,13 +379,39 @@ const Register = () => {
 
           {/* Right Side - Form */}
           <div className="register-form-container">
-            {isPhone && <AuthSheetBar switchTo={loginPath} switchLabel="Log in" />}
+            {isPhone && <AuthSheetBar />}
             <div className="register-form-card">
-              <div className="register-form-header">
-                <h2 className="register-form-title">Sign Up</h2>
-              </div>
+              {!choosing && formHeader}
+              {choosing && (
+                <div className="auth-choose">
+                  {formHeader}
+                  <div className="auth-choose-art" aria-hidden="true">
+                    <PopArt name={forSelling ? 'WelcomeSeller' : 'Welcome'} size={190} tone={TONES.emerald} />
+                  </div>
+                  <div className="auth-choose-buttons">
+                    {googleButton}
+                    <button type="button" className="register-form-google" onClick={() => setEmailOpen(true)}>
+                      <EnvelopeSimple size={19} />
+                      Continue with Email
+                    </button>
+                  </div>
+                  {apiError && <div className="register-form-error-message">{apiError}</div>}
+                  <div className="register-form-footer">
+                    <span className="register-form-footer-text">Already have an account? </span>
+                    <Link to={loginPath} replace state={{ ...location.state, fromSheet: true }} className="register-form-footer-link">
+                      Log in
+                    </Link>
+                  </div>
+                  <p className="register-form-terms">
+                    By continuing, you agree to Emoorm's{' '}
+                    <Link to="/terms" className="register-form-terms-link">Terms</Link>
+                    {' & '}
+                    <Link to="/privacy" className="register-form-terms-link">Privacy Policy</Link>
+                  </p>
+                </div>
+              )}
 
-              {googleProfile && (
+              {!choosing && googleProfile && (
                 <div className="login-mfa-hint" style={{ marginBottom: 16 }}>
                   Continuing with Google as <strong>{googleProfile.email}</strong>.{' '}
                   <button type="button" onClick={handleCancelGoogleProfile} className="register-form-google" style={{ display: 'inline', padding: 0, border: 'none', background: 'none', color: 'var(--t-info-600, #2563eb)', textDecoration: 'underline', width: 'auto' }}>
@@ -353,6 +420,7 @@ const Register = () => {
                 </div>
               )}
 
+              {!choosing && (
               <form onSubmit={handleSubmit} className="register-form">
                 {/* Full Name Field */}
                 <div className="register-form-group">
@@ -538,20 +606,7 @@ const Register = () => {
                     </div>
 
                     {/* Google Sign Up */}
-                    <button
-                      type="button"
-                      className="register-form-google"
-                      onClick={handleGoogleSignup}
-                      disabled={isLoading || googleLoading}
-                    >
-                      <svg width="18" height="18" viewBox="0 0 18 18" fill="none">
-                        <path d="M17.64 9.2c0-.637-.057-1.251-.164-1.84H9v3.481h4.844c-.209 1.125-.843 2.078-1.796 2.717v2.258h2.908c1.702-1.567 2.684-3.874 2.684-6.615z" fill="#4285F4" />
-                        <path d="M9.003 18c2.43 0 4.467-.806 5.956-2.184l-2.908-2.258c-.806.54-1.837.86-3.048.86-2.344 0-4.328-1.584-5.036-3.711H.96v2.332C2.44 15.983 5.485 18 9.003 18z" fill="#34A853" />
-                        <path d="M3.964 10.71c-.18-.54-.282-1.117-.282-1.71 0-.593.102-1.17.282-1.71V4.958H.957C.347 6.173 0 7.548 0 9c0 1.452.348 2.827.957 4.042l3.007-2.332z" fill="#FBBC05" />
-                        <path d="M9.003 3.58c1.321 0 2.508.454 3.44 1.345l2.582-2.58C13.464.891 11.426 0 9.003 0 5.485 0 2.44 2.017.96 4.958L3.967 7.29c.708-2.127 2.692-3.71 5.036-3.71z" fill="#EA4335" />
-                      </svg>
-                      {googleLoading ? 'Signing up…' : 'Sign up with Google'}
-                    </button>
+                    {googleButton}
                   </>
                 )}
 
@@ -571,6 +626,7 @@ const Register = () => {
                   <Link to="/privacy" className="register-form-terms-link">Privacy Policy</Link>
                 </p>
               </form>
+              )}
             </div>
 
             {/* Need Help */}

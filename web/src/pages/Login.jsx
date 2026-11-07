@@ -560,14 +560,14 @@ const Login = ({ seller = false }) => {
                 />
               )}
               {mfaStage === 'credentials' && choosing && (
-                <div className="login-choose">
+                <div className="auth-choose">
                   {formHeader}
-                  <div className="login-choose-art" aria-hidden="true">
+                  <div className="auth-choose-art" aria-hidden="true">
                     <PopArt name={seller ? 'WelcomeSeller' : 'Welcome'} size={190} tone={TONES.emerald} />
                   </div>
-                  <div className="login-choose-buttons">
+                  <div className="auth-choose-buttons">
                     {googleButton}
-                    <button type="button" className="login-form-google login-form-email" onClick={() => setEmailOpen(true)}>
+                    <button type="button" className="login-form-google" onClick={() => setEmailOpen(true)}>
                       <EnvelopeSimple size={19} />
                       Continue with Email
                     </button>

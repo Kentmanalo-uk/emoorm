@@ -437,3 +437,78 @@
     max-width: 100%;
   }
 }
+
+/* ── The sheet's first step, Log in and Sign up alike (.auth-choose) ──
+   The title and the other door on one line, a 3D illustration, then the
+   two ways in -- Google, or email (which opens the form). The other door
+   is a plain link on phones. */
+.auth-choose {
+  display: flex;
+  flex-direction: column;
+}
+
+.auth-choose-art {
+  display: flex;
+  justify-content: center;
+  margin: 6px 0 22px;
+}
+
+.auth-choose-art svg {
+  width: min(190px, 52vw);
+  height: auto;
+}
+
+.auth-choose-buttons {
+  display: grid;
+  gap: 12px;
+}
+
+/* The two ways in: a firm dark outline, so they read as buttons at a
+   glance rather than as fields. */
+.auth-choose :is(.login-form-google, .register-form-google) {
+  min-height: 48px;
+  border: 1.5px solid var(--t-neutral-800, #1f2937);
+  border-radius: 10px;
+  color: var(--t-neutral-900, #111827);
+  font-size: 15px;
+  font-weight: 600;
+}
+
+.auth-choose :is(.login-form-google, .register-form-google):active {
+  background-color: var(--t-neutral-100, #f3f4f6);
+}
+
+.auth-choose :is(.login-form-footer, .register-form-footer) {
+  margin-top: 24px;
+}
+
+.auth-choose :is(.login-form-terms, .register-form-terms) {
+  margin-top: 14px;
+}
+
+@media (max-width: 768px) {
+  :is(.login-page, .register-page).is-sheet :is(.login-switch-link, .auth-switch-link) {
+    min-height: 0;
+    padding: 0;
+    background: none;
+    font-size: 15px;
+  }
+
+  .login-page.is-sheet .login-switch-link svg {
+    display: none;
+  }
+}
+
+/* Sign up's title row, as Log in's: the title, and Log in at the other end. */
+.register-form-header-row {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 8px;
+}
+
+.auth-switch-link {
+  color: var(--t-primary-700, #047857);
+  font-weight: 600;
+  text-decoration: none;
+}
