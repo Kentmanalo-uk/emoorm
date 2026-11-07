@@ -1796,3 +1796,9 @@
     background: var(--t-neutral-0, #fff);
   }
 }
+
+/* Home's logo inside a <picture> (the white logo on the green phone
+   header, HeaderLogo): laid out as if it were the image alone. */
+.header-logo-pic {
+  display: contents;
+}

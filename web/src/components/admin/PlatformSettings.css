@@ -321,3 +321,72 @@
     grid-template-columns: repeat(2, minmax(0, 1fr));
   }
 }
+
+/* Header on phones: three choices side by side (stacked on a phone). */
+.ps-choices--3 {
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+  max-width: 560px;
+}
+
+@media (max-width: 560px) {
+  .ps-choices--3 {
+    grid-template-columns: minmax(0, 1fr);
+  }
+}
+
+/* Its preview: the top of a phone, the status bar and a page's header,
+   in the colours that choice gives them. */
+.ps-head-preview {
+  display: grid;
+  overflow: hidden;
+  border: 1px solid var(--t-neutral-200, #e5e7eb);
+  border-radius: 10px;
+  margin-right: 22px;
+  --hp-bg: linear-gradient(to right, #fde7f3, #fef1f7, #e8fcf3);
+  --hp-ink: #111827;
+  background: var(--hp-bg);
+  color: var(--hp-ink);
+}
+
+.ps-head-preview.is-white {
+  --hp-bg: #fff;
+}
+
+.ps-head-preview.is-green {
+  --hp-bg: var(--t-primary-600, #047857);
+  --hp-ink: #fff;
+}
+
+.ps-head-status {
+  display: flex;
+  justify-content: space-between;
+  padding: 5px 9px 2px;
+}
+
+.ps-head-status i {
+  width: 18px;
+  height: 4px;
+  border-radius: 2px;
+  background: currentColor;
+  opacity: 0.55;
+}
+
+.ps-head-bar {
+  display: flex;
+  align-items: center;
+  gap: 3px;
+  padding: 4px 9px 9px;
+}
+
+.ps-head-bar b {
+  flex: 1;
+  font-size: 13px;
+  font-weight: 600;
+}
+
+.ps-head-bar i {
+  width: 3.5px;
+  height: 3.5px;
+  border-radius: 50%;
+  background: currentColor;
+}

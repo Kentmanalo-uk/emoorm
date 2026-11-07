@@ -3,7 +3,7 @@ import { useLocation, useNavigate, useParams } from 'react-router-dom';
 import { Plus, PencilSimple as Pencil, Trash as Trash2, X, Check, UploadSimple as Upload, Image as ImageIcon, CircleNotch as Loader2, Basket, CookingPot, Cow } from '../lib/icons';
 import toast from 'react-hot-toast';
 import AdminLayout from '../components/admin/AdminLayout';
-import { CategoryStyleSettings, ShortcutArtSettings } from '../components/admin/PlatformSettings';
+import { CategoryStyleSettings, MobileHeaderSettings, ShortcutArtSettings } from '../components/admin/PlatformSettings';
 import AdminFormPage, { AdminFormLoading, AdminFormMissing } from '../components/admin/AdminFormPage';
 import Skeleton from '../components/ui/Skeleton';
 import LoadFailed from '../components/ui/LoadFailed';
@@ -257,6 +257,7 @@ export default function AdminCategories() {
       </div>
       <CategoryStyleSettings />
       <ShortcutArtSettings />
+      <MobileHeaderSettings />
     </AdminLayout>
   );
 }

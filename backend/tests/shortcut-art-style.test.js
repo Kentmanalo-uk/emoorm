@@ -8,7 +8,7 @@ const appSettingService = require('../src/services/appSetting.service');
 
 // Every test here changes a global setting, so it is put back afterwards.
 after(async () => {
-  await appSettingService.update({ shortcutArtStyle: 'GLASS', shortcutIconScale: 100 }).catch(() => {});
+  await appSettingService.update({ shortcutArtStyle: 'GLASS', shortcutIconScale: 100, mobileHeaderStyle: 'GLOW' }).catch(() => {});
   await h.cleanup();
 });
 
@@ -66,4 +66,26 @@ test('their size: standard unless chosen, and only from the sizes offered', asyn
     assert.equal((await put(bad)).status, 400, `${JSON.stringify(bad)} is refused`);
   }
   assert.equal((await appSettingService.get()).shortcutIconScale, 130, 'nothing bad got through');
+});
+
+test('the header on phones: the wash unless chosen, then white or green', async () => {
+  await appSettingService.update({ mobileHeaderStyle: 'GLOW' });
+  assert.equal((await h.api('GET', '/app-settings')).body?.data?.mobileHeaderStyle, 'GLOW');
+
+  const admin = await h.user('SUPER_ADMIN');
+  const put = (value, who = admin) => h.api('PUT', '/app-settings', { token: h.token(who), body: { mobileHeaderStyle: value } });
+
+  for (const [sent, stored] of [['green', 'GREEN'], ['WHITE', 'WHITE'], ['Glow', 'GLOW']]) {
+    const res = await put(sent);
+    assert.equal(res.status, 200);
+    assert.equal(res.body?.data?.mobileHeaderStyle, stored, `${sent} is stored as ${stored}`);
+  }
+
+  const seller = await h.user('SELLER');
+  assert.equal((await put('GREEN', seller)).status, 403, 'a seller cannot recolour the header for everyone');
+
+  for (const bad of ['BLUE', '', null, 1]) {
+    assert.equal((await put(bad)).status, 400, `${JSON.stringify(bad)} is refused`);
+  }
+  assert.equal((await appSettingService.get()).mobileHeaderStyle, 'GLOW', 'nothing bad got through');
 });

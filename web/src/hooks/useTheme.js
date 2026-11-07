@@ -8,6 +8,17 @@ import {
 } from '../lib/theme';
 import { DEFAULT_THEME } from '../lib/themePresets';
 
+const HEADER_STYLE_KEY = 'emoorm.headerStyle';
+
+/** The phone header's colour on <html>: data-header-style white or green;
+    none for the wash, the default. */
+const applyHeaderStyle = (style) => {
+  const value = String(style || '').toLowerCase();
+  const root = document.documentElement;
+  if (value === 'white' || value === 'green') root.dataset.headerStyle = value;
+  else delete root.dataset.headerStyle;
+};
+
 /**
  * The palette that is currently live, and the ability to change it.
  *
@@ -55,6 +66,17 @@ export default function useTheme() {
 export function ThemeRuntime() {
   const { settings, isLoading } = useAppSettings();
   const theme = settings?.theme ?? null;
+  const headerStyle = settings?.mobileHeaderStyle;
+
+  // The header's colour on phones (styles/phone-app.css), kept for the next
+  // load like the palette.
+  useEffect(() => {
+    if (isLoading) return;
+    applyHeaderStyle(headerStyle);
+    try {
+      localStorage.setItem(HEADER_STYLE_KEY, headerStyle || 'GLOW');
+    } catch { /* private window: the next load starts from the wash */ }
+  }, [headerStyle, isLoading]);
 
   useEffect(() => {
     // Nothing to apply yet: bootTheme already put this browser's last
@@ -97,6 +119,9 @@ export function ThemeRuntime() {
 export const bootTheme = () => {
   const cached = readCachedTheme();
   if (cached) applyTheme(cached);
+  try {
+    applyHeaderStyle(localStorage.getItem(HEADER_STYLE_KEY));
+  } catch { /* storage blocked: the wash until the settings arrive */ }
 };
 
 export { writeModePreference };

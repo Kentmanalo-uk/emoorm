@@ -18,6 +18,7 @@ import LanguageChoice from '../LanguageChoice';
 import LanguageTip from '../LanguageTip';
 import { useLanguageIntro, dismissLanguageTip } from '../../lib/languageIntro';
 import AppLogo from '../AppLogo';
+import useAppSettings from '../../hooks/useAppSettings';
 import ImageSearchModal from './ImageSearchModal';
 import InstallAppBar from './InstallAppBar';
 import { TopbarHelpCard } from './HeadCards';
@@ -86,6 +87,25 @@ const PLACEHOLDER_SUGGESTIONS = [
 // Lines as thin as the other tabs' on the larger drawing (21 / 24).
 const NAV_BIG = { '--icon-ink': 0.875, translate: '0 -1.5px' };
 const NAV_BIG_PERSON = { '--icon-ink': 0.875 };
+
+/**
+ * Home's logo. On a phone with the green header (App settings,
+ * mobileHeaderStyle) the default logo becomes the white one; a logo of the
+ * shop's own is kept, on a white tile (styles/phone-app.css).
+ */
+function HeaderLogo() {
+  const { settings } = useAppSettings();
+  const green = settings?.mobileHeaderStyle === 'GREEN';
+  const custom = Boolean(settings?.appLogo) && settings.appLogo !== '/brand-icon.png';
+  if (!green) return <AppLogo className="header-logo-icon" alt="" />;
+  if (custom) return <AppLogo className="header-logo-icon is-custom" alt="" />;
+  return (
+    <picture className="header-logo-pic">
+      <source media="(max-width: 768px)" srcSet="/brand-icon-white.svg" />
+      <AppLogo className="header-logo-icon" alt="" />
+    </picture>
+  );
+}
 
 const Header = () => {
   const navigate = useNavigate();
@@ -528,7 +548,7 @@ const Header = () => {
         <div className="header-container">
           <div className={isCartPage ? 'cart-header-context' : undefined}>
             <Link to="/" className="header-logo" aria-label="Emoorm home">
-              <AppLogo className="header-logo-icon" alt="" />
+              <HeaderLogo />
               <span className="header-logo-text">emoorm</span>
             </Link>
             {isCartPage && <><span className="cart-header-divider" /><span className="cart-header-title">Shopping Cart</span></>}

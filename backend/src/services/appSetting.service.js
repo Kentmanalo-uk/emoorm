@@ -19,6 +19,7 @@ const DEFAULT_SETTINGS = {
   categoryStyle: 'IMAGE',
   shortcutArtStyle: 'GLASS',
   shortcutIconScale: 100,
+  mobileHeaderStyle: 'GLOW',
   availableTodayEnabled: true,
   adminTeamMax: 5,
   orderConfirmHours: 48,
@@ -36,6 +37,9 @@ const SHORTCUT_ART_STYLES = ['GLASS', 'POP'];
 
 // Their size, as a percent of the standard one: a few steps, nothing between.
 const SHORTCUT_ICON_SCALES = [85, 100, 115, 130];
+
+// The header bars on phones: the pink-to-green wash, plain white, or green.
+const MOBILE_HEADER_STYLES = ['GLOW', 'WHITE', 'GREEN'];
 
 // A switch is a boolean. "yes", 1 and "" are rejected rather than guessed
 // at, because a mis-set checkout gate is not something to be lenient about.
@@ -242,6 +246,14 @@ const sanitize = (input = {}, current = null) => {
       throw new ApiError(`shortcutIconScale must be one of ${SHORTCUT_ICON_SCALES.join(', ')}`, 400);
     }
     data.shortcutIconScale = scale;
+  }
+
+  if (input.mobileHeaderStyle !== undefined) {
+    const style = String(input.mobileHeaderStyle || '').toUpperCase();
+    if (!MOBILE_HEADER_STYLES.includes(style)) {
+      throw new ApiError(`mobileHeaderStyle must be one of ${MOBILE_HEADER_STYLES.join(', ')}`, 400);
+    }
+    data.mobileHeaderStyle = style;
   }
 
   if (input.availableTodayEnabled !== undefined) {

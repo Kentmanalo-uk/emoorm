@@ -25,6 +25,8 @@ export const DEFAULT_APP_SETTINGS = {
   shortcutArtStyle: 'GLASS',
   // Their size, as a percent of the standard one: 85, 100, 115 or 130.
   shortcutIconScale: 100,
+  // The header bars on phones: 'GLOW' (pink to green), 'WHITE' or 'GREEN'.
+  mobileHeaderStyle: 'GLOW',
   // MoorMove rider delivery, switched on by the super admin.
   moormoveEnabled: false,
   // 3D / AR product views, switched on by the super admin.

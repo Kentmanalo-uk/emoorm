@@ -376,7 +376,7 @@ const SHORTCUT_SIZES = [
 
 const SHORTCUT_LOOKS = [
   { value: 'GLASS', look: 'glass', title: 'Glass', text: 'Coloured glass, light and clear' },
-  { value: 'POP', look: 'pop', title: '3D', text: 'Chunky, glossy and raised' },
+  { value: 'POP', look: 'pop', title: '3D', text: 'Glossy 3D objects' },
 ];
 
 export function ShortcutArtSettings() {
@@ -436,6 +436,51 @@ export function ShortcutArtSettings() {
               </span>
               <strong>{title}</strong>
               <span>{value}%</span>
+            </label>
+          ))}
+        </div>
+      </SettingRow>
+    </SettingsCard>
+  );
+}
+
+/* ── The header's colour on phones (and the status bar over it) ── */
+
+const HEADER_STYLES = [
+  { value: 'GLOW', title: 'Pink to green', text: 'The light wash, pink into green' },
+  { value: 'WHITE', title: 'White', text: 'Plain white, dark text' },
+  { value: 'GREEN', title: 'Green', text: 'Green, white text and logo' },
+];
+
+export function MobileHeaderSettings() {
+  const { settings } = useAppSettings();
+  const { save, saving } = useSaveSettings();
+  const current = HEADER_STYLES.some((s) => s.value === settings.mobileHeaderStyle) ? settings.mobileHeaderStyle : 'GLOW';
+  return (
+    <SettingsCard id="mobile-header" title="Header on phones">
+      <SettingRow
+        label="Header colour"
+        help="The colour of the bar at the top of each page on phones, and of the phone's status bar above it. Computers keep their own header."
+      >
+        <div className="ps-choices ps-choices--3" role="radiogroup" aria-label="Header colour on phones">
+          {HEADER_STYLES.map(({ value, title, text }) => (
+            <label key={value} className={`ps-choice${current === value ? ' is-on' : ''}`}>
+              <input
+                type="radio"
+                name="mobileHeaderStyle"
+                value={value}
+                checked={current === value}
+                disabled={saving}
+                onChange={() => save({ mobileHeaderStyle: value }, `The phone header is now ${title.toLowerCase()}`)}
+              />
+              <span className={`ps-head-preview is-${value.toLowerCase()}`} aria-hidden="true">
+                <span className="ps-head-status"><i /><i /></span>
+                <span className="ps-head-bar"><b>Cart</b><i /><i /><i /></span>
+              </span>
+              <span className="ps-choice-text">
+                <strong>{title}{value === 'GLOW' && <em className="ps-choice-default"> (default)</em>}</strong>
+                <span>{text}</span>
+              </span>
             </label>
           ))}
         </div>

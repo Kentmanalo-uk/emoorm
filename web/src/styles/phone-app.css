@@ -318,3 +318,117 @@
     display: none;
   }
 }
+
+/* ── The header's colour (App settings, mobileHeaderStyle) ─────────────
+   A super admin chooses how the bars that carry the header wash look on
+   phones: the wash (the default, nothing set here), plain white, or green.
+   ThemeRuntime puts the choice on <html> as data-header-style. The status
+   bar follows on its own: StatusBarTint samples the bar under it. */
+@media (max-width: 768px) {
+  :root[data-header-style='white'] {
+    --header-glow-band: var(--t-neutral-0, #fff);
+    --header-glow: var(--t-neutral-0, #fff);
+  }
+
+  :root[data-header-style='green'] {
+    --header-green: var(--t-primary-600, #047857);
+    --header-glow-band: var(--header-green);
+    --header-glow: var(--header-green);
+    /* The page's own ink, kept here so what opens inside a green bar (a
+       menu, a search field) can have it back. */
+    --hs-n400: var(--t-neutral-400, #9ca3af);
+    --hs-n500: var(--t-neutral-500, #636b78);
+    --hs-n600: var(--t-neutral-600, #4b5563);
+    --hs-n700: var(--t-neutral-700, #374151);
+    --hs-n800: var(--t-neutral-800, #1f2937);
+    --hs-n900: var(--t-neutral-900, #111827);
+    --hs-p700: var(--t-primary-700, #03684c);
+  }
+
+  /* On green, everything written on the bar is white: its title, its
+     icons, the shop's name and greeting. */
+  :root[data-header-style='green'] :is(
+    .header,
+    .layout-back-bar,
+    .scm-head,
+    .scm-backbar,
+    .cart-m-head,
+    .msgr-page-head,
+    .login-gate-head,
+    .sh-head,
+    .sme-head,
+    .profile-mobile-page-header,
+    .layout--flat .notif-page-header,
+    .layout--flat .notif-header
+  ) {
+    --t-neutral-400: rgba(255, 255, 255, 0.7);
+    --t-neutral-500: rgba(255, 255, 255, 0.82);
+    --t-neutral-600: rgba(255, 255, 255, 0.88);
+    --t-neutral-700: #fff;
+    --t-neutral-800: #fff;
+    --t-neutral-900: #fff;
+    --t-primary-700: #bbf7d0;
+    --pa-ink: #fff;
+    --pa-icon: #fff;
+    --pa-band: rgba(255, 255, 255, 0.16);
+    --pa-bar: var(--header-green);
+    /* The Seller Center's own names for its ink (SellerApp.css,
+       SellerMobile.css). */
+    --sa-ink: #fff;
+    --sa-text: #fff;
+    --sa-label: #fff;
+    --sa-muted: rgba(255, 255, 255, 0.82);
+    --sa-faint: rgba(255, 255, 255, 0.82);
+    --scm-ink: #fff;
+    --scm-muted: rgba(255, 255, 255, 0.82);
+    color: #fff;
+  }
+
+  /* What opens inside the bar, or is filled in on it, keeps the page's
+     ink: the ⋯ menu, other pop-ups, search fields. */
+  :root[data-header-style='green'] :is(
+    .header,
+    .layout-back-bar,
+    .scm-head,
+    .scm-backbar,
+    .cart-m-head,
+    .msgr-page-head,
+    .login-gate-head,
+    .sh-head,
+    .sme-head,
+    .profile-mobile-page-header,
+    .layout--flat .notif-page-header,
+    .layout--flat .notif-header
+  ) :is(.more-menu-pop, [role='menu'], [role='listbox'], [role='dialog'], form, input, textarea) {
+    --t-neutral-400: var(--hs-n400);
+    --t-neutral-500: var(--hs-n500);
+    --t-neutral-600: var(--hs-n600);
+    --t-neutral-700: var(--hs-n700);
+    --t-neutral-800: var(--hs-n800);
+    --t-neutral-900: var(--hs-n900);
+    --t-primary-700: var(--hs-p700);
+    --pa-ink: var(--hs-n900);
+    --pa-icon: var(--hs-n700);
+    --pa-band: var(--t-neutral-100, #f3f4f6);
+    --sa-ink: var(--hs-n900);
+    --sa-text: var(--hs-n800);
+    --sa-label: var(--hs-n700);
+    --sa-muted: var(--hs-n500);
+    --sa-faint: var(--hs-n500);
+    --scm-ink: var(--hs-n900);
+    --scm-muted: var(--hs-n500);
+    color: var(--hs-n900);
+  }
+
+  /* Home's logo on green: the white mark (Header.jsx swaps the default
+     logo for it); a logo of the shop's own sits on a white tile. */
+  :root[data-header-style='green'] .header .header-logo-icon.is-custom {
+    background: #fff;
+    border-radius: 10px;
+    padding: 3px;
+  }
+
+  :root[data-header-style='green'] .header .header-logo-text {
+    color: #fff;
+  }
+}
