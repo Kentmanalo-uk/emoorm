@@ -76,9 +76,12 @@ export default function AuthSheetBar({ switchTo, switchLabel }) {
       <button type="button" className="auth-sheet-close" data-sheet-close onClick={close} aria-label="Close">
         <X size={20} weight="bold" />
       </button>
-      <Link to={switchTo} replace state={{ ...location.state, fromSheet: true }} className="auth-sheet-switch">
-        {switchLabel}
-      </Link>
+      {/* Optional: the sheet's way to its other half (Log in / Sign up). */}
+      {switchTo && (
+        <Link to={switchTo} replace state={{ ...location.state, fromSheet: true }} className="auth-sheet-switch">
+          {switchLabel}
+        </Link>
+      )}
     </div>
   );
 }
