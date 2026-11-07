@@ -23,6 +23,11 @@ import ImageSearchModal from './ImageSearchModal';
 import InstallAppBar from './InstallAppBar';
 import { TopbarHelpCard } from './HeadCards';
 import './Header.css';
+// Phone-app feel, started once for the whole site (the header is in the
+// first bundle): a pressed look under the finger, and the unread count on
+// the app's icon (fed by the same counts as the badges below).
+import '../../lib/native/press';
+import '../../lib/native/badge';
 import UserAvatar from '../ui/UserAvatar';
 import NotificationPicture from '../NotificationPicture';
 import { isBottomNavTab } from '../../lib/navTabs';

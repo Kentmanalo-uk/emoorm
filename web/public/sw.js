@@ -169,14 +169,31 @@ self.addEventListener('fetch', (event) => {
 self.addEventListener('push', (event) => {
   let data;
   try { data = event.data ? event.data.json() : {}; } catch { data = { body: event.data?.text() }; }
-  event.waitUntil(self.registration.showNotification(data.title || 'Emoorm', {
-    body: data.body || '',
-    icon: '/icon-192x192.png',
-    badge: '/icon-96x96.png',
-    tag: data.tag,
-    data: { url: data.url || '/notifications' },
-  }));
+  event.waitUntil(Promise.all([
+    self.registration.showNotification(data.title || 'Emoorm', {
+      body: data.body || '',
+      icon: '/icon-192x192.png',
+      badge: '/icon-96x96.png',
+      tag: data.tag,
+      data: { url: data.url || '/notifications' },
+    }),
+    appBadge(data.badge),
+  ]));
 });
+
+// The number on the app's icon: what the server counted as unread when it
+// sent this (`badge`, a number). Pushes without one leave it as it is; the
+// app sets it again when opened (lib/native/badge.js). iPhone home-screen
+// apps and installed Chrome / Edge apps only; never fails the push.
+const appBadge = async (count) => {
+  try {
+    const nav = self.navigator;
+    if (typeof count !== 'number' || !Number.isFinite(count) || !nav || typeof nav.setAppBadge !== 'function') return;
+    if (count > 0) await nav.setAppBadge(Math.floor(count));
+    else if (typeof nav.clearAppBadge === 'function') await nav.clearAppBadge();
+    else await nav.setAppBadge(0);
+  } catch { /* no badge */ }
+};
 
 // Tapping it opens the notification in a tab already open, or a new one.
 self.addEventListener('notificationclick', (event) => {

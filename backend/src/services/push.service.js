@@ -28,6 +28,36 @@ const client = () => {
   return webpush;
 };
 
+/**
+ * The number for the app's icon (iPhone home-screen app, installed Chrome /
+ * Edge app): every unread notification plus every chat with something not
+ * read yet, as the site's own badges count them (web/src/lib/native/badge.js).
+ * Five small counts, asked only for someone with push turned on; null if any
+ * fails, and the push goes without it.
+ */
+const unreadBadge = async (userId) => {
+  try {
+    // Required here: the message service requires the notification service,
+    // which requires this one.
+    const messages = require('./message.service');
+    const [byAudience, chats, shop, support] = await Promise.all([
+      prisma.notification.groupBy({
+        by: ['audience'],
+        where: { userId, isRead: false, deletedAt: null },
+        _count: { _all: true },
+      }),
+      messages.countUnreadChats(userId),
+      messages.countUnreadShopChats(userId),
+      messages.countUnreadSupportCases(userId),
+    ]);
+    const notices = byAudience.reduce((sum, g) => sum + (g._count?._all || 0), 0);
+    const total = notices + chats + shop + support;
+    return Number.isFinite(total) ? total : null;
+  } catch {
+    return null;
+  }
+};
+
 const hashOf = (endpoint) => `web:${crypto.createHash('sha256').update(endpoint).digest('hex')}`;
 
 const config = () => ({ enabled: enabled(), publicKey: enabled() ? process.env.VAPID_PUBLIC_KEY : null });
@@ -104,11 +134,14 @@ const sendToUser = async (userId, notice) => {
   if (!push || !userId) return 0;
   const subs = await prisma.pushToken.findMany({ where: { userId, platform: 'web', endpoint: { not: null } } });
   if (!subs.length) return 0;
+  const badge = await unreadBadge(userId);
   const payload = JSON.stringify({
     title: notice.title || 'Emoorm',
     body: notice.message || '',
     url: notice.id ? `/notifications/${notice.id}` : '/notifications',
     tag: notice.id || undefined,
+    // The unread count for the app's icon (public/sw.js).
+    badge: badge ?? undefined,
   });
   let sent = 0;
   const sendOne = async (s) => {
@@ -139,4 +172,4 @@ const sendToUser = async (userId, notice) => {
   return sent;
 };
 
-module.exports = { config, subscribe, unsubscribe, sendToUser, enabled };
+module.exports = { config, subscribe, unsubscribe, sendToUser, enabled, unreadBadge };

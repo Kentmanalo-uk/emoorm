@@ -1,0 +1,84 @@
+/*
+ * Phone-app touch feel (lib/native/press.js marks what is pressed).
+ *
+ *   shrink  buttons, icon buttons     a little smaller
+ *   row     wide list rows            tinted, as a table cell
+ *   card    products, shops           a little dimmer
+ *   dim     text links, small icons   dimmer
+ *
+ * Only things with no :active look of their own are marked, and the marks
+ * appear only on touch. The look goes on after a moment (so a touch that
+ * becomes a scroll shows nothing) and fades off when the finger lifts.
+ */
+
+@media (hover: none) and (pointer: coarse) {
+  /* The grey box iPhone Safari draws over a tapped link: a phone app has
+     none, and the pressed looks replace it. */
+  :where(a[href], button, [role="button"], [role="link"], [role="tab"], summary,
+    input[type="button"], input[type="submit"], input[type="reset"]) {
+    -webkit-tap-highlight-color: transparent;
+  }
+}
+
+/* Zero specificity: a transition of the element's own wins over this one. */
+:where([data-press]) {
+  transition: opacity 0.2s ease, scale 0.2s ease, box-shadow 0.2s ease;
+}
+
+:where([data-press]:active) {
+  transition-duration: 0.08s;
+  transition-delay: 0.04s;
+}
+
+[data-press="shrink"]:active {
+  scale: 0.97;
+}
+
+[data-press="row"]:active {
+  /* Over the row's own background, under its content. */
+  box-shadow: inset 0 0 0 100vmax rgba(15, 23, 42, 0.05);
+}
+
+[data-press="card"]:active {
+  opacity: 0.8;
+}
+
+[data-press="dim"]:active {
+  opacity: 0.6;
+}
+
+@media (prefers-reduced-motion: reduce) {
+  [data-press="shrink"]:active {
+    scale: none;
+    opacity: 0.7;
+  }
+}
+
+/*
+ * No zoom when typing: iPhone Safari zooms the page in on a field whose text
+ * is under 16px, and stays zoomed. Only iOS (the only browsers with
+ * -webkit-touch-callout) and only on phone widths, so Android and computers
+ * keep the fields as drawn. Most phone fields are already 16px; this catches
+ * the rest (dialogs, sheets, seller and admin forms).
+ *
+ * The fields drawn larger on purpose (prices, steppers, codes) are left out:
+ * !important would otherwise bring them down to 16px. A new one of those
+ * goes in this list.
+ */
+@supports (-webkit-touch-callout: none) {
+  @media (max-width: 768px) {
+    :is(
+      input:not([type="checkbox"], [type="radio"], [type="range"], [type="color"], [type="file"], [type="button"], [type="submit"], [type="reset"], [type="image"], [type="hidden"]),
+      select,
+      textarea
+    ):not(
+      .auth-phone-code, .login-mfa-input, .at-code input, .at-code .admin-input,
+      .pde-name, .pf-input--lg, .pf-money input, .pf-stepper-field input,
+      .pkf-count input, .pm-stepper input, .of-money input,
+      .sp-price-input--big input, .sp-stock-stepper input, .stw-stepper input,
+      .tpp-inline input, .tpp-stepper input, .tpp-time
+    ) {
+      font-size: 16px !important;
+    }
+  }
+}

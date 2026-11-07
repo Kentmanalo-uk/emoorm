@@ -35,6 +35,12 @@ test('a browser subscribes, gets each notification, and is forgotten once it uns
     assert.equal(sent.length, 1);
     assert.equal(sent[0].sub.endpoint, endpoint);
     assert.equal(sent[0].payload.url, `/notifications/${n.id}`);
+    // The app icon's number: everything unread, this one included.
+    assert.equal(sent[0].payload.badge, 1);
+    await notices.createNotification({ userId: buyer.id, type: 'ORDER_READY', title: 'Ready', message: 'Your order is ready.' });
+    await new Promise((r) => setTimeout(r, 200));
+    assert.equal(sent.length, 2);
+    assert.equal(sent[1].payload.badge, 2);
 
     // The browser unsubscribed on its side: the push service answers 410.
     webpush.sendNotification = async () => { const e = new Error('Gone'); e.statusCode = 410; throw e; };
