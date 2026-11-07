@@ -1,16 +1,20 @@
 import { useEffect, useState } from 'react';
 import { Pressable, StyleSheet, Text, View } from 'react-native';
 import { router, useLocalSearchParams } from 'expo-router';
-import { ShoppingBagIcon, StorefrontIcon } from '../../src/lib/icons';
+import { DeviceMobileIcon, EnvelopeSimpleIcon } from '../../src/lib/icons';
 import apiClient from '../../src/api/client';
 import useAuthStore from '../../src/store/authStore';
 import { fetchMunicipalities } from '../../src/lib/referenceData';
 import AuthSheet, { HelpLink } from '../../src/components/auth/AuthSheet';
 import {
-  AuthDivider, AuthErrorBox, AuthField, AuthSubmit, GoogleButton,
+  AuthDivider, AuthErrorBox, AuthField, AuthSubmit, AuthWayButton, GoogleButton,
 } from '../../src/components/auth/AuthForm';
 import { AuthTitle, GoogleCompleteProfile, MfaSetup, MfaVerify } from '../../src/components/auth/AuthPanels';
+import AuthChoose, { AuthChooseLink } from '../../src/components/auth/AuthChoose';
+import PhoneSignIn from '../../src/components/auth/PhoneSignIn';
+import usePhoneLogin from '../../src/components/auth/phoneLogin';
 import useAuthGoogle from '../../src/components/auth/useAuthGoogle';
+import useAppSettings from '../../src/lib/appSettings';
 import { useSignupInvite } from '../../src/lib/invite';
 import RoleSwitchOverlay from '../../src/components/RoleSwitchOverlay';
 import useSideStore from '../../src/store/sideStore';
@@ -19,7 +23,8 @@ import { font, t, themed } from '../../src/theme';
 const PASSWORD_RULE = /(?=.*[a-z])(?=.*[A-Z])(?=.*\d)(?=.*[!@#$%^&*(),.?":{}|<>])/;
 
 const emptyGoogleForm = {
-  fullName: '', contactNumber: '', password: '', confirmPassword: '',
+  // email: only asked when signing up with a mobile number (no email from Google).
+  fullName: '', email: '', contactNumber: '', password: '', confirmPassword: '',
   province: 'Oriental Mindoro', provinceCode: '', municipalityId: '',
   municipalityName: '', municipalityCode: '', barangay: '', barangayCode: '', street: '',
 };
@@ -29,6 +34,16 @@ const emptyGoogleForm = {
  * website's phone sheet (web/src/pages/Login.jsx + AuthSheet.css). Log in
  * opens the buyer side, a seller's account too; Seller Login opens the
  * Seller Center, and an account without a shop goes on to apply for one.
+ *
+ * The sheet opens on a choice (auth/AuthChoose): Google, a mobile number,
+ * or email, which opens the form. A link that gives the email (?email=)
+ * opens the form at once; Sign up's mobile-number button opens that step
+ * (?openPhone=1).
+ *
+ * No "Continue with Facebook" here, though the website has one: the app
+ * claims every emoorm.shop link as an Android App Link, so Facebook's
+ * return to emoorm.shop/facebook-return would open the app instead of the
+ * browser tab that started it, and the Meta app is not published yet.
  */
 export default function Login({ seller = false }) {
   const params = useLocalSearchParams();
@@ -46,6 +61,15 @@ export default function Login({ seller = false }) {
   // Switch account sends an account whose session ended here with its email.
   const [formData, setFormData] = useState({ email: typeof params.email === 'string' ? params.email : '', password: '' });
   const [showPassword, setShowPassword] = useState(false);
+  // The first step is the choice; the email form is one tap away.
+  const [emailOpen, setEmailOpen] = useState(() => typeof params.email === 'string' && Boolean(params.email));
+  // Continue with mobile number: on while the server can send texts and the
+  // super admin has it on. Sign up sends people here with it open.
+  const phoneEnabled = usePhoneLogin();
+  const [phoneOpen, setPhoneOpen] = useState(() => params.openPhone === '1');
+  // Continue with Google, unless the super admin switched it off.
+  const appSettings = useAppSettings();
+  const googleOn = appSettings.loginGoogle !== false;
   const [errors, setErrors] = useState({});
   const [isLoading, setIsLoading] = useState(false);
   const [apiError, setApiError] = useState('');
@@ -270,6 +294,9 @@ export default function Login({ seller = false }) {
   const validateGoogleForm = () => {
     const errs = {};
     if (!googleForm.fullName.trim()) errs.fullName = 'Full name is required';
+    if (!googleProfile?.email && !/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(googleForm.email.trim())) {
+      errs.email = 'Enter your email address';
+    }
     if (googleForm.contactNumber && !/^(\+63|0)?[0-9]{10}$/.test(googleForm.contactNumber.replace(/[-\s]/g, ''))) {
       errs.contactNumber = 'Contact number must be 10 digits';
     }
@@ -294,6 +321,7 @@ export default function Login({ seller = false }) {
       const res = await apiClient.post('/auth/google/complete', {
         googleToken: googleProfile.googleToken,
         fullName: googleForm.fullName.trim(),
+        email: googleProfile?.email ? undefined : googleForm.email.trim(),
         contactNumber: googleForm.contactNumber.trim() || undefined,
         province: googleForm.province || undefined,
         municipalityId: googleForm.municipalityId,
@@ -310,8 +338,8 @@ export default function Login({ seller = false }) {
       }
       await invite.done();
       await finishLogin(data.user, data.accessToken, data.refreshToken);
-    } catch {
-      setApiError('Failed to complete sign-up.');
+    } catch (err) {
+      setApiError(err?.message || 'Failed to complete sign-up.');
     } finally {
       setCompletingGoogle(false);
     }
@@ -325,11 +353,49 @@ export default function Login({ seller = false }) {
     setApiError('');
   };
 
-  const SwitchIcon = seller ? ShoppingBagIcon : StorefrontIcon;
+  // The first step, the choice (the website's `choosing` on phones).
+  const choosing = !emailOpen && !phoneOpen;
+  const otherDoor = seller ? '/login' : '/seller-login';
+  const otherDoorLabel = seller ? 'Buyer Login' : 'Seller Login';
+
+  const googleButton = (edge) => (googleOn ? (
+    <GoogleButton
+      edge={edge}
+      label={google.loading ? 'Signing in…' : 'Sign in with Google'}
+      onPress={handleGoogleLogin}
+      disabled={google.loading}
+    />
+  ) : null);
+
+  const phoneButton = (edge) => (phoneEnabled ? (
+    <AuthWayButton
+      edge={edge}
+      icon={<DeviceMobileIcon size={21} color={t.neutral[900]} />}
+      label="Continue with mobile number"
+      onPress={() => { setApiError(''); setPhoneOpen(true); }}
+    />
+  ) : null);
+
+  // The title row of the email and number steps, the other door at its end.
+  const formHeader = (
+    <View style={styles.headerRow}>
+      <AuthTitle>{seller ? 'Seller Login' : 'Sign In'}</AuthTitle>
+      <Pressable accessibilityRole="link" hitSlop={8} onPress={() => router.replace(otherDoor)}>
+        <Text style={styles.switchLinkText}>{otherDoorLabel}</Text>
+      </Pressable>
+    </View>
+  );
+
+  const onChoose = mfaStage === 'credentials' && choosing;
 
   return (
-    <AuthSheet switchTo={signUpPath} switchLabel="Sign up">
-      <View style={styles.card}>
+    <AuthSheet
+      band={onChoose}
+      // While choosing, the other door sits in the bar (the title row is the form's).
+      switchTo={choosing ? otherDoor : undefined}
+      switchLabel={choosing ? otherDoorLabel : undefined}
+    >
+      <View style={onChoose ? styles.cardChoose : styles.card}>
         {mfaStage === 'verify' && (
           <MfaVerify
             email={mfaEmail}
@@ -374,20 +440,43 @@ export default function Login({ seller = false }) {
             apiError={apiError}
           />
         )}
-        {mfaStage === 'credentials' && (
+        {onChoose && (
+          <AuthChoose
+            title={seller ? 'Sell to all of Mindoro' : 'Fresh finds from Mindoro'}
+            sub={seller ? 'Log in to your Seller Center' : 'Sign in to shop, chat and track orders'}
+            scene={seller ? 'seller' : 'signIn'}
+            error={apiError}
+            more={(
+              <>
+                {seller ? 'New to selling? ' : 'New to Emoorm? '}
+                <AuthChooseLink onPress={() => router.replace(signUpPath)}>
+                  {seller ? 'Open a shop' : 'Create an account'}
+                </AuthChooseLink>
+              </>
+            )}
+            onHelp={() => router.push('/help-center')}
+            onTerms={() => router.push('/terms')}
+            onPrivacy={() => router.push('/privacy')}
+          >
+            {googleButton(true)}
+            {phoneButton(true)}
+            <AuthWayButton
+              edge
+              icon={<EnvelopeSimpleIcon size={21} color={t.neutral[900]} />}
+              label="Continue with Email"
+              onPress={() => setEmailOpen(true)}
+            />
+          </AuthChoose>
+        )}
+        {mfaStage === 'credentials' && phoneOpen && (
           <>
-            <View style={styles.headerRow}>
-              <AuthTitle>{seller ? 'Seller Login' : 'Sign In'}</AuthTitle>
-              {/* The other door: sellers to the Seller Center, and back */}
-              <Pressable
-                accessibilityRole="link"
-                onPress={() => router.replace(seller ? '/login' : '/seller-login')}
-                style={({ pressed }) => [styles.switchLink, pressed && styles.switchLinkPressed]}
-              >
-                <SwitchIcon size={17} weight="fill" color={t.success[700]} />
-                <Text style={styles.switchLinkText}>{seller ? 'Buyer Login' : 'Seller Login'}</Text>
-              </Pressable>
-            </View>
+            {formHeader}
+            <PhoneSignIn onAnswer={applyGoogleAnswer} onBack={() => setPhoneOpen(false)} />
+          </>
+        )}
+        {mfaStage === 'credentials' && !choosing && !phoneOpen && (
+          <>
+            {formHeader}
 
             <View style={styles.form}>
               <AuthField
@@ -432,14 +521,11 @@ export default function Login({ seller = false }) {
 
               {apiError ? <AuthErrorBox>{apiError}</AuthErrorBox> : null}
 
-              <AuthDivider style={styles.divider} />
+              {/* The "or" only when another way in follows. */}
+              {googleOn || phoneEnabled ? <AuthDivider style={styles.divider} /> : null}
 
-              <GoogleButton
-                label={google.loading ? 'Signing in…' : 'Sign in with Google'}
-                onPress={handleGoogleLogin}
-                disabled={google.loading}
-                style={styles.google}
-              />
+              {googleButton(false)}
+              {phoneButton(false)}
 
               <Text style={styles.footer}>
                 <Text style={styles.footerText}>{seller ? 'New to selling? ' : 'New to Emoorm? '}</Text>
@@ -459,7 +545,8 @@ export default function Login({ seller = false }) {
         )}
       </View>
 
-      <HelpLink />
+      {/* Help is in the first step's body ("Trouble signing in?"). */}
+      {onChoose ? null : <HelpLink />}
       {seller ? <RoleSwitchOverlay visible={switching} target="seller" /> : null}
     </AuthSheet>
   );
@@ -467,6 +554,8 @@ export default function Login({ seller = false }) {
 
 const styles = themed(() => StyleSheet.create({
   card: { paddingTop: 20 },
+  // The first step runs to the foot of the screen.
+  cardChoose: { flexGrow: 1 },
   headerRow: {
     flexDirection: 'row',
     alignItems: 'center',
@@ -475,23 +564,13 @@ const styles = themed(() => StyleSheet.create({
     gap: 8,
     marginBottom: 20,
   },
-  switchLink: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    gap: 6,
-    height: 36,
-    paddingHorizontal: 12,
-    borderRadius: 999,
-    backgroundColor: t.secondary[50],
-  },
-  switchLinkPressed: { backgroundColor: t.secondary[100] },
-  switchLinkText: { fontSize: 13.5, lineHeight: 21.6, color: t.success[700], ...font(500) },
+  // .login-switch-link in the sheet: plain words, no pill and no icon.
+  switchLinkText: { fontSize: 15, lineHeight: 24, color: t.success[700], ...font(500) },
   form: { gap: 16 },
   forgot: { minHeight: 32, justifyContent: 'center' },
   forgotText: { fontSize: 13, lineHeight: 20.8, color: t.primary[600], ...font(500) },
   submit: { marginTop: 8 },
   divider: { marginVertical: 4 },
-  google: { marginTop: 0 },
   footer: { marginTop: 8, textAlign: 'center', fontSize: 14, lineHeight: 21, color: t.neutral[500], ...font(400) },
   footerText: { color: t.neutral[500], ...font(400) },
   footerLink: { color: t.primary[600], ...font(500) },

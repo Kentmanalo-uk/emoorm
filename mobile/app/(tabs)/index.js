@@ -86,7 +86,7 @@ const ProductGrid = memo(function ProductGrid({ products, tileWidth }) {
 });
 
 // How many "Suggested for You" shows. A saved page may hold more, from before.
-const SUGGESTED = 4;
+const SUGGESTED = 6;
 
 const mapBanner = (b) => ({
   id: b.id,
@@ -169,6 +169,8 @@ export default function Home() {
   const [exploreFailed, setExploreFailed] = useState(false);
   // One request at a time: scroll events come many per second.
   const exploreBusy = useRef(false);
+  // What Explore's first batch was asked with; its later batches ask the same.
+  const exploreSignals = useRef(undefined);
   const exploreSaved = useRef(cache.explorePage || 1);
 
   // Banners: the carousel and the popup. The two sidebar placements are for
@@ -247,6 +249,7 @@ export default function Home() {
     return Promise.all([first, load(
       fetchForYou(user?.id, { page: 1, pageSize: EXPLORE_BATCH, skip: SUGGESTED }),
       (res) => {
+        exploreSignals.current = res.signals;
         const fresh = res.data || [];
         if (exploreSaved.current > 1) {
           // More was loaded last time: the first batch is refreshed in
@@ -303,7 +306,9 @@ export default function Home() {
     setExploreFailed(false);
     try {
       const nextPage = explorePage + 1;
-      const res = await fetchForYou(user?.id, { page: nextPage, pageSize: EXPLORE_BATCH, skip: SUGGESTED });
+      const res = await fetchForYou(user?.id, {
+        page: nextPage, pageSize: EXPLORE_BATCH, skip: SUGGESTED, signals: exploreSignals.current,
+      });
       const seen = new Set(explore.map((p) => p.id));
       const next = [...explore, ...(res.data || []).filter((p) => !seen.has(p.id))];
       const hasNext = Boolean(res.pagination?.hasNext);

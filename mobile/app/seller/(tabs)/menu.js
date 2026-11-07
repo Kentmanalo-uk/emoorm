@@ -19,6 +19,7 @@ import ShopQrPop from '../../../src/components/seller/me/ShopQrPop';
 import { qrMethod } from '../../../src/components/seller/me/qrPayment';
 import { font, t, themed } from '../../../src/theme';
 import { ShopLogoArt } from '../../../src/components/shop/ShopArt';
+import { GradientIcon } from '../../../src/components/inbox/InboxGradient';
 
 /*
  * /seller/menu, "Me" (web/src/pages/SellerMenu.jsx + SellerApp.css .sme-*),
@@ -45,12 +46,14 @@ const HEALTH = {
   NEEDS_ATTENTION: { label: 'Needs attention', tone: 'bad' },
 };
 
-// The health row's icon tile and level colour, per tone (.sh-notice is-*, .sme-health is-*).
+// The health row's icon gradient and level colour, per tone (.sh-notice is-*,
+// .sme-health is-*). The icon stands on its own, no tile behind it, filled
+// light-to-deep in the tone (web styles/iconTiles.css).
 const TONES = themed(() => ({
-  good: { bg: t.primary[50], icon: t.primary[600], level: t.primary[700] },
-  ok: { bg: t.warning[50], icon: t.warning[600], level: t.warning[700] },
-  bad: { bg: t.danger[50], icon: t.danger[600], level: t.danger[700] },
-  none: { bg: t.neutral[100], icon: t.neutral[500], level: t.neutral[900] },
+  good: { gradient: ['#34D399', '#047857'], level: t.primary[700] },
+  ok: { gradient: ['#FCD34D', '#D97706'], level: t.warning[700] },
+  bad: { gradient: ['#FCA5A5', '#DC2626'], level: t.danger[700] },
+  none: { gradient: ['#CBD5E1', '#64748B'], level: t.neutral[900] },
 }));
 
 const HEALTH_KEY = 'seller:health';
@@ -186,8 +189,8 @@ export default function SellerMeScreen() {
             onPress={go(health?.readyToSell === false ? '/seller' : '/seller/analytics')}
             style={({ pressed }) => [meStyles.card, styles.health, pressed && meStyles.pressed]}
           >
-            <View style={[styles.healthIcon, { backgroundColor: tone.bg }]}>
-              <HeartbeatIcon size={29} weight="fill" color={tone.icon} />
+            <View style={styles.healthIcon}>
+              <GradientIcon Icon={HeartbeatIcon} size={29} colors={tone.gradient} />
             </View>
             <View style={styles.healthText}>
               <Text style={styles.healthTitle}>
@@ -323,7 +326,7 @@ const styles = themed(() => StyleSheet.create({
 
   // .sh-notice.sme-health
   health: { flexDirection: 'row', alignItems: 'center', gap: 12, paddingVertical: 12, paddingHorizontal: 14 },
-  healthIcon: { width: 40, height: 40, borderRadius: 12, alignItems: 'center', justifyContent: 'center' },
+  healthIcon: { width: 40, height: 40, alignItems: 'center', justifyContent: 'center' },
   healthText: { flex: 1, minWidth: 0, gap: 1 },
   healthTitle: { fontSize: 14.5, lineHeight: 23.2, ...font(400), color: t.neutral[900] },
   healthLevel: { ...font(500) },

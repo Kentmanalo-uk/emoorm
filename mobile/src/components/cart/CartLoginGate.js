@@ -5,7 +5,7 @@ import { HeartIcon, StorefrontIcon } from '../../lib/icons';
 import { border, font, t, themed } from '../../theme';
 import EmptyState from '../EmptyState';
 import ShellPageMenu from '../ShellPageMenu';
-import HeaderGlow from '../HeaderGlow';
+import HeaderGlow, { useHeaderInk } from '../HeaderGlow';
 import { floatingTabBar } from '../Glass';
 
 /*
@@ -18,6 +18,8 @@ import { floatingTabBar } from '../Glass';
 export default function CartLoginGate() {
   const router = useRouter();
   const insets = useSafeAreaInsets();
+  // White on the green header (App settings, mobileHeaderStyle).
+  const ink = useHeaderInk();
   // `redirect` brings them back to the cart once they are signed in.
   const toLogin = () => router.push({ pathname: '/login', params: { redirect: '/cart' } });
   const menu = [
@@ -32,8 +34,8 @@ export default function CartLoginGate() {
       <HeaderGlow height={insets.top + 12 + 48} />
       <View style={{ height: insets.top + 12 }} />
       <View style={styles.head}>
-        <Text style={styles.heading} numberOfLines={1} accessibilityRole="header">Cart</Text>
-        <ShellPageMenu label="Cart options" items={menu} />
+        <Text style={[styles.heading, ink && { color: ink.strong }]} numberOfLines={1} accessibilityRole="header">Cart</Text>
+        <ShellPageMenu label="Cart options" items={menu} barInk={ink} />
       </View>
     <ScrollView showsVerticalScrollIndicator={false} showsHorizontalScrollIndicator={false}
       style={styles.screen}

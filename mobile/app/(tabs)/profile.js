@@ -1,54 +1,87 @@
-import { useCallback, useEffect, useState } from 'react';
-import { Image, Pressable, ScrollView, StyleSheet, Text, View } from 'react-native';
+import { useCallback, useEffect, useRef, useState } from 'react';
+import {
+  AccessibilityInfo, Animated, Easing, Image, Pressable, ScrollView, StyleSheet, Text, View,
+} from 'react-native';
 import { useFocusEffect, useRouter } from 'expo-router';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import Svg, { Defs, LinearGradient, Rect, Stop } from 'react-native-svg';
 import {
-  ArrowCounterClockwiseIcon, BellIcon, CaretRightIcon, ChatTextIcon, EnvelopeSimpleIcon, EyeIcon, GearIcon, GiftIcon, InfoIcon, ScanIcon,
-  HandshakeIcon, HeartIcon, LifebuoyIcon, FlagIcon, MapPinIcon, PackageIcon, QuestionIcon, ShoppingBagIcon,
-  StarIcon, StorefrontIcon, UsersThreeIcon,
+  CaretRightIcon, EnvelopeSimpleIcon, EyeIcon, GearIcon, HeadsetIcon, InfoIcon, LifebuoyIcon, PackageIcon,
+  QuestionIcon, ScanIcon, ShoppingBagIcon, StorefrontIcon, TruckIcon, UsersThreeIcon,
 } from '../../src/lib/icons';
+import {
+  FlagArt, GiftArt, HeartArt, ParcelArt, PinArt, ReturnArt, ShopArt, StarArt, TagArt,
+} from '../../src/components/art/FlatArt';
 import apiClient from '../../src/api/client';
 import { resolveImg } from '../../src/lib/media';
 import Avatar from '../../src/components/avatars/Avatar';
 import { toast } from '../../src/lib/toast';
 import { getCacheEntry, refreshCachedData } from '../../src/lib/dataCache';
 import useAuthStore from '../../src/store/authStore';
-import useWishlistStore from '../../src/store/wishlistStore';
 import ShellBarButton from '../../src/components/ShellBarButton';
 import { GoogleMark } from '../../src/components/auth/AuthForm';
-import { useTabBarScroll } from '../../src/components/Glass';
+import { floatingTabBar, tabBarTop, useTabBarScroll } from '../../src/components/Glass';
 import ShellPageMenu from '../../src/components/ShellPageMenu';
-import LoadingSkeleton from '../../src/components/LoadingSkeleton';
-import { startAccountSwitch, useAccountSwitchStore } from '../../src/components/RoleSwitchOverlay';
-import { GradientUserIcon, GreenToolIcon, useSvgId } from '../../src/components/profile/ProfileIcons';
+import { startAccountSwitch } from '../../src/components/RoleSwitchOverlay';
+import { GradientUserIcon, useSvgId } from '../../src/components/profile/ProfileIcons';
 import { PfRow, PfSection, PfTitle } from '../../src/components/profile/ProfileUI';
+import { ProfileLinks, ProfileTools } from '../../src/components/profile/ProfileTools';
 import RecentlyViewed from '../../src/components/profile/RecentlyViewed';
 import { countBuyerTabs, errorText } from '../../src/components/profile/profileLib';
 import { syncWishlist } from '../../src/components/profile/wishlistSync';
 import MoreProducts from '../../src/components/home/MoreProducts';
 import { font, t, themed } from '../../src/theme';
-import HeaderGlow from '../../src/components/HeaderGlow';
+import HeaderGlow, { useHeaderInk } from '../../src/components/HeaderGlow';
 import { openSwitchAccount } from '../../src/components/SwitchAccountSheet';
 import { loadSavedAccounts, useSavedAccounts } from '../../src/store/savedAccounts';
 import { PageLoader } from '../../src/components/BrandLoader';
 import { PullScrollView } from '../../src/components/PullList';
 import { useReferralSettings } from '../../src/lib/invite';
+import useAppSettings, { shortcutLook, shortcutScale } from '../../src/lib/appSettings';
 
 const CACHE_KEY = 'profile:summary';
 
+// My Purchase: thin grey outlines (web: weight light at 30 x the phone's
+// 1.2 zoom = 36px, with an --icon-ink of 0.6 on the 1.5 stroke).
 const PURCHASE = [
-  ['To Pay', 'bag', 'to_pay'],
-  ['To Ship', 'package', 'to_ship'],
-  ['To Receive', 'truck', 'to_receive'],
-  ['To Pick Up', 'store', 'to_pickup'],
+  ['To Pay', ShoppingBagIcon, 'to_pay'],
+  ['To Ship', PackageIcon, 'to_ship'],
+  ['To Receive', TruckIcon, 'to_receive'],
+  ['To Pick Up', StorefrontIcon, 'to_pickup'],
 ];
+const PURCHASE_ICON = 36;
+const PURCHASE_STROKE = 1.5 * 0.6;
+
+/*
+ * The shortcuts (Home's marks): the same list signed in and out. `invite`
+ * shows only while a super admin has invites on. The website's last tile,
+ * Language, switches its Google Translate, which the app does not have, so
+ * the app has no Language tile (as Settings has no Language row).
+ */
+const TOOLS = [
+  ['orders', '/orders', 'My Orders', ParcelArt],
+  ['returns', '/returns', 'Returns & Refunds', ReturnArt],
+  ['addresses', '/addresses', 'My Addresses', PinArt],
+  ['wishlist', '/wishlist', 'Wishlist', HeartArt],
+  ['following', '/followed-stores', 'Followed Stores', ShopArt],
+  ['reviews', '/reviews', 'My Reviews', StarArt],
+  ['offers', '/offers', 'My Offers', TagArt],
+  ['invite', '/invite-friends', 'Invite Friends', GiftArt],
+  ['reports', '/reports', 'My Reports', FlagArt],
+];
+
+/** The shortcuts' look and size, as the super admin chose them. */
+function useToolLook() {
+  const settings = useAppSettings();
+  return { look: shortcutLook(settings), scale: shortcutScale(settings) };
+}
 
 /**
  * The Profile tab on phones (web/src/pages/Profile.jsx, phone layout; for a
- * visitor web/src/components/ProfileGuest.jsx): the account card with its
- * counts, My Purchase, recently viewed, the lists reaching every account
- * page, and Log out.
+ * visitor web/src/components/ProfileGuest.jsx): the account card, My
+ * Purchase, recently viewed, Home's marks as shortcuts to every account
+ * page, a strip of help links, and for a seller a Switch to My Shop pill.
+ * No Inbox section (Messages and Notifications are tabs) and no counts row.
  */
 export default function Profile() {
   const isAuthenticated = useAuthStore((s) => s.isAuthenticated);
@@ -62,11 +95,9 @@ const loadSummary = async () => {
     apiClient.get('/orders/my/orders'),
   ]);
   const tabs = countBuyerTabs(ordersRes.data || []);
-  const [following, reviews] = await Promise.allSettled([
-    apiClient.get('/follows/me'),
-    apiClient.get('/reviews/my/reviews', { params: { page: 1, pageSize: 1 } }),
-    syncWishlist(),
-  ]);
+  // The wishlist is brought up to date for the pages behind the shortcuts;
+  // the page itself no longer shows counts of follows or reviews.
+  await Promise.allSettled([syncWishlist()]);
   return {
     profile: profileRes.data,
     stats: {
@@ -75,25 +106,22 @@ const loadSummary = async () => {
       toReceiveCount: tabs.to_receive || 0,
       toPickupCount: tabs.to_pickup || 0,
     },
-    followingCount: following.status === 'fulfilled' && Array.isArray(following.value?.data) ? following.value.data.length : 0,
-    reviewCount: reviews.status === 'fulfilled'
-      ? reviews.value?.pagination?.total ?? (reviews.value?.data || []).length
-      : 0,
   };
 };
 
 function SignedIn() {
+  // On the green header (super admin's choice) the bar is written in white.
+  const ink = useHeaderInk();
   const router = useRouter();
   const user = useAuthStore((s) => s.user);
   const logout = useAuthStore((s) => s.logout);
   const updateUser = useAuthStore((s) => s.updateUser);
-  const wishlistCount = useWishlistStore((s) => s.items.length);
-  const cachedShop = useAccountSwitchStore((s) => s.shop);
-  const shop = cachedShop && (!cachedShop.ownerId || cachedShop.ownerId === user?.id) ? cachedShop : null;
   const [summary, setSummary] = useState(() => getCacheEntry(CACHE_KEY)?.data || null);
   const [resending, setResending] = useState(false);
   // Invite friends shows only while a super admin has invites on.
   const invitesOn = useReferralSettings().enabled;
+  const { look, scale } = useToolLook();
+  const isSeller = user?.role === 'SELLER';
 
   const [pullKey, setPullKey] = useState(0);
 
@@ -112,8 +140,6 @@ function SignedIn() {
 
   const profile = summary?.profile || null;
   const stats = summary?.stats || { toPayCount: 0, toShipCount: 0, toReceiveCount: 0, toPickupCount: 0 };
-  const followingCount = summary?.followingCount || 0;
-  const reviewCount = summary?.reviewCount || 0;
   const counts = { to_pay: stats.toPayCount, to_ship: stats.toShipCount, to_receive: stats.toReceiveCount, to_pickup: stats.toPickupCount };
 
   // A typed-email account stays "Unverified" until it opens its welcome link.
@@ -130,8 +156,18 @@ function SignedIn() {
     }
   };
 
-  // "My shop": the switch to the Seller Center, with the account-switch screen.
+  // Switch to My Shop: to the Seller Center, with the account-switch screen.
   const enterShop = () => startAccountSwitch('seller', '/seller', { replace: true });
+
+  const tools = TOOLS
+    .filter(([key]) => key !== 'invite' || invitesOn)
+    .map(([key, to, label, Art]) => ({ key, label, Art, onPress: () => router.push(to) }));
+  const links = [
+    { key: 'help', Icon: LifebuoyIcon, label: 'Help Centre', onPress: () => router.push('/help-center') },
+    { key: 'support', Icon: HeadsetIcon, label: 'Help & Support', onPress: () => router.push('/support') },
+    { key: 'about', Icon: InfoIcon, label: 'About E-MOORM', onPress: () => router.push('/about') },
+    !isSeller && { key: 'sell', Icon: StorefrontIcon, label: 'Sell on E-MOORM', onPress: () => router.push('/sell') },
+  ].filter(Boolean);
 
   const name = profile?.fullName || user?.fullName || 'Your account';
   const email = profile?.email || user?.email;
@@ -174,13 +210,14 @@ function SignedIn() {
       {/* Log in on a computer: scan the website's "Log in with QR" code (qr-scan). */}
       {user?.id ? (
         <ShellBarButton label="Scan to log in on a computer" onPress={() => router.push('/qr-scan')}>
-          <ScanIcon size={28} color={t.neutral[700]} />
+          <ScanIcon size={28} color={ink ? ink.icon : t.neutral[700]} />
         </ShellBarButton>
       ) : null}
       <ShellBarButton label="Settings" onPress={() => router.push('/settings')}>
-        <GearIcon size={28} color={t.neutral[700]} />
+        <GearIcon size={28} color={ink ? ink.icon : t.neutral[700]} />
       </ShellBarButton>
       <ShellPageMenu
+        barInk={ink}
         extra={user?.id ? [{ key: 'public', Icon: EyeIcon, label: 'View public profile', to: `/u/${user.id}` }] : []}
       />
     </ProfileHeader>
@@ -200,6 +237,7 @@ function SignedIn() {
         onPull={() => setPullKey((key) => key + 1)}
         header={header}
         footer={<MoreProducts refreshKey={pullKey} />}
+        room={isSeller ? 64 : 0}
       >
         {/* Account card: tap to edit the name and photo. */}
         <View style={styles.card}>
@@ -247,66 +285,55 @@ function SignedIn() {
               </Pressable>
             </View>
           ) : null}
-          <View style={styles.stats}>
-            <Stat value={followingCount} label="Following" onPress={() => router.push('/followed-stores')} />
-            <Stat value={wishlistCount} label="Wishlist" onPress={() => router.push('/wishlist')} line />
-            <Stat value={reviewCount} label="Reviews" onPress={() => router.push('/reviews')} line />
-          </View>
         </View>
 
         <Purchase counts={counts} onOpen={(to) => router.push(to)} />
 
         <RecentlyViewed userId={user?.id} />
 
-        <PfSection list>
-          <PfTitle list>Orders &amp; shopping</PfTitle>
-          <PfRow first Icon={PackageIcon} label="My Orders" onPress={() => router.push('/orders')} />
-          <PfRow Icon={ArrowCounterClockwiseIcon} label="Returns & refunds" onPress={() => router.push('/returns')} />
-          <PfRow Icon={MapPinIcon} label="My Addresses" onPress={() => router.push('/addresses')} />
-          <PfRow Icon={HeartIcon} label="Wishlist" hint={wishlistCount || null} onPress={() => router.push('/wishlist')} />
-          <PfRow Icon={StorefrontIcon} label="Followed Stores" hint={followingCount || null} onPress={() => router.push('/followed-stores')} />
-          <PfRow Icon={StarIcon} label="My Reviews" hint={reviewCount || null} onPress={() => router.push('/reviews')} />
-          <PfRow Icon={HandshakeIcon} label="My Offers" onPress={() => router.push('/offers')} />
-        </PfSection>
+        {/* The same marks as Home's shortcuts, in the look and size a super
+            admin chose for them, in pages swiped sideways. */}
+        <ProfileTools tools={tools} look={look} scale={scale} />
 
-        <PfSection list>
-          <PfTitle list>Inbox</PfTitle>
-          <PfRow first Icon={ChatTextIcon} label="Messages" onPress={() => router.push('/messages')} />
-          <PfRow Icon={BellIcon} label="Notifications" onPress={() => router.push('/notifications')} />
-        </PfSection>
-
-        <PfSection list>
-          <PfTitle list>More</PfTitle>
-          {user?.role === 'SELLER'
-            ? <PfRow first Icon={StorefrontIcon} label="My shop" hint={shop?.name || null} onPress={enterShop} />
-            : <PfRow first Icon={ShoppingBagIcon} label="Sell on Emoorm" onPress={() => router.push('/seller-apply')} />}
-          {invitesOn ? <PfRow Icon={GiftIcon} label="Invite friends" onPress={() => router.push('/invite-friends')} /> : null}
-          <PfRow Icon={LifebuoyIcon} label="Help & Support" onPress={() => router.push('/support')} />
-          <PfRow Icon={FlagIcon} label="My Reports" onPress={() => router.push('/reports')} />
-          <PfRow Icon={InfoIcon} label="About Emoorm" onPress={() => router.push('/about')} />
-          <PfRow Icon={GearIcon} label="Settings" onPress={() => router.push('/settings')} />
-        </PfSection>
+        {/* Help and the rest, on one strip. */}
+        <ProfileLinks links={links} />
       </ProfileScroll>
+
+      {/* A seller's way to their shop: a black pill easing in above the tab bar. */}
+      {isSeller ? <ShopSwitchPill onPress={enterShop} /> : null}
     </View>
   );
 }
 
 /** The Profile tab for a visitor: the same page, with a sign-in card in place of the account card. */
 function Guest() {
+  // On the green header (super admin's choice) the bar is written in white.
+  const ink = useHeaderInk();
   const router = useRouter();
   const toLogin = (redirect) => router.push({ pathname: '/login', params: { redirect } });
   // Accounts saved on this phone (Switch account): back into one without logging in.
   const saved = useSavedAccounts((s) => s.accounts);
   useEffect(() => { loadSavedAccounts(); }, []);
+  const { look, scale } = useToolLook();
+  // No Invite Friends signed out (the website's guest page has none).
+  const tools = TOOLS
+    .filter(([key]) => key !== 'invite')
+    .map(([key, to, label, Art]) => ({ key, label, Art, onPress: () => toLogin(to) }));
+  const links = [
+    { key: 'help', Icon: LifebuoyIcon, label: 'Help Centre', onPress: () => router.push('/help-center') },
+    { key: 'support', Icon: HeadsetIcon, label: 'Help & Support', onPress: () => toLogin('/support') },
+    { key: 'about', Icon: InfoIcon, label: 'About E-MOORM', onPress: () => router.push('/about') },
+    { key: 'sell', Icon: StorefrontIcon, label: 'Sell on E-MOORM', onPress: () => router.push('/sell') },
+  ];
   return (
     <View style={styles.screen}>
       <ProfileScroll
         header={(
           <ProfileHeader>
             <ShellBarButton label="Help and support" onPress={() => router.push('/help-center')}>
-              <QuestionIcon size={28} color={t.neutral[700]} />
+              <QuestionIcon size={28} color={ink ? ink.icon : t.neutral[700]} />
             </ShellBarButton>
-            <ShellPageMenu />
+            <ShellPageMenu barInk={ink} />
           </ProfileHeader>
         )}
       >
@@ -339,28 +366,10 @@ function Guest() {
 
         <RecentlyViewed />
 
-        <PfSection list>
-          <PfTitle list>Orders &amp; shopping</PfTitle>
-          <PfRow first Icon={PackageIcon} label="My Orders" onPress={() => toLogin('/orders')} />
-          <PfRow Icon={ArrowCounterClockwiseIcon} label="Returns & refunds" onPress={() => toLogin('/returns')} />
-          <PfRow Icon={MapPinIcon} label="My Addresses" onPress={() => toLogin('/addresses')} />
-          <PfRow Icon={HeartIcon} label="Wishlist" onPress={() => toLogin('/wishlist')} />
-          <PfRow Icon={StorefrontIcon} label="Followed Stores" onPress={() => toLogin('/followed-stores')} />
-          <PfRow Icon={StarIcon} label="My Reviews" onPress={() => toLogin('/reviews')} />
-        </PfSection>
-
-        <PfSection list>
-          <PfTitle list>Inbox</PfTitle>
-          <PfRow first Icon={ChatTextIcon} label="Messages" onPress={() => toLogin('/messages')} />
-          <PfRow Icon={BellIcon} label="Notifications" onPress={() => toLogin('/notifications')} />
-        </PfSection>
-
-        <PfSection list last>
-          <PfTitle list>More</PfTitle>
-          <PfRow first Icon={ShoppingBagIcon} label="Sell on Emoorm" onPress={() => router.push('/seller-apply')} />
-          <PfRow Icon={LifebuoyIcon} label="Help & Support" onPress={() => router.push('/help-center')} />
-          <PfRow Icon={InfoIcon} label="About Emoorm" onPress={() => router.push('/about')} />
-        </PfSection>
+        {/* The signed-in Profile's shortcuts and strip; what needs an
+            account asks for one first. */}
+        <ProfileTools tools={tools} look={look} scale={scale} />
+        <ProfileLinks links={links} />
       </ProfileScroll>
     </View>
   );
@@ -370,7 +379,9 @@ function Guest() {
  * The page scrolls under its bar, which is fixed at the top as Home's search
  * bar is (the 12px above it stays put too).
  */
-function ProfileScroll({ header, children, footer = null, onPull }) {
+function ProfileScroll({
+  header, children, footer = null, onPull, room = 0,
+}) {
   // Signed out there is nothing of theirs to reload.
   const List = onPull ? PullScrollView : ScrollView;
   const insets = useSafeAreaInsets();
@@ -388,6 +399,8 @@ function ProfileScroll({ header, children, footer = null, onPull }) {
       >
         <View style={styles.content}>{children}</View>
         {footer}
+        {/* Room at the end so a pill over the page never covers the last row. */}
+        {room ? <View style={{ height: room }} /> : null}
       </List>
     </>
   );
@@ -398,10 +411,11 @@ const GLOW_HEIGHT = 56;
 
 /** The page's own bar (.profile-mobile-page-header): "Profile" and plain icon buttons. */
 function ProfileHeader({ children }) {
+  const ink = useHeaderInk();
   return (
     <View style={styles.headWrap}>
       <View style={styles.head}>
-        <Text style={styles.headTitle} accessibilityRole="header">Profile</Text>
+        <Text style={[styles.headTitle, ink && { color: ink.strong }]} accessibilityRole="header">Profile</Text>
         <View style={styles.headActions}>{children}</View>
       </View>
     </View>
@@ -419,12 +433,12 @@ function Purchase({ counts, onOpen }) {
         </Pressable>
       </View>
       <View style={styles.purchase}>
-        {PURCHASE.map(([label, icon, status]) => {
+        {PURCHASE.map(([label, Icon, status]) => {
           const count = counts[status] || 0;
           return (
             <Pressable key={label} accessibilityRole="link" accessibilityLabel={label} onPress={() => onOpen(`/orders?status=${status}`)} style={styles.purchaseItem}>
               <View style={styles.purchaseIcon}>
-                <GreenToolIcon name={icon} size={29} />
+                <Icon size={PURCHASE_ICON} weight="light" strokeWidth={PURCHASE_STROKE} color={t.neutral[500]} />
                 {count > 0 ? (
                   <View style={styles.badge}><Text style={styles.badgeText}>{count > 99 ? '99+' : count}</Text></View>
                 ) : null}
@@ -438,12 +452,63 @@ function Purchase({ counts, onOpen }) {
   );
 }
 
-function Stat({ value, label, onPress, line = false }) {
+/**
+ * A seller's way to their shop (web .pf-m-switch): a black pill easing up
+ * into place above the tab bar each time Profile is opened, and switching to
+ * the Seller Center with the account switch's screen.
+ */
+function ShopSwitchPill({ onPress }) {
+  const insets = useSafeAreaInsets();
+  const shown = useRef(new Animated.Value(0)).current;
+
+  // From 18px lower and a little smaller, after a moment (0.5s, 0.25s in,
+  // the website's --pop-ease); at once when the phone asks for less motion.
+  useFocusEffect(useCallback(() => {
+    let live = true;
+    let run = null;
+    shown.setValue(0);
+    AccessibilityInfo.isReduceMotionEnabled()
+      .catch(() => false)
+      .then((reduce) => {
+        if (!live) return;
+        if (reduce) { shown.setValue(1); return; }
+        run = Animated.timing(shown, {
+          toValue: 1,
+          duration: 500,
+          delay: 250,
+          easing: Easing.bezier(0.65, 0, 0.35, 1),
+          useNativeDriver: true,
+        });
+        run.start();
+      });
+    return () => { live = false; if (run) run.stop(); };
+  }, [shown]));
+
+  // Over the page's foot: above the tab bar where it lies over the page
+  // (iOS 26), else above the page's bottom edge, which is the bar's top.
+  const bottom = (floatingTabBar ? tabBarTop(insets) : 0) + 14;
+  const motion = {
+    opacity: shown,
+    transform: [
+      { translateY: shown.interpolate({ inputRange: [0, 1], outputRange: [18, 0] }) },
+      { scale: shown.interpolate({ inputRange: [0, 1], outputRange: [0.86, 1] }) },
+    ],
+  };
+
   return (
-    <Pressable accessibilityRole="link" onPress={onPress} style={({ pressed }) => [styles.stat, line && styles.statLine, pressed && styles.pressed]}>
-      <Text style={styles.statValue}>{value}</Text>
-      <Text style={styles.statLabel}>{label}</Text>
-    </Pressable>
+    <View pointerEvents="box-none" style={[styles.switchWrap, { bottom }]}>
+      <Animated.View style={motion}>
+        <Pressable
+          accessibilityRole="button"
+          accessibilityLabel="Switch to My Shop"
+          onPress={onPress}
+          style={({ pressed }) => [styles.switchPill, pressed && styles.switchPressed]}
+        >
+          <StorefrontIcon size={18} weight="fill" color={t.neutral[0]} />
+          <Text style={styles.switchText}>Switch to My Shop</Text>
+        </Pressable>
+      </Animated.View>
+    </View>
   );
 }
 
@@ -563,18 +628,27 @@ const styles = themed(() => StyleSheet.create({
   confirmBtn: { paddingVertical: 6, paddingHorizontal: 12, borderRadius: 999, backgroundColor: t.warning[600] },
   confirmBtnText: { fontSize: 13, lineHeight: 17, color: t.onBrand, ...font(500) },
 
-  stats: { flexDirection: 'row', borderTopWidth: 1, borderTopColor: t.neutral[100] },
-  stat: { flex: 1, alignItems: 'center', gap: 1, paddingVertical: 12 },
-  statLine: { borderLeftWidth: 1, borderLeftColor: t.neutral[100] },
-  statValue: { fontSize: 19, lineHeight: 30.4, color: t.neutral[900], ...font(500) },
-  statLabel: { fontSize: 13, lineHeight: 20.8, color: t.neutral[500], ...font(400) },
+  // The Switch to My Shop pill: #111827 and white on the website, so the
+  // ink's own pair here (light on dark, dark on light in dark mode).
+  switchWrap: { position: 'absolute', left: 0, right: 0, alignItems: 'center', zIndex: 118 },
+  switchPill: {
+    flexDirection: 'row', alignItems: 'center', gap: 8, height: 44, paddingLeft: 16, paddingRight: 20,
+    borderRadius: 999, backgroundColor: t.neutral[900],
+    boxShadow: [
+      { offsetX: 0, offsetY: 10, blurRadius: 24, color: 'rgba(15, 23, 42, 0.28)' },
+      { offsetX: 0, offsetY: 2, blurRadius: 6, color: 'rgba(15, 23, 42, 0.18)' },
+    ],
+  },
+  switchPressed: { transform: [{ scale: 0.96 }] },
+  // 600 on the website, which its phones draw at 500.
+  switchText: { fontSize: 14.5, lineHeight: 20, color: t.neutral[0], ...font(500) },
 
   sectionHead: { flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between' },
   seeAll: { flexDirection: 'row', alignItems: 'center', gap: 2 },
   seeAllText: { fontSize: 14, lineHeight: 22.4, color: t.neutral[500], ...font(500) },
   purchase: { flexDirection: 'row', marginTop: 12 },
   purchaseItem: { flex: 1, alignItems: 'center', gap: 7 },
-  purchaseIcon: { height: 32, alignItems: 'center', justifyContent: 'center' },
+  purchaseIcon: { height: 36, alignItems: 'center', justifyContent: 'center' },
   purchaseLabel: { fontSize: 13.5, lineHeight: 21.6, color: t.neutral[700], ...font(400) },
   badge: {
     position: 'absolute', top: -4, right: -10, minWidth: 18, height: 18, paddingHorizontal: 5,

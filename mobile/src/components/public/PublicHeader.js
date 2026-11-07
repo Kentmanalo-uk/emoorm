@@ -4,6 +4,7 @@ import {
 } from '../../lib/icons';
 import ScreenHeader from '../ScreenHeader';
 import ShellPageMenu from '../ShellPageMenu';
+import { useHeaderInk } from '../HeaderGlow';
 
 /*
  * The ⋯ menu of the public pages (web/src/lib/pageMenus.jsx, buyer rules for
@@ -56,6 +57,7 @@ export function publicMenuItems(pathname) {
 export default function PublicHeader({ title, backTo }) {
   const pathname = usePathname();
   const items = publicMenuItems(pathname);
+  const ink = useHeaderInk();
   if (!items) return <ScreenHeader title={title} backTo={backTo} />;
-  return <ScreenHeader title={title} backTo={backTo} menu={false} action={<ShellPageMenu items={items} />} />;
+  return <ScreenHeader title={title} backTo={backTo} menu={false} action={<ShellPageMenu items={items} barInk={ink} />} />;
 }

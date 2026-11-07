@@ -1,5 +1,7 @@
-import { StyleSheet, Text, View } from 'react-native';
+import { Pressable, StyleSheet, Text, View } from 'react-native';
+import { useRouter } from 'expo-router';
 import { font, t, themed } from '../../../theme';
+import { OrderThumb, orderLook } from '../orders/OrderLook';
 import { CARD_SHADOW } from '../analytics/parts';
 import { numericDate, peso } from '../analytics/format';
 
@@ -36,6 +38,8 @@ export const toRow = (o) => ({
   id: o.id,
   date: o.createdAt,
   number: (o.orderNumber || o.id).toString(),
+  // What was sold, which is how a seller knows the order (orders/OrderLook).
+  look: orderLook(o),
   buyer: o.buyer?.fullName || o.buyer?.email || '—',
   items: o.items?.length || 0,
   // The shop's sale: a MoorMove rider's delivery fee is the rider's.
@@ -57,15 +61,36 @@ export function StatTile({ label, value, hint, big = false, style }) {
 }
 
 /**
- * A completed order as a phone card: the number and amount, the buyer and
- * date, then Items, Payment and Refunded in three small grey boxes.
+ * A completed order as a phone card: what was sold (the product's photo
+ * and name, the order number under it; opens the order) and the amount, the
+ * buyer and date, then Items, Payment and Refunded in three small grey boxes.
  */
 export function FinanceRow({ order }) {
+  const router = useRouter();
   const refunded = order.refunded === null ? '—' : (order.refunded > 0 ? peso(order.refunded) : '—');
+  const { look } = order;
   return (
     <View style={styles.row}>
       <View style={styles.line}>
-        <Text style={[styles.cell2, styles.number]}>#{order.number.slice(-8)}</Text>
+        <Pressable
+          accessibilityRole="link"
+          accessibilityLabel={`${look.name}, order #${order.number.slice(-8)}`}
+          onPress={() => router.push({ pathname: '/seller/orders', params: { id: order.id } })}
+          style={[styles.cell2, styles.order]}
+        >
+          {({ pressed }) => (
+            <>
+              <OrderThumb photo={look.photo} size={40} />
+              <View style={styles.orderText}>
+                <Text style={[styles.orderName, pressed && styles.orderNamePressed]} numberOfLines={1}>
+                  {look.name}
+                  {look.more > 0 ? <Text style={styles.orderMore}>{` + ${look.more} more`}</Text> : null}
+                </Text>
+                <Text style={styles.orderRef} numberOfLines={1}>#{order.number.slice(-8)}</Text>
+              </View>
+            </>
+          )}
+        </Pressable>
         <Text style={[styles.cell1, styles.amount]}>{peso(order.amount)}</Text>
       </View>
       <View style={styles.line}>
@@ -113,7 +138,13 @@ const styles = themed(() => StyleSheet.create({
   line: { flexDirection: 'row', columnGap: 10 },
   cell1: { flex: 1, minWidth: 0 },
   cell2: { flex: 2, minWidth: 0 },
-  number: { fontSize: 13.5, lineHeight: 20, color: t.neutral[900], ...font(700) },
+  // .sfi-order-link: the photo, the name, the number under it.
+  order: { flexDirection: 'row', alignItems: 'center', gap: 12 },
+  orderText: { flex: 1, minWidth: 0, gap: 1 },
+  orderName: { fontSize: 13.5, lineHeight: 18, color: t.neutral[900], ...font(600) },
+  orderNamePressed: { color: t.primary[700] },
+  orderMore: { fontSize: 12, color: t.neutral[500], ...font(500) },
+  orderRef: { fontSize: 12, lineHeight: 16, color: t.neutral[500], ...font(400) },
   amount: { textAlign: 'right', fontSize: 15, lineHeight: 20, color: t.primary[700], ...font(700) },
   buyer: { fontSize: 13.5, lineHeight: 20, color: t.neutral[700], ...font(400) },
   date: { textAlign: 'right', fontSize: 12.5, lineHeight: 20, color: t.neutral[500], ...font(400) },

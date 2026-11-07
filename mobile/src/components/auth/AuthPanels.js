@@ -1,6 +1,8 @@
 import { Image, Pressable, StyleSheet, Text, View } from 'react-native';
 import AuthAddressPicker from './AuthAddressPicker';
-import { AuthErrorBox, AuthField, AuthSubmit } from './AuthForm';
+import {
+  AuthErrorBox, AuthField, AuthFieldError, AuthSubmit,
+} from './AuthForm';
 import InviteCodeField from './InviteCodeField';
 import { font, t, themed } from '../../theme';
 
@@ -33,7 +35,12 @@ export function AuthTextLink({ label, onPress }) {
   );
 }
 
-/** First Google sign-in: name, contact, address and a password before the account is made. */
+/**
+ * First Google sign-in: name, contact, address and a password before the
+ * account is made. A new mobile number (Continue with mobile number) comes
+ * here too, with `profile.phone` and no email: it is asked for an email
+ * instead of a contact number (the number is the one just proved).
+ */
 export function GoogleCompleteProfile({
   profile, form, errors, onChange, onAddressChange, municipalities, municipalitiesLoading,
   showPassword, onTogglePassword, onSubmit, onCancel, isLoading, apiError, invite,
@@ -42,7 +49,7 @@ export function GoogleCompleteProfile({
     <View style={styles.form}>
       <AuthTitle>Complete your account</AuthTitle>
       <AuthHint>
-        You&apos;re signing in with <Strong>{profile?.email}</Strong>. Just a few more
+        You&apos;re signing in with <Strong>{profile?.email || profile?.phone}</Strong>. Just a few more
         details to finish setting up your Emoorm account.
       </AuthHint>
 
@@ -53,15 +60,35 @@ export function GoogleCompleteProfile({
         error={errors.fullName}
         autoComplete="name"
       />
-      <AuthField
-        label="Contact number"
-        optional
-        value={form.contactNumber}
-        onChangeText={(v) => onChange('contactNumber', v)}
-        placeholder="09123456789"
-        keyboardType="phone-pad"
-        error={errors.contactNumber}
-      />
+      {!profile?.email ? (
+        <View style={styles.group}>
+          <AuthField
+            label="Email address"
+            value={form.email}
+            onChangeText={(v) => onChange('email', v)}
+            placeholder="you@example.com"
+            keyboardType="email-address"
+            autoCapitalize="none"
+            autoCorrect={false}
+            autoComplete="email"
+            textContentType="emailAddress"
+            error={errors.email ? true : undefined}
+          />
+          <Text style={styles.fieldHint}>For your receipts, and to get back in if you change numbers.</Text>
+          {errors.email ? <AuthFieldError>{errors.email}</AuthFieldError> : null}
+        </View>
+      ) : null}
+      {!profile?.phone ? (
+        <AuthField
+          label="Contact number"
+          optional
+          value={form.contactNumber}
+          onChangeText={(v) => onChange('contactNumber', v)}
+          placeholder="09123456789"
+          keyboardType="phone-pad"
+          error={errors.contactNumber}
+        />
+      ) : null}
       <AuthAddressPicker
         value={form}
         onChange={onAddressChange}
@@ -241,4 +268,7 @@ const styles = themed(() => StyleSheet.create({
     textAlign: 'center',
   },
   signedAs: { marginTop: -8 },
+  // The email field with its note under it (.auth-phone-hint), then the error.
+  group: { gap: 6 },
+  fieldHint: { fontSize: 13, lineHeight: 18.85, color: t.neutral[500], ...font(400) },
 }));

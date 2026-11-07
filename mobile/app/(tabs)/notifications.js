@@ -19,6 +19,7 @@ import { useTabBarScroll } from '../../src/components/Glass';
 import ShellPageMenu from '../../src/components/ShellPageMenu';
 import CartConfirmDialog from '../../src/components/cart/CartConfirmDialog';
 import InboxPageHead, { InboxTopGap } from '../../src/components/inbox/InboxPageHead';
+import { useHeaderInk } from '../../src/components/HeaderGlow';
 import InboxLoginGate from '../../src/components/inbox/InboxLoginGate';
 import NotificationPicture from '../../src/components/inbox/NotificationPicture';
 import NotificationCategories, { NOTIFICATION_CATEGORIES, minusOne } from '../../src/components/inbox/NotificationCategories';
@@ -99,6 +100,8 @@ export default function Notifications() {
 }
 
 function NotificationList() {
+  // On the green header (super admin's choice) the bar is written in white.
+  const ink = useHeaderInk();
   const tabScroll = useTabBarScroll();
   const router = useRouter();
   const insets = useSafeAreaInsets();
@@ -271,10 +274,10 @@ function NotificationList() {
           accessibilityState={{ expanded: searchOpen }}
         >
           {searchOpen
-            ? <XIcon size={28} weight="bold" color={t.primary[700]} />
-            : <MagnifyingGlassIcon size={28} color={t.neutral[700]} />}
+            ? <XIcon size={28} weight="bold" color={ink ? ink.accent : t.primary[700]} />
+            : <MagnifyingGlassIcon size={28} color={ink ? ink.icon : t.neutral[700]} />}
         </ShellBarButton>
-        <ShellPageMenu label="Notification options" items={menuItems} />
+        <ShellPageMenu label="Notification options" items={menuItems} barInk={ink} />
       </InboxPageHead>
       <PullScrollView onPull={() => { setFeedKey((key) => key + 1); return fetchNotifications(); }} showsVerticalScrollIndicator={false} showsHorizontalScrollIndicator={false}
         ref={scrollRef}

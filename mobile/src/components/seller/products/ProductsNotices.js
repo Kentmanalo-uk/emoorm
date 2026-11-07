@@ -1,6 +1,11 @@
 import { Pressable, StyleSheet, Text, View } from 'react-native';
 import { PackageIcon, ProhibitIcon, WarningCircleIcon } from '../../../lib/icons';
 import { font, t, themed } from '../../../theme';
+import { GradientIcon } from '../../inbox/InboxGradient';
+
+/* The icon on its own, filled with a gradient in its tone (web
+   styles/iconTiles.css: no tile, the icon a little larger). */
+const GRADIENTS = { amber: ['#FCD34D', '#D97706'], red: ['#FCA5A5', '#DC2626'] };
 
 /*
  * My products' "what needs doing" rows (web SellerProducts.jsx .spm-notices:
@@ -63,8 +68,8 @@ function Notice({ tone, Icon, title, text, cta, role = 'button', onPress }) {
       onPress={onPress}
       style={({ pressed }) => [styles.notice, pressed && styles.pressed]}
     >
-      <View style={[styles.icon, red && styles.iconRed]}>
-        <Icon size={22} weight="fill" color={red ? t.danger[600] : t.warning[600]} />
+      <View style={styles.icon}>
+        <GradientIcon Icon={Icon} size={29} colors={red ? GRADIENTS.red : GRADIENTS.amber} />
       </View>
       <View style={styles.text}>
         <Text style={styles.title}>{title}</Text>
@@ -89,9 +94,8 @@ const styles = themed(() => StyleSheet.create({
   },
   pressed: { backgroundColor: t.neutral[50] },
   icon: {
-    width: 40, height: 40, borderRadius: 12, alignItems: 'center', justifyContent: 'center', backgroundColor: t.warning[50],
+    width: 40, height: 40, alignItems: 'center', justifyContent: 'center',
   },
-  iconRed: { backgroundColor: t.danger[50] },
   text: { flex: 1, minWidth: 0, gap: 1 },
   title: { fontSize: 14.5, lineHeight: 23.2, color: t.neutral[900], ...font(400) },
   sub: { fontSize: 12.5, lineHeight: 17.5, color: t.neutral[500], ...font(400) },

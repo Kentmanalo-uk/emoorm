@@ -1,16 +1,16 @@
-import { Image, Pressable, StyleSheet, Text, View } from 'react-native';
+import { Pressable, StyleSheet, Text, View } from 'react-native';
 import { useRouter } from 'expo-router';
-import { CaretRightIcon, PackageIcon, WarningCircleIcon } from '../../../lib/icons';
+import { CaretRightIcon, WarningCircleIcon } from '../../../lib/icons';
 import { font, t, themed } from '../../../theme';
-import { resolveImg } from '../../../lib/media';
-import { variationImage } from '../../../lib/variationImage';
 import EmptyState from '../../EmptyState';
 import LoadingSkeleton from '../../LoadingSkeleton';
+import { GradientIcon } from '../../inbox/InboxGradient';
 import { sellerHref } from '../sellerRoutes';
+import { OrderState, OrderThumb, orderLook } from '../orders/OrderLook';
 import {
-  STATUS_COLORS, STATUS_META, formatNumber, orderDay,
+  STATUS_META, formatNumber, orderDay,
 } from './homeLib';
-import { HOME_TOOLS } from './sellerTools';
+import { HOME_TOOLS, useToolArt } from './sellerTools';
 import { PageLoader } from '../../BrandLoader';
 
 /*
@@ -41,17 +41,23 @@ export function HomeHead({ title, link, onLink, style }) {
   );
 }
 
-const NOTICE_TONES = themed(() => ({
-  amber: { backgroundColor: t.warning[50], color: t.warning[600] },
-  red: { backgroundColor: t.danger[50], color: t.danger[600] },
-  blue: { backgroundColor: t.info[50], color: t.info[600] },
-  green: { backgroundColor: t.primary[50], color: t.primary[600] },
-}));
+/* The notice's icon stands on its own, filled with a gradient in its tone
+   (web styles/iconTiles.css + ui/IconGradients.jsx: the tile's old colour,
+   light at the top left into deep at the bottom right). */
+const NOTICE_GRADIENTS = {
+  amber: ['#FCD34D', '#D97706'],
+  red: ['#FCA5A5', '#DC2626'],
+  bad: ['#FCA5A5', '#DC2626'],
+  blue: ['#93C5FD', '#2563EB'],
+  green: ['#34D399', '#047857'],
+  good: ['#34D399', '#047857'],
+  none: ['#CBD5E1', '#64748B'],
+};
 
 /** The one thing Home asks for first (.sh-notice): icon, title, hint, a green pill or ›. */
 export function HomeNotice({ notice }) {
   const router = useRouter();
-  const tone = NOTICE_TONES[notice.tone] || NOTICE_TONES.amber;
+  const gradient = NOTICE_GRADIENTS[notice.tone] || NOTICE_GRADIENTS.amber;
   const Icon = notice.Icon;
   return (
     <Pressable
@@ -60,8 +66,10 @@ export function HomeNotice({ notice }) {
       onPress={() => router.push(sellerHref(notice.to))}
       style={({ pressed }) => [homeStyles.section, styles.notice, pressed && styles.pressed]}
     >
-      <View style={[styles.noticeIcon, { backgroundColor: tone.backgroundColor }]}>
-        <Icon size={22} weight="fill" color={tone.color} />
+      {/* The tile keeps its size, so nothing around it moves; the icon
+          grows into the room its colour took (--icon-zoom 1.3). */}
+      <View style={styles.noticeIcon}>
+        <GradientIcon Icon={Icon} size={29} colors={gradient} />
       </View>
       <View style={styles.noticeText}>
         <Text style={styles.noticeTitle}>{notice.title}</Text>
@@ -109,13 +117,16 @@ export function HomeNumbers({ numbers }) {
 }
 
 /**
- * Shop tools (.sh-tools): the tool's own flat mark, nothing behind it.
+ * Shop tools (.sh-tools): the tool's own mark, nothing behind it, in the
+ * look and size the super admin chose (glass or 3D; 44px on phones times
+ * shortcutIconScale).
  *
  * Eight here, the ones a seller opens most days; the arrow opens the
  * rest, grouped (app/seller/tools.js).
  */
 export function HomeTools() {
   const router = useRouter();
+  const { look, size } = useToolArt();
   return (
     <HomeSection>
       <HomeHead title="Shop tools" link="All tools" onLink={() => router.push('/seller/tools')} />
@@ -124,8 +135,8 @@ export function HomeTools() {
           <Pressable key={to} accessibilityRole="link" accessibilityLabel={label} onPress={() => router.push(to)} style={styles.tool}>
             {({ pressed }) => (
               <>
-                <View style={[styles.toolIcon, pressed && styles.toolIconPressed]}>
-                  <Art size={36} tone={tone} />
+                <View style={[styles.toolIcon, { height: size }, pressed && styles.toolIconPressed]}>
+                  <Art size={size} tone={tone} look={look} />
                 </View>
                 <Text style={styles.toolLabel}>{label}</Text>
               </>
@@ -215,18 +226,14 @@ export function HomeRecentOrders({ isLoading, orders, last }) {
 }
 
 /**
- * A recent order as the seller thinks of it: the product's photo and name,
- * who ordered and when, the total and where it stands. The order number
- * stays on the order itself.
+ * A recent order as the seller thinks of it: the product's photo (where the
+ * order stands as a badge on its corner) and name, who ordered and when, the
+ * total over where it stands and how far along. The order number stays on
+ * the order itself.
  */
 function OrderRow({ order, first, onPress }) {
-  const { label, tint } = STATUS_META[order.status] || STATUS_META.PENDING;
-  const items = order.items || [];
-  const firstItem = items[0];
-  const photo = firstItem ? variationImage(firstItem.product, firstItem.selectedVariations) : null;
-  const name = firstItem?.productName || firstItem?.product?.name || 'Order';
-  const more = items.length - 1;
-  const qty = items.reduce((sum, it) => sum + (it.quantity || 0), 0);
+  const { label } = STATUS_META[order.status] || { label: order.status };
+  const { photo, name, more, qty } = orderLook(order);
   // The day first, so a long name is what gets cut.
   const meta = [orderDay(order.createdAt), order.buyer?.fullName].filter(Boolean).join(' · ');
   const extra = more > 0 ? ` + ${more} more` : qty > 1 ? ` × ${qty}` : '';
@@ -237,22 +244,22 @@ function OrderRow({ order, first, onPress }) {
       onPress={onPress}
       style={({ pressed }) => [styles.order, !first && styles.orderLine, pressed && styles.pressed]}
     >
-      <View style={styles.orderImg}>
-        {photo
-          ? <Image source={{ uri: resolveImg(photo) }} style={styles.orderPhoto} resizeMode="cover" />
-          : <PackageIcon size={29} weight="fill" color={t.neutral[300]} />}
-      </View>
-      <View style={styles.orderBody}>
-        <Text style={styles.orderName} numberOfLines={1}>
-          {name}
-          {extra ? <Text style={styles.orderSmall}>{extra}</Text> : null}
-        </Text>
-        <Text style={styles.orderMeta} numberOfLines={1}>{meta}</Text>
-      </View>
-      <View style={styles.orderRight}>
-        <Text style={styles.orderTotal}>₱{formatNumber(order.total)}</Text>
-        <Text style={[styles.orderStatus, { color: STATUS_COLORS[tint] }]}>{label}</Text>
-      </View>
+      {({ pressed }) => (
+        <>
+          <OrderThumb photo={photo} status={order.status} size={48} ring={pressed ? t.neutral[50] : t.neutral[0]} />
+          <View style={styles.orderBody}>
+            <Text style={styles.orderName} numberOfLines={1}>
+              {name}
+              {extra ? <Text style={styles.orderSmall}>{extra}</Text> : null}
+            </Text>
+            <Text style={styles.orderMeta} numberOfLines={1}>{meta}</Text>
+          </View>
+          <View style={styles.orderRight}>
+            <Text style={styles.orderTotal}>₱{formatNumber(order.total)}</Text>
+            <OrderState status={order.status} label={label} />
+          </View>
+        </>
+      )}
     </Pressable>
   );
 }
@@ -313,7 +320,7 @@ const styles = themed(() => StyleSheet.create({
     flexDirection: 'row', alignItems: 'center', gap: 12, paddingVertical: 12, paddingHorizontal: 14,
   },
   noticeIcon: {
-    width: 40, height: 40, flexShrink: 0, alignItems: 'center', justifyContent: 'center', borderRadius: 12,
+    width: 40, height: 40, flexShrink: 0, alignItems: 'center', justifyContent: 'center',
   },
   noticeText: { flex: 1, minWidth: 0, gap: 1 },
   noticeTitle: { fontSize: 14.5, lineHeight: 23.2, color: t.neutral[900], ...font(400) },
@@ -363,17 +370,12 @@ const styles = themed(() => StyleSheet.create({
     flexDirection: 'row', alignItems: 'center', gap: 12, paddingVertical: 10, paddingHorizontal: 16,
   },
   orderLine: { borderTopWidth: 1, borderTopColor: t.neutral[100] },
-  orderImg: {
-    width: 48, height: 48, flexShrink: 0, alignItems: 'center', justifyContent: 'center', overflow: 'hidden', borderRadius: 10, backgroundColor: t.neutral[100],
-  },
-  orderPhoto: { width: '100%', height: '100%' },
   orderBody: { flex: 1, minWidth: 0, gap: 2 },
   orderName: { fontSize: 14.5, lineHeight: 23.2, color: t.neutral[900], ...font(500) },
   orderSmall: { fontSize: 12.5, color: t.neutral[500], ...font(400) },
   orderMeta: { fontSize: 12.5, lineHeight: 20, color: t.neutral[500], ...font(400) },
-  orderRight: { flexShrink: 0, alignItems: 'flex-end', gap: 2 },
+  orderRight: { flexShrink: 0, alignItems: 'flex-end', gap: 4 },
   orderTotal: { fontSize: 14.5, lineHeight: 23.2, color: t.neutral[900], ...font(500) },
-  orderStatus: { fontSize: 12.5, lineHeight: 20, ...font(500) },
 
   skRow: {
     flexDirection: 'row', alignItems: 'center', gap: 12, paddingVertical: 12, paddingHorizontal: 4,

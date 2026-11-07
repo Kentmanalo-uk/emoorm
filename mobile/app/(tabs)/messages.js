@@ -13,6 +13,7 @@ import EmptyState from '../../src/components/EmptyState';
 import ShellBarButton from '../../src/components/ShellBarButton';
 import ShellPageMenu from '../../src/components/ShellPageMenu';
 import InboxPageHead, { InboxTopGap } from '../../src/components/inbox/InboxPageHead';
+import { useHeaderInk } from '../../src/components/HeaderGlow';
 import InboxLoginGate from '../../src/components/inbox/InboxLoginGate';
 import ConversationRow from '../../src/components/inbox/ConversationRow';
 import { useConversationPeek } from '../../src/components/peek/ConversationPeek';
@@ -39,6 +40,8 @@ export default function Messages() {
 }
 
 function MessagesList() {
+  // On the green header (super admin's choice) the bar is written in white.
+  const ink = useHeaderInk();
   const router = useRouter();
   const { store: initialStoreId, c: initialConversationId } = useLocalSearchParams();
   const currentUser = useAuthStore((s) => s.user);
@@ -149,10 +152,10 @@ function MessagesList() {
       <InboxPageHead title="Messages">
         <ShellBarButton label={searchOpen ? 'Close search' : 'Search chats'} onPress={toggleSearch} accessibilityState={{ expanded: searchOpen }}>
           {searchOpen
-            ? <XIcon size={28} weight="bold" color={t.primary[700]} />
-            : <MagnifyingGlassIcon size={28} color={t.neutral[700]} />}
+            ? <XIcon size={28} weight="bold" color={ink ? ink.accent : t.primary[700]} />
+            : <MagnifyingGlassIcon size={28} color={ink ? ink.icon : t.neutral[700]} />}
         </ShellBarButton>
-        <ShellPageMenu label="Chat options" items={menuItems} />
+        <ShellPageMenu label="Chat options" items={menuItems} barInk={ink} />
       </InboxPageHead>
     <PullFlatList
       onPull={() => { setFeedKey((key) => key + 1); return fetchConversations(); }}

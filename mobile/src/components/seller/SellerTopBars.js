@@ -13,7 +13,7 @@ import ShellBarButton from '../ShellBarButton';
 import { GlassBackdrop, liquidGlass } from '../Glass';
 import { closeMenu, menuPopStyle, openMenu } from '../menuMotion';
 import ShellPageMenu from '../ShellPageMenu';
-import HeaderGlow from '../HeaderGlow';
+import HeaderGlow, { useHeaderInk } from '../HeaderGlow';
 import { useSellerShell } from './SellerShell';
 import { cleanSellerPath, sellerBackTarget, sellerMenuItems, sellerPhoneTitle } from './sellerRoutes';
 
@@ -29,12 +29,17 @@ import { cleanSellerPath, sellerBackTarget, sellerMenuItems, sellerPhoneTitle } 
  *   SellerBackBar     every other page (.scm-backbar): back arrow + title + ⋯
  *   SellerHeaderButton  one round icon (.scm-icon / .sh-icon) with a pink count
  *   SellerPageMenu    the ⋯ menu with the seller rules of web/src/lib/pageMenus.jsx
+ *
+ * On the green header (App settings, mobileHeaderStyle) what is written on
+ * the bars is white: titles, icons, the shop's name and greeting
+ * (HeaderGlow useHeaderInk). What opens from them keeps the page's colours.
  */
 
 /** The ⋯ page menu, with the Seller Center's links for this page. extra: this page's own actions first. */
 export function SellerPageMenu({ extra = [] }) {
   const pathname = usePathname();
-  return <ShellPageMenu extra={extra} items={sellerMenuItems(pathname)} />;
+  const ink = useHeaderInk();
+  return <ShellPageMenu extra={extra} items={sellerMenuItems(pathname)} barInk={ink} />;
 }
 
 /**
@@ -65,9 +70,10 @@ export const SellerHeaderButton = forwardRef(function SellerHeaderButton({ label
 /** The bell with the unread seller notifications. */
 export function SellerBellButton() {
   const { unreadCount } = useSellerShell();
+  const ink = useHeaderInk();
   return (
     <SellerHeaderButton label="Notifications" to="/seller/notifications" badge={unreadCount}>
-      <BellIcon size={28} color={t.neutral[700]} />
+      <BellIcon size={28} color={ink ? ink.icon : t.neutral[700]} />
     </SellerHeaderButton>
   );
 }
@@ -83,11 +89,12 @@ export function SellerBellButton() {
 export function SellerTabHeader({ title, actions, bell = true, menu = true, menuItems, chat = false }) {
   const pathname = usePathname();
   const insets = useSafeAreaInsets();
+  const ink = useHeaderInk();
   return (
     <View style={[styles.head, { paddingTop: 12 + insets.top }]}>
       <HeaderGlow />
       {chat ? <ChatTitle /> : (
-        <Text style={styles.title} numberOfLines={1} accessibilityRole="header">{title || sellerPhoneTitle(pathname)}</Text>
+        <Text style={[styles.title, ink && { color: ink.strong }]} numberOfLines={1} accessibilityRole="header">{title || sellerPhoneTitle(pathname)}</Text>
       )}
       <View style={styles.actions}>
         {actions}
@@ -100,11 +107,12 @@ export function SellerTabHeader({ title, actions, bell = true, menu = true, menu
 
 /** My products' bar: + Add product, the bell, ⋯ */
 export function SellerProductsHeader() {
+  const ink = useHeaderInk();
   return (
     <SellerTabHeader
       actions={(
         <SellerHeaderButton label="Add product" to="/seller/products/new?fromList=1">
-          <PlusIcon size={28} weight="bold" color={t.neutral[700]} />
+          <PlusIcon size={28} weight="bold" color={ink ? ink.icon : t.neutral[700]} />
         </SellerHeaderButton>
       )}
     />
@@ -134,6 +142,7 @@ function ChatTitle() {
   const [anchor, setAnchor] = useState(null);
   const [expanded, setExpanded] = useState(false);
   const pop = useRef(new Animated.Value(0)).current;
+  const ink = useHeaderInk();
   const adminCount = waiting['/seller/support']?.count || 0;
   // The menu opens 8px under the title row, from its left edge (.scm-chat-menu),
   // growing out of that corner and shrinking back into it (menuMotion).
@@ -148,7 +157,7 @@ function ChatTitle() {
   };
   return (
     <View ref={boxRef} collapsable={false} style={styles.chatTitle}>
-      <Text style={styles.title} accessibilityRole="header">Chat</Text>
+      <Text style={[styles.title, ink && { color: ink.strong }]} accessibilityRole="header">Chat</Text>
       <Pressable
         accessibilityRole="button"
         accessibilityLabel="Chatting with buyers. Change"
@@ -212,6 +221,7 @@ export function SellerHomeHeader() {
   const user = useAuthStore((s) => s.user);
   const { store, unreadCount, switchToPersonal } = useSellerShell();
   const name = store?.name || 'My shop';
+  const ink = useHeaderInk();
   const firstName = user?.fullName?.trim().split(/\s+/)[0];
   return (
     <View style={[styles.head, styles.ownHead, { paddingTop: 12 + insets.top, paddingBottom: 12 }]}>
@@ -219,13 +229,13 @@ export function SellerHomeHeader() {
       <Pressable accessibilityRole="link" accessibilityLabel="Your shop" onPress={() => router.push('/seller/menu')} style={styles.shop}>
         <Avatar uri={store?.logo} name={name} size={44} fontSize={18} />
         <View style={styles.shopText}>
-          <Text style={styles.shopHi} numberOfLines={1}>{firstName ? `Hi, ${firstName}` : 'Seller Center'}</Text>
-          <Text style={styles.shopName} numberOfLines={1} accessibilityRole="header">{name}</Text>
+          <Text style={[styles.shopHi, ink && { color: ink.muted }]} numberOfLines={1}>{firstName ? `Hi, ${firstName}` : 'Seller Center'}</Text>
+          <Text style={[styles.shopName, ink && { color: ink.strong }]} numberOfLines={1} accessibilityRole="header">{name}</Text>
         </View>
       </Pressable>
       <View style={styles.actions}>
         <SellerHeaderButton label="Notifications" to="/seller/notifications" badge={unreadCount}>
-          <BellIcon size={28} color={t.neutral[700]} />
+          <BellIcon size={28} color={ink ? ink.icon : t.neutral[700]} />
         </SellerHeaderButton>
         <SellerHeaderButton label="Switch to my buyer account" onPress={switchToPersonal}>
           <Avatar uri={user?.profilePhoto} name={user?.fullName || 'U'} size={30} fontSize={13} />
@@ -242,18 +252,20 @@ export function SellerHomeHeader() {
  */
 export function SellerMeHeader({ onShare }) {
   const insets = useSafeAreaInsets();
+  const ink = useHeaderInk();
+  const iconColor = ink ? ink.icon : t.neutral[700];
   return (
     <View style={[styles.head, styles.ownHead, { paddingTop: 12 + insets.top }]}>
       <HeaderGlow />
-      <Text style={styles.title} accessibilityRole="header">Me</Text>
+      <Text style={[styles.title, ink && { color: ink.strong }]} accessibilityRole="header">Me</Text>
       <View style={styles.actions}>
         {onShare ? (
           <SellerHeaderButton label="Share shop" onPress={onShare}>
-            <ShareNetworkIcon size={28} color={t.neutral[700]} />
+            <ShareNetworkIcon size={28} color={iconColor} />
           </SellerHeaderButton>
         ) : null}
         <SellerHeaderButton label="Shop settings" to="/seller/settings">
-          <GearIcon size={28} color={t.neutral[700]} />
+          <GearIcon size={28} color={iconColor} />
         </SellerHeaderButton>
         <SellerPageMenu />
       </View>
@@ -275,6 +287,7 @@ export function SellerBackBar({ title, action, onBack, menu = true, menuItems })
   const pathname = usePathname();
   const params = useLocalSearchParams();
   const insets = useSafeAreaInsets();
+  const ink = useHeaderInk();
   const path = cleanSellerPath(pathname);
   const editing = path === '/seller/products/new' && Boolean(params.edit);
   const goBack = onBack || (() => (router.canGoBack() ? router.back() : router.replace(sellerBackTarget(path))));
@@ -282,9 +295,9 @@ export function SellerBackBar({ title, action, onBack, menu = true, menuItems })
     <View style={[styles.backbar, { paddingTop: insets.top, height: 52 + insets.top }]}>
       <HeaderGlow />
       <ShellBarButton label="Back" onPress={goBack}>
-        <CaretLeftIcon size={22} weight="bold" color={t.neutral[900]} />
+        <CaretLeftIcon size={22} weight="bold" color={ink ? ink.icon : t.neutral[900]} />
       </ShellBarButton>
-      <Text style={styles.backtitle} numberOfLines={1} accessibilityRole="header">
+      <Text style={[styles.backtitle, ink && { color: ink.strong }]} numberOfLines={1} accessibilityRole="header">
         {title || sellerPhoneTitle(path, { editing })}
       </Text>
       {action}

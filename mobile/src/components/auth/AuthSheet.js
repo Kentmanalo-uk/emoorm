@@ -3,9 +3,11 @@ import {
   Animated, Easing, KeyboardAvoidingView, PanResponder, Platform, Pressable, ScrollView, StyleSheet, Text, View, useWindowDimensions,
 } from 'react-native';
 import { useRouter } from 'expo-router';
+import { StatusBar } from 'expo-status-bar';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import AuthHeader from '../AuthHeader';
 import { liquidGlass } from '../Glass';
+import { AuthBand } from './AuthChoose';
 import { font, t, themed } from '../../theme';
 
 const CLOSE_MS = 260;
@@ -20,9 +22,12 @@ const native = Platform.OS !== 'web';
  *
  * switchTo / switchLabel: the bar's link; it replaces this sheet as the
  * website's does. `bar={false}` leaves the bar out (the email confirmation).
+ * band: Log in / Sign up's first step (auth/AuthChoose): the pink-to-mint
+ * band behind everything, the bar clear over it, and the phone's status bar
+ * in the band's top colour with dark content (the website's StatusBarTint).
  */
 const AuthSheet = forwardRef(function AuthSheet({
-  children, switchTo, switchLabel, switchBold, bar = true, contentStyle, onClose,
+  children, switchTo, switchLabel, switchBold, bar = true, band = false, contentStyle, onClose,
 }, ref) {
   const router = useRouter();
   const insets = useSafeAreaInsets();
@@ -69,8 +74,12 @@ const AuthSheet = forwardRef(function AuthSheet({
     <View style={styles.root}>
       <Animated.View pointerEvents="none" style={[StyleSheet.absoluteFill, styles.backdrop, { opacity: backdrop }]} />
       <Animated.View style={[styles.sheet, { transform: [{ translateY: drag }] }]}>
+        {/* iOS 26: the page sheet sits below the status bar, which is not ours to tint. */}
+        {band ? <AuthBand top={liquidGlass ? 0 : insets.top} /> : null}
+        {band && !liquidGlass ? <StatusBar style="dark" /> : null}
         {bar ? (
           <AuthHeader
+            onBand={band}
             onClose={close}
             switchLabel={switchLabel}
             switchBold={switchBold}
@@ -87,7 +96,8 @@ const AuthSheet = forwardRef(function AuthSheet({
             overScrollMode="never"
             contentContainerStyle={[
               styles.content,
-              { paddingBottom: 24 + insets.bottom },
+              // The band's white body clears the home bar itself.
+              { paddingBottom: band ? 0 : 24 + insets.bottom },
               // (iOS 26: the page sheet already sits below the status bar.)
               !bar && !liquidGlass && { paddingTop: insets.top },
               contentStyle,

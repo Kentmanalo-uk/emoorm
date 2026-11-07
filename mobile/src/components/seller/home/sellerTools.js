@@ -3,6 +3,20 @@ import {
   PackageArt, PinArt, PlusArt, PotArt, QrArt, QuestionArt, ReceiptArt, ReturnArt, ShopArt, SparkArt,
   StarArt, TagArt, TONES, TruckArt, WalletArt, LiveArt,
 } from '../../art/FlatArt';
+import useAppSettings, { shortcutLook, shortcutScale } from '../../../lib/appSettings';
+
+/** A tool's mark on phones at the standard size (web SellerApp.css .sh-tool-icon > svg). */
+export const TOOL_ART_SIZE = 44;
+
+/**
+ * How the tools' marks are drawn: the look the super admin chose (glass or
+ * glossy 3D, App settings shortcutArtStyle) and the size (44px times
+ * shortcutIconScale). Home's tools and the All tools page use it.
+ */
+export function useToolArt() {
+  const settings = useAppSettings();
+  return { look: shortcutLook(settings), size: Math.round(TOOL_ART_SIZE * shortcutScale(settings)) };
+}
 
 /**
  * Every tool in the Seller Center, in groups: the full list behind the

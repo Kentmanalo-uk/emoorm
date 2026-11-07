@@ -2,7 +2,7 @@ import { forwardRef, useState } from 'react';
 import { ActivityIndicator, Platform, Pressable, StyleSheet, Text, TextInput, View } from 'react-native';
 import { EyeIcon, EyeSlashIcon } from '../../lib/icons';
 import Svg, { Path } from 'react-native-svg';
-import { font, t, themed } from '../../theme';
+import { activeScheme, font, t, themed } from '../../theme';
 
 /*
  * The pieces of the website's phone Log in / Sign up / password sheets
@@ -119,7 +119,8 @@ export const AuthField = forwardRef(function AuthField({
       ) : (
         <AuthInput ref={ref} kind={kind} error={error} style={inputStyle} {...rest} />
       )}
-      {error ? <AuthFieldError kind={kind} style={{ marginTop: k.errorGap }}>{error}</AuthFieldError> : null}
+      {/* error === true: the red border alone (the message shows elsewhere). */}
+      {error && error !== true ? <AuthFieldError kind={kind} style={{ marginTop: k.errorGap }}>{error}</AuthFieldError> : null}
     </View>
   );
 });
@@ -196,20 +197,34 @@ export function GoogleMark({ size = 18 }) {
   );
 }
 
-/** "Sign in with Google" / "Sign up with Google" (.login-form-google). */
-export function GoogleButton({ label, onPress, disabled, style }) {
+/**
+ * A way in -- Google, a mobile number, email -- as the sheets' quiet
+ * off-white button (AuthSheet.css .is-sheet .login-form-google, 50px, the
+ * icon beside the words). `edge`: the first step's larger one, the icon at
+ * the left edge and the words centred (.auth-choose .login-form-google).
+ */
+export function AuthWayButton({
+  icon, label, onPress, disabled, edge = false, style,
+}) {
   return (
     <Pressable
       accessibilityRole="button"
       accessibilityState={{ disabled: Boolean(disabled) }}
       disabled={disabled}
       onPress={onPress}
-      style={({ pressed }) => [styles.google, pressed && styles.outlinePressed, disabled && styles.googleOff, style]}
+      style={({ pressed }) => [styles.way, edge && styles.wayEdge, pressed && styles.wayPressed, disabled && styles.googleOff, style]}
     >
-      <GoogleMark />
-      <Text style={styles.googleText}>{label}</Text>
+      {edge ? <View style={styles.wayIconEdge}>{icon}</View> : icon}
+      <Text style={[styles.wayText, edge && styles.wayTextEdge]}>{label}</Text>
     </Pressable>
   );
+}
+
+/** "Sign in with Google" / "Sign up with Google" (.login-form-google). */
+export function GoogleButton({
+  label, onPress, disabled, edge, style,
+}) {
+  return <AuthWayButton icon={<GoogleMark />} label={label} onPress={onPress} disabled={disabled} edge={edge} style={style} />;
 }
 
 /** The "or" between the form and Google (.login-form-divider). */
@@ -298,20 +313,28 @@ const styles = themed(() => StyleSheet.create({
   outlinePressed: { backgroundColor: t.neutral[50], borderColor: t.neutral[400] },
   outlineText: { fontSize: 15, lineHeight: 24, color: t.neutral[800], ...font(500) },
 
-  google: {
-    height: 48,
-    borderRadius: 10,
-    borderWidth: 1,
-    borderColor: t.neutral[300],
-    backgroundColor: t.neutral[0],
+  // The off-white is the website's own #f2f4f7 (#e6e9ee pressed); in dark
+  // mode, where the website keeps it and its white words vanish, the dark
+  // ramp's raised grey instead.
+  way: {
+    minHeight: 50,
+    borderRadius: 6,
+    backgroundColor: activeScheme() === 'dark' ? t.neutral[150] : '#f2f4f7',
     alignItems: 'center',
     justifyContent: 'center',
     flexDirection: 'row',
     gap: 12,
     paddingHorizontal: 24,
+    paddingVertical: 12,
   },
+  wayEdge: { minHeight: 52, paddingHorizontal: 56 },
+  wayPressed: { backgroundColor: activeScheme() === 'dark' ? t.neutral[200] : '#e6e9ee' },
+  wayIconEdge: {
+    position: 'absolute', left: 22, top: 0, bottom: 0, justifyContent: 'center',
+  },
+  wayText: { fontSize: 15.5, lineHeight: 23.25, color: t.neutral[900], ...font(500) },
+  wayTextEdge: { fontSize: 16, lineHeight: 24, textAlign: 'center' },
   googleOff: { opacity: 0.6 },
-  googleText: { fontSize: 14, lineHeight: 16.8, color: t.neutral[700], ...font(500) },
 
   // The "or" sits 4px down a 24px line box (baseline-aligned inline-block on the website).
   divider: { height: 24, alignItems: 'center', paddingTop: 4 },

@@ -5,23 +5,23 @@ import Sheet from '../../Sheet';
 import { font, t, themed } from '../../../theme';
 import { num, peso } from './format';
 import { Thumb } from './parts';
+import { statusLabel } from '../../orders/orderProgress';
+import { OrderState } from '../orders/OrderLook';
 
 const HAIRLINE = 'rgba(15, 23, 42, 0.05)';
 
-// .an-badge-<status>
-const BADGES = themed(() => ({
-  completed: [t.primary[100], t.primary[700]],
-  cancelled: [t.danger[100], t.danger[700]],
-  pending: [t.warning[100], t.warning[700]],
-  confirmed: [t.info[100], t.info[700]],
-  preparing: [t.violet[100], t.violet[700]],
-  ready: ['#cffafe', t.teal[600]],
-}));
+// "3:05 PM", for the order's line under the buyer.
+const timeOf = (iso) => {
+  if (!iso) return '';
+  const d = new Date(iso);
+  return Number.isNaN(d.getTime()) ? '' : d.toLocaleTimeString('en-PH', { hour: 'numeric', minute: '2-digit' });
+};
 
 /**
  * One day's orders (web/src/components/analytics/DayDetailModal.jsx, a
- * bottom sheet on phones): Orders, Items sold and Revenue, then each order
- * with its buyer, total and items.
+ * bottom sheet on phones): Orders, Items sold and Revenue, then each order:
+ * who ordered and when lead (the order number a reference after the time),
+ * the total over where it stands, then the items.
  */
 export default function DayDetailSheet({ date, onClose }) {
   const [data, setData] = useState(null);
@@ -57,21 +57,19 @@ export default function DayDetailSheet({ date, onClose }) {
           {(data.orders || []).length === 0 ? <Text style={styles.empty}>No orders on this date.</Text> : null}
 
           {(data.orders || []).map((o) => {
-            const status = String(o.status || '').toLowerCase();
-            const [bg, fg] = BADGES[status] || [t.neutral[100], t.neutral[600]];
+            const time = timeOf(o.createdAt);
             return (
               <View key={o.id} style={styles.order}>
+                {/* Who ordered and when lead; the order number is a reference. */}
                 <View style={styles.orderHead}>
-                  <View style={styles.orderLeft}>
-                    <Text style={styles.orderNo}>{o.orderNumber}</Text>
-                    <View style={[styles.badge, { backgroundColor: bg }]}>
-                      <Text style={[styles.badgeText, { color: fg }]}>{status}</Text>
-                    </View>
-                  </View>
-                  <View style={styles.orderRight}>
+                  <View style={styles.orderWho}>
                     <Text style={styles.buyer} numberOfLines={1}>{o.buyer?.name || 'Guest'}</Text>
+                    <Text style={styles.orderSub} numberOfLines={1}>{`${time ? `${time} · ` : ''}#${o.orderNumber}`}</Text>
+                  </View>
+                  <View style={styles.orderSide}>
                     {/* The shop's sale: a MoorMove rider's delivery fee is the rider's. */}
                     <Text style={styles.total}>{peso(o.shopTotal ?? o.total)}</Text>
+                    <OrderState status={o.status} label={o.status === 'PENDING' ? 'New' : statusLabel(o.status, o.fulfillmentMethod)} />
                     {Number(o.riderFee) > 0 ? <Text style={styles.riderNote}>Rider fee {peso(o.riderFee)} goes to MoorMove</Text> : null}
                   </View>
                 </View>
@@ -116,13 +114,12 @@ const styles = themed(() => StyleSheet.create({
   // .an-day-order
   order: { paddingVertical: 14, paddingHorizontal: 16, borderBottomWidth: 1, borderBottomColor: HAIRLINE },
   orderHead: { flexDirection: 'row', justifyContent: 'space-between', alignItems: 'flex-start', gap: 12, marginBottom: 10 },
-  orderLeft: { flexShrink: 1, flexDirection: 'row', flexWrap: 'wrap', alignItems: 'center', rowGap: 4 },
-  orderNo: { fontSize: 13, lineHeight: 18, color: t.neutral[900], ...font(700) },
-  badge: { marginLeft: 8, paddingVertical: 2, paddingHorizontal: 10, borderRadius: 999 },
-  badgeText: { fontSize: 11, lineHeight: 14, letterSpacing: 0.44, textTransform: 'uppercase', ...font(600) },
-  orderRight: { flexShrink: 0, maxWidth: '50%' },
-  buyer: { marginTop: 4, fontSize: 13, lineHeight: 17, textAlign: 'right', color: t.neutral[700], ...font(600) },
-  total: { fontSize: 13, lineHeight: 18, textAlign: 'right', color: t.primary[600], ...font(600) },
+  // .an-day-order-who / -side
+  orderWho: { flex: 1, minWidth: 0, gap: 2 },
+  buyer: { fontSize: 14, lineHeight: 18, color: t.neutral[900], ...font(600) },
+  orderSub: { fontSize: 12, lineHeight: 16, color: t.neutral[500], ...font(400) },
+  orderSide: { flexShrink: 0, maxWidth: '50%', alignItems: 'flex-end', gap: 4 },
+  total: { fontSize: 14, lineHeight: 18, textAlign: 'right', color: t.neutral[900], ...font(700) },
   riderNote: { fontSize: 11.5, lineHeight: 16, textAlign: 'right', color: t.neutral[500], ...font(400) },
   items: { gap: 8 },
   item: { flexDirection: 'row', alignItems: 'center', gap: 10 },

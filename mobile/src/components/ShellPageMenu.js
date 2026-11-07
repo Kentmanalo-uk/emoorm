@@ -93,8 +93,12 @@ const OUT = Easing.bezier(0.22, 1, 0.36, 1);
  * extra: this page's own actions, listed first:
  *   [{ key, Icon, label, onPress?, to?, danger? }]
  * items: replaces the per-page links entirely (same shape).
+ * barInk: the bar's colours on the green header (HeaderGlow useHeaderInk):
+ *   the ⋯ is drawn in them. Leave it out on any other bar.
  */
-export default function ShellPageMenu({ extra = [], items: override, label = 'Page menu' }) {
+export default function ShellPageMenu({
+  extra = [], items: override, label = 'Page menu', barInk,
+}) {
   const router = useRouter();
   const pathname = usePathname();
   const signedIn = useAuthStore((s) => s.isAuthenticated);
@@ -151,7 +155,7 @@ export default function ShellPageMenu({ extra = [], items: override, label = 'Pa
         accessibilityState={{ expanded }}
       >
         <Animated.View style={{ transform: [{ rotate }] }}>
-          <DotsThreeIcon size={28} weight="bold" color={expanded ? t.primary[700] : t.neutral[700]} />
+          <DotsThreeIcon size={28} weight="bold" color={expanded ? (barInk ? barInk.accent : t.primary[700]) : (barInk ? barInk.icon : t.neutral[700])} />
         </Animated.View>
       </ShellBarButton>
       <Modal visible={open} transparent animationType="none" statusBarTranslucent onRequestClose={() => hide()}>

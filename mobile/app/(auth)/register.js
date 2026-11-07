@@ -1,19 +1,23 @@
 import { useEffect, useState } from 'react';
-import { StyleSheet, Text, View } from 'react-native';
+import { Pressable, StyleSheet, Text, View } from 'react-native';
 import { router, useLocalSearchParams } from 'expo-router';
 import Toast from 'react-native-toast-message';
+import { DeviceMobileIcon, EnvelopeSimpleIcon } from '../../src/lib/icons';
 import apiClient from '../../src/api/client';
 import useAuthStore from '../../src/store/authStore';
 import { fetchMunicipalities } from '../../src/lib/referenceData';
 import AuthSheet, { HelpLink } from '../../src/components/auth/AuthSheet';
 import {
-  AuthDivider, AuthErrorBox, AuthField, AuthLabel, AuthSubmit, GoogleButton,
+  AuthDivider, AuthErrorBox, AuthField, AuthLabel, AuthSubmit, AuthWayButton, GoogleButton,
 } from '../../src/components/auth/AuthForm';
+import AuthChoose, { AuthChooseLink } from '../../src/components/auth/AuthChoose';
+import usePhoneLogin from '../../src/components/auth/phoneLogin';
 import AuthAddressPicker from '../../src/components/auth/AuthAddressPicker';
 import { AuthHint, AuthTitle, Strong } from '../../src/components/auth/AuthPanels';
 import useAuthGoogle from '../../src/components/auth/useAuthGoogle';
 import InviteCodeField from '../../src/components/auth/InviteCodeField';
 import { useSignupInvite } from '../../src/lib/invite';
+import useAppSettings from '../../src/lib/appSettings';
 import { font, t, themed } from '../../src/theme';
 
 const PASSWORD_RULE = /(?=.*[a-z])(?=.*[A-Z])(?=.*\d)(?=.*[!@#$%^&*(),.?":{}|<>])/;
@@ -22,6 +26,11 @@ const PASSWORD_RULE = /(?=.*[a-z])(?=.*[A-Z])(?=.*\d)(?=.*[!@#$%^&*(),.?":{}|<>]
  * Sign up: the website's phone sheet (web/src/pages/Register.jsx +
  * AuthSheet.css). "Sign up with Google" for a new email reuses this form to
  * finish the account (POST /auth/google/complete instead of /auth/register).
+ *
+ * The sheet opens on the same choice as Log in (auth/AuthChoose): Google, a
+ * mobile number (done on the Log in sheet, opened at that step), or email,
+ * which opens the form. No "Continue with Facebook" in the app (see
+ * app/(auth)/login.js).
  */
 export default function Register() {
   const params = useLocalSearchParams();
@@ -47,6 +56,13 @@ export default function Register() {
     street: '',
   });
   const [showPassword, setShowPassword] = useState(false);
+  // The first step is the choice; the form is one tap away.
+  const [emailOpen, setEmailOpen] = useState(false);
+  // Continue with mobile number: done on the Log in sheet, opened at it.
+  const phoneEnabled = usePhoneLogin();
+  // Continue with Google, unless the super admin switched it off.
+  const appSettings = useAppSettings();
+  const googleOn = appSettings.loginGoogle !== false;
   const [showConfirmPassword, setShowConfirmPassword] = useState(false);
   const [errors, setErrors] = useState({});
   const [isLoading, setIsLoading] = useState(false);
@@ -203,10 +219,73 @@ export default function Register() {
     setApiError('');
   };
 
+  // Signing up to sell (on to the seller application): the megaphone.
+  const forSelling = Boolean(safeRedirect?.startsWith('/seller'));
+  // The first step, the choice. Google sending a new email back opens the
+  // form to finish the account.
+  const choosing = !emailOpen && !googleProfile;
+
+  const googleButton = (edge) => (googleOn ? (
+    <GoogleButton
+      edge={edge}
+      label={google.loading ? 'Signing up…' : 'Sign up with Google'}
+      onPress={handleGoogleSignup}
+      disabled={isLoading || google.loading}
+    />
+  ) : null);
+
+  const phoneButton = (edge) => (phoneEnabled ? (
+    <AuthWayButton
+      edge={edge}
+      icon={<DeviceMobileIcon size={21} color={t.neutral[900]} />}
+      label="Continue with mobile number"
+      onPress={() => router.replace({ pathname: loginPath, params: { openPhone: '1' } })}
+    />
+  ) : null);
+
+  if (choosing) {
+    return (
+      <AuthSheet band switchTo={loginPath} switchLabel="Log in">
+        <View style={styles.cardChoose}>
+          <AuthChoose
+            title={forSelling ? 'Start selling on E-MOORM' : 'Join E-MOORM'}
+            sub={forSelling ? 'Make an account, then open your shop' : 'Fresh finds from Mindoro, delivered or picked up'}
+            scene={forSelling ? 'sell' : 'signUp'}
+            error={apiError}
+            more={(
+              <>
+                Already have an account?{' '}
+                <AuthChooseLink onPress={() => router.replace(loginPath)}>Log in</AuthChooseLink>
+              </>
+            )}
+            onHelp={() => router.push('/help-center')}
+            onTerms={() => router.push('/terms')}
+            onPrivacy={() => router.push('/privacy')}
+          >
+            {googleButton(true)}
+            {phoneButton(true)}
+            <AuthWayButton
+              edge
+              icon={<EnvelopeSimpleIcon size={21} color={t.neutral[900]} />}
+              label="Continue with Email"
+              onPress={() => setEmailOpen(true)}
+            />
+          </AuthChoose>
+        </View>
+      </AuthSheet>
+    );
+  }
+
   return (
-    <AuthSheet switchTo={loginPath} switchLabel="Log in">
+    <AuthSheet>
       <View style={styles.card}>
-        <AuthTitle style={styles.title}>Sign Up</AuthTitle>
+        {/* The title row, as Log in's: the title, and Log in at the other end. */}
+        <View style={styles.headerRow}>
+          <AuthTitle>Sign Up</AuthTitle>
+          <Pressable accessibilityRole="link" hitSlop={8} onPress={() => router.replace(loginPath)}>
+            <Text style={styles.switchLinkText}>Log in</Text>
+          </Pressable>
+        </View>
 
         {googleProfile ? (
           <AuthHint style={styles.googleHint}>
@@ -318,13 +397,10 @@ export default function Register() {
 
           {!googleProfile ? (
             <>
-              <AuthDivider style={styles.divider} />
-              <GoogleButton
-                label={google.loading ? 'Signing up…' : 'Sign up with Google'}
-                onPress={handleGoogleSignup}
-                disabled={isLoading || google.loading}
-                style={styles.google}
-              />
+              {/* The "or" only when another way in follows. */}
+              {googleOn || phoneEnabled ? <AuthDivider style={styles.divider} /> : null}
+              {googleButton(false)}
+              {phoneButton(false)}
             </>
           ) : null}
 
@@ -355,14 +431,23 @@ export default function Register() {
 
 const styles = themed(() => StyleSheet.create({
   card: { paddingTop: 20 },
-  title: { marginBottom: 20 },
+  // The first step runs to the foot of the screen.
+  cardChoose: { flexGrow: 1 },
+  headerRow: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'space-between',
+    gap: 8,
+    marginBottom: 20,
+  },
+  // .auth-switch-link in the sheet.
+  switchLinkText: { fontSize: 15, lineHeight: 24, color: t.primary[700], ...font(500) },
   googleHint: { marginBottom: 16 },
   googleCancel: { color: t.info[600], textDecorationLine: 'underline' },
   form: { gap: 16 },
   group: { gap: 6 },
   submit: { marginTop: 4 },
   divider: { marginVertical: 4 },
-  google: { marginTop: 0 },
   footer: { marginTop: 4, textAlign: 'center', fontSize: 14, lineHeight: 21.7, color: t.neutral[500], ...font(400) },
   footerText: { color: t.neutral[500], ...font(400) },
   footerLink: { color: t.primary[600], ...font(500) },

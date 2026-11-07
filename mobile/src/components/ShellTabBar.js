@@ -10,8 +10,12 @@ import { colors, font, ink, t, text, themed, veil } from '../theme';
 // (.mobile-bottom-nav in Header.css), so 29 is the same icon at the same
 // size, and the label under it is the website's 9px.
 const ICON = 29;
-// Lines stay this thick on screen, however large a tab's drawing is.
-const STROKE = 1.5;
+// Lines stay this thick on screen, however large a tab's drawing is: the
+// website's stroke (1.5) times the phone's lighter ink (0.75, index.css),
+// as its bar draws all five tabs (Header.jsx NAV_BIG_INK scales the bell
+// and the person by 21 / 24 to match; here STROKE * ICON / size does).
+// At 1.5 the whole bar was a third heavier than the website's.
+const STROKE = 1.5 * 0.75;
 
 // The five drawings do not fill their square alike: at one size the bell is
 // 14 units wide and sits 2 low, the person is 13, the rest are 16 to 18. These

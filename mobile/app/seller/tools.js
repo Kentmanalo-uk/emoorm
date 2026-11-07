@@ -2,7 +2,7 @@ import { Pressable, StyleSheet, Text, View } from 'react-native';
 import { useRouter } from 'expo-router';
 import SellerPage from '../../src/components/seller/SellerPage';
 import { HomeHead, HomeSection } from '../../src/components/seller/home/HomeCards';
-import { TOOL_SECTIONS } from '../../src/components/seller/home/sellerTools';
+import { TOOL_SECTIONS, useToolArt } from '../../src/components/seller/home/sellerTools';
 import { font, t, themed } from '../../src/theme';
 
 /**
@@ -19,6 +19,8 @@ import { font, t, themed } from '../../src/theme';
  */
 export default function SellerToolsScreen() {
   const router = useRouter();
+  // The look and size the super admin chose, as on Home's tools.
+  const { look, size } = useToolArt();
   return (
     <SellerPage title="Shop tools">
       {TOOL_SECTIONS.map((section, i) => (
@@ -33,7 +35,7 @@ export default function SellerToolsScreen() {
                 onPress={() => router.push(to)}
                 style={({ pressed }) => [styles.tool, pressed && styles.toolPressed]}
               >
-                <Art size={36} tone={tone} />
+                <Art size={size} tone={tone} look={look} />
                 <Text style={styles.label} numberOfLines={2}>{label}</Text>
               </Pressable>
             ))}

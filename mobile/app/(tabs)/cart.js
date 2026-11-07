@@ -13,7 +13,7 @@ import ShellPageMenu from '../../src/components/ShellPageMenu';
 import CartStoreGroup from '../../src/components/cart/CartStoreGroup';
 import CartSuggestions from '../../src/components/cart/CartSuggestions';
 import CartBar from '../../src/components/cart/CartBar';
-import HeaderGlow from '../../src/components/HeaderGlow';
+import HeaderGlow, { useHeaderInk } from '../../src/components/HeaderGlow';
 import { floatingTabBar, tabBarTop, useTabBarScroll } from '../../src/components/Glass';
 import CartVoucherCard from '../../src/components/cart/CartVoucherCard';
 import CartConfirmDialog from '../../src/components/cart/CartConfirmDialog';
@@ -34,6 +34,8 @@ const SUGGESTION_COUNT = 12;
 const fixed2 = (n) => `₱${Number(n || 0).toFixed(2)}`;
 
 export default function Cart() {
+  // On the green header (super admin's choice) the bar is written in white.
+  const ink = useHeaderInk();
   const router = useRouter();
   const insets = useSafeAreaInsets();
   const params = useLocalSearchParams();
@@ -356,9 +358,9 @@ export default function Cart() {
   const head = (
     <View style={styles.head}>
       <View style={styles.titleRow}>
-        <Text style={styles.title} accessibilityRole="header">Cart</Text>
+        <Text style={[styles.title, ink && { color: ink.strong }]} accessibilityRole="header">Cart</Text>
       </View>
-      <ShellPageMenu items={menuItems} label="Cart options" />
+      <ShellPageMenu items={menuItems} label="Cart options" barInk={ink} />
     </View>
   );
 

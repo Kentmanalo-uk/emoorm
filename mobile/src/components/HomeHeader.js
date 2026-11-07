@@ -2,13 +2,16 @@ import { useEffect, useRef, useState } from 'react';
 import { Animated, AppState, Image, Pressable, ScrollView, StyleSheet, Text, View } from 'react-native';
 import { useRouter } from 'expo-router';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
-import HeaderGlow from './HeaderGlow';
+import HeaderGlow, { useHeaderStyle } from './HeaderGlow';
 import Svg, { Circle, Path, Rect } from 'react-native-svg';
 import { MagnifyingGlassIcon } from '../lib/icons';
 import { font, t, text, themed } from '../theme';
 import { fetchCategories } from '../lib/referenceData';
 import { isPageMoving } from '../lib/pageMotion';
 import { loadRecent, PLACEHOLDER_SUGGESTIONS, POPULAR_SUGGESTIONS, saveRecent } from '../lib/shellSearch';
+
+const LOGO = require('../../assets/brand-icon.png');
+const LOGO_WHITE = require('../../assets/brand-icon-white.png');
 
 // The website's own outline camera (Header.jsx), not a Phosphor icon.
 function CameraGlyph({ size = 26, color }) {
@@ -50,10 +53,14 @@ function useRotatingPlaceholder() {
  * search bar with the camera and the green search button flush at its end.
  * Phones search on their own page, so the bar is a button, not a field:
  * no keyboard opens here. No line under it, scrolled or not.
+ *
+ * On the green header (App settings, mobileHeaderStyle) the logo is the
+ * white one (web Header.jsx HeaderLogo); the search box keeps its own look.
  */
 export default function HomeHeader() {
   const router = useRouter();
   const insets = useSafeAreaInsets();
+  const green = useHeaderStyle() === 'GREEN';
   const [placeholder, opacity] = useRotatingPlaceholder();
   const openSearch = () => router.push('/search');
 
@@ -62,7 +69,7 @@ export default function HomeHeader() {
       <HeaderGlow />
       <View style={styles.row}>
         <Pressable accessibilityRole="link" accessibilityLabel="Emoorm home" onPress={() => router.replace('/')}>
-          <Image source={require('../../assets/brand-icon.png')} style={styles.logo} />
+          <Image source={green ? LOGO_WHITE : LOGO} style={styles.logo} />
         </Pressable>
         <View style={styles.search}>
           <Pressable accessibilityRole="search" accessibilityLabel="Search products" style={styles.field} onPress={openSearch}>

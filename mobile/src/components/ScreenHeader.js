@@ -4,7 +4,7 @@ import { useRouter } from 'expo-router';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { border, font, t, text, themed } from '../theme';
 import ShellBarButton from './ShellBarButton';
-import HeaderGlow from './HeaderGlow';
+import HeaderGlow, { useHeaderInk } from './HeaderGlow';
 import ShellPageMenu from './ShellPageMenu';
 
 /**
@@ -20,27 +20,31 @@ import ShellPageMenu from './ShellPageMenu';
  *   (Home) when there is no history.
  * subtitle: a second line under the title. The website's bar has none, so
  *   ported pages put that text in the page instead.
+ *
+ * On the green header (App settings, mobileHeaderStyle) its title and icons
+ * are white (useHeaderInk).
  */
 export default function ScreenHeader({
   title, subtitle, action, menu = true, menuItems, onBack, backTo = '/', titleStyle,
 }) {
   const router = useRouter();
   const insets = useSafeAreaInsets();
+  const ink = useHeaderInk();
   const goBack = onBack || (() => (router.canGoBack() ? router.back() : router.replace(backTo)));
   return (
     <View style={[styles.bar, { paddingTop: insets.top, height: 52 + insets.top }]}>
       <HeaderGlow />
       <ShellBarButton label="Back" onPress={goBack}>
-        <CaretLeftIcon size={22} weight="bold" color={text.strong} />
+        <CaretLeftIcon size={22} weight="bold" color={ink ? ink.icon : text.strong} />
       </ShellBarButton>
       <View style={styles.text}>
-        {title ? <Text style={[styles.title, titleStyle]} numberOfLines={1} accessibilityRole="header">{title}</Text> : null}
-        {subtitle ? <Text style={styles.subtitle} numberOfLines={1}>{subtitle}</Text> : null}
+        {title ? <Text style={[styles.title, titleStyle, ink && { color: ink.strong }]} numberOfLines={1} accessibilityRole="header">{title}</Text> : null}
+        {subtitle ? <Text style={[styles.subtitle, ink && { color: ink.muted }]} numberOfLines={1}>{subtitle}</Text> : null}
       </View>
       {action || menu ? (
         <View style={styles.end}>
           {action}
-          {menu ? <ShellPageMenu extra={menuItems} /> : null}
+          {menu ? <ShellPageMenu extra={menuItems} barInk={ink} /> : null}
         </View>
       ) : null}
     </View>

@@ -1,7 +1,7 @@
 import { StyleSheet, Text, View } from 'react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { border, font, t, themed } from '../../theme';
-import HeaderGlow from '../HeaderGlow';
+import HeaderGlow, { useHeaderInk } from '../HeaderGlow';
 
 /**
  * The title bar of the Messages and Notifications tabs on phones
@@ -11,14 +11,17 @@ import HeaderGlow from '../HeaderGlow';
  *
  * Render <InboxTopGap /> and this above the page's ScrollView: the bar stays
  * fixed at the top (as Home's search bar) and only the page under it scrolls.
+ * On the green header the title is white; the page's own tools (children)
+ * take useHeaderInk() themselves.
  */
 export default function InboxPageHead({
   title, badge, children, padLeft = 12, padRight = 12, toolGap = 8, style,
 }) {
+  const ink = useHeaderInk();
   return (
     <View style={[styles.bar, { paddingLeft: padLeft, paddingRight: padRight }, style]}>
       <View style={styles.left}>
-        <Text style={styles.title} numberOfLines={1} accessibilityRole="header">{title}</Text>
+        <Text style={[styles.title, ink && { color: ink.strong }]} numberOfLines={1} accessibilityRole="header">{title}</Text>
         {badge}
       </View>
       {children ? <View style={[styles.tools, { gap: toolGap }]}>{children}</View> : null}
