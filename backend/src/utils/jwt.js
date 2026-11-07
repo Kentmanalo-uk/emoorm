@@ -187,6 +187,8 @@ const generateGoogleProfileToken = (profile) => {
     {
       googleId: profile.googleId || undefined,
       facebookId: profile.facebookId || undefined,
+      // Continue with mobile number: the number its code proved.
+      phone: profile.phone || undefined,
       email: profile.email,
       fullName: profile.fullName,
       profilePhoto: profile.profilePhoto,

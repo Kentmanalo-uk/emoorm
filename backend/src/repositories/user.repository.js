@@ -764,6 +764,8 @@ module.exports = {
   findByEmail,
   findByGoogleId: (googleId) => prisma.user.findUnique({ where: { googleId }, select: SOCIAL_SELECT }),
   findByFacebookId: (facebookId) => prisma.user.findUnique({ where: { facebookId }, select: SOCIAL_SELECT }),
+  // Continue with mobile number: the live accounts that proved this number.
+  findByVerifiedPhone: (number) => prisma.user.findMany({ where: { phoneVerifiedNumber: number, deletedAt: null }, select: SOCIAL_SELECT, take: 2 }),
   findById,
   updateUser,
   softDeleteUser,

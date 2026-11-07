@@ -635,3 +635,52 @@
   font-weight: 600;
   text-decoration: none;
 }
+
+/* ── Continue with mobile number (PhoneSignIn): the number, then the code ── */
+.auth-phone-hint {
+  display: block;
+  margin-top: 6px;
+  color: var(--t-neutral-500, #6b7280);
+  font-size: 13px;
+  line-height: 1.45;
+}
+
+.auth-phone-sent {
+  margin: 0;
+  color: var(--t-neutral-600, #4b5563);
+  font-size: 14.5px;
+  line-height: 1.5;
+}
+
+.auth-phone-sent strong {
+  color: var(--t-neutral-900, #111827);
+}
+
+.auth-phone-link,
+.auth-phone-back {
+  padding: 0;
+  border: 0;
+  background: none;
+  color: var(--t-primary-700, #047857);
+  font: inherit;
+  font-weight: 600;
+  cursor: pointer;
+}
+
+.auth-phone-back {
+  align-self: center;
+  min-height: 40px;
+  font-size: 14.5px;
+}
+
+.auth-phone-back:disabled {
+  color: var(--t-neutral-400, #9ca3af);
+  cursor: default;
+}
+
+.auth-phone-code {
+  font-size: 22px !important;
+  letter-spacing: 0.5em;
+  text-align: center;
+}
+

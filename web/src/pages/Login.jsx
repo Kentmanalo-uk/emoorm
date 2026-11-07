@@ -15,6 +15,8 @@ import AuthSheetBar from '../components/AuthSheetBar';
 import AuthHero from '../components/auth/AuthHero';
 import PopArt from '../components/art/PopArt';
 import FacebookButton from '../components/auth/FacebookButton';
+import PhoneSignIn from '../components/auth/PhoneSignIn';
+import { usePhoneLogin } from '../lib/phoneLogin';
 import { facebookReturnUri, startFacebookLogin, useFacebookLogin } from '../lib/facebookLogin';
 import { TONES } from '../components/art/FlatArt';
 import Footer from '../components/layout/Footer';
@@ -80,6 +82,8 @@ const Login = ({ seller = false }) => {
   const { municipalities, isLoading: municipalitiesLoading } = useMunicipalities({ enabled: mfaStage === 'google-profile' });
   const [googleForm, setGoogleForm] = useState({
     fullName: '',
+    // Only asked when signing up with a mobile number (no email from Google).
+    email: '',
     contactNumber: '',
     password: '',
     confirmPassword: '',
@@ -301,6 +305,10 @@ const Login = ({ seller = false }) => {
   // Continue with Facebook: on when the server has a Meta app; Facebook's
   // answer comes back here from /facebook-return (pages/FacebookReturn).
   const facebook = useFacebookLogin();
+  // Continue with mobile number: on while the server can send texts. Sign up
+  // sends people here with it open (openPhone).
+  const phoneEnabled = usePhoneLogin();
+  const [phoneOpen, setPhoneOpen] = useState(() => Boolean(location.state?.openPhone));
   const [facebookLoading, setFacebookLoading] = useState(() => Boolean(location.state?.facebookReturn?.code));
 
   // Google's answer, from the pop-up here or from the Android app's browser.
@@ -401,6 +409,9 @@ const Login = ({ seller = false }) => {
   const validateGoogleForm = () => {
     const errs = {};
     if (!googleForm.fullName.trim()) errs.fullName = 'Full name is required';
+    if (!googleProfile?.email && !/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(googleForm.email.trim())) {
+      errs.email = 'Enter your email address';
+    }
     if (googleForm.contactNumber && !/^(\+63|0)?[0-9]{10}$/.test(googleForm.contactNumber.replace(/[-\s]/g, ''))) {
       errs.contactNumber = 'Contact number must be 10 digits';
     }
@@ -426,6 +437,7 @@ const Login = ({ seller = false }) => {
       const res = await axios.post('/auth/google/complete', {
         googleToken: googleProfile.googleToken,
         fullName: googleForm.fullName.trim(),
+        email: googleProfile?.email ? undefined : googleForm.email.trim(),
         contactNumber: googleForm.contactNumber.trim() || undefined,
         province: googleForm.province || undefined,
         municipalityId: googleForm.municipalityId,
@@ -495,12 +507,19 @@ const Login = ({ seller = false }) => {
     </button>
   );
 
+  const phoneButton = phoneEnabled ? (
+    <button type="button" className="login-form-google" onClick={() => { setApiError(''); setPhoneOpen(true); }}>
+      <Smartphone size={21} />
+      Continue with mobile number
+    </button>
+  ) : null;
+
   const facebookButton = facebook.enabled ? (
     <FacebookButton className="login-form-google" onClick={handleFacebookLogin} busy={facebookLoading} />
   ) : null;
 
   // Phones: the sheet's first step, the choice.
-  const choosing = isPhone && !emailOpen;
+  const choosing = isPhone && !emailOpen && !phoneOpen;
 
   return (
     <div
@@ -612,6 +631,7 @@ const Login = ({ seller = false }) => {
                     <div className="auth-choose-buttons">
                       {googleButton}
                       {facebookButton}
+                      {phoneButton}
                       <button type="button" className="login-form-google" onClick={() => setEmailOpen(true)}>
                         <EnvelopeSimple size={21} />
                         Continue with Email
@@ -634,7 +654,13 @@ const Login = ({ seller = false }) => {
                   </div>
                 </div>
               )}
-              {mfaStage === 'credentials' && (!showQrLogin || isPhone) && !choosing && (<>
+              {mfaStage === 'credentials' && phoneOpen && (
+                <div className="auth-phone-wrap">
+                  {formHeader}
+                  <PhoneSignIn onAnswer={applyGoogleAnswer} onBack={() => setPhoneOpen(false)} />
+                </div>
+              )}
+              {mfaStage === 'credentials' && (!showQrLogin || isPhone) && !choosing && !phoneOpen && (<>
                 {formHeader}
 
                 <form onSubmit={handleSubmit} className="login-form">
@@ -725,6 +751,7 @@ const Login = ({ seller = false }) => {
                   {/* Google Sign In */}
                   {googleButton}
                   {facebookButton}
+                  {phoneButton}
 
                   {/* Computers only: approve the sign-in from the phone app */}
                   {!seller && (
@@ -782,7 +809,7 @@ function GoogleCompleteProfile({
     <form onSubmit={onSubmit} className="login-form">
       <h2 className="login-form-title">Complete your account</h2>
       <p className="login-mfa-hint">
-        You're signing in with <strong>{profile?.email}</strong>. Just a few more
+        You're signing in with <strong>{profile?.email || profile?.phone}</strong>. Just a few more
         details to finish setting up your Emoorm account.
       </p>
 
@@ -798,19 +825,38 @@ function GoogleCompleteProfile({
         {errors.fullName && <span className="login-form-error" role="alert">{errors.fullName}</span>}
       </div>
 
-      <div className="login-form-group">
-        <label htmlFor="google-contactNumber" className="login-form-label">Contact number <span className="register-form-optional">(optional)</span></label>
-        <input
-          id="google-contactNumber"
-          type="tel"
-          autoComplete="tel"
-          placeholder="09123456789"
-          className={`login-form-input ${errors.contactNumber ? 'login-form-input-error' : ''}`}
-          value={form.contactNumber}
-          onChange={(e) => onChange('contactNumber', e.target.value)}
-        />
-        {errors.contactNumber && <span className="login-form-error" role="alert">{errors.contactNumber}</span>}
-      </div>
+      {!profile?.email && (
+        <div className="login-form-group">
+          <label htmlFor="google-email" className="login-form-label">Email address</label>
+          <input
+            id="google-email"
+            type="email"
+            autoComplete="email"
+            placeholder="you@example.com"
+            className={`login-form-input ${errors.email ? 'login-form-input-error' : ''}`}
+            value={form.email}
+            onChange={(e) => onChange('email', e.target.value)}
+          />
+          <span className="auth-phone-hint">For your receipts, and to get back in if you change numbers.</span>
+          {errors.email && <span className="login-form-error" role="alert">{errors.email}</span>}
+        </div>
+      )}
+
+      {!profile?.phone && (
+        <div className="login-form-group">
+          <label htmlFor="google-contactNumber" className="login-form-label">Contact number <span className="register-form-optional">(optional)</span></label>
+          <input
+            id="google-contactNumber"
+            type="tel"
+            autoComplete="tel"
+            placeholder="09123456789"
+            className={`login-form-input ${errors.contactNumber ? 'login-form-input-error' : ''}`}
+            value={form.contactNumber}
+            onChange={(e) => onChange('contactNumber', e.target.value)}
+          />
+          {errors.contactNumber && <span className="login-form-error" role="alert">{errors.contactNumber}</span>}
+        </div>
+      )}
 
       <div className="login-form-group">
         <PhAddressPicker

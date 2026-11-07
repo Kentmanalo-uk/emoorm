@@ -11,6 +11,7 @@ const identityVerificationRepository = require('../repositories/identityVerifica
 const addressService = require('./address.service');
 const googleService = require('./google.service');
 const facebookService = require('./facebook.service');
+const phoneVerifyService = require('./phoneVerify.service');
 const { hashPassword, comparePassword } = require('../utils/password');
 const {
   generateTokens,
@@ -1654,6 +1655,72 @@ const loginWithFacebook = async ({ code, redirectUri }) => {
   return loginWithSocialProfile(profile, 'facebook');
 };
 
+/**
+ * The last steps of every sign-in that skips the password (Google,
+ * Facebook, a text code): a closed or suspended account stops here; admins
+ * and anyone who turned on two-step sign-in are asked for it; otherwise
+ * they are in.
+ */
+const finishSignIn = async (user) => {
+  if (user.deletedAt) {
+    throw new ApiError('Account has been deleted', 403);
+  }
+  if (!user.isActive) {
+    throw new ApiError(await suspendedMessage(user.id), 403);
+  }
+
+  // Admin accounts still need MFA — mirror the password login response shape.
+  // So does anyone else who turned it on: Google proves the email, not the
+  // second factor they chose.
+  const isAdmin = user.role === 'SUPER_ADMIN' || user.role === 'MUNICIPAL_ADMIN';
+  if (!isAdmin && user.mfaEnabled) {
+    return {
+      requiresMfa: true,
+      mfaToken: generateMfaToken(user, 'mfa-verify'),
+      email: user.email,
+    };
+  }
+  if (isAdmin) {
+    if (user.mfaEnabled) {
+      return {
+        requiresMfa: true,
+        mfaToken: generateMfaToken(user, 'mfa-verify'),
+        email: user.email,
+      };
+    }
+    return {
+      requiresMfaSetup: true,
+      mfaToken: generateMfaToken(user, 'mfa-setup'),
+      email: user.email,
+    };
+  }
+
+  const tokens = await sessionService.issue(user);
+  return { user, ...tokens };
+};
+
+/**
+ * Continue with mobile number: the code texted to the number. An account
+ * that proved this number signs in; a new number finishes its account (with
+ * an email) through the same step as a first Google sign-in.
+ */
+const loginWithPhone = async ({ number, code }) => {
+  const phone = await phoneVerifyService.takeLoginCode(number, code);
+  const users = await userRepository.findByVerifiedPhone(phone);
+  if (users.length > 1) {
+    throw new ApiError('This number is on more than one account. Please sign in with your email.', 409);
+  }
+  if (users.length === 1) return finishSignIn(users[0]);
+  return {
+    requiresProfile: true,
+    googleToken: generateGoogleProfileToken({ phone, fullName: '' }),
+    email: null,
+    phone,
+    fullName: '',
+    profilePhoto: null,
+  };
+};
+
 const SOCIAL = {
   google: { field: 'googleId', find: (id) => userRepository.findByGoogleId(id), name: 'Google' },
   facebook: { field: 'facebookId', find: (id) => userRepository.findByFacebookId(id), name: 'Facebook' },
@@ -1716,41 +1783,7 @@ const loginWithSocialProfile = async (profile, provider) => {
     };
   }
 
-  if (user.deletedAt) {
-    throw new ApiError('Account has been deleted', 403);
-  }
-  if (!user.isActive) {
-    throw new ApiError(await suspendedMessage(user.id), 403);
-  }
-
-  // Admin accounts still need MFA — mirror the password login response shape.
-  // So does anyone else who turned it on: Google proves the email, not the
-  // second factor they chose.
-  const isAdmin = user.role === 'SUPER_ADMIN' || user.role === 'MUNICIPAL_ADMIN';
-  if (!isAdmin && user.mfaEnabled) {
-    return {
-      requiresMfa: true,
-      mfaToken: generateMfaToken(user, 'mfa-verify'),
-      email: user.email,
-    };
-  }
-  if (isAdmin) {
-    if (user.mfaEnabled) {
-      return {
-        requiresMfa: true,
-        mfaToken: generateMfaToken(user, 'mfa-verify'),
-        email: user.email,
-      };
-    }
-    return {
-      requiresMfaSetup: true,
-      mfaToken: generateMfaToken(user, 'mfa-setup'),
-      email: user.email,
-    };
-  }
-
-  const tokens = await sessionService.issue(user);
-  return { user, ...tokens };
+  return finishSignIn(user);
 };
 
 // ── "Continue with Google" in the Android app (apk/) ──
@@ -1894,6 +1927,52 @@ const exchangeGoogleAppTicket = async ({ ticket, verifier } = {}) => {
  * token, validates the user-supplied name/address/contact/password, then
  * creates the E-MOORM account linked to the Google ID and logs them in.
  */
+/**
+ * A new account from a texted code: the number is proven; the email is the
+ * one typed in the form, confirmed later by the welcome email like any
+ * sign-up's.
+ */
+const completePhoneSignup = async (phone, data) => {
+  const email = String(data.email || '').trim().toLowerCase();
+  if (!/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email)) throw new ApiError('Enter your email address', 400);
+  if (await userRepository.findByEmail(email)) {
+    throw new ApiError('That email already has an account. Sign in with it, then add your number in Settings.', 409);
+  }
+  if ((await userRepository.findByVerifiedPhone(phone)).length) {
+    throw new ApiError('This number already has an account. Sign in with it instead.', 409);
+  }
+  const { fullName, municipalityId, province, barangay, address, password } = data;
+  if (!fullName || !String(fullName).trim()) throw new ApiError('Full name is required', 400);
+  if (!municipalityId) throw new ApiError('Municipality is required', 400);
+  if (!password || String(password).length < 8) throw new ApiError('Password must be at least 8 characters', 400);
+
+  const name = String(fullName).trim();
+  const created = await userRepository.createUser({
+    email,
+    password: await hashPassword(password),
+    fullName: name,
+    username: await allocateUsername(name, email),
+    contactNumber: phone,
+    phoneVerifiedNumber: phone,
+    phoneVerifiedAt: new Date(),
+    municipalityId,
+    province: province || 'Oriental Mindoro',
+    barangay: barangay || null,
+    address: address || null,
+    role: 'BUYER',
+    isActive: true,
+    isVerified: false,
+  });
+  await addressService.saveProfileAddress(created.id, {
+    fullName: name, contactNumber: phone, municipalityId, barangay, address,
+  });
+  await referralService.attachAtSignup(created.id, { referralCode: data.referralCode, referralShop: data.referralShop });
+  sendInBackground('welcome', async () => sendWelcomeEmail({ user: created, confirmUrl: await issueEmailConfirmation(created) }));
+  const tokens = await sessionService.issue(created);
+  delete created.password;
+  return { user: created, ...tokens };
+};
+
 const completeGoogleSignup = async (googleToken, data) => {
   let decoded;
   try {
@@ -1902,7 +1981,9 @@ const completeGoogleSignup = async (googleToken, data) => {
     throw new ApiError(err.message || 'Invalid Google sign-in session', 401);
   }
 
-  const { googleId, facebookId, email, profilePhoto } = decoded;
+  const { googleId, facebookId, phone, profilePhoto } = decoded;
+  if (phone) return completePhoneSignup(phone, data);
+  const { email } = decoded;
   const provider = facebookId ? SOCIAL.facebook : SOCIAL.google;
   const socialId = facebookId || googleId;
   if (!socialId) throw new ApiError('Invalid sign-in session', 401);
@@ -1972,6 +2053,7 @@ module.exports = {
   login,
   loginWithGoogle,
   loginWithFacebook,
+  loginWithPhone,
   googleAppStartUrl,
   googleAppFinishUrl,
   googleAppTicketFromWeb,

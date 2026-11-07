@@ -1,7 +1,7 @@
 import { useState, useEffect } from 'react';
 import { Link, useLocation, useNavigate, useSearchParams } from 'react-router-dom';
 import {
-  Eye, EyeSlash as EyeOff, Storefront, EnvelopeSimple,
+  Eye, EyeSlash as EyeOff, Storefront, EnvelopeSimple, DeviceMobile,
 } from '../lib/icons';
 import { useGoogleLogin } from '@react-oauth/google';
 import withGoogle from '../lib/withGoogle';
@@ -18,6 +18,7 @@ import AuthHero from '../components/auth/AuthHero';
 import PopArt from '../components/art/PopArt';
 import FacebookButton from '../components/auth/FacebookButton';
 import { startFacebookLogin, useFacebookLogin } from '../lib/facebookLogin';
+import { usePhoneLogin } from '../lib/phoneLogin';
 import { TONES } from '../components/art/FlatArt';
 import Footer from '../components/layout/Footer';
 import { BusyLabel } from '../components/ui/Spinner';
@@ -63,6 +64,8 @@ const Register = () => {
   const [emailOpen, setEmailOpen] = useState(false);
   // Continue with Facebook: finished on the Log in page it comes back to.
   const facebook = useFacebookLogin();
+  // Continue with mobile number: done on the Log in page, opened at it.
+  const phoneEnabled = usePhoneLogin();
   const [showConfirmPassword, setShowConfirmPassword] = useState(false);
   const [errors, setErrors] = useState({});
   const [isLoading, setIsLoading] = useState(false);
@@ -341,6 +344,20 @@ const Register = () => {
     />
   ) : null;
 
+  const phoneButton = phoneEnabled ? (
+    <button
+      type="button"
+      className="register-form-google"
+      onClick={() => navigate(forSelling ? '/seller/login' : loginPath, {
+        replace: isPhone,
+        state: { ...location.state, fromSheet: isPhone, openPhone: true },
+      })}
+    >
+      <DeviceMobile size={21} />
+      Continue with mobile number
+    </button>
+  ) : null;
+
   const googleButton = (
   <button
     type="button"
@@ -407,6 +424,7 @@ const Register = () => {
                     <div className="auth-choose-buttons">
                       {googleButton}
                       {facebookButton}
+                      {phoneButton}
                       <button type="button" className="register-form-google" onClick={() => setEmailOpen(true)}>
                         <EnvelopeSimple size={21} />
                         Continue with Email
@@ -627,6 +645,7 @@ const Register = () => {
                     {/* Google Sign Up */}
                     {googleButton}
                     {facebookButton}
+                    {phoneButton}
                   </>
                 )}
 

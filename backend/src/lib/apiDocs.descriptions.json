@@ -10,6 +10,8 @@
   "POST /api/auth/google": "\"Continue with Google\" from the website popup (auth code / ID token); signs in, or asks to complete sign-up for a new person.",
   "POST /api/auth/facebook": "\"Continue with Facebook\": the code Facebook sent back to /facebook-return; signs in, or asks to complete sign-up for a new person (finished at /auth/google/complete).",
   "GET /api/auth/facebook/config": "Whether Continue with Facebook is on, and the Meta app id to start it with.",
+  "POST /api/auth/phone/login/send": "Continue with mobile number: texts a 6-digit sign-in code to the number (never says whether it has an account).",
+  "POST /api/auth/phone/login": "Continue with mobile number: the texted code; signs in the account that proved the number, or asks to complete sign-up (with an email) at /auth/google/complete.",
   "POST /api/auth/google/complete": "Finish a Google sign-up (details the new account still needs).",
   "GET /api/auth/google/app/start": "Android app: redirects the phone's browser to Google's consent.",
   "GET /api/auth/google/app/callback": "Google's redirect target for the app flow; hands a one-time ticket back to the app.",

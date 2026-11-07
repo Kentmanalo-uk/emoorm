@@ -43,6 +43,13 @@ const registerValidation = [
     .isLength({ min: 2, max: 100 })
     .withMessage('Full name must be between 2 and 100 characters'),
 
+  // Signing up with a mobile number: the email comes from the form.
+  body('email')
+    .optional({ values: 'falsy' })
+    .trim()
+    .isEmail()
+    .withMessage('Please provide a valid email address'),
+
   body('contactNumber')
     .optional()
     .trim()

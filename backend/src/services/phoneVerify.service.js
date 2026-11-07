@@ -100,6 +100,60 @@ const verifyCode = async (userId, code) => {
   return user;
 };
 
+/*
+ * Continue with mobile number: a code to sign in (or sign up) with, sent to
+ * a number by someone not signed in yet. Limits by number and by address
+ * instead of by account, sharing the daily caps above (they cost the same).
+ * The answer never says whether the number has an account.
+ */
+const LOGIN_PER_ADDRESS_PER_HOUR = 10;
+
+const sendLoginCode = async (rawNumber, ip) => {
+  if (!sms.enabled()) throw new ApiError('Sign-in by mobile number is not available yet', 503);
+  const number = cleanNumber(rawNumber);
+  if (!PH_MOBILE.test(number)) throw new ApiError('Enter a mobile number like 09171234567', 400);
+  if ((await counters.hit(`sms-login-wait:${number}`, RESEND_AFTER)).hits > 1) {
+    throw new ApiError('Wait a minute before asking for another code', 429);
+  }
+  const { day, left } = today();
+  const [fromAddress, toNumber, site] = await Promise.all([
+    hitsOf(`sms-login-ip:${ip || '?'}`), hitsOf(`sms-day:${day}:${number}`), hitsOf(`sms-day:${day}`),
+  ]);
+  if (fromAddress >= LOGIN_PER_ADDRESS_PER_HOUR) throw new ApiError('Too many codes asked for. Try again in an hour.', 429);
+  if (toNumber >= MAX_PER_NUMBER_PER_DAY) {
+    throw new ApiError('This number has had too many codes today. Try again tomorrow.', 429);
+  }
+  if (site >= MAX_SITE_PER_DAY) throw new ApiError('Texts are busy today. Please sign in with your email.', 503);
+
+  const code = String(crypto.randomInt(0, 1000000)).padStart(6, '0');
+  await Promise.all([
+    counters.put(`sms-login:${number}`, { hash: hash(code) }, new Date(Date.now() + CODE_TTL)),
+    counters.hit(`sms-login-ip:${ip || '?'}`, HOUR),
+    counters.hit(`sms-day:${day}:${number}`, left),
+    counters.hit(`sms-day:${day}`, left),
+  ]);
+  await sms.sendSms(number, `Your Emoorm sign-in code is ${code}. It expires in 10 minutes. Never share it with anyone, even Emoorm staff.`)
+    .catch(() => { throw new ApiError('The text could not be sent. Try again in a while.', 502); });
+  return { sentTo: `${number.slice(0, 4)}***${number.slice(-3)}` };
+};
+
+/** The number, once its sign-in code is right (the code is used up). */
+const takeLoginCode = async (rawNumber, code) => {
+  const number = cleanNumber(rawNumber);
+  if (!PH_MOBILE.test(number)) throw new ApiError('Enter a mobile number like 09171234567', 400);
+  const name = `sms-login:${number}`;
+  const entry = await counters.peek(name);
+  if (!entry?.data?.hash) throw new ApiError('The code has expired. Ask for a new one.', 400);
+  if (entry.hits >= MAX_TRIES) throw new ApiError('Too many wrong codes. Ask for a new one.', 429);
+  if (hash(String(code || '').trim()) !== entry.data.hash) {
+    await counters.hit(name, CODE_TTL);
+    throw new ApiError('That code is not right', 400);
+  }
+  const { count } = await prisma.securityCounter.deleteMany({ where: { name: counters.nameOf(name) } });
+  if (!count) throw new ApiError('The code has expired. Ask for a new one.', 400);
+  return number;
+};
+
 /** For checkout: is a verified number required for cash on delivery, and does this buyer have one? */
 const assertCodAllowed = async (userId) => {
   if (process.env.COD_REQUIRES_VERIFIED_PHONE !== 'true' || !sms.enabled()) return;
@@ -109,4 +163,6 @@ const assertCodAllowed = async (userId) => {
   }
 };
 
-module.exports = { config, sendCode, verifyCode, assertCodAllowed };
+module.exports = {
+  config, sendCode, verifyCode, assertCodAllowed, sendLoginCode, takeLoginCode, cleanNumber,
+};
