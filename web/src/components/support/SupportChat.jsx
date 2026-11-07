@@ -20,6 +20,7 @@ import SafetyNotice from '../common/SafetyNotice';
 import './SupportChat.css';
 import { useSheetPresence } from '../../hooks/useSheetMotion';
 import useFocusTrap from '../../hooks/useFocusTrap';
+import useKeyboardInset from '../../lib/native/useKeyboardInset';
 import { BusyLabel } from '../ui/Spinner';
 import { pollWhileVisible } from '../../lib/visiblePoll';
 import Select from '../ui/Select';
@@ -498,6 +499,8 @@ export default function SupportChat({ mode = 'user', initialConversationId = nul
   const [threadRetry, setThreadRetry] = useState(0);
   const bottomRef = useRef(null);
   const textareaRef = useRef(null);
+  const chatRef = useRef(null);
+  const messagesRef = useRef(null);
   const listUrl = isAdmin ? '/support/inbox' : '/support/cases';
 
   const visibleConversations = isAdmin ? conversations.filter((c) => matchesFilter(c, filter, meId)) : conversations;
@@ -556,9 +559,16 @@ export default function SupportChat({ mode = 'user', initialConversationId = nul
   }, [activeId, threadRetry]);
 
   const messageCount = thread?.messages?.length || 0;
+  // The list scrolls itself to its end. scrollIntoView would scroll the page
+  // too, which on an iPhone with the keyboard up shifts the whole chat.
   useEffect(() => {
-    bottomRef.current?.scrollIntoView({ block: 'end' });
+    const box = messagesRef.current;
+    if (box && box.scrollHeight > box.clientHeight) box.scrollTop = box.scrollHeight;
+    else bottomRef.current?.scrollIntoView({ block: 'end' });
   }, [messageCount, activeId]);
+
+  // iPhones: the open chat stays above the keyboard (lib/native/useKeyboardInset).
+  useKeyboardInset(chatRef, { active: Boolean(activeId), scrollerRef: messagesRef });
 
   const send = async (event) => {
     event?.preventDefault();
@@ -700,7 +710,7 @@ export default function SupportChat({ mode = 'user', initialConversationId = nul
   ));
 
   return (
-    <div className={`sc-chat${activeId ? ' has-active' : ''}`}>
+    <div ref={chatRef} className={`sc-chat${activeId ? ' has-active' : ''}`}>
       <aside className="sc-list">
         {!isAdmin && (
           <div className="sc-list-head">
@@ -929,7 +939,7 @@ export default function SupportChat({ mode = 'user', initialConversationId = nul
 
             <div className={`sc-thread-body${panelOpen ? ' has-panel' : ''}`}>
               <div className="sc-thread-main">
-                <div className="sc-messages">
+                <div className="sc-messages" ref={messagesRef}>
                   {active.messages.length === 0 && (
                     <div className="sc-empty">
                       <ChatsCircle size={56} weight="fill" />

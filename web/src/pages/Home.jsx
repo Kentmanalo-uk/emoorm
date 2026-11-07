@@ -28,6 +28,7 @@ import { freshBoot } from '../lib/boot';
 import { POPULAR_SUGGESTIONS, loadRecent, saveRecent } from '../lib/buyerSearch';
 import CategoryIcon, { CategoryIconGradients } from '../components/CategoryIcon';
 import TodayRail from '../components/today/TodayRail';
+import PullToRefresh from '../components/native/PullToRefresh';
 
 import useStorePeek from '../components/peek/useStorePeek';
 import { ShopCoverArt, ShopLogoArt } from '../components/shop/ShopArt';
@@ -73,12 +74,29 @@ const Home = () => {
   const [promotionPopup, setPromotionPopup] = useState(null);
   const [popupOpen, setPopupOpen] = useState(false);
 
+  // Pull to refresh (the home-screen app): each round makes every section
+  // that has loaded ask again. Its requests are kept, so the spinner waits
+  // for them; sections not reached yet still wait to come near.
+  const [refreshRound, setRefreshRound] = useState(0);
+  const roundJobs = useRef([]);
+  const roundStarted = useRef(null);
+  const inRound = (job) => {
+    if (roundStarted.current) roundJobs.current.push(job);
+    return job;
+  };
+  const refreshHome = useCallback(() => new Promise((resolve) => {
+    roundJobs.current = [];
+    roundStarted.current = resolve;
+    setRefreshRound((n) => n + 1);
+  }).then(() => Promise.allSettled(roundJobs.current)), []);
+
   useEffect(() => {
     let cancelled = false;
-    (async () => {
+    inRound((async () => {
       try {
-        // The banners the page came with (lib/boot), or asked for.
-        const sent = freshBoot('banners');
+        // The banners the page came with (lib/boot), or asked for. A
+        // refresh always asks.
+        const sent = refreshRound ? undefined : freshBoot('banners');
         const res = sent ? { data: sent } : await axios.get('/banners');
         const list = Array.isArray(res.data) ? res.data : [];
         if (!cancelled && list.length > 0) {
@@ -112,9 +130,9 @@ const Home = () => {
       } finally {
         if (!cancelled) setSideBannersReady(true);
       }
-    })();
+    })());
     return () => { cancelled = true; };
-  }, []);
+  }, [refreshRound]);
 
   // The promotion waits for the first-visit language card and its pointer,
   // and counts as seen only once it has shown (choosing Tagalog reloads).
@@ -191,15 +209,15 @@ const Home = () => {
       .then((res) => { if (!cancelled) show(res); })
       .catch((err) => console.error('Failed to load home data:', err));
 
-    load(
+    inRound(load(
       fetchForYou(user?.id, { pageSize: SUGGESTED }),
       (res) => {
         setFeaturedProducts(res.data || []);
         patchCache('home', { featured: res.data || [] });
       },
-    ).finally(() => { if (!cancelled) setFeaturedReady(true); });
+    ).finally(() => { if (!cancelled) setFeaturedReady(true); }));
     return () => { cancelled = true; };
-  }, [user?.id]);
+  }, [user?.id, refreshRound]);
 
   // Explore Products, under everything else: its first batch once it comes near.
   useEffect(() => {
@@ -208,12 +226,12 @@ const Home = () => {
     const load = (request, show) => request
       .then((res) => { if (!cancelled) show(res); })
       .catch((err) => console.error('Failed to load home data:', err));
-    load(
+    inRound(load(
       fetchForYou(user?.id, { page: 1, pageSize: exploreBatch, skip: SUGGESTED }),
       (res) => {
         exploreSignals.current = res.signals;
         const fresh = res.data || [];
-        if ((exploreSaved.explorePage || 1) > 1) {
+        if (!refreshRound && (exploreSaved.explorePage || 1) > 1) {
           // More was loaded last time: the first batch is refreshed in
           // place and the rest stays, so the list keeps its length.
           const freshIds = new Set(fresh.map((p) => p.id));
@@ -231,14 +249,14 @@ const Home = () => {
           explore: fresh, explorePage: 1, exploreHasMore: Boolean(res.pagination?.hasNext), exploreBatch,
         });
       },
-    );
+    ));
     return () => { cancelled = true; };
-  }, [exploreNear, user?.id, exploreBatch, exploreSaved]);
+  }, [exploreNear, user?.id, exploreBatch, exploreSaved, refreshRound]);
 
   useEffect(() => {
     if (!storesNear) return undefined;
     let cancelled = false;
-    axios.get('/stores', {
+    inRound(axios.get('/stores', {
       params: {
         pageSize: 6,
         municipalityId: user?.municipalityId || undefined,
@@ -250,16 +268,16 @@ const Home = () => {
         patchCache('home', { nearbyStores: res.data || [] });
       })
       .catch((err) => console.error('Failed to load home data:', err))
-      .finally(() => { if (!cancelled) setStoresLoaded(true); });
+      .finally(() => { if (!cancelled) setStoresLoaded(true); }));
     return () => { cancelled = true; };
-  }, [storesNear, user?.municipalityId]);
+  }, [storesNear, user?.municipalityId, refreshRound]);
 
   // Every public shop with a spot: its pin, or placed from its address
   // (pinned: false, drawn with a dashed ring).
   useEffect(() => {
     if (!mapNear) return undefined;
     let cancelled = false;
-    axios.get('/stores/map')
+    inRound(axios.get('/stores/map')
       .then((res) => {
         if (cancelled) return;
         const mapped = Array.isArray(res.data) ? res.data : [];
@@ -267,9 +285,16 @@ const Home = () => {
         patchCache('home', { mappedStores: mapped });
       })
       .catch((err) => console.error('Failed to load home data:', err))
-      .finally(() => { if (!cancelled) setMapLoaded(true); });
+      .finally(() => { if (!cancelled) setMapLoaded(true); }));
     return () => { cancelled = true; };
-  }, [mapNear]);
+  }, [mapNear, refreshRound]);
+
+  // After the effects above: this round's requests are all asked for.
+  useEffect(() => {
+    if (!refreshRound) return;
+    roundStarted.current?.();
+    roundStarted.current = null;
+  }, [refreshRound]);
 
   // Explore Products loads its next batch on its own as the page nears the
   // bottom, one request at a time. A failure waits for "Try again" (no
@@ -345,6 +370,7 @@ const Home = () => {
       {showPromotion && (
         <PromotionPopup banner={promotionPopup} onClose={() => setPopupOpen(false)} />
       )}
+      <PullToRefresh onRefresh={refreshHome}>
       {isPhone && quickTerms.length > 0 && (
         <nav className="home-quick-search" aria-label="Search suggestions">
           {quickTerms.map((term) => (
@@ -415,7 +441,7 @@ const Home = () => {
       </Suspense>
 
       {/* Available Today: fresh items for a limited time (hidden when none). */}
-      <TodayRail />
+      <TodayRail round={refreshRound} />
 
       {/* Featured Products Section */}
       <section className="products-section">
@@ -559,6 +585,7 @@ const Home = () => {
           </div>
         </div>
       </section>
+      </PullToRefresh>
 
       {/* Phones: the floating "Start selling" sticker (guests and buyers). */}
       {isPhone && <StartSellingSticker />}

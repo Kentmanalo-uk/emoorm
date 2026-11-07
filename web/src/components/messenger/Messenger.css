@@ -2326,3 +2326,12 @@
 .msgr-bubble-more .more-menu-pop.is-left {
   transform-origin: bottom left;
 }
+
+/* iPhones with the keyboard up (lib/native/useKeyboardInset): the chat is
+   pinned to the part of the screen above the keyboard, so the message box
+   no longer needs room for the home indicator under it. */
+@media (max-width: 768px) {
+  .msgr-shell.has-active.is-keyboard-open .msgr-composer {
+    padding-bottom: 8px;
+  }
+}

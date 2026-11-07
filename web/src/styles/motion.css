@@ -74,10 +74,15 @@
     animation: motion-page-in 260ms cubic-bezier(0.2, 0.7, 0.3, 1) backwards;
   }
 
-  /* The product picture's glide (lib/productTransition.jsx) is the
-     transition there. */
+  /* While a view transition runs (the product picture's glide, a phone's
+     slide to another screen: lib/native/transitions.js), that is the
+     transition: a page arriving then does not fade in as well. The
+     duration, not "animation: none": dropping the animation and giving it
+     back when the transition ends would start the fade over (a flash at
+     the end of every slide), while a changed duration only re-times the
+     fade that already finished. */
   html.is-view-transition :is(.layout-main, .sc-content > *, .ac-content > *) {
-    animation: none;
+    animation-duration: 0s;
   }
 
   @keyframes motion-page-in {

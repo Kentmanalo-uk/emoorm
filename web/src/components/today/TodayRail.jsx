@@ -12,8 +12,9 @@ import './TodayRail.css';
  * near the buyer's town first (all towns when there is nothing near). Hidden
  * when nothing is on, or when the feature is switched off. Laid out like the
  * other Home sections: a plain title, an arrow to the full list, one row.
+ * `round`: asks again whenever it changes (Home's pull to refresh).
  */
-export default function TodayRail() {
+export default function TodayRail({ round = 0 } = {}) {
   const townId = useAuthStore((s) => s.user?.municipalityId) || null;
   const [items, setItems] = useState(null);
   // Nothing near: all towns are shown, and "See all" opens all towns too.
@@ -37,7 +38,7 @@ export default function TodayRail() {
     };
     load();
     return () => { live = false; };
-  }, [townId]);
+  }, [townId, round]);
 
   // A window can end while the page is open: only what still takes orders.
   const shown = (items || []).filter((w) => isOpen(w));

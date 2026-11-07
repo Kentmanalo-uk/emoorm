@@ -7,6 +7,7 @@ import axios from '../../lib/axios';
 import { resolveImg } from '../../lib/media';
 import { usePhoneLayout } from '../../hooks/useMobileNav';
 import useFocusTrap from '../../hooks/useFocusTrap';
+import useSheetDrag, { useMergedRefs } from '../../lib/native/useSheetDrag';
 import {
   MIN_SHARE, below, heads, peso,
 } from './offerText';
@@ -34,6 +35,9 @@ function Sheet({
 }) {
   const isPhone = usePhoneLayout();
   const trapRef = useFocusTrap(true, { onClose });
+  // Phones: dragged down by its grip, it slides away and closes.
+  const dragRef = useSheetDrag({ onClose });
+  const sheetRef = useMergedRefs(trapRef, dragRef);
   useEffect(() => {
     const { overflow } = document.body.style;
     document.body.style.overflow = 'hidden';
@@ -42,7 +46,7 @@ function Sheet({
 
   return createPortal(
     <div className={`of-backdrop${isPhone ? ' is-sheet' : ''}`} onClick={onClose} role="presentation">
-      <form className="of-dialog" ref={trapRef} role="dialog" aria-modal="true" aria-label={label || title} onClick={(e) => e.stopPropagation()} onSubmit={onSubmit} noValidate>
+      <form className="of-dialog" ref={sheetRef} role="dialog" aria-modal="true" aria-label={label || title} onClick={(e) => e.stopPropagation()} onSubmit={onSubmit} noValidate>
         {isPhone && <span className="of-grip" aria-hidden="true" />}
         <div className="of-dialog-head">
           <h2>{title}</h2>

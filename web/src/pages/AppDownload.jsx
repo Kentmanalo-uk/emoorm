@@ -11,6 +11,7 @@ import Layout from '../components/layout/Layout';
 import { useShare } from '../components/ShareSheet';
 import { usePhoneLayout } from '../hooks/useMobileNav';
 import { useSheetPresence } from '../hooks/useSheetMotion';
+import useSheetDrag, { useMergedRefs } from '../lib/native/useSheetDrag';
 import useFocusTrap from '../hooks/useFocusTrap';
 import useSeo from '../lib/seo';
 import { androidAppVersion } from '../lib/inApp';
@@ -165,6 +166,9 @@ function Sheet({
 }) {
   const { mounted, closing } = useSheetPresence(open);
   const panel = useFocusTrap(open, { onClose });
+  // Phones: dragged down by its grabber, it closes.
+  const dragRef = useSheetDrag({ onClose });
+  const panelRef = useMergedRefs(panel, dragRef);
 
   // The sheet itself takes focus (after the trap noted the opener).
   useEffect(() => {
@@ -179,7 +183,7 @@ function Sheet({
       role="presentation"
     >
       <div
-        ref={panel}
+        ref={panelRef}
         className="appdl-sheet ui-sheet-panel"
         role="dialog"
         aria-modal="true"

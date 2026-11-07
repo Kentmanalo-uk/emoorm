@@ -1,0 +1,72 @@
+/* Pull to refresh (PullToRefresh.jsx), home-screen app on phones only.
+   The spinner waits under the header (z-index 100) and shows in the gap the
+   page opens as it is pulled down. Its eight bars appear one by one with the
+   pull, as on an iPhone, and turn while the page refreshes. */
+.ptr-mark {
+  position: fixed;
+  top: 0;
+  left: 0;
+  right: 0;
+  z-index: 99;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  height: 52px;
+  opacity: 0;
+  overflow: hidden;
+  pointer-events: none;
+  color: var(--color-primary, #047857);
+}
+
+.ptr-spinner {
+  position: relative;
+  display: block;
+  width: 26px;
+  height: 26px;
+  --ptr-size: 26px;
+  transform: translate3d(0, -52px, 0);
+}
+
+.ptr-spinner i {
+  position: absolute;
+  top: 0;
+  left: calc(50% - var(--ptr-size) * 0.055);
+  width: calc(var(--ptr-size) * 0.11);
+  height: calc(var(--ptr-size) * 0.29);
+  border-radius: 999px;
+  background: currentColor;
+  transform: rotate(calc(var(--ptr-i) * 45deg));
+  transform-origin: 50% calc(var(--ptr-size) * 0.5);
+  /* Bar i shows once the pull has gone i eighths of the way. */
+  opacity: clamp(0, calc(var(--ptr-p, 0) * 8 - var(--ptr-i)), 1);
+}
+
+/* Past the mark: a small nod that letting go will refresh. */
+.ptr-mark.is-armed .ptr-spinner {
+  animation: ptr-nod 220ms ease-out;
+}
+
+.ptr-mark.is-spinning .ptr-spinner i {
+  opacity: 0.2;
+  animation: ptr-fade 0.8s linear infinite;
+  animation-delay: calc(var(--ptr-i) * 0.1s - 0.8s);
+}
+
+@keyframes ptr-fade {
+  0% { opacity: 1; }
+  100% { opacity: 0.2; }
+}
+
+@keyframes ptr-nod {
+  50% { scale: 1.12; }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .ptr-mark.is-armed .ptr-spinner {
+    animation: none;
+  }
+
+  .ptr-mark.is-spinning .ptr-spinner i {
+    animation-duration: 1.6s;
+  }
+}

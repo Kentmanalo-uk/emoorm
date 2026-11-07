@@ -30,6 +30,7 @@ import NotificationCategories from '../components/notifications/NotificationCate
 import { categoryLabel, minusOne } from '../lib/notificationCategories';
 import { timeAgo } from '../lib/format';
 import MoreProducts from '../components/product/MoreProducts';
+import PullToRefresh from '../components/native/PullToRefresh';
 
 const TYPE_CONFIG = {
   ORDER_RECEIVED: { icon: ShoppingBag, color: 'var(--t-info-500, #3b82f6)', bg: 'var(--t-info-100, #dbeafe)', label: 'New Order' },
@@ -629,5 +630,7 @@ export default function Notifications({ bare = false, mode = 'BUYER', shell } = 
   );
 
   const withMore = mode === 'BUYER' ? <>{inner}<MoreProducts /></> : inner;
-  return bare ? withMore : <Layout>{withMore}</Layout>;
+  // The home-screen app: pull down at the top to ask for the list again.
+  const pulled = <PullToRefresh onRefresh={fetchNotifications}>{withMore}</PullToRefresh>;
+  return bare ? pulled : <Layout>{pulled}</Layout>;
 }

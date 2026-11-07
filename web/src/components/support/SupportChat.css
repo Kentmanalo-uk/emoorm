@@ -1353,3 +1353,12 @@
     min-height: 42px;
   }
 }
+
+/* iPhones with the keyboard up (lib/native/useKeyboardInset): the chat is
+   pinned to the part of the screen above the keyboard, so the message box
+   no longer needs room for the home indicator under it. */
+@media (max-width: 768px) {
+  .sc-chat.has-active.is-keyboard-open .sc-composer {
+    padding-bottom: 8px;
+  }
+}

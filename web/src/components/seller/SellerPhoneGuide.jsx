@@ -1,6 +1,7 @@
 import { useEffect, useState } from 'react';
 import { useLocation } from 'react-router-dom';
 import useFocusTrap from '../../hooks/useFocusTrap';
+import useSheetDrag, { useMergedRefs } from '../../lib/native/useSheetDrag';
 import useAccountSwitchStore from '../../store/accountSwitchStore';
 import { completeGuide, shouldShowGuide } from '../../lib/sellerGuides';
 import SellerGuideArt from './SellerGuideArt';
@@ -150,12 +151,15 @@ export default function SellerPhoneGuide({ store, setStore }) {
   // before its line throws on every render (the seller centre on phones
   // showed only "Something went wrong").
   const trapRef = useFocusTrap(open && !shown.closing, { onClose: close });
+  // Dragged down by its handle, it closes like "Got it".
+  const dragRef = useSheetDrag({ onClose: close, backdrop: (panel) => panel.parentElement?.querySelector('.spg-backdrop') });
+  const sheetRef = useMergedRefs(trapRef, dragRef);
 
   if (!open) return null;
   return (
     <div className={`spg${shown.closing ? ' is-closing' : ''}`}>
       <button type="button" className="spg-backdrop" aria-label="Close" tabIndex={-1} onClick={close} />
-      <section className="spg-sheet" ref={trapRef} role="dialog" aria-modal="true" aria-labelledby="spg-title" aria-describedby="spg-text">
+      <section className="spg-sheet" ref={sheetRef} role="dialog" aria-modal="true" aria-labelledby="spg-title" aria-describedby="spg-text">
         <span className="spg-handle" aria-hidden="true" />
         <SellerGuideArt name={page.art} className="spg-art" />
         <h2 id="spg-title" className="spg-title">{page.title}</h2>

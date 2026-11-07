@@ -5,7 +5,11 @@ import './index.css';
 import './styles/phone-app.css';
 import './styles/motion.css';
 import './styles/iconTiles.css';
+import './styles/native-nav.css';
 import App from './App.jsx';
+import { resumeLastScreen } from './lib/native/resume';
+import { startEdgeSwipeBack } from './lib/native/edgeSwipeBack';
+import { startNoZoom } from './lib/native/noZoom';
 import { loadGoogleTranslate, getCurrentLanguage } from './lib/googleTranslate';
 import { startCuratedTagalog } from './lib/tagalog';
 import { keepOriginalText } from './lib/noTranslate';
@@ -38,6 +42,10 @@ if (language !== 'en') {
 // Tagalog: our own wording for the app's buttons and labels, ahead of Google's.
 if (language === 'tl') startCuratedTagalog();
 
+// The home-screen app, started cold on Home soon after it was left: back to
+// the screen it was on (lib/native/resume).
+resumeLastScreen();
+
 // React Router calls the page a fresh load opens "default", on every fresh
 // load. Each load gets a name of its own instead, so what a page remembers
 // of one visit (where it was scrolled, the tab picked) stays with that
@@ -51,6 +59,10 @@ if (!window.history.state?.key) {
 // Listen for the browser's offer to install the app (it can come early) and
 // register the service worker that makes the site installable.
 setupPwaInstall();
+// The home-screen app: swipe from the left edge to go back.
+startEdgeSwipeBack();
+// ...and no pinch or double-tap zoom there (browser tabs still zoom).
+startNoZoom();
 // A product's data is fetched as soon as its link is touched (lib/prefetch).
 watchProductLinks();
 // A page open across a deploy (the Android app in the background) picks up

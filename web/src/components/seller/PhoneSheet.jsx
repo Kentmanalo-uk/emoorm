@@ -2,16 +2,19 @@ import { createPortal } from 'react-dom';
 import { X } from '../../lib/icons';
 import { useSheetPresence } from '../../hooks/useSheetMotion';
 import useFocusTrap from '../../hooks/useFocusTrap';
+import useSheetDrag, { useMergedRefs } from '../../lib/native/useSheetDrag';
 
 /**
  * A bottom sheet for the Seller Center on phones: filters, "more" actions,
  * a quick stock change. Slides up and away like the buyer sheets, closes on
- * the backdrop, the X or Escape.
+ * the backdrop, the X, Escape or a drag down.
  */
 export default function PhoneSheet({ open, title, onClose, children, footer, className = '' }) {
   const { mounted, closing } = useSheetPresence(open);
 
   const trapRef = useFocusTrap(open, { onClose });
+  const dragRef = useSheetDrag({ onClose });
+  const panelRef = useMergedRefs(trapRef, dragRef);
 
   if (!mounted) return null;
 
@@ -22,7 +25,7 @@ export default function PhoneSheet({ open, title, onClose, children, footer, cla
       role="presentation"
     >
       <div
-        ref={trapRef}
+        ref={panelRef}
         className={`scm-sheet ui-sheet-panel ${className}`.trim()}
         role="dialog"
         aria-modal="true"

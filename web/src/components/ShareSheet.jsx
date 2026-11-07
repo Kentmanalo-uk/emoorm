@@ -6,6 +6,7 @@ import {
 import { isTouchPhone } from '../lib/device';
 import './ShareSheet.css';
 import useFocusTrap from '../hooks/useFocusTrap';
+import useSheetDrag, { useMergedRefs } from '../lib/native/useSheetDrag';
 
 const CLOSE_MS = 220;
 
@@ -72,6 +73,9 @@ export function useShare() {
 function ShareSheet({ open, payload, onClose }) {
   // Escape closes it (only the top dialog listens).
   const trapRef = useFocusTrap(open, { onClose });
+  // Phones: dragged down, it closes; the scrim beside it fades with it.
+  const dragRef = useSheetDrag({ onClose, backdrop: (panel) => panel.parentElement?.querySelector('.share-scrim') });
+  const sheetRef = useMergedRefs(trapRef, dragRef);
   const [shown, setShown] = useState(null);
   const [closing, setClosing] = useState(false);
   const [copied, setCopied] = useState(false);
@@ -124,7 +128,7 @@ function ShareSheet({ open, payload, onClose }) {
   return (
     <div className={`share-root${closing ? ' is-closing' : ''}`}>
       <button type="button" className="share-scrim" onClick={onClose} aria-label="Close" tabIndex={-1} />
-      <div className="share-sheet" ref={trapRef} role="dialog" aria-modal="true" aria-label="Share">
+      <div className="share-sheet" ref={sheetRef} role="dialog" aria-modal="true" aria-label="Share">
         <div className="share-head">
           <span className="share-grabber" aria-hidden="true" />
           <h2>Share</h2>

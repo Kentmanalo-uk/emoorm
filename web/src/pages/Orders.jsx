@@ -24,6 +24,7 @@ import { standaloneLine } from '../store/cartStore';
 import { startBuyNow } from '../lib/buyNow';
 import './Orders.css';
 import { useSheetPresence } from '../hooks/useSheetMotion';
+import PullToRefresh from '../components/native/PullToRefresh';
 import useEntryState from '../hooks/useEntryState';
 import { OrderCardsSkeleton } from '../components/ui/PageSkeletons';
 import { OrderProof } from '../components/orders/ProofPhotoSheet';
@@ -422,6 +423,7 @@ const Orders = () => {
   }
 
   return (
+    <PullToRefresh onRefresh={() => Promise.all([fetchOrders(), loadPendingReviews()])}>
     <div className="profile-page-wrap">
       <header className="profile-page-header">
         <h1 className="profile-page-title">My Orders</h1>
@@ -979,6 +981,7 @@ const Orders = () => {
         onCancel={() => { if (!receiving) setReceiveTarget(null); }}
       />
     </div>
+    </PullToRefresh>
   );
 };
 

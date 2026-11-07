@@ -6,6 +6,7 @@ import { CaretDown, Check } from '../../lib/icons';
 import { usePhoneLayout } from '../../hooks/useMobileNav';
 import { useSheetPresence } from '../../hooks/useSheetMotion';
 import useFocusTrap from '../../hooks/useFocusTrap';
+import useSheetDrag, { useMergedRefs } from '../../lib/native/useSheetDrag';
 import './Select.css';
 
 /**
@@ -114,7 +115,10 @@ export default function Select({
     if (refocus) trigger.current?.focus();
   }, []);
   // The phone sheet is modal: focus stays in it and Escape closes it.
-  const sheetRef = useFocusTrap(open && isPhone, { onClose: hide });
+  const trapRef = useFocusTrap(open && isPhone, { onClose: hide });
+  // …and dragged down by its grip (or the list at its top), it closes.
+  const dragRef = useSheetDrag({ onClose: () => hide() });
+  const sheetRef = useMergedRefs(trapRef, dragRef);
 
   const pick = (i) => {
     if (!choosable(i)) return;

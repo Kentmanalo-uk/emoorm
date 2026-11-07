@@ -10,6 +10,7 @@ import {
   forgetAccount, loadSavedAccounts, setCurrentAside, switchToAccount, useSavedAccounts,
 } from '../../lib/savedAccounts';
 import { useSheetPresence } from '../../hooks/useSheetMotion';
+import useSheetDrag, { useMergedRefs } from '../../lib/native/useSheetDrag';
 import useFocusTrap from '../../hooks/useFocusTrap';
 import UserAvatar from '../ui/UserAvatar';
 import ConfirmDialog from '../ui/ConfirmDialog';
@@ -77,6 +78,9 @@ export default function SwitchAccountSheet({ open, onClose }) {
   const { mounted, closing } = useSheetPresence(open);
   // Escape closes it (not while an account is being removed).
   const trapRef = useFocusTrap(open && !removing, { onClose });
+  // Dragged down, it closes (not while an account is being opened).
+  const dragRef = useSheetDrag({ onClose, enabled: !busy && !removing });
+  const panelRef = useMergedRefs(trapRef, dragRef);
 
   useEffect(() => { if (open) loadSavedAccounts(); }, [open]);
 
@@ -141,7 +145,7 @@ export default function SwitchAccountSheet({ open, onClose }) {
           role="presentation"
         >
           <div
-            ref={trapRef}
+            ref={panelRef}
             className="sas-panel ui-sheet-panel"
             role="dialog"
             aria-modal="true"

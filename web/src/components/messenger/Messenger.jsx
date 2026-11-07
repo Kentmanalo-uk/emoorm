@@ -23,6 +23,9 @@ import ReportModal from '../ReportModal';
 import EmptyState from '../ui/EmptyState';
 import { useSheetClose } from '../../hooks/useSheetMotion';
 import useFocusTrap from '../../hooks/useFocusTrap';
+import useSheetDrag, { useMergedRefs } from '../../lib/native/useSheetDrag';
+import useKeyboardInset from '../../lib/native/useKeyboardInset';
+import PullToRefresh from '../native/PullToRefresh';
 import './Messenger.css';
 import { ConversationListSkeleton } from '../ui/PageSkeletons';
 import { readCache, writeCache } from '../../lib/pageCache';
@@ -314,7 +317,10 @@ function ProductPicker({ storeId, onPick: onPickProp, onClose: onCloseProp }) {
     return () => { live = false; clearTimeout(t); };
   }, [storeId, query]);
 
-  const sheetRef = useFocusTrap(true, { onClose });
+  const trapRef = useFocusTrap(true, { onClose });
+  // Phones: dragged down by its grabber (or the list at its top), it closes.
+  const dragRef = useSheetDrag({ onClose });
+  const sheetRef = useMergedRefs(trapRef, dragRef);
 
   return (
     <div className={`msgr-sheet-backdrop ui-sheet-backdrop${sheetClosing ? ' is-closing' : ''}`} onClick={() => onClose()} role="presentation">
@@ -414,9 +420,13 @@ export default function Messenger({ role = 'buyer', className = '', title = '', 
     activeIdRef.current = activeId;
   }, [activeId]);
 
+  // The list scrolls itself to its end. scrollIntoView would scroll the page
+  // too, which on an iPhone with the keyboard up shifts the whole chat.
   const scrollToBottom = useCallback(() => {
     requestAnimationFrame(() => {
-      messagesEndRef.current?.scrollIntoView({ block: 'end' });
+      const box = messagesBoxRef.current;
+      if (box && box.scrollHeight > box.clientHeight) box.scrollTop = box.scrollHeight;
+      else messagesEndRef.current?.scrollIntoView({ block: 'end' });
     });
   }, []);
 
@@ -605,6 +615,10 @@ export default function Messenger({ role = 'buyer', className = '', title = '', 
     next.delete('c');
     setSearchParams(next, { replace: true });
   };
+
+  // iPhones: the open chat stays above the keyboard (lib/native/useKeyboardInset).
+  const shellRef = useRef(null);
+  useKeyboardInset(shellRef, { active: Boolean(activeId), scrollerRef: messagesBoxRef });
 
   // Hide the app's mobile bottom nav while an active chat is open (matches reference).
   useEffect(() => {
@@ -850,9 +864,11 @@ export default function Messenger({ role = 'buyer', className = '', title = '', 
   );
 
   return (
-    <>
+    // The home-screen app: pull the list down to ask for it again (not while
+    // a chat fills the screen).
+    <PullToRefresh onRefresh={fetchConversations} disabled={Boolean(activeId)}>
     {pageHead}
-    <div className={`msgr-shell ${activeId ? 'has-active' : ''}${title ? ' has-page-head' : ''}${searchOpen || searchQuery ? ' is-searching' : ''} ${className}`}>
+    <div ref={shellRef} className={`msgr-shell ${activeId ? 'has-active' : ''}${title ? ' has-page-head' : ''}${searchOpen || searchQuery ? ' is-searching' : ''} ${className}`}>
       <aside className="msgr-list">
         <header className="msgr-list-head">
           <h2>
@@ -1272,6 +1288,6 @@ export default function Messenger({ role = 'buyer', className = '', title = '', 
         onCancel={() => setUnsendTarget(null)}
       />
     </div>
-    </>
+    </PullToRefresh>
   );
 }

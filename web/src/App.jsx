@@ -1,6 +1,9 @@
 import { Suspense, lazy, useState } from 'react';
 import { useDockedLive } from './lib/liveDock';
-import { BrowserRouter as Router, Routes, Route, Navigate, useLocation, useSearchParams } from 'react-router-dom';
+import { Routes, Route, Navigate, useLocation, useSearchParams } from 'react-router-dom';
+// <BrowserRouter> that slides between screens on phones, the iOS way.
+import { NativeRouter as Router } from './lib/native/navigation';
+import { ResumeTracker } from './lib/native/resume';
 import { QueryClient, QueryClientProvider } from '@tanstack/react-query';
 import { bootData, freshBoot } from './lib/boot';
 import { queryKeys } from './lib/queryKeys';
@@ -500,6 +503,8 @@ function App() {
         {/* After the pages: it puts a page back where it was scrolled once
             the page has laid itself out (its body classes and all). */}
         <ScrollMemory />
+        {/* The home-screen app reopens on the screen it was left on. */}
+        <ResumeTracker />
       </Router>
     </QueryClientProvider>
   );

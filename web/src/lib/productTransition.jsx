@@ -1,13 +1,16 @@
 import { useEffect } from 'react';
 import { flushSync } from 'react-dom';
 import { useNavigate } from 'react-router-dom';
+import { holdTransition, isTransitioning } from './native/transitions';
 
 /*
  * Opening a product: the picture that was tapped (a product card, a wishlist
  * row, a cart item…) glides and grows into the product page's main picture,
  * using the browser's View Transitions. One listener covers every product
  * link on the site. Browsers without View Transitions, and people who ask
- * for less motion, get the normal page change.
+ * for less motion, get the normal page change. On phones this glide takes
+ * the place of the usual slide to a new screen (lib/native/navigation.jsx):
+ * the page change joins the transition already running.
  */
 
 const NAME = 'product-hero';
@@ -48,7 +51,7 @@ export default function ProductTransitions() {
     // link then sees the click already handled and stays out of the way.
     const onClick = (e) => {
       if (e.defaultPrevented || e.button !== 0 || e.metaKey || e.ctrlKey || e.shiftKey || e.altKey) return;
-      if (lessMotion.matches) return;
+      if (lessMotion.matches || isTransitioning()) return;
       const link = e.target.closest?.('a[href]');
       if (!link || (link.target && link.target !== '_self') || link.hasAttribute('download')) return;
       const url = new URL(link.href, window.location.href);
@@ -73,6 +76,7 @@ export default function ProductTransitions() {
           if (target.decode) await Promise.race([target.decode().catch(() => {}), new Promise((res) => { setTimeout(res, 250); })]);
         }
       });
+      holdTransition(transition);
       // A skipped or cut-short transition still navigates; nothing to report.
       transition.ready.catch(() => {});
       transition.updateCallbackDone.catch(() => {});

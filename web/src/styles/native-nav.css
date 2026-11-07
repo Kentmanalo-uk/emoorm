@@ -1,0 +1,138 @@
+/*
+ * Moving between screens on a phone, the iOS way (lib/native/navigation.jsx
+ * and lib/native/edgeSwipeBack.js). The classes on <html> say which move a
+ * view transition is making:
+ *   nav-push  a new screen slides in from the right; the old one drifts a
+ *             third of the way left and dims beneath it.
+ *   nav-back  the reverse: the screen slides off to the right, uncovering
+ *             the previous one as it drifts back and brightens.
+ *   nav-swipe the edge swipe: the screen follows the finger (driven from
+ *             script), over a shade.
+ * The product picture's glide (lib/productTransition.jsx) uses none of
+ * these, so its own styles in index.css apply there.
+ */
+:root {
+  --nav-slide-ms: 420ms;
+  /* Close to UIKit's navigation push: quick off the mark, a long soft landing. */
+  --nav-slide-ease: cubic-bezier(0.32, 0.72, 0, 1);
+  --nav-under: #eceef1;
+}
+
+:root[data-theme='dark'] {
+  --nav-under: #0e0f11;
+}
+
+html:is(.nav-push, .nav-back, .nav-swipe)::view-transition-old(root),
+html:is(.nav-push, .nav-back, .nav-swipe)::view-transition-new(root) {
+  mix-blend-mode: normal;
+  backface-visibility: hidden;
+}
+
+html:is(.nav-push, .nav-back)::view-transition-group(root) {
+  animation-duration: var(--nav-slide-ms);
+}
+
+/* ── Forward ──────────────────────────────────────────────────────────── */
+html.nav-push::view-transition-old(root) {
+  animation: nav-old-push var(--nav-slide-ms) var(--nav-slide-ease) both;
+}
+
+html.nav-push::view-transition-new(root) {
+  animation: nav-new-push var(--nav-slide-ms) var(--nav-slide-ease) both;
+  box-shadow: -6px 0 24px rgb(0 0 0 / 0.16);
+}
+
+@keyframes nav-new-push {
+  from { transform: translateX(100%); }
+  to { transform: none; }
+}
+
+@keyframes nav-old-push {
+  from { transform: none; filter: brightness(1); }
+  to { transform: translateX(-30%); filter: brightness(0.82); }
+}
+
+/* ── Back ─────────────────────────────────────────────────────────────── */
+html.nav-back::view-transition-old(root) {
+  z-index: 1;
+  animation: nav-old-back var(--nav-slide-ms) var(--nav-slide-ease) both;
+  box-shadow: -6px 0 24px rgb(0 0 0 / 0.16);
+}
+
+html.nav-back::view-transition-new(root) {
+  animation: nav-new-back var(--nav-slide-ms) var(--nav-slide-ease) both;
+}
+
+@keyframes nav-old-back {
+  from { transform: none; }
+  to { transform: translateX(100%); }
+}
+
+@keyframes nav-new-back {
+  from { transform: translateX(-30%); filter: brightness(0.82); }
+  to { transform: none; filter: brightness(1); }
+}
+
+/* ── The edge swipe ───────────────────────────────────────────────────────
+   Script moves the snapshot and the shade. The group's do-nothing
+   animation keeps the transition open while the finger is down (a view
+   transition ends when its animations do); the script ends it itself. */
+html.nav-swipe::view-transition {
+  background: var(--nav-under);
+}
+
+html.nav-swipe::view-transition-group(root) {
+  animation: nav-hold 60s linear both;
+}
+
+html.nav-swipe::view-transition-old(root) {
+  z-index: 1;
+  animation: none;
+  box-shadow: -6px 0 24px rgb(0 0 0 / 0.18);
+}
+
+html.nav-swipe::view-transition-new(root) {
+  animation: none;
+  opacity: 0;
+}
+
+@keyframes nav-hold {
+  from { opacity: 1; }
+  to { opacity: 1; }
+}
+
+/* Browsers without view transitions: a round back arrow follows the finger. */
+.nav-edge-arrow {
+  --nav-arrow-x: 0px;
+  --nav-arrow-on: 0;
+  position: fixed;
+  left: 0;
+  z-index: 2147483000;
+  display: grid;
+  place-items: center;
+  width: 40px;
+  height: 40px;
+  margin: -20px 0 0 -40px;
+  border-radius: 50%;
+  background: rgb(30 30 32 / 0.82);
+  color: #fff;
+  pointer-events: none;
+  opacity: var(--nav-arrow-on);
+  transform: translateX(var(--nav-arrow-x)) scale(calc(0.7 + var(--nav-arrow-on) * 0.3));
+  transition: background-color 0.15s ease, opacity 0.18s ease;
+}
+
+.nav-edge-arrow.is-armed {
+  background: rgb(5 93 7 / 0.92);
+}
+
+.nav-edge-arrow.is-leaving {
+  opacity: 0;
+}
+
+@media (prefers-reduced-motion: reduce) {
+  html:is(.nav-push, .nav-back)::view-transition-old(root),
+  html:is(.nav-push, .nav-back)::view-transition-new(root) {
+    animation: none;
+  }
+}
