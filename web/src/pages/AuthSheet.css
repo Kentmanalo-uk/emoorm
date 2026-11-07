@@ -451,7 +451,7 @@
 }
 
 .auth-choose-hero {
-  padding: 0 0 22px;
+  padding: 0;
   text-align: center;
 }
 
@@ -464,24 +464,34 @@
   letter-spacing: -0.01em;
 }
 
+/* Close under the headline: one lockup. */
 .auth-choose-sub {
-  margin: 6px 0 0;
+  margin: 2px 0 0;
   color: var(--t-neutral-600, #4b5563);
   font-size: 14.5px;
+  line-height: 1.35;
 }
 
+/* The illustration, large, its lower part dissolving into the band and
+   running under the white curve (the body overlaps it). */
 .auth-choose-art {
+  position: relative;
+  z-index: 0;
   display: flex;
   justify-content: center;
-  margin-top: 6px;
+  margin: 4px 0 -22px;
 }
 
 .auth-choose-art svg {
-  width: min(170px, 46vw);
+  width: min(232px, 60vw);
   height: auto;
+  -webkit-mask-image: linear-gradient(to bottom, #000 48%, rgba(0, 0, 0, 0.4) 72%, transparent 94%);
+  mask-image: linear-gradient(to bottom, #000 48%, rgba(0, 0, 0, 0.4) 72%, transparent 94%);
 }
 
 .auth-choose-body {
+  position: relative;
+  z-index: 1;
   display: flex;
   flex: 1 0 auto;
   flex-direction: column;
