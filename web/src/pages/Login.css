@@ -1128,6 +1128,18 @@
   color: var(--t-neutral-800, #1f2937);
 }
 
+/* The two ways in: a firm dark outline, so they read as buttons at a
+   glance rather than as fields. */
+.login-choose .login-form-google {
+  border: 1.5px solid var(--t-neutral-800, #1f2937);
+  color: var(--t-neutral-900, #111827);
+  font-weight: 600;
+}
+
+.login-choose .login-form-google:active {
+  background-color: var(--t-neutral-100, #f3f4f6);
+}
+
 .login-choose .login-form-footer {
   margin-top: 24px;
 }
