@@ -562,9 +562,15 @@
 @media (max-width: 768px) {
   :is(.login-form-container, .register-form-container):has(.auth-choose) {
     padding-bottom: 0;
+    /* A colourful band: deep pink into peach and mint, with soft pink and
+       green patches for depth and a light glow behind the headline. */
     background:
-      radial-gradient(120% 60% at 50% 0, rgba(255, 255, 255, 0.55), transparent 70%),
-      linear-gradient(110deg, #fbd3e9 0%, #fde8f2 45%, #d6f7e6 100%);
+      radial-gradient(55% 30% at 50% 14%, rgba(255, 255, 255, 0.6), transparent 72%),
+      radial-gradient(42% 26% at 8% 34%, rgba(244, 114, 182, 0.55), transparent 72%),
+      radial-gradient(40% 26% at 96% 22%, rgba(52, 211, 153, 0.5), transparent 72%),
+      radial-gradient(46% 28% at 88% 52%, rgba(251, 146, 60, 0.32), transparent 72%),
+      radial-gradient(48% 28% at 14% 58%, rgba(16, 185, 129, 0.38), transparent 72%),
+      linear-gradient(165deg, #ffb3d9 0%, #ffd0e6 28%, #ffe4cf 46%, #c6f4dd 72%, #9ee8c7 100%);
   }
 
   :is(.login-form-container, .register-form-container):has(.auth-choose) .auth-sheet-bar {
