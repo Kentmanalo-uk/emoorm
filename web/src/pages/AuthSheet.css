@@ -439,23 +439,56 @@
 }
 
 /* ── The sheet's first step, Log in and Sign up alike (.auth-choose) ──
-   The title and the other door on one line, a 3D illustration, then the
-   two ways in -- Google, or email (which opens the form). The other door
-   is a plain link on phones. */
+   A soft band in the header's pink-to-mint wash with a headline and the 3D
+   illustration, the close button on its right and the other door on its
+   left; then, on white under a gentle curve, the ways in as quiet
+   off-white buttons (the icon at the left edge, the words centred), the
+   links, and the terms at the foot of the screen. */
 .auth-choose {
   display: flex;
+  flex: 1 0 auto;
   flex-direction: column;
+}
+
+.auth-choose-hero {
+  padding: 0 0 22px;
+  text-align: center;
+}
+
+.auth-choose-title {
+  margin: 0;
+  color: var(--t-primary-700, #047857);
+  font-size: 25px;
+  font-weight: 800;
+  line-height: 1.2;
+  letter-spacing: -0.01em;
+}
+
+.auth-choose-sub {
+  margin: 6px 0 0;
+  color: var(--t-neutral-600, #4b5563);
+  font-size: 14.5px;
 }
 
 .auth-choose-art {
   display: flex;
   justify-content: center;
-  margin: 6px 0 22px;
+  margin-top: 6px;
 }
 
 .auth-choose-art svg {
-  width: min(190px, 52vw);
+  width: min(170px, 46vw);
   height: auto;
+}
+
+.auth-choose-body {
+  display: flex;
+  flex: 1 0 auto;
+  flex-direction: column;
+  margin: 0 -20px;
+  padding: 28px 20px calc(14px + env(safe-area-inset-bottom, 0px));
+  border-radius: 50% 50% 0 0 / 26px 26px 0 0;
+  background: var(--t-neutral-0, #fff);
 }
 
 .auth-choose-buttons {
@@ -463,30 +496,108 @@
   gap: 12px;
 }
 
-/* The two ways in: a firm dark outline, so they read as buttons at a
-   glance rather than as fields. */
 .auth-choose :is(.login-form-google, .register-form-google) {
-  min-height: 48px;
-  border: 1.5px solid var(--t-neutral-800, #1f2937);
-  border-radius: 10px;
+  position: relative;
+  min-height: 52px;
+  padding: 12px 56px;
+  border: 0;
+  border-radius: 6px;
+  background: #f2f4f7;
   color: var(--t-neutral-900, #111827);
-  font-size: 15px;
-  font-weight: 600;
+  font-size: 16px;
+  font-weight: 500;
+}
+
+.auth-choose :is(.login-form-google, .register-form-google) svg {
+  position: absolute;
+  left: 22px;
+  top: 50%;
+  transform: translateY(-50%);
 }
 
 .auth-choose :is(.login-form-google, .register-form-google):active {
-  background-color: var(--t-neutral-100, #f3f4f6);
+  background: #e6e9ee;
 }
 
-.auth-choose :is(.login-form-footer, .register-form-footer) {
-  margin-top: 24px;
+.auth-choose-more {
+  margin: 22px 0 0;
+  color: var(--t-neutral-600, #4b5563);
+  font-size: 14.5px;
+  text-align: center;
 }
 
-.auth-choose :is(.login-form-terms, .register-form-terms) {
+.auth-choose-more a,
+.auth-choose-help {
+  color: var(--t-primary-700, #047857);
+  font-weight: 600;
+  text-decoration: none;
+}
+
+.auth-choose-help {
+  align-self: center;
   margin-top: 14px;
+  padding: 4px 8px;
+  font-size: 15px;
 }
 
+.auth-choose-terms {
+  margin: auto 0 0;
+  padding-top: 14px;
+  border-top: 1px solid var(--t-neutral-200, #e5e7eb);
+  color: var(--t-neutral-500, #6b7280);
+  font-size: 13px;
+  line-height: 1.5;
+  text-align: center;
+  text-wrap: balance;
+}
+
+.auth-choose-terms a {
+  color: var(--t-primary-700, #047857);
+  text-decoration: none;
+}
+
+/* The sheet while choosing: the wash behind everything, the bar clear over
+   it with the close button on the right, the white body running to the
+   bottom of the screen. */
 @media (max-width: 768px) {
+  :is(.login-form-container, .register-form-container):has(.auth-choose) {
+    padding-bottom: 0;
+    background:
+      radial-gradient(120% 60% at 50% 0, rgba(255, 255, 255, 0.55), transparent 70%),
+      linear-gradient(110deg, #fbd3e9 0%, #fde8f2 45%, #d6f7e6 100%);
+  }
+
+  :is(.login-form-container, .register-form-container):has(.auth-choose) .auth-sheet-bar {
+    flex-direction: row-reverse;
+    background: transparent;
+  }
+
+  :is(.login-form-container, .register-form-container):has(.auth-choose) .auth-sheet-grabber {
+    background: rgba(255, 255, 255, 0.85);
+  }
+
+  :is(.login-form-container, .register-form-container):has(.auth-choose) .auth-sheet-close {
+    background: rgba(255, 255, 255, 0.7);
+  }
+
+  :is(.login-form-container, .register-form-container):has(.auth-choose) .auth-sheet-switch {
+    padding: 7px 14px;
+    background: rgba(255, 255, 255, 0.7);
+    font-size: 14px;
+  }
+
+  :is(.login-form-container, .register-form-container):has(.auth-choose) :is(.login-form-card, .register-form-card) {
+    display: flex;
+    flex: 1 0 auto;
+    flex-direction: column;
+    padding-top: 0;
+  }
+
+  /* Help is in the body ("Trouble signing in?"). */
+  :is(.login-form-container, .register-form-container):has(.auth-choose) > :is(.login-help-link, .register-help-link) {
+    display: none;
+  }
+
   :is(.login-page, .register-page).is-sheet :is(.login-switch-link, .auth-switch-link) {
     min-height: 0;
     padding: 0;
@@ -496,6 +607,18 @@
 
   .login-page.is-sheet .login-switch-link svg {
     display: none;
+  }
+}
+
+/* The email step on phones: Google as the same quiet off-white button. */
+@media (max-width: 768px) {
+  :is(.login-page, .register-page).is-sheet :is(.login-form-google, .register-form-google) {
+    min-height: 50px;
+    border: 0;
+    border-radius: 6px;
+    background: #f2f4f7;
+    color: var(--t-neutral-900, #111827);
+    font-size: 15.5px;
   }
 }
 

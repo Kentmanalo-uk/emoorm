@@ -505,7 +505,14 @@ const Login = ({ seller = false }) => {
 
           {/* Right Side - Form */}
           <div className="login-form-container">
-            {isPhone && <AuthSheetBar />}
+            {/* While choosing, the other door sits in the bar (the title row is
+                the form's). */}
+            {isPhone && (
+              <AuthSheetBar
+                switchTo={choosing ? (seller ? '/login' : '/seller/login') : undefined}
+                switchLabel={seller ? 'Buyer Login' : 'Seller Login'}
+              />
+            )}
             <div className="login-form-card">
               {mfaStage === 'verify' && (
                 <MfaVerify
@@ -561,30 +568,36 @@ const Login = ({ seller = false }) => {
               )}
               {mfaStage === 'credentials' && choosing && (
                 <div className="auth-choose">
-                  {formHeader}
-                  <div className="auth-choose-art" aria-hidden="true">
-                    <PopArt name={seller ? 'WelcomeSeller' : 'Welcome'} size={190} tone={TONES.emerald} />
+                  <div className="auth-choose-hero">
+                    <h2 className="auth-choose-title">{seller ? 'Sell to all of Mindoro' : 'Fresh finds from Mindoro'}</h2>
+                    <p className="auth-choose-sub">{seller ? 'Log in to your Seller Center' : 'Sign in to shop, chat and track orders'}</p>
+                    <div className="auth-choose-art" aria-hidden="true">
+                      <PopArt name={seller ? 'WelcomeSeller' : 'Welcome'} size={170} tone={TONES.emerald} />
+                    </div>
                   </div>
-                  <div className="auth-choose-buttons">
-                    {googleButton}
-                    <button type="button" className="login-form-google" onClick={() => setEmailOpen(true)}>
-                      <EnvelopeSimple size={19} />
-                      Continue with Email
-                    </button>
+                  <div className="auth-choose-body">
+                    <div className="auth-choose-buttons">
+                      {googleButton}
+                      <button type="button" className="login-form-google" onClick={() => setEmailOpen(true)}>
+                        <EnvelopeSimple size={21} />
+                        Continue with Email
+                      </button>
+                    </div>
+                    {apiError && <div className="login-form-error-message">{apiError}</div>}
+                    <p className="auth-choose-more">
+                      {seller ? 'New to selling? ' : 'New to Emoorm? '}
+                      <Link to={signUpPath} replace state={{ ...location.state, fromSheet: true }}>
+                        {seller ? 'Open a shop' : 'Create an account'}
+                      </Link>
+                    </p>
+                    <Link to="/help" className="auth-choose-help">Trouble signing in?</Link>
+                    <p className="auth-choose-terms">
+                      By continuing, you agree to Emoorm's{' '}
+                      <Link to="/terms">Terms</Link>
+                      {' & '}
+                      <Link to="/privacy">Privacy Policy</Link>
+                    </p>
                   </div>
-                  {apiError && <div className="login-form-error-message">{apiError}</div>}
-                  <div className="login-form-footer">
-                    <span className="login-form-footer-text">{seller ? 'New to selling? ' : 'New to Emoorm? '}</span>
-                    <Link to={signUpPath} replace state={{ ...location.state, fromSheet: true }} className="login-form-footer-link">
-                      {seller ? 'Open a shop' : 'Create an account'}
-                    </Link>
-                  </div>
-                  <p className="login-form-terms">
-                    By continuing, you agree to Emoorm's{' '}
-                    <Link to="/terms" className="login-form-terms-link">Terms</Link>
-                    {' & '}
-                    <Link to="/privacy" className="login-form-terms-link">Privacy Policy</Link>
-                  </p>
                 </div>
               )}
               {mfaStage === 'credentials' && (!showQrLogin || isPhone) && !choosing && (<>

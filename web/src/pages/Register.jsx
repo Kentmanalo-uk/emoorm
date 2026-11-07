@@ -379,35 +379,42 @@ const Register = () => {
 
           {/* Right Side - Form */}
           <div className="register-form-container">
-            {isPhone && <AuthSheetBar />}
+            {/* While choosing, Log in sits in the bar (the title row is the form's). */}
+            {isPhone && <AuthSheetBar switchTo={choosing ? loginPath : undefined} switchLabel="Log in" />}
             <div className="register-form-card">
               {!choosing && formHeader}
               {choosing && (
                 <div className="auth-choose">
-                  {formHeader}
-                  <div className="auth-choose-art" aria-hidden="true">
-                    <PopArt name={forSelling ? 'WelcomeSeller' : 'Welcome'} size={190} tone={TONES.emerald} />
+                  <div className="auth-choose-hero">
+                    <h2 className="auth-choose-title">{forSelling ? 'Start selling on E-MOORM' : 'Join E-MOORM'}</h2>
+                    <p className="auth-choose-sub">{forSelling ? 'Make an account, then open your shop' : 'Fresh finds from Mindoro, delivered or picked up'}</p>
+                    <div className="auth-choose-art" aria-hidden="true">
+                      <PopArt name={forSelling ? 'WelcomeSeller' : 'Welcome'} size={170} tone={TONES.emerald} />
+                    </div>
                   </div>
-                  <div className="auth-choose-buttons">
-                    {googleButton}
-                    <button type="button" className="register-form-google" onClick={() => setEmailOpen(true)}>
-                      <EnvelopeSimple size={19} />
-                      Continue with Email
-                    </button>
+                  <div className="auth-choose-body">
+                    <div className="auth-choose-buttons">
+                      {googleButton}
+                      <button type="button" className="register-form-google" onClick={() => setEmailOpen(true)}>
+                        <EnvelopeSimple size={21} />
+                        Continue with Email
+                      </button>
+                    </div>
+                    {apiError && <div className="register-form-error-message">{apiError}</div>}
+                    <p className="auth-choose-more">
+                      Already have an account?{' '}
+                      <Link to={loginPath} replace state={{ ...location.state, fromSheet: true }}>
+                        Log in
+                      </Link>
+                    </p>
+                    <Link to="/help" className="auth-choose-help">Trouble signing in?</Link>
+                    <p className="auth-choose-terms">
+                      By continuing, you agree to Emoorm's{' '}
+                      <Link to="/terms">Terms</Link>
+                      {' & '}
+                      <Link to="/privacy">Privacy Policy</Link>
+                    </p>
                   </div>
-                  {apiError && <div className="register-form-error-message">{apiError}</div>}
-                  <div className="register-form-footer">
-                    <span className="register-form-footer-text">Already have an account? </span>
-                    <Link to={loginPath} replace state={{ ...location.state, fromSheet: true }} className="register-form-footer-link">
-                      Log in
-                    </Link>
-                  </div>
-                  <p className="register-form-terms">
-                    By continuing, you agree to Emoorm's{' '}
-                    <Link to="/terms" className="register-form-terms-link">Terms</Link>
-                    {' & '}
-                    <Link to="/privacy" className="register-form-terms-link">Privacy Policy</Link>
-                  </p>
                 </div>
               )}
 
