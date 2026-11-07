@@ -400,7 +400,7 @@ const Register = () => {
                     <h2 className="auth-choose-title">{forSelling ? 'Start selling on E-MOORM' : 'Join E-MOORM'}</h2>
                     <p className="auth-choose-sub">{forSelling ? 'Make an account, then open your shop' : 'Fresh finds from Mindoro, delivered or picked up'}</p>
                     <div className="auth-choose-art" aria-hidden="true">
-                      <PopArt name={forSelling ? 'WelcomeSeller' : 'Welcome'} size={170} tone={TONES.emerald} />
+                      <PopArt name={forSelling ? 'AuthSell' : 'AuthSignUp'} size={170} tone={TONES.emerald} />
                     </div>
                   </div>
                   <div className="auth-choose-body">

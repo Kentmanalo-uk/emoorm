@@ -605,7 +605,7 @@ const Login = ({ seller = false }) => {
                     <h2 className="auth-choose-title">{seller ? 'Sell to all of Mindoro' : 'Fresh finds from Mindoro'}</h2>
                     <p className="auth-choose-sub">{seller ? 'Log in to your Seller Center' : 'Sign in to shop, chat and track orders'}</p>
                     <div className="auth-choose-art" aria-hidden="true">
-                      <PopArt name={seller ? 'WelcomeSeller' : 'Welcome'} size={170} tone={TONES.emerald} />
+                      <PopArt name={seller ? 'AuthSeller' : 'AuthSignIn'} size={170} tone={TONES.emerald} />
                     </div>
                   </div>
                   <div className="auth-choose-body">
