@@ -17,12 +17,15 @@
   -webkit-user-select: none;
   -webkit-touch-callout: none;
   transition: transform 0.5s cubic-bezier(0.34, 1.45, 0.5, 1);
-  will-change: transform;
 }
 
+/* A layer of its own only while it is dragged: kept as one all the time,
+   the browser drew it as a picture and resampled it, which roughened the
+   circles and the moving letters. */
 .ssb.is-dragging {
   transition: none;
   cursor: grabbing;
+  will-change: transform;
 }
 
 .ssb-inner {
@@ -83,7 +86,7 @@
   width: 100%;
   height: 100%;
   overflow: hidden;
-  border: 1.5px solid #fff;
+  border: 2px solid #fff;
   border-radius: 50%;
   background: #fff;
 }
@@ -106,7 +109,7 @@
   min-width: 0;
   min-height: 0;
   padding: 0;
-  border: 1.5px solid #fff;
+  border: 2px solid #fff;
   border-radius: 50%;
   background: rgba(15, 23, 42, 0.62);
   color: #fff;
@@ -135,7 +138,7 @@
   min-height: 0;
   margin-top: -9px;
   padding: 0 9px;
-  border: 1.5px solid #fff;
+  border: 2px solid #fff;
   border-radius: 11px;
   background: linear-gradient(90deg, var(--t-accent-500, #ec4899) 0%, var(--t-accent-500, #ec4899) 6%, var(--t-primary-600, #047857) 94%, var(--t-primary-600, #047857) 100%);
   box-shadow: 0 3px 8px rgba(219, 39, 119, 0.28);

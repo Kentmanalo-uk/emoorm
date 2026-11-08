@@ -125,7 +125,13 @@ export default function StartSellingSticker() {
     if (!canSell) return undefined;
     const onResize = () => {
       const b = getBounds();
-      setPos((p) => ({ ...p, x: p.side === 'left' ? b.left : b.right, y: clamp(p.y, b.top, b.bottom) }));
+      setPos((p) => {
+        const x = p.side === 'left' ? b.left : b.right;
+        const y = clamp(p.y, b.top, b.bottom);
+        // Unmoved (an iPhone's toolbar showing or hiding is a resize too):
+        // keep the same state, so it doesn't spring for nothing.
+        return Math.round(x) === Math.round(p.x) && Math.round(y) === Math.round(p.y) ? p : { ...p, x, y };
+      });
     };
     window.addEventListener('resize', onResize);
     return () => window.removeEventListener('resize', onResize);
@@ -195,7 +201,8 @@ export default function StartSellingSticker() {
   return (
     <div
       className={`ssb${dragging ? ' is-dragging' : ''}`}
-      style={{ transform: `translate3d(${pos.x}px, ${pos.y}px, 0)` }}
+      // Whole pixels: a fractional place blurs and roughens its edges.
+      style={{ transform: `translate3d(${Math.round(pos.x)}px, ${Math.round(pos.y)}px, 0)` }}
       onPointerDown={onPointerDown}
       onPointerMove={onPointerMove}
       onPointerUp={endDrag}
