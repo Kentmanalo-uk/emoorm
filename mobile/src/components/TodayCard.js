@@ -11,7 +11,7 @@ import useOpenProduct from './useOpenProduct';
 import { sizedImg } from '../lib/media';
 import { parseImages } from './product/productLib';
 import { peso, SaleWas } from './SaleTag';
-import TodayTag from './TodayTag';
+import TodayTag, { ProductBadge } from './TodayTag';
 import { useProductPeek } from './peek/ProductPeek';
 
 /**
@@ -82,6 +82,7 @@ export default function TodayCard({ item, result = false, onPress, style }) {
       <View style={styles.info}>
         <Text style={[styles.name, soldOut && styles.out]} numberOfLines={2}>
           <TodayTag mode={item.mode} style={styles.tag} />
+          <ProductBadge product={product} todayMode={item.mode} style={styles.tag} />
           {product.name}
         </Text>
         <View style={styles.priceRow}>

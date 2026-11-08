@@ -5,6 +5,7 @@ import {
 import { font, t, themed } from '../../../theme';
 import PhotoPicker from './PhotoPicker';
 import PhotoDesign from './PhotoDesign';
+import BadgeField from './BadgeField';
 import ChoiceGroup from './ChoiceGroup';
 import WayField, { derivedStyles } from './WayField';
 import {
@@ -215,6 +216,8 @@ export default function FoodStep({
             onChangeText={(v) => set('description', v)}
           />
         </Field>
+
+        <BadgeField value={form.badge} onChange={(v) => set('badge', v)} />
 
         {!editing ? (
           <Pressable accessibilityRole="button" onPress={onPackage} style={styles.pkg}>

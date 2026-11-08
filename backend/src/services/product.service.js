@@ -10,6 +10,7 @@ const { cached } = require('../lib/cachePolicy');
 const { cleanText, cleanFields } = require('../utils/sanitize');
 const { ApiError } = require('../middleware/errorHandler');
 const { parseImageOverlay } = require('../utils/imageOverlays');
+const { parseBadge } = require('../utils/productBadges');
 const photoDesignService = require('./photoDesign.service');
 const shopReadiness = require('./shopReadiness.service');
 const { markBestSellers, markBestSeller } = require('./bestSeller.service');
@@ -832,6 +833,8 @@ const createProduct = async (userId, rawData) => {
   const kindData = { productType: kind, listingKind: kind === 'READY_TO_EAT' ? 'TODAY' : 'REGULAR' };
   if (has(data, 'fulfillment')) kindData.fulfillment = validateFulfillment(data.fulfillment, store);
   if (has(data, 'imageOverlay')) Object.assign(kindData, await overlayFields(data, store.id));
+  // A label before its name (Pre-order, Palengke, DIY); only a label.
+  if (has(data, 'badge')) kindData.badge = parseBadge(data.badge);
   if (kind === 'PACKAGE') {
     const { items, ...pkg } = await packageFields({ data, store, product: null, fields });
     Object.assign(kindData, pkg, { packageItems: { create: items } });
@@ -1184,6 +1187,7 @@ const updateProduct = async (productId, userId, rawData) => {
   }
   if (has(data, 'fulfillment')) updateData.fulfillment = validateFulfillment(data.fulfillment, store);
   if (has(data, 'imageOverlay')) Object.assign(updateData, await overlayFields(data, store.id));
+  if (has(data, 'badge')) updateData.badge = parseBadge(data.badge);
 
   // The kind's facts: checked again when sent, or when the kind changes.
   const heads = updateData.stock !== undefined ? updateData.stock : Number(product.stock);

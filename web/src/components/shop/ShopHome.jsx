@@ -8,6 +8,7 @@ import ImageOverlay from '../product/ImageOverlay';
 import ProductImage from '../ProductImage';
 import ProductTile from '../product/ProductTile';
 import BestSellerTag from '../product/BestSellerTag';
+import ProductBadge from '../product/ProductBadge';
 import useProductPeek from '../peek/useProductPeek';
 import { peso } from '../../lib/format';
 import './ShopHome.css';
@@ -185,7 +186,7 @@ function SpotlightTile({
         {Number(p.stock) === 0 && <em className="shh-tile-out">Sold out</em>}
       </span>
       <span className="shh-tile-info">
-        <span className="shh-tile-name"><BestSellerTag product={p} />{p.name}</span>
+        <span className="shh-tile-name"><ProductBadge product={p} /><BestSellerTag product={p} />{p.name}</span>
         <span className="shh-tile-meta">
           {reviews > 0 ? <><Star size={12} weight="fill" /> {rating.toFixed(1)}</> : <span className="shh-tile-new">New</span>}
           {sold > 0 && <span className="shh-tile-sold">· {sold} sold</span>}

@@ -6,6 +6,7 @@ import { kindFacts, priceUnit } from '../productKinds';
 import { peso } from './formState';
 import { PF } from './parts';
 import ImageOverlay from '../../product/ImageOverlay';
+import { ProductBadge } from '../../TodayTag';
 
 const BADGES = {
   READY_TO_EAT: 'Available today',
@@ -36,7 +37,7 @@ export function PreviewCard({
         {BADGES[kind] ? <Text style={styles.badge}>{BADGES[kind]}</Text> : null}
       </View>
       <View style={styles.body}>
-        <Text style={styles.name}>{draft.name || 'Your product name'}</Text>
+        <Text style={styles.name}><ProductBadge product={draft} todayMode={null} size={12} />{draft.name || 'Your product name'}</Text>
         <View style={styles.price}>
           {draft.salePrice ? (
             <>

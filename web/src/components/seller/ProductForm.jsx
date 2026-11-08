@@ -22,6 +22,7 @@ import KindDetails, { ServesField } from './product-form/KindDetails';
 import MoreDetails from './product-form/MoreDetails';
 import PreviewCard from './product-form/PreviewCard';
 import PhotoDesign from './product-form/PhotoDesign';
+import BadgeField from './product-form/BadgeField';
 import WayField from './product-form/WayField';
 import Model3dEditor from './product-form/Model3dEditor';
 import { SHAPES as SHAPES_3D } from '../../lib/model3d/templates';
@@ -848,6 +849,8 @@ export default function ProductForm({
             onChange={(e) => set('description', e.target.value)}
           />
         </Field>
+
+        <BadgeField value={form.badge} onChange={(key) => set('badge', key)} />
 
         {!editing && (
           <button type="button" className="pf-package-hint" onClick={requestPackage}>

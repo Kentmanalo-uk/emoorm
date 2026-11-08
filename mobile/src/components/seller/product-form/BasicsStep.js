@@ -3,6 +3,7 @@ import { PackageIcon } from '../../../lib/icons';
 import { font, themed } from '../../../theme';
 import PhotoPicker from './PhotoPicker';
 import PhotoDesign from './PhotoDesign';
+import BadgeField from './BadgeField';
 import {
   Field, FieldError, FieldLabel, MoneyInput, PF, PfInput, PfSelect, RadioCards, useInvalidTarget,
 } from './parts';
@@ -104,6 +105,8 @@ export default function BasicsStep({
           placeholder={ex.description}
         />
       </Field>
+
+      <BadgeField value={form.badge} onChange={(v) => set('badge', v)} />
 
       {!editing ? (
         <Pressable accessibilityRole="button" onPress={onPackage} style={styles.pkg}>

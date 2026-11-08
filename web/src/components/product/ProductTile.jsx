@@ -6,6 +6,7 @@ import ImageOverlay from './ImageOverlay';
 import { SaleWas } from '../ui/SaleTag';
 import { ProductTodayTag } from '../today/TodayTag';
 import BestSellerTag from './BestSellerTag';
+import ProductBadge from './ProductBadge';
 import useProductPeek from '../peek/useProductPeek';
 import KindPrice from './kinds/KindPrice';
 import { notTakingOrders } from '../../lib/availability';
@@ -87,7 +88,7 @@ export default memo(function ProductTile({
         )}
       </div>
       <div className="product-info">
-        <span className="product-name"><ProductTodayTag product={product} /><BestSellerTag product={product} />{product.name}</span>
+        <span className="product-name"><ProductTodayTag product={product} /><ProductBadge product={product} /><BestSellerTag product={product} />{product.name}</span>
         <span className="product-price"><KindPrice product={product}>₱{saleInfo(product).price.toFixed(2)}</KindPrice> <SaleWas product={product} compact /></span>
         <ProductStats product={product} />
       </div>

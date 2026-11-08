@@ -1109,6 +1109,9 @@ model Product {
   /// With imageOverlay 'custom': the shop's own design it wears.
   photoDesignId String?     @map("photo_design_id")
   photoDesign   StorePhotoDesign? @relation(fields: [photoDesignId], references: [id], onDelete: SetNull)
+  /// A label the seller picks, shown before the name (utils/productBadges.js):
+  /// PRE_ORDER, PALENGKE or DIY. Only a label: ordering is unchanged. Null: none.
+  badge         String?     @map("badge") @db.VarChar(20)
 
   // Ownership
   storeId     String        @map("store_id")

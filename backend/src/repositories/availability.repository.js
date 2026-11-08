@@ -39,6 +39,8 @@ const PRODUCT_SELECT = {
   returnPolicy: true,
   imageOverlay: true,
   photoDesign: { select: { id: true, layers: true } },
+  // The seller's label before the name (Pre-order, Palengke, DIY).
+  badge: true,
   deletedAt: true,
 };
 

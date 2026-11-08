@@ -37,6 +37,8 @@ const PRODUCT_CARD = {
   // The shop-branding design over its photo, in the shop's colour.
   imageOverlay: true,
   photoDesign: { select: { id: true, layers: true } },
+  // The seller's label before the name (Pre-order, Palengke, DIY).
+  badge: true,
   store: { select: { id: true, name: true, logo: true, primaryColor: true } },
 };
 

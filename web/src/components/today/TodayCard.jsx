@@ -6,6 +6,7 @@ import { SaleWas } from '../ui/SaleTag';
 import { saleInfo } from '../../lib/variantPricing';
 import { windowState, shortLeft, isEndingSoon } from '../../lib/availability';
 import TodayTag from './TodayTag';
+import ProductBadge from '../product/ProductBadge';
 import useProductPeek from '../peek/useProductPeek';
 import { peso } from '../../lib/format';
 import './TodayCard.css';
@@ -51,7 +52,7 @@ export default function TodayCard({ item, result = false }) {
         {soldOut && <span className="today-card-cover">{state.text}</span>}
       </div>
       <div className="today-card-info">
-        <span className="today-card-name"><TodayTag mode={item.mode} />{product.name}</span>
+        <span className="today-card-name"><TodayTag mode={item.mode} /><ProductBadge product={product} todayMode={item.mode} />{product.name}</span>
         <span className="today-card-price">{peso(saleInfo(product).price)} <SaleWas product={product} compact /></span>
         {result ? (
           <>

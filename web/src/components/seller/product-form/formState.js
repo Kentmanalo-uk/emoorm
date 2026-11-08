@@ -252,6 +252,8 @@ export const toFormState = (product) => {
     imageOverlay: overlayOf(product),
     // With 'custom': the shop's own design ({ id, layers }).
     photoDesign: overlayOf(product) === 'custom' ? product.photoDesign : null,
+    // A label before its name (Pre-order, Palengke, DIY); '' is none.
+    badge: typeof product?.badge === 'string' ? product.badge : '',
     // The kinds' own facts (product.details).
     size: d.size || '',
     serves: d.serves || '',
@@ -488,6 +490,7 @@ export const buildPayload = (state, { kind, hasOptions, editing, product }) => {
     fulfillment: state.fulfillment || null,
     imageOverlay: state.imageOverlay || null,
     photoDesignId: state.imageOverlay === 'custom' ? state.photoDesign?.id || null : null,
+    badge: state.badge || null,
   };
 
   if (kind === 'REGULAR') {
@@ -801,6 +804,7 @@ export const draftProduct = (s, ctx) => {
     fulfillment: s.fulfillment,
     imageOverlay: s.imageOverlay || null,
     photoDesign: s.imageOverlay === 'custom' ? s.photoDesign : null,
+    badge: s.badge || null,
   };
 };
 

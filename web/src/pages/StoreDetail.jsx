@@ -57,6 +57,7 @@ import { useShare } from '../components/ShareSheet';
 import './StoreDetail.css';
 import ProductTile from '../components/product/ProductTile';
 import BestSellerTag from '../components/product/BestSellerTag';
+import ProductBadge from '../components/product/ProductBadge';
 import ShopHome from '../components/shop/ShopHome';
 import { awayUntil, shortDate, nowLabel, weekLines } from '../lib/shopHours';
 import { saleInfo } from '../lib/variantPricing';
@@ -1171,7 +1172,7 @@ function PhoneProductRow({
         {soldOut && <span className="shop-m-row-soldout">Sold out</span>}
       </Link>
       <div className="shop-m-row-body">
-        <Link to={`/product/${product.slug}`} className="shop-m-row-name"><BestSellerTag product={product} />{product.name}</Link>
+        <Link to={`/product/${product.slug}`} className="shop-m-row-name"><ProductBadge product={product} /><BestSellerTag product={product} />{product.name}</Link>
         <div className="shop-m-row-meta">
           {reviews > 0 ? (
             <span className="shop-m-row-stars">

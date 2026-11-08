@@ -3,6 +3,7 @@ import { resolveImg, srcSetFor } from '../../../lib/media';
 import { kindFacts, priceUnit } from '../../../lib/productKinds';
 import { peso } from './formState';
 import ImageOverlay from '../../product/ImageOverlay';
+import ProductBadge from '../../product/ProductBadge';
 
 const BADGES = {
   READY_TO_EAT: 'Available today',
@@ -26,7 +27,7 @@ export default function PreviewCard({
         {BADGES[kind] && <em className="pf-preview-badge">{BADGES[kind]}</em>}
       </div>
       <div className="pf-preview-body">
-        <strong className="pf-preview-name">{draft.name || 'Your product name'}</strong>
+        <strong className="pf-preview-name"><ProductBadge product={draft} todayMode={null} />{draft.name || 'Your product name'}</strong>
         <div className="pf-preview-price">
           {draft.salePrice ? (
             <>

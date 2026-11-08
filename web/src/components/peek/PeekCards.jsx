@@ -12,6 +12,7 @@ import { SaleWas } from '../ui/SaleTag';
 import UserAvatar from '../ui/UserAvatar';
 import { ProductTodayTag } from '../today/TodayTag';
 import BestSellerTag from '../product/BestSellerTag';
+import ProductBadge from '../product/ProductBadge';
 import { notTakingOrders } from '../../lib/availability';
 import { peso } from '../../lib/format';
 import { ShopLogoArt } from '../shop/ShopArt';
@@ -39,7 +40,7 @@ export function ProductPeekCard({ product: p }) {
         {outOfStock(p) && <span className="peek-badge">{productKind(p) === 'LIVESTOCK' ? 'Sold out' : 'Out of stock'}</span>}
       </div>
       <div className="peek-body">
-        <p className="peek-title"><ProductTodayTag product={p} /><BestSellerTag product={p} />{p.name}</p>
+        <p className="peek-title"><ProductTodayTag product={p} /><ProductBadge product={p} /><BestSellerTag product={p} />{p.name}</p>
         <div className="peek-price-row">
           <span className="peek-price"><KindPrice product={p}>{peso(saleInfo(p).price)}</KindPrice></span>
           <SaleWas product={p} compact />

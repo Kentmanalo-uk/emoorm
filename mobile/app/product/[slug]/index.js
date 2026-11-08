@@ -17,7 +17,7 @@ import ShellBarButton from '../../../src/components/ShellBarButton';
 import ShellPageMenu from '../../../src/components/ShellPageMenu';
 import EmptyState from '../../../src/components/EmptyState';
 import Glass, { liquidGlass } from '../../../src/components/Glass';
-import TodayTag, { BestSellerTag } from '../../../src/components/TodayTag';
+import TodayTag, { BestSellerTag, ProductBadge } from '../../../src/components/TodayTag';
 import { Image as PhotoImage } from 'expo-image';
 import { cardPhotoOf, heroImageReady, useHeroArriving } from '../../../src/components/HeroFlight';
 import { PageLoader } from '../../../src/components/BrandLoader';
@@ -746,6 +746,12 @@ function ProductPage({ slug, via }) {
         <View style={styles.heroInfo}>
           <Text style={styles.title} numberOfLines={2} accessibilityRole="header">
             {todayItem && product.availability ? <TodayTag mode={product.availability.mode} size={11.5} style={styles.titleTag} /> : null}
+            <ProductBadge
+              product={product}
+              todayMode={todayItem && product.availability ? product.availability.mode : null}
+              size={11.5}
+              style={styles.titleTag}
+            />
             <BestSellerTag product={product} size={11.5} style={styles.titleTag} />
             {product.name}
           </Text>
