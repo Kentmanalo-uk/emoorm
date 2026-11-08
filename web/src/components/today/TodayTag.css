@@ -24,21 +24,18 @@
 }
 
 /* Best seller (product/BestSellerTag.jsx): the shop's most sold product.
-   Polished gold with no shadow: a bright top edge, a glossy band of light
-   across the top half and a deeper gold underneath give it its 3D look;
-   a fine darker edge line (an outline, not a shadow) holds the shape. Dark
-   brown words read better on gold than white, and keep their bold (through
-   a variable: the build turns plain bold into medium on phones). */
+   Satin champagne gold, as in the reference the user picked: pale gold
+   that deepens toward its corners with a diagonal sheen of light across
+   it; no outline and no shadow, flat like the other tags. Dark brown words
+   read on the pale gold and keep their bold (through a variable: the build
+   turns plain bold into medium on phones). */
 .today-tag.is-best-seller {
   --bs-weight: 700;
   background:
-    linear-gradient(180deg, rgb(255 255 255 / 0.95) 0, rgb(255 255 255 / 0.95) 1px, transparent 1px),
-    linear-gradient(180deg, rgb(255 255 255 / 0.55) 0%, rgb(255 255 255 / 0.12) 46%, rgb(255 255 255 / 0) 52%),
-    linear-gradient(180deg, #fff1a8 0%, #ffd23f 34%, #f5a800 72%, #d98c00 100%);
-  color: #4a2c00;
+    linear-gradient(115deg, transparent 28%, rgb(255 255 255 / 0.5) 44%, rgb(255 255 255 / 0.12) 52%, transparent 62%),
+    linear-gradient(160deg, #f6eaa7 0%, #ecdb96 28%, #e2ca82 52%, #f4eaa6 74%, #d9bc6f 100%);
+  color: #5a3c08;
   font-weight: var(--bs-weight);
-  outline: 1px solid rgb(176 112 0 / 0.6);
-  outline-offset: -1px;
 }
 
 /* The seller's badges (product/ProductBadge.jsx); Pre-order uses

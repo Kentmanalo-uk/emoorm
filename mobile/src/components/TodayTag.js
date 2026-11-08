@@ -52,26 +52,28 @@ export function BestSellerTag({ product, size = 10.5, style }) {
   return (
     <View style={[styles.slot, style]}>
       <View style={[styles.tag, styles.bestSeller]}>
-        {/* Polished gold, as on the website: a deeper gold underneath, a
-            glossy band of light over the top half and a bright top edge;
-            no shadow. Hex stops with stopOpacity (iOS drops rgba alpha). */}
+        {/* Satin champagne gold, as on the website: pale gold deepening
+            toward its corners, a diagonal sheen of light across it; no
+            outline, no shadow. Hex stops with stopOpacity (iOS drops rgba
+            alpha). */}
         <Svg style={StyleSheet.absoluteFill} width="100%" height="100%" preserveAspectRatio="none">
           <Defs>
-            <LinearGradient id={`bsg${uid}`} x1="0" y1="0" x2="0" y2="1">
-              <Stop offset="0" stopColor="#fff1a8" />
-              <Stop offset="0.34" stopColor="#ffd23f" />
-              <Stop offset="0.72" stopColor="#f5a800" />
-              <Stop offset="1" stopColor="#d98c00" />
+            <LinearGradient id={`bsg${uid}`} x1="0" y1="0" x2="0.35" y2="1">
+              <Stop offset="0" stopColor="#f6eaa7" />
+              <Stop offset="0.28" stopColor="#ecdb96" />
+              <Stop offset="0.52" stopColor="#e2ca82" />
+              <Stop offset="0.74" stopColor="#f4eaa6" />
+              <Stop offset="1" stopColor="#d9bc6f" />
             </LinearGradient>
-            <LinearGradient id={`bss${uid}`} x1="0" y1="0" x2="0" y2="1">
-              <Stop offset="0" stopColor="#ffffff" stopOpacity="0.55" />
-              <Stop offset="0.46" stopColor="#ffffff" stopOpacity="0.12" />
-              <Stop offset="0.52" stopColor="#ffffff" stopOpacity="0" />
+            <LinearGradient id={`bss${uid}`} x1="0" y1="0.2" x2="1" y2="0.8">
+              <Stop offset="0.28" stopColor="#ffffff" stopOpacity="0" />
+              <Stop offset="0.44" stopColor="#ffffff" stopOpacity="0.5" />
+              <Stop offset="0.52" stopColor="#ffffff" stopOpacity="0.12" />
+              <Stop offset="0.62" stopColor="#ffffff" stopOpacity="0" />
             </LinearGradient>
           </Defs>
           <Rect x="0" y="0" width="100%" height="100%" fill={`url(#bsg${uid})`} />
           <Rect x="0" y="0" width="100%" height="100%" fill={`url(#bss${uid})`} />
-          <Rect x="0" y="0" width="100%" height="1" fill="#ffffff" fillOpacity="0.95" />
         </Svg>
         <Text style={[styles.label, styles.bestSellerLabel, { fontSize: size, lineHeight: size * 1.6, letterSpacing: size * 0.01 }]}>Best seller</Text>
       </View>
@@ -120,11 +122,9 @@ export function ProductBadge({ product, todayMode, size = 10.5, style }) {
 }
 
 const styles = themed(() => StyleSheet.create({
-  // Gold drawn by the Svg inside; a fine darker-gold edge holds the shape.
-  bestSeller: {
-    overflow: 'hidden', paddingHorizontal: 4, borderWidth: 1, borderColor: 'rgba(176, 112, 0, 0.6)', backgroundColor: '#f5a800',
-  },
-  bestSellerLabel: { ...font(700), color: '#4a2c00' },
+  // Gold drawn by the Svg inside; flat like the other tags (no outline).
+  bestSeller: { overflow: 'hidden', backgroundColor: '#e8d48c' },
+  bestSellerLabel: { ...font(700), color: '#5a3c08' },
   badgePreOrder: { backgroundColor: t.accent[600] },
   badgePalengke: { backgroundColor: '#4d7c0f' },
   badgeDiy: { backgroundColor: '#6d28d9' },
