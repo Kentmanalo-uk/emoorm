@@ -56,6 +56,7 @@ import MoreMenu from '../components/MoreMenu';
 import { useShare } from '../components/ShareSheet';
 import './StoreDetail.css';
 import ProductTile from '../components/product/ProductTile';
+import BestSellerTag from '../components/product/BestSellerTag';
 import ShopHome from '../components/shop/ShopHome';
 import { awayUntil, shortDate, nowLabel, weekLines } from '../lib/shopHours';
 import { saleInfo } from '../lib/variantPricing';
@@ -67,6 +68,8 @@ import { StoreSkeleton } from '../components/ui/PageSkeletons';
 import Spinner, { BusyLabel } from '../components/ui/Spinner';
 import { notTakingOrders, opensLabel } from '../lib/availability';
 import Select from '../components/ui/Select';
+import ListEnd from '../components/ui/ListEnd';
+import useInfiniteList from '../hooks/useInfiniteList';
 import useProductPeek from '../components/peek/useProductPeek';
 import { ShopCoverArt, ShopLogoArt } from '../components/shop/ShopArt';
 import ShopInviteCard from '../components/shop/ShopInviteCard';
@@ -84,11 +87,14 @@ const SORTS = [
   { key: 'popular', label: 'Most Popular', sortBy: 'orderCount', sortOrder: 'desc' },
 ];
 
-const PAGE_SIZE = 16;
-// A shop as it showed last time, and each list of its products.
+// Products per batch; the next comes on its own as the end of the list
+// nears, so every product of the shop shows. Fills whole rows (2 / 3 / 4 / 6).
+const BATCH = 24;
+// A shop as it showed last time, and each list of its products (every batch
+// loaded so far, so Back finds the list and the spot in it as left).
 const storeKey = (slug) => `store:${slug}`;
-const productsKey = (storeId, page, category, sort, search) => (
-  `store-products:${storeId}:${JSON.stringify([page, category, sort, search.trim()])}`
+const productsKey = (storeId, category, sort, search) => (
+  `store-products-list:${storeId}:${JSON.stringify([category, sort, search.trim()])}`
 );
 const DEFAULT_PRIMARY = 'var(--t-primary-600, #059669)';
 const DEFAULT_SECONDARY = 'var(--t-warning-500, #f59e0b)';
@@ -140,7 +146,6 @@ export default function StoreDetail() {
   const [searchOpen, setSearchOpen] = useEntryState('searchOpen', false);
   // Only a search opened just now takes the keyboard, not one Back reopens.
   const [focusSearch, setFocusSearch] = useState(false);
-  const [page, setPage] = useEntryState('page', 1);
   const [activeCategory, setActiveCategory] = useEntryState('category', 'all');
   const [sortKey, setSortKey] = useEntryState('sort', 'newest');
   const [rawSearch, setRawSearch] = useEntryState('search', '');
@@ -149,22 +154,15 @@ export default function StoreDetail() {
   // The shop and its products as they showed last time: shown at once while
   // they are asked for again.
   const [store, setStore] = useState(() => readCache(storeKey(slug)) || null);
-  const [keptProducts] = useState(() => (store
-    ? readCache(productsKey(store.id, page, activeCategory, sortKey, search))
-    : undefined));
-  const [products, setProducts] = useState(() => keptProducts?.products || []);
-  const [pagination, setPagination] = useState(() => keptProducts?.pagination || { total: 0, totalPages: 0 });
   const [isLoadingStore, setIsLoadingStore] = useState(() => !store);
   // The shop could not be asked for (offline, the server busy) and no copy
   // of it is saved: say so, with Try again, rather than a blank page.
   const [storeFailed, setStoreFailed] = useState(false);
-  const [isLoadingProducts, setIsLoadingProducts] = useState(() => !keptProducts);
   const [showReport, setShowReport] = useState(false);
   const [followBusy, setFollowBusy] = useState(false);
   const { share, shareSheet } = useShare();
   // Only the latest request is shown: an earlier one can answer after it.
   const storeRequest = useRef(0);
-  const productsRequest = useRef(0);
 
   // Changes the shop shown, and what is remembered of it.
   const updateStore = useCallback((change) => setStore((cur) => {
@@ -177,11 +175,56 @@ export default function StoreDetail() {
     fetchStore();
   }, [slug]);
 
+  // The shop's products, all of them: one batch after another as the end of
+  // the list nears. A tab, a sort or a search starts again from the first
+  // batch. Keyed on the store id: following it must not reload the products.
+  const storeId = store?.id;
+  const productsListKey = storeId ? productsKey(storeId, activeCategory, sortKey, search) : '';
+  const products = useInfiniteList({
+    listKey: productsListKey,
+    enabled: Boolean(storeId),
+    loadPage: async (page) => {
+      const isNewTab = activeCategory === 'new';
+      const s = SORTS.find((x) => x.key === sortKey) || SORTS[0];
+      const params = {
+        storeId,
+        page,
+        pageSize: BATCH,
+        ...(isNewTab ? { sortBy: 'createdAt', sortOrder: 'desc' } : { sortBy: s.sortBy, sortOrder: s.sortOrder }),
+      };
+      if (activeCategory !== 'all' && activeCategory !== 'new') params.categoryId = activeCategory;
+      if (search.trim()) params.search = search.trim();
+      const res = await axios.get('/products', { params });
+      const list = res.data || [];
+      return {
+        items: list,
+        total: res.pagination?.total ?? list.length,
+        totalPages: res.pagination?.totalPages ?? 1,
+      };
+    },
+    readSaved: readCache,
+    // The shop's first batch is saved on the device; more of it, a tab or a
+    // search, for this visit.
+    save: (key, saved) => writeCache(key, saved, {
+      visitOnly: !(saved.page === 1 && activeCategory === 'all' && sortKey === 'newest' && !search.trim()),
+    }),
+  });
+  const isLoadingProducts = products.loading;
   useEffect(() => {
-    if (store) fetchProducts();
-    // Keyed on the store id: following it must not reload the products.
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [store?.id, page, activeCategory, sortKey, search]);
+    if (products.error) toast.error('Failed to load products');
+  }, [products.error]);
+  // Another tab, sort or search starts the list over: when the page is
+  // scrolled down into it (the phone's search sits in the bar at the top),
+  // back up to where the list begins.
+  const productsSection = useRef(null);
+  const shownList = useRef(productsListKey);
+  useEffect(() => {
+    const was = shownList.current;
+    shownList.current = productsListKey;
+    if (!was || was === productsListKey || !productsSection.current) return;
+    const top = productsSection.current.getBoundingClientRect().top + window.scrollY - 80;
+    if (window.scrollY > top) window.scrollTo(0, Math.max(0, top));
+  }, [productsListKey]);
 
   const fetchStore = async () => {
     const request = ++storeRequest.current;
@@ -230,56 +273,6 @@ export default function StoreDetail() {
       }
     } finally {
       if (request === storeRequest.current) setIsLoadingStore(false);
-    }
-  };
-
-  const fetchProducts = async () => {
-    const request = ++productsRequest.current;
-    const key = productsKey(store.id, page, activeCategory, sortKey, search);
-    const kept = readCache(key);
-    if (kept) {
-      setProducts(kept.products || []);
-      if (kept.pagination) setPagination(kept.pagination);
-      setIsLoadingProducts(false);
-    } else {
-      setIsLoadingProducts(true);
-    }
-    try {
-      const isNewTab = activeCategory === 'new';
-      const sortForRequest = isNewTab
-        ? { sortBy: 'createdAt', sortOrder: 'desc' }
-        : (() => {
-          const s = SORTS.find((x) => x.key === sortKey) || SORTS[0];
-          return { sortBy: s.sortBy, sortOrder: s.sortOrder };
-        })();
-
-      const params = {
-        storeId: store.id,
-        page,
-        pageSize: PAGE_SIZE,
-        ...sortForRequest,
-      };
-      if (activeCategory !== 'all' && activeCategory !== 'new') {
-        params.categoryId = activeCategory;
-      }
-      if (search.trim()) params.search = search.trim();
-
-      const res = await axios.get('/products', { params });
-      if (request !== productsRequest.current) return;
-      const list = res.data || [];
-      setProducts(list);
-      if (res.pagination) setPagination(res.pagination);
-      // The shop's first page is saved on the device; a category, a search
-      // or another page, for this visit.
-      const firstView = page === 1 && activeCategory === 'all' && sortKey === 'newest' && !search.trim();
-      writeCache(key, {
-        products: list,
-        pagination: res.pagination || { total: list.length, totalPages: 1 },
-      }, { visitOnly: !firstView });
-    } catch {
-      if (request === productsRequest.current) toast.error('Failed to load products');
-    } finally {
-      if (request === productsRequest.current) setIsLoadingProducts(false);
     }
   };
 
@@ -402,19 +395,17 @@ export default function StoreDetail() {
     return () => { cancelled = true; };
   }, [store?.id]);
 
+  // Each starts the list over from its first batch.
   const onCategoryChange = useCallback((id) => {
     setActiveCategory(id);
-    setPage(1);
-  }, [setActiveCategory, setPage]);
+  }, [setActiveCategory]);
 
   const onSortChange = (key) => {
     setSortKey(key);
-    setPage(1);
   };
 
   const onSearchChange = (val) => {
     setRawSearch(val);
-    setPage(1);
   };
 
   useEffect(() => {
@@ -1007,7 +998,7 @@ export default function StoreDetail() {
         )}
 
         {/* Products */}
-        <div className={`shop-container shop-products-section${isPhone && phoneTab !== 'products' ? ' is-hidden-phone' : ''}`}>
+        <div ref={productsSection} className={`shop-container shop-products-section${isPhone && phoneTab !== 'products' ? ' is-hidden-phone' : ''}`}>
           {/* One row: the tabs, then search and sort (computers). */}
           <div className="shop-toolbar">
             <div className="shop-tabs">
@@ -1087,7 +1078,7 @@ export default function StoreDetail() {
                 <div key={i} className="shop-product-skeleton" />
               ))}
             </div>
-          ) : products.length === 0 ? (
+          ) : products.items.length === 0 ? (
             <div className="shop-empty">
               <EmptyArt name={search ? 'search' : 'products'} size={isPhone ? 88 : 104} />
               <p>
@@ -1112,7 +1103,7 @@ export default function StoreDetail() {
             </div>
           ) : isPhone && mobileLayout === 'list' ? (
             <div className="shop-m-list">
-              {products.map((product) => (
+              {products.items.map((product) => (
                 <PhoneProductRow
                   key={product.id}
                   product={product}
@@ -1125,7 +1116,7 @@ export default function StoreDetail() {
             </div>
           ) : (
             <div className="shop-grid">
-              {products.map((product) => (
+              {products.items.map((product) => (
                 <ProductTile
                   key={product.id}
                   product={product}
@@ -1136,31 +1127,9 @@ export default function StoreDetail() {
             </div>
           )}
 
-          {/* Pagination */}
-          {!(!isPhone && deskView === 'home') && pagination.totalPages > 1 && (
-            <div className="shop-pagination">
-              <button
-                className="shop-page-btn"
-                disabled={page <= 1}
-                onClick={() => {
-                  setPage(page - 1);
-                  window.scrollTo({ top: 400, behavior: 'smooth' });
-                }}
-              >
-                <ChevronLeft size={16} /> Prev
-              </button>
-              <span>Page {page} of {pagination.totalPages}</span>
-              <button
-                className="shop-page-btn"
-                disabled={page >= pagination.totalPages}
-                onClick={() => {
-                  setPage(page + 1);
-                  window.scrollTo({ top: 400, behavior: 'smooth' });
-                }}
-              >
-                Next <ChevronRight size={16} />
-              </button>
-            </div>
+          {/* Under the list: the next batch as the end nears, "Try again", or the end. */}
+          {!(!isPhone && deskView === 'home') && !isLoadingProducts && products.items.length > 0 && (
+            <ListEnd list={products} done={products.total > BATCH ? 'That’s every product in this shop' : ''} />
           )}
         </div>
       </div>
@@ -1202,7 +1171,7 @@ function PhoneProductRow({
         {soldOut && <span className="shop-m-row-soldout">Sold out</span>}
       </Link>
       <div className="shop-m-row-body">
-        <Link to={`/product/${product.slug}`} className="shop-m-row-name">{product.name}</Link>
+        <Link to={`/product/${product.slug}`} className="shop-m-row-name"><BestSellerTag product={product} />{product.name}</Link>
         <div className="shop-m-row-meta">
           {reviews > 0 ? (
             <span className="shop-m-row-stars">

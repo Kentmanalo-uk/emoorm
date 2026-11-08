@@ -20,9 +20,13 @@ export default function useNearScreen(ref, { margin = '600px', enabled = true } 
   useEffect(() => {
     const el = ref.current;
     if (near || !el || !enabled) return undefined;
+    // Anything above the screen counts as near too: a jump to the bottom (the
+    // End key, dragging the scrollbar, a long fling) skips past a section
+    // without it ever being on screen, and Explore was left never loading.
+    // A hidden element (display: none) still never counts.
     const watch = new IntersectionObserver((entries) => {
       if (entries.some((entry) => entry.isIntersecting)) setNear(true);
-    }, { rootMargin: `${margin} 0px` });
+    }, { rootMargin: `100000px 0px ${margin} 0px` });
     watch.observe(el);
     return () => watch.disconnect();
   }, [ref, near, margin, enabled]);

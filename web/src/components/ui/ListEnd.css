@@ -1,0 +1,41 @@
+/* Under a list that loads as it is scrolled (ListEnd.jsx): the same look as
+   the end of Home's Explore Products. */
+.list-end {
+  display: flex;
+  justify-content: center;
+  align-items: center;
+  width: 100%;
+  min-height: 56px;
+  padding: 12px 0 20px;
+  color: var(--t-primary-600, #047857);
+  /* A whole row of a grid it sits in. */
+  grid-column: 1 / -1;
+}
+
+.list-end-retry {
+  min-height: 0;
+  padding: 6px 8px;
+  border: 0;
+  background: none;
+  color: var(--t-neutral-500, #64748b);
+  font: inherit;
+  font-size: 13.5px;
+  line-height: 18px;
+  cursor: pointer;
+}
+
+.list-end-retry span {
+  color: var(--t-primary-600, #047857);
+  font-weight: 500;
+}
+
+.list-end-retry:hover span {
+  text-decoration: underline;
+}
+
+.list-end-done {
+  margin: 0;
+  color: var(--t-neutral-500, #636b78);
+  font-size: 13px;
+  line-height: 17px;
+}

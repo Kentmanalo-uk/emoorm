@@ -1,6 +1,8 @@
-import { useState, useEffect, useRef } from 'react';
+import { useState, useEffect, useMemo } from 'react';
 import EmptyArt from '../components/ui/EmptyArt';
-import { Link, useNavigate, useParams, useSearchParams } from 'react-router-dom';
+import {
+  Link, useNavigate, useNavigationType, useParams, useSearchParams,
+} from 'react-router-dom';
 import {
   SlidersHorizontal, CaretDown as ChevronDown, GridFour as Grid, Rows as List, WarningCircle,
   CaretLeft, MagnifyingGlass, CaretUp, MapPin,
@@ -21,6 +23,8 @@ import { POPULAR_SUGGESTIONS, saveRecent } from '../lib/buyerSearch';
 import { readCache, writeCache } from '../lib/pageCache';
 import { parseImages } from '../lib/media';
 import Select from '../components/ui/Select';
+import ListEnd from '../components/ui/ListEnd';
+import useInfiniteList from '../hooks/useInfiniteList';
 
 // The DB stores `images` as JSON; some rows come back stringified. Normalize.
 
@@ -37,9 +41,13 @@ const SORTS = {
   'name-desc': { sortBy: 'name', sortOrder: 'desc' },
 };
 
-/** GET /products parameters for the list as filtered and paged. */
-const listParams = ({ page, pageSize, category, categorySlug, municipalityId, search, minPrice, maxPrice, sort }) => {
-  const params = { page, pageSize };
+// Products per batch; the next comes on its own as the end of the grid
+// nears. Fills whole rows of the grid (5 / 4 / 2 columns).
+const BATCH = 20;
+
+/** GET /products parameters for the list as filtered (each batch adds its page). */
+const listParams = ({ pageSize, category, categorySlug, municipalityId, search, minPrice, maxPrice, sort }) => {
+  const params = { pageSize };
   if (category) params.categoryId = category;
   else if (categorySlug) params.categorySlug = categorySlug;
   if (municipalityId) params.municipalityId = municipalityId;
@@ -50,33 +58,17 @@ const listParams = ({ page, pageSize, category, categorySlug, municipalityId, se
   return params;
 };
 
-// Each filtered page remembers what it showed (pageCache).
-const listKey = (params) => `products:${JSON.stringify(params)}`;
+// Each filtered list remembers what it showed, every batch loaded so far
+// (pageCache), so Back finds the whole list and the spot in it as left.
+const listKey = (params) => `products-list:${JSON.stringify(params)}`;
 
 const Products = () => {
   const navigate = useNavigate();
+  const navigationType = useNavigationType();
   // Hold a result: its preview with quick actions.
   const [searchParams, setSearchParams] = useSearchParams();
   const isPhone = usePhoneLayout();
-  // The list as it showed last time for these filters: shown at once while
-  // it is asked for again (and Back finds it, and the spot in it, as left).
-  const [saved] = useState(() => (searchParams.get('imageSearch') === '1' ? undefined : readCache(listKey(listParams({
-    page: parseInt(searchParams.get('page')) || 1,
-    pageSize: 20,
-    category: searchParams.get('category') || '',
-    municipalityId: searchParams.get('municipalityId') || '',
-    search: searchParams.get('q') || '',
-    minPrice: searchParams.get('minPrice') || '',
-    maxPrice: searchParams.get('maxPrice') || '',
-    sort: searchParams.get('sort') || 'newest',
-  })))));
-  const [products, setProducts] = useState(() => saved?.products || []);
-  const [imageSearchPreview, setImageSearchPreview] = useState('');
   const { categories } = useCategories();
-  const [isLoading, setIsLoading] = useState(() => !saved);
-  const [loadError, setLoadError] = useState('');
-  // Only the latest request is shown: an earlier one can answer after it.
-  const latestRequest = useRef(0);
   const [viewMode, setViewMode] = useState('grid');
   const addItem = useCartStore((s) => s.addItem);
 
@@ -134,20 +126,10 @@ const Products = () => {
   const municipalityId = searchParams.get('municipalityId') || '';
   const imageSearch = searchParams.get('imageSearch') === '1';
   const [sortBy, setSortBy] = useState(searchParams.get('sort') || (searchParams.get('q') ? 'relevance' : 'newest'));
-  // The words the results are for, when the search had a typo.
-  const [corrected, setCorrected] = useState('');
   const [priceRange, setPriceRange] = useState({
     min: searchParams.get('minPrice') || '',
     max: searchParams.get('maxPrice') || '',
   });
-
-  // Pagination
-  const [pagination, setPagination] = useState(() => ({
-    page: parseInt(searchParams.get('page')) || 1,
-    pageSize: 20,
-    total: saved?.total || 0,
-    totalPages: saved?.totalPages || 0,
-  }));
 
   // Sync local search state whenever the URL query string changes (e.g. header re-search).
   useEffect(() => {
@@ -157,94 +139,72 @@ const Products = () => {
     // No sort chosen: a search ranks by best match, browsing by newest.
     if (!searchParams.get('sort')) setSortBy(q ? 'relevance' : 'newest');
     setSelectedCategory((prev) => (prev === cat ? prev : cat));
-    setPagination((p) => ({ ...p, page: parseInt(searchParams.get('page')) || 1 }));
   }, [searchParams]);
 
-  useEffect(() => {
-    if (imageSearch) {
-      latestRequest.current += 1;
-      try {
-        const stored = JSON.parse(sessionStorage.getItem('emoorm.image-search') || '{}');
-        setProducts(Array.isArray(stored.results) ? stored.results : []);
-        setImageSearchPreview(stored.previewUrl || '');
-        setPagination((prev) => ({ ...prev, total: Array.isArray(stored.results) ? stored.results.length : 0, totalPages: 1 }));
-      } catch {
-        setProducts([]);
-        setImageSearchPreview('');
-      } finally {
-        setIsLoading(false);
-      }
-      return undefined;
-    }
-    setImageSearchPreview('');
-    fetchProducts();
-    return undefined;
-  }, [activeCategory, pathCategorySlug, searchQuery, sortBy, priceRange, pagination.page, municipalityId, imageSearch]);
-
-  const fetchProducts = async () => {
-    const params = listParams({
-      page: pagination.page,
-      pageSize: pagination.pageSize,
-      category: activeCategory,
-      // Before the category list has arrived: asked by its slug.
-      categorySlug: activeCategory ? undefined : pathCategorySlug,
-      municipalityId,
-      search: searchQuery,
-      minPrice: priceRange.min,
-      maxPrice: priceRange.max,
-      sort: sortBy,
-    });
-    const key = listKey(params);
-    const request = ++latestRequest.current;
-    // Shown before: at once, then refreshed. New filters: the skeleton.
-    const kept = readCache(key);
-    if (kept) {
-      setProducts(kept.products || []);
-      setPagination((prev) => ({ ...prev, total: kept.total || 0, totalPages: kept.totalPages || 0 }));
-      setIsLoading(false);
-    } else {
-      setIsLoading(true);
-    }
-    setLoadError('');
+  // An image search: the results the image search page kept (not asked for here).
+  const imageStored = useMemo(() => {
+    if (!imageSearch) return null;
     try {
-      const response = await axios.get('/products', { params });
-      if (request !== latestRequest.current) return;
-      setProducts(response.data || []);
-      setCorrected(response.correctedSearch || '');
-      if (response.pagination) {
-        setPagination(prev => ({
-          ...prev,
-          total: response.pagination.total,
-          totalPages: response.pagination.totalPages,
-        }));
-      }
-      // All products, page 1, is saved on the device; a search, a filter or
-      // another page, for this visit.
-      const firstView = params.page === 1 && !params.categoryId && !params.municipalityId
-        && !params.search && !params.minPrice && !params.maxPrice
-        && params.sortBy === SORTS.newest.sortBy && params.sortOrder === SORTS.newest.sortOrder;
-      writeCache(key, {
-        products: response.data || [],
-        total: response.pagination?.total || 0,
-        totalPages: response.pagination?.totalPages || 0,
-      }, { visitOnly: !firstView });
-    } catch (error) {
-      if (request !== latestRequest.current) return;
-      console.error('Failed to fetch products:', error);
-      // Offline and the like: the list shown last time stays.
-      if (!kept) {
-        setProducts([]);
-        setLoadError(error?.message || 'Failed to load products');
-      }
-    } finally {
-      if (request === latestRequest.current) setIsLoading(false);
+      const stored = JSON.parse(sessionStorage.getItem('emoorm.image-search') || '{}');
+      return { results: Array.isArray(stored.results) ? stored.results : [], previewUrl: stored.previewUrl || '' };
+    } catch {
+      return { results: [], previewUrl: '' };
     }
-  };
+  }, [imageSearch]);
+  const imageSearchPreview = imageStored?.previewUrl || '';
+
+  // The list, every product of it: one batch after another as the end of
+  // the grid nears. Any change of filters or sort starts again from the
+  // first batch. (An old link's ?page= is ignored: the list starts at the
+  // top and the rest follows on scrolling.) The price is the one applied
+  // (Apply, or the phone's sheet), not what is being typed.
+  const appliedMin = searchParams.get('minPrice') || '';
+  const appliedMax = searchParams.get('maxPrice') || '';
+  const params = listParams({
+    pageSize: BATCH,
+    category: selectedCategory,
+    // A category page asks by its slug (its address), so its list stays
+    // the same one while the category names arrive.
+    categorySlug: selectedCategory ? undefined : pathCategorySlug,
+    municipalityId,
+    search: searchQuery,
+    minPrice: appliedMin,
+    maxPrice: appliedMax,
+    sort: sortBy,
+  });
+  const key = listKey(params);
+  // All products, newest first, is saved on the device (its first batch);
+  // a search or a filter, for this visit.
+  const firstView = !params.categoryId && !params.municipalityId
+    && !params.search && !params.minPrice && !params.maxPrice
+    && params.sortBy === SORTS.newest.sortBy && params.sortOrder === SORTS.newest.sortOrder;
+  const list = useInfiniteList({
+    listKey: key,
+    enabled: !imageSearch,
+    loadPage: async (page) => {
+      const response = await axios.get('/products', { params: { ...params, page } });
+      return {
+        items: response.data || [],
+        total: response.pagination?.total ?? (response.data || []).length,
+        totalPages: response.pagination?.totalPages ?? 1,
+        extra: { corrected: response.correctedSearch || '' },
+      };
+    },
+    readSaved: readCache,
+    // Back to another filter of this page: all of it, as it was left.
+    restoreAll: navigationType === 'POP',
+    // Later batches are kept for this visit only: the device keeps the first.
+    save: (k, saved) => writeCache(k, saved, { visitOnly: !firstView || saved.page > 1 }),
+  });
+  const products = imageStored ? imageStored.results : list.items;
+  const total = imageStored ? imageStored.results.length : list.total;
+  const isLoading = imageStored ? false : list.loading;
+  const loadError = imageSearch ? '' : (list.error ? (list.error.message || 'Failed to load products') : '');
+  const corrected = imageSearch ? '' : (list.extra?.corrected || '');
 
   const handleCategoryChange = (categoryId) => {
     setSelectedCategory(categoryId);
-    setPagination(prev => ({ ...prev, page: 1 }));
-    updateURL({ category: categoryId, page: 1 });
+    updateURL({ category: categoryId });
   };
 
   const handleSortChange = (sort) => {
@@ -253,22 +213,19 @@ const Products = () => {
   };
 
   const handlePriceFilter = () => {
-    setPagination(prev => ({ ...prev, page: 1 }));
     updateURL({
       minPrice: priceRange.min,
       maxPrice: priceRange.max,
-      page: 1
     });
   };
 
-  const handlePageChange = (newPage) => {
-    setPagination(prev => ({ ...prev, page: newPage }));
-    updateURL({ page: newPage });
-    window.scrollTo({ top: 0, behavior: 'smooth' });
-  };
-
   const updateURL = (params) => {
+    // Another filter or sort starts the list over: back to its top (the
+    // phone's bar stays on screen, so it can be changed far down the list).
+    window.scrollTo(0, 0);
     const newParams = new URLSearchParams(searchParams);
+    // No page numbers any more: the list loads on as it is scrolled.
+    newParams.delete('page');
     // On a category page the category is part of the address: a change of
     // filters goes on from /products, carrying the category unless changed.
     if (categorySlug && pathCategoryId && !newParams.has('category') && !('category' in params)) {
@@ -293,9 +250,8 @@ const Products = () => {
     setSearchQuery('');
     setSortBy('newest');
     setPriceRange({ min: '', max: '' });
-    setImageSearchPreview('');
     sessionStorage.removeItem('emoorm.image-search');
-    setPagination(prev => ({ ...prev, page: 1 }));
+    window.scrollTo(0, 0);
     if (categorySlug) navigate('/products');
     else setSearchParams({});
   };
@@ -322,11 +278,10 @@ const Products = () => {
     if (window.history.length > 1) navigate(-1); else navigate('/');
   };
 
-  // Phones: a sort tab, and filters from the sheet; each goes back to page 1.
+  // Phones: a sort tab, and filters from the sheet; each starts the list over.
   const pickSort = (sort) => {
     setSortBy(sort);
-    setPagination((prev) => ({ ...prev, page: 1 }));
-    updateURL({ sort: sort === 'newest' ? '' : sort, page: 1 });
+    updateURL({ sort: sort === 'newest' ? '' : sort });
   };
   const applyFilters = (changes) => {
     const next = {};
@@ -340,8 +295,7 @@ const Products = () => {
       next.minPrice = changes.minPrice || '';
       next.maxPrice = changes.maxPrice || '';
     }
-    setPagination((prev) => ({ ...prev, page: 1 }));
-    updateURL({ ...next, page: 1 });
+    updateURL(next);
   };
   const resetFilters = () => applyFilters({ category: '', municipalityId: '', minPrice: '', maxPrice: '' });
 
@@ -570,7 +524,7 @@ const Products = () => {
                   <p className="srch-m-count">
                     {isLoading ? <Skeleton height={11} width={140} /> : (
                       <>
-                        <strong>{pagination.total}</strong> {pagination.total === 1 ? 'result' : 'results'}
+                        <strong>{total}</strong> {total === 1 ? 'result' : 'results'}
                         {searchQuery ? <> for “{corrected || searchQuery}”</> : null}
                         {corrected ? <span className="srch-corrected"> (you searched “{searchQuery}”)</span> : null}
                         {activeMunicipalityName ? <> in {activeMunicipalityName}</> : null}
@@ -596,7 +550,7 @@ const Products = () => {
                     {isLoading ? <Skeleton height={12} width={150} /> : (
                       <span className="srch-m-image">
                         {imageSearchPreview && <img src={imageSearchPreview} alt="" />}
-                        <span><strong>{pagination.total}</strong> matching this photo</span>
+                        <span><strong>{total}</strong> matching this photo</span>
                       </span>
                     )}
                   </div>
@@ -609,7 +563,7 @@ const Products = () => {
                   <Skeleton height={11} width={180} />
                 ) : (
                   <span>
-                    Showing {products.length} of {pagination.total} products
+                    Showing {products.length} of {total} products
                   </span>
                 )}
               </div>
@@ -622,7 +576,7 @@ const Products = () => {
                   <WarningCircle size={64} weight="fill" />
                   <h3>Couldn't load products</h3>
                   <p>{loadError}</p>
-                  <button onClick={fetchProducts} className="empty-clear-btn">
+                  <button onClick={list.reload} className="empty-clear-btn">
                     Try again
                   </button>
                 </div>
@@ -668,54 +622,8 @@ const Products = () => {
                 </div>
               )}
 
-              {/* Pagination */}
-              {!isLoading && products.length > 0 && pagination.totalPages > 1 && (
-                <div className="pagination">
-                  <button
-                    onClick={() => handlePageChange(pagination.page - 1)}
-                    disabled={pagination.page === 1}
-                    className="pagination-btn"
-                  >
-                    Previous
-                  </button>
-
-                  <div className="pagination-pages">
-                    {[...Array(pagination.totalPages)].map((_, index) => {
-                      const page = index + 1;
-                      // Show first, last, current, and 2 pages around current
-                      if (
-                        page === 1 ||
-                        page === pagination.totalPages ||
-                        (page >= pagination.page - 2 && page <= pagination.page + 2)
-                      ) {
-                        return (
-                          <button
-                            key={page}
-                            onClick={() => handlePageChange(page)}
-                            className={`pagination-btn ${page === pagination.page ? 'active' : ''}`}
-                          >
-                            {page}
-                          </button>
-                        );
-                      } else if (
-                        page === pagination.page - 3 ||
-                        page === pagination.page + 3
-                      ) {
-                        return <span key={page} className="pagination-ellipsis">...</span>;
-                      }
-                      return null;
-                    })}
-                  </div>
-
-                  <button
-                    onClick={() => handlePageChange(pagination.page + 1)}
-                    disabled={pagination.page === pagination.totalPages}
-                    className="pagination-btn"
-                  >
-                    Next
-                  </button>
-                </div>
-              )}
+              {/* Under the grid: the next batch as the end nears, "Try again", or the end. */}
+              {!imageSearch && !isLoading && !loadError && products.length > 0 && <ListEnd list={list} done={total > BATCH ? 'You’ve seen everything for now' : ''} />}
             </div>
           </div>
         </div>

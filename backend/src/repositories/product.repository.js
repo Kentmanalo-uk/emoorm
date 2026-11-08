@@ -482,13 +482,17 @@ const findAll = async (options = {}) => {
   }
 
   // Sort by aggregate order count (popularity) or a whitelisted column.
+  // The id last, so products with the same price (or name, or date) keep one
+  // order from page to page: without it MySQL may order ties differently
+  // for each page, and a list loaded page by page showed some products twice
+  // and others never.
   const direction = sortOrder === 'asc' ? 'asc' : 'desc';
   let orderBy;
   if (sortBy === 'orderCount') {
     // Popularity: units sold (kept on the row, products_sold_idx).
-    orderBy = [{ soldCount: direction }, { createdAt: 'desc' }];
+    orderBy = [{ soldCount: direction }, { createdAt: 'desc' }, { id: 'desc' }];
   } else {
-    orderBy = { [SORTABLE_COLUMNS.has(sortBy) ? sortBy : 'createdAt']: direction };
+    orderBy = [{ [SORTABLE_COLUMNS.has(sortBy) ? sortBy : 'createdAt']: direction }, { id: direction }];
   }
 
   const [products, total] = await Promise.all([
@@ -518,6 +522,9 @@ const rankedSearch = async (where, words, search, page, pageSize) => {
   const pool = await prisma.product.findMany({
     where,
     select: { id: true, name: true, createdAt: true, soldCount: true },
+    // One order every time (newest first), so equal scores stay in the same
+    // order from page to page.
+    orderBy: [{ createdAt: 'desc' }, { id: 'desc' }],
     take: RANK_POOL,
   });
   const ranked = pool

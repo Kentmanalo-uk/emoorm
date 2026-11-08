@@ -1,4 +1,3 @@
-import { useEffect, useState } from 'react';
 import EmptyArt from '../components/ui/EmptyArt';
 import { Link, useParams } from 'react-router-dom';
 import { ArrowRight, MapPin } from '../lib/icons';
@@ -8,37 +7,49 @@ import { resolveImg, srcSetFor } from '../lib/media';
 import './MunicipalityShowcase.css';
 import ProductTile from '../components/product/ProductTile';
 import { HighlightCardsSkeleton } from '../components/ui/PageSkeletons';
+import Skeleton from '../components/ui/Skeleton';
+import ListEnd from '../components/ui/ListEnd';
 import { ShopLogoArt } from '../components/shop/ShopArt';
+import useInfiniteList from '../hooks/useInfiniteList';
+import { readCache, writeCache, usePageCache } from '../lib/pageCache';
 
 const readList = (response) => Array.isArray(response?.data) ? response.data : [];
 
+// The town's products per batch; the next comes on its own as the end of
+// the grid nears, so every one of them shows. Fills whole rows (6 / 4 / 2).
+const BATCH = 24;
+// Kept for this visit, so Back finds the town, its products loaded so far
+// and the spot in them as left.
+const pageKey = (id) => `municipality:${id}`;
+const productsKey = (id) => `municipality-products:${id}`;
+
 export default function MunicipalityShowcase() {
   const { id } = useParams();
-  const [municipality, setMunicipality] = useState(null);
-  const [stores, setStores] = useState([]);
-  const [products, setProducts] = useState([]);
-  const [isLoading, setIsLoading] = useState(true);
-  const [error, setError] = useState('');
-
-  useEffect(() => {
-    let cancelled = false;
-    setIsLoading(true);
-    Promise.all([
+  // The town and its shops (the strip shows six, with "View all stores").
+  const { data, loading: isLoading, error: loadError } = usePageCache(pageKey(id), async () => {
+    const [municipalityRes, storesRes] = await Promise.all([
       axios.get(`/municipalities/${id}`),
       axios.get('/stores', { params: { pageSize: 100, municipalityId: id } }),
-      axios.get('/products', { params: { pageSize: 100, municipalityId: id, sortBy: 'createdAt', sortOrder: 'desc' } }),
-    ]).then(([municipalityRes, storesRes, productsRes]) => {
-      if (cancelled) return;
-      setMunicipality(municipalityRes.data || null);
-      setStores(readList(storesRes));
-      setProducts(readList(productsRes));
-    }).catch(() => {
-      if (!cancelled) setError('Unable to load this municipality right now.');
-    }).finally(() => {
-      if (!cancelled) setIsLoading(false);
-    });
-    return () => { cancelled = true; };
-  }, [id]);
+    ]);
+    return { municipality: municipalityRes.data || null, stores: readList(storesRes) };
+  });
+  const municipality = data?.municipality || null;
+  const stores = data?.stores || [];
+  const error = loadError && !data ? 'Unable to load this municipality right now.' : '';
+
+  // Every product of the town, newest first, a batch at a time.
+  const products = useInfiniteList({
+    listKey: productsKey(id),
+    loadPage: async (page) => {
+      const res = await axios.get('/products', {
+        params: { page, pageSize: BATCH, municipalityId: id, sortBy: 'createdAt', sortOrder: 'desc' },
+      });
+      const list = readList(res);
+      return { items: list, total: res.pagination?.total ?? list.length, totalPages: res.pagination?.totalPages ?? 1 };
+    },
+    readSaved: readCache,
+    save: (key, saved) => writeCache(key, saved, { visitOnly: true }),
+  });
 
   const logo = municipality?.logo ? resolveImg(municipality.logo) : null;
 
@@ -86,17 +97,7 @@ export default function MunicipalityShowcase() {
                 </div>
               </section>
 
-              <section className="municipality-content-section">
-                <div className="section-header"><h2 className="section-title">Top Products</h2><Link to={`/products?municipalityId=${id}`} className="section-arrow-link" aria-label="View all products"><ArrowRight size={19} /></Link></div>
-                {products.length > 0 ? (
-                  <div className="municipality-product-grid">
-                    {products.slice(0, 8).map((product) => (
-                      <ProductTile key={product.id} product={product} />
-                    ))}
-                  </div>
-                ) : <div className="municipality-empty"><EmptyArt name="products" size={80} /><span>No products are available yet.</span></div>}
-              </section>
-
+              {/* The shops first: the products below run on to the very end. */}
               <section className="municipality-content-section">
                 <div className="section-header"><h2 className="section-title">Stores in {municipality?.name}</h2><Link to={`/stores?municipalityId=${id}`} className="section-arrow-link" aria-label="View all stores"><ArrowRight size={19} /></Link></div>
                 {stores.length > 0 ? (
@@ -109,6 +110,22 @@ export default function MunicipalityShowcase() {
                     ))}
                   </div>
                 ) : <div className="municipality-empty"><EmptyArt name="stores" size={80} /><span>No stores are available yet.</span></div>}
+              </section>
+
+              <section className="municipality-content-section">
+                <div className="section-header"><h2 className="section-title">Products</h2><Link to={`/products?municipalityId=${id}`} className="section-arrow-link" aria-label="View all products"><ArrowRight size={19} /></Link></div>
+                {products.loading ? (
+                  <Skeleton.Cards count={12} />
+                ) : products.items.length > 0 ? (
+                  <>
+                    <div className="municipality-product-grid">
+                      {products.items.map((product) => (
+                        <ProductTile key={product.id} product={product} />
+                      ))}
+                    </div>
+                    <ListEnd list={products} done={products.total > BATCH ? `That’s every product from ${municipality?.name || 'this town'}` : ''} />
+                  </>
+                ) : <div className="municipality-empty"><EmptyArt name="products" size={80} /><span>{products.error ? 'Couldn’t load the products right now.' : 'No products are available yet.'}</span></div>}
               </section>
             </>
           )}
