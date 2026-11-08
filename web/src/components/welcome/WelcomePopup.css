@@ -15,9 +15,9 @@
   display: flex;
   overflow-y: auto;
   padding: 24px 16px;
+  /* A plain dim, no blur: blurring the whole page behind it made opening
+     the pop-up heavy on phones. */
   background: rgb(10 14 25 / 0.6);
-  -webkit-backdrop-filter: blur(4px);
-  backdrop-filter: blur(4px);
   overscroll-behavior: contain;
   animation: wp-fade 0.22s ease-out;
 }
@@ -32,9 +32,15 @@
   background: rgb(0 0 0 / 0.68);
 }
 
+/* Closing: the pop-up swells a touch, then shrinks away (wp-spring-out on
+   .wp-stack) while the dim fades a beat later. */
 .wp-backdrop.is-closing {
   opacity: 0;
-  transition: opacity 0.2s ease-in;
+  transition: opacity 0.26s 0.08s ease-in;
+}
+
+.wp-backdrop.is-closing .wp-stack {
+  animation: wp-spring-out 0.32s cubic-bezier(0.4, 0, 0.2, 1) forwards;
 }
 
 .wp-stack {
@@ -43,6 +49,10 @@
   /* Room for the gift box above the card. */
   padding-top: 78px;
   outline: none;
+  /* Opening: small, a little bigger than its size, then settled. Only
+     transform and opacity move, so it stays smooth on phones. */
+  transform-origin: 50% 55%;
+  animation: wp-spring-in 0.52s cubic-bezier(0.25, 0.9, 0.3, 1) both;
 }
 
 .wp-card {
@@ -53,7 +63,6 @@
   box-shadow: 0 24px 60px rgb(80 7 36 / 0.38), 0 4px 14px rgb(80 7 36 / 0.18);
   color: #fff;
   text-align: center;
-  animation: wp-pop 0.42s cubic-bezier(0.2, 1.1, 0.35, 1) both;
 }
 
 /* A halftone corner, top right, fading out toward the middle. */
@@ -359,11 +368,17 @@
   from { opacity: 0; }
 }
 
-@keyframes wp-pop {
-  from {
-    opacity: 0;
-    transform: scale(0.88);
-  }
+@keyframes wp-spring-in {
+  0% { opacity: 0; transform: scale(0.6); }
+  55% { opacity: 1; transform: scale(1.05); }
+  80% { transform: scale(0.985); }
+  100% { opacity: 1; transform: scale(1); }
+}
+
+@keyframes wp-spring-out {
+  0% { opacity: 1; transform: scale(1); }
+  30% { opacity: 1; transform: scale(1.05); }
+  100% { opacity: 0; transform: scale(0.6); }
 }
 
 @keyframes wp-float-in {
@@ -375,6 +390,8 @@
 
 @media (prefers-reduced-motion: reduce) {
   .wp-backdrop,
+  .wp-backdrop.is-closing .wp-stack,
+  .wp-stack,
   .wp-card,
   .wp-art,
   .wp-perks,

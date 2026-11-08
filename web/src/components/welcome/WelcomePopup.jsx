@@ -31,7 +31,7 @@ const PERKS = [
   { key: 'pay', Icon: Wallet, lines: ['Cash or', 'GCash'] },
 ];
 
-const CLOSE_MS = 200;
+const CLOSE_MS = 340;
 
 const reducedMotion = () => typeof window !== 'undefined'
   && window.matchMedia?.('(prefers-reduced-motion: reduce)').matches;
