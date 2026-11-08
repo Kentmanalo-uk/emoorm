@@ -44,8 +44,8 @@ const BATCH = 20;
 /**
  * E-MOORM Palengke (/palengke): the fresh-market products, every product a
  * seller tagged Palengke (product.badge PALENGKE), in one grid that loads
- * on as it is scrolled. On top a campaign band (PalengkeBand: a search of
- * the palengke, the huge word, the basket), then cards that choose a kind
+ * on as it is scrolled. On top a green band (PalengkeBand: a search of the
+ * palengke, the E-MOORM logo and the word), then cards that choose a kind
  * of produce or an order, the three best sellers (only once three have
  * really sold), and the grid with a town filter. Search, kind, order and
  * town are kept in the address, so a view can be shared, and Back finds
@@ -230,7 +230,7 @@ export default function Palengke() {
     body = (
       <div className="plg-state">
         <div className="plg-state-art" aria-hidden="true">
-          <span className="plg-state-sun" />
+          <span className="plg-state-disc" />
           <PalengkeBasket size={isPhone ? 120 : 140} />
         </div>
         <h2>{title}</h2>

@@ -1,34 +1,37 @@
 import { useEffect, useRef } from 'react';
 import { Check } from '../../lib/icons';
 import {
-  BasketArt, FishArt, LivestockArt, TagArt, TONES, TrendArt,
+  BasketArt, FishArt, LivestockArt, PiggyArt, TONES, TrendArt,
 } from '../art/FlatArt';
+import useShortcutLook from '../../hooks/useShortcutLook';
 import { GulayMark, PrutasMark } from './PalengkeMarks';
 
 /*
- * The cards under the band: what kind of produce (a category, by slug, as
- * GET /products?categorySlug= takes it) and two ways to order the list.
- * Each card has its own colour: the mark's hue, and a pill in a deeper
- * shade of it that white reads on.
+ * The cards under the carousel: what kind of produce (a category, by slug,
+ * as GET /products?categorySlug= takes it) and two ways to order the list.
+ * The marks are the Home shortcuts' own, in the look the super admin chose
+ * for them (glass or 3D, useShortcutLook). The rest is flat: a pill in one
+ * deep shade of the mark's hue that white reads on, a pale wash of its tint
+ * behind the card (a stronger one when chosen).
  */
 // eslint-disable-next-line react-refresh/only-export-components
 export const PLG_KINDS = [
-  { slug: '', label: 'Lahat', name: 'Everything', art: (s) => <BasketArt size={s} look="pop" tone={TONES.green} />, pill: ['#10B981', '#047857'] },
-  { slug: 'vegetables', label: 'Gulay', name: 'Vegetables', art: (s) => <GulayMark size={s} />, pill: ['#22C55E', '#15803D'] },
-  { slug: 'fruits', label: 'Prutas', name: 'Fruits', art: (s) => <PrutasMark size={s} />, pill: ['#F59E0B', '#C2410C'] },
-  { slug: 'seafood', label: 'Seafood', name: 'Seafood', art: (s) => <FishArt size={s} look="pop" tone={TONES.sky} />, pill: ['#0EA5E9', '#1D4ED8'] },
-  { slug: 'livestock', label: 'Hayop', name: 'Livestock', art: (s) => <LivestockArt size={s} look="pop" tone={TONES.amber} />, pill: ['#F97316', '#B91C1C'] },
+  { slug: '', label: 'Lahat', name: 'Everything', art: (s, look) => <BasketArt size={s} look={look} />, color: '#047857', tint: TONES.green[0] },
+  { slug: 'vegetables', label: 'Gulay', name: 'Vegetables', art: (s, look) => <GulayMark size={s} look={look} />, color: '#15803D', tint: TONES.emerald[0] },
+  { slug: 'fruits', label: 'Prutas', name: 'Fruits', art: (s, look) => <PrutasMark size={s} look={look} />, color: '#C2410C', tint: TONES.orange[0] },
+  { slug: 'seafood', label: 'Seafood', name: 'Seafood', art: (s, look) => <FishArt size={s} look={look} />, color: '#0369A1', tint: TONES.sky[0] },
+  { slug: 'livestock', label: 'Hayop', name: 'Livestock', art: (s, look) => <LivestockArt size={s} look={look} />, color: '#B45309', tint: TONES.amber[0] },
 ];
 
 // eslint-disable-next-line react-refresh/only-export-components
 export const PLG_ORDERS = [
   // A soft hyphen: the long word may break in the pill on phones.
-  { key: 'top-sales', label: 'Pinaka­mabenta', art: (s) => <TrendArt size={s} look="pop" tone={TONES.rose} />, pill: ['#F43F5E', '#BE185D'] },
-  { key: 'price-low', label: 'Pinaka­mura', art: (s) => <TagArt size={s} look="pop" tone={TONES.violet} />, pill: ['#8B5CF6', '#6D28D9'] },
+  { key: 'top-sales', label: 'Pinaka­mabenta', art: (s, look) => <TrendArt size={s} look={look} />, color: '#B91C1C', tint: TONES.red[0] },
+  { key: 'price-low', label: 'Pinaka­mura', art: (s, look) => <PiggyArt size={s} look={look} />, color: '#6D28D9', tint: TONES.violet[0] },
 ];
 
 function Card({
-  on, label, art, pill, onClick, size,
+  on, label, art, color, tint, onClick, size, look,
 }) {
   return (
     <button
@@ -36,9 +39,9 @@ function Card({
       className={`plg-card${on ? ' is-on' : ''}`}
       aria-pressed={on}
       onClick={onClick}
-      style={{ '--c1': pill[0], '--c2': pill[1] }}
+      style={{ '--c': color, '--l': tint }}
     >
-      <span className="plg-card-art">{art(size)}</span>
+      <span className="plg-card-art">{art(size, look)}</span>
       {/* A long word may take two lines in the pill, smaller. */}
       <span className={`plg-card-pill${label.length > 9 ? ' is-long' : ''}`}>{label}</span>
       {on && <span className="plg-card-check" aria-hidden="true"><Check size={11} weight="bold" /></span>}
@@ -54,6 +57,7 @@ function Card({
 export default function PalengkeCards({
   kinds, cat, sort, onCat, onSort, isPhone,
 }) {
+  const look = useShortcutLook();
   const size = isPhone ? 50 : 62;
   const row = useRef(null);
   // A chosen card past the screen's edge (an order, opened from a link):
@@ -73,8 +77,10 @@ export default function PalengkeCards({
           on={cat === k.slug}
           label={k.label}
           art={k.art}
-          pill={k.pill}
+          color={k.color}
+          tint={k.tint}
           size={size}
+          look={look}
           onClick={() => onCat(k.slug)}
         />
       ))}
@@ -85,8 +91,10 @@ export default function PalengkeCards({
           on={sort === o.key}
           label={o.label}
           art={o.art}
-          pill={o.pill}
+          color={o.color}
+          tint={o.tint}
           size={size}
+          look={look}
           onClick={() => onSort(sort === o.key ? '' : o.key)}
         />
       ))}

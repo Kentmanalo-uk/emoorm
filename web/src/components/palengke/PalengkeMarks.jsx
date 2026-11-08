@@ -1,22 +1,125 @@
 import { useId } from 'react';
+import '../art/FlatArt.css';
 
 /**
- * The Palengke page's small glossy pieces, in the 3D look of the shortcut
- * marks (art/PopArt.jsx) and the basket (PalengkeBasket.jsx): light from
- * the top left, each face softened along its edges (the puff filter), a
- * gloss where a curve catches the light, no shadow on the page.
+ * The Gulay and Prutas cards' marks, in the two looks of the shortcut
+ * marks they sit beside (art/FlatArt.jsx), chosen the same way (the super
+ * admin's shortcutArtStyle, useShortcutLook):
  *
- *   GulayMark, PrutasMark   the Gulay and Prutas cards (48 x 48, like the
- *                           shortcut marks they sit beside)
- *   PlgLeaf, PlgTomato, PlgCalamansi, PlgSparkle
- *                           the props floating round the basket in the band
+ *   look 'pop'      a small glossy 3D object, lit like PopArt.jsx: light
+ *                   from the top left, every face softened along its edges
+ *                   (the puff filter), a gloss where a curve catches it
+ *   anything else   glass, as FlatArt's Mark draws it: the deep parts solid,
+ *                   the tint parts a frosted wash over them with a light rim,
+ *                   a sheen over the whole
  *
- * Every svg makes its own ids (useId), so any number can share a page.
+ * 48 x 48 like the shortcut marks. Every svg makes its own ids (useId).
  */
 
 const WHITE = '#FFFFFF';
 
-function useKit(prefix) {
+const svgProps = (size) => ({
+  width: size, height: size, viewBox: '0 0 48 48', 'aria-hidden': true, focusable: 'false',
+});
+
+/** a mixed t of the way to b, both #RRGGBB. */
+const mix = (a, b, t) => {
+  const p = (h) => [1, 3, 5].map((i) => parseInt(h.slice(i, i + 2), 16));
+  const [x, y] = [p(a), p(b)];
+  return `#${x.map((v, i) => Math.round(v + (y[i] - v) * t).toString(16).padStart(2, '0')).join('')}`;
+};
+
+/* ── Glass (FlatArt's Mark, for a [tint, deep] pair) ──────────────────── */
+
+/* The hues a colour runs on through, as in FlatArt: [neighbour, touch]. */
+const HUE_PATH = {
+  '#059669': ['#0D9488', '#3B82F6'], // emerald, teal, a little blue
+  '#F97316': ['#F43F5E', '#6366F1'], // orange, rose, a little indigo
+};
+
+/**
+ * draw({ tint, deep }) returns the mark's shapes; tint parts are painted
+ * url(#…t) and deep ones url(#…d), which FlatArt.css keys the layers on.
+ */
+function GlassMark({ size, tone, draw }) {
+  const id = `plgx${useId().replace(/[^a-zA-Z0-9]/g, '')}`;
+  const [tint, deep] = tone;
+  const [via, touch] = HUE_PATH[deep] || [mix(deep, '#000000', 0.15), mix(deep, '#000000', 0.3)];
+  const url = (k) => `url(#${id}${k})`;
+  const children = draw({ tint: url('t'), deep: url('d') });
+  return (
+    <svg {...svgProps(size)}>
+      <defs>
+        <linearGradient id={`${id}t`} gradientUnits="userSpaceOnUse" x1="6" y1="2" x2="40" y2="46">
+          <stop offset="0" stopColor={mix(tint, WHITE, 0.7)} stopOpacity="0.92" />
+          <stop offset="0.6" stopColor={tint} stopOpacity="0.72" />
+          <stop offset="1" stopColor={mix(tint, touch, 0.35)} stopOpacity="0.7" />
+        </linearGradient>
+        <linearGradient id={`${id}d`} gradientUnits="userSpaceOnUse" x1="4" y1="2" x2="44" y2="46">
+          <stop offset="0" stopColor={mix(tint, WHITE, 0.2)} />
+          <stop offset="0.42" stopColor={deep} />
+          <stop offset="0.78" stopColor={via} />
+          <stop offset="1" stopColor={mix(via, touch, 0.75)} />
+        </linearGradient>
+        <linearGradient id={`${id}s`} gradientUnits="userSpaceOnUse" x1="0" y1="0" x2="0" y2="48">
+          <stop offset="0" stopColor={WHITE} stopOpacity="0.7" />
+          <stop offset="0.38" stopColor={WHITE} stopOpacity="0.18" />
+          <stop offset="0.46" stopColor={WHITE} stopOpacity="0" />
+          <stop offset="0.86" stopColor={WHITE} stopOpacity="0" />
+          <stop offset="1" stopColor={WHITE} stopOpacity="0.32" />
+        </linearGradient>
+        <filter id={`${id}b`} x="-20%" y="-20%" width="140%" height="140%">
+          <feGaussianBlur stdDeviation="2.2" />
+        </filter>
+        <mask id={`${id}m`} maskUnits="userSpaceOnUse" x="0" y="0" width="48" height="48">
+          <g className="fa-silhouette">{children}</g>
+        </mask>
+        <mask id={`${id}g`} maskUnits="userSpaceOnUse" x="0" y="0" width="48" height="48">
+          <g className="fa-tint-mask">{children}</g>
+        </mask>
+      </defs>
+      <g className="fa-base">{children}</g>
+      <g mask={url('g')}>
+        <g className="fa-base" filter={url('b')} opacity="0.9">{children}</g>
+        <g className="fa-glass">{children}</g>
+        <g className="fa-rim">{children}</g>
+      </g>
+      <rect width="48" height="48" fill={url('s')} mask={url('m')} />
+    </svg>
+  );
+}
+
+const EMERALD = ['#6EE7B7', '#059669'];
+const ORANGE = ['#FDBA74', '#F97316'];
+
+const gulayGlass = ({ tint, deep }) => (
+  <>
+    <path d="M17 42C8 36 4.5 22 9.5 10.5c8 5 12 18.5 10.5 31.5z" fill={tint} />
+    <path d="M22 43C14.5 31 14.5 14.5 22.5 4c7.5 9 8.5 25 2.5 39z" fill={tint} />
+    <g transform="rotate(32 31 30)">
+      <path d="M31 15c6.5 0 9.5 6 9.5 13 0 9-4.5 17-9.5 17s-9.5-8-9.5-17c0-7 3-13 9.5-13z" fill={deep} />
+      <path d="M26.2 25c.5-3 2-5.2 4-6" fill="none" stroke={WHITE} strokeWidth="2" strokeLinecap="round" />
+      <path d="M24.2 17.8c2-3.6 4.4-4.9 6.8-4.9s4.8 1.3 6.8 4.9c-2.2.1-3.6 1-4.6 2.4L31 22.8l-2.2-2.6c-1-1.4-2.4-2.3-4.6-2.4z" fill={deep} />
+      <path d="M31 13.5V8.6" stroke={deep} strokeWidth="2.6" strokeLinecap="round" />
+    </g>
+  </>
+);
+
+const prutasGlass = ({ tint, deep }) => (
+  <>
+    <g transform="translate(26 25) rotate(48)">
+      <path d="M2-18C10.5-17 13.5-8 12.5 2.5 11.5 12.5 5 18.5-2 18.5c-5 0-8.5-4-8.5-9 0-5 4-7.2 4-13.2 0-6.6.6-15 8.5-14.3z" fill={deep} />
+      <path d="M4.6-12.4c2.6 1 4.2 3.6 4.6 6.6" fill="none" stroke={WHITE} strokeWidth="2" strokeLinecap="round" />
+      <path d="M2.4-18.2l.9-3.6" stroke={deep} strokeWidth="1.8" strokeLinecap="round" />
+      <path d="M3.2-21.2c4.4-6 11.4-7.2 15.6-4.8-3.2 5.2-9.6 7.4-15.6 4.8z" fill={tint} />
+    </g>
+    <circle cx="12.5" cy="37" r="7.6" fill={tint} />
+  </>
+);
+
+/* ── Pop (lit like PopArt) ────────────────────────────────────────────── */
+
+function usePopKit(prefix) {
   const id = `${prefix}${useId().replace(/[^a-zA-Z0-9]/g, '')}`;
   const u = (name) => `url(#${id}${name})`;
   return {
@@ -58,14 +161,12 @@ function Filters({ id, box, blur = 1.3 }) {
   );
 }
 
-/** A gradient from three stops, top left to bottom right (or radial). */
-function Grad({
-  id, stops, radial = false, x2 = 1, y2 = 1,
-}) {
+/** A gradient from its stops, top left to bottom right (or radial). */
+function Grad({ id, stops, radial = false }) {
   const kids = stops.map(([o, c]) => <stop key={o} offset={o} stopColor={c} />);
   return radial
     ? <radialGradient id={id} cx="0.35" cy="0.3" r="0.8">{kids}</radialGradient>
-    : <linearGradient id={id} x1="0" y1="0" x2={x2} y2={y2}>{kids}</linearGradient>;
+    : <linearGradient id={id} x1="0" y1="0" x2="1" y2="1">{kids}</linearGradient>;
 }
 
 const LEAF = [[0, '#B8F5A6'], [0.5, '#3FCB5E'], [1, '#14904A']];
@@ -73,17 +174,10 @@ const LEAF_DEEP = [[0, '#9BEA8E'], [0.55, '#25B158'], [1, '#0E7A43']];
 const CAP = [[0, '#9BF0CC'], [0.5, '#22C78C'], [1, '#0B7F5C']];
 const EGGPLANT = [[0, '#D9B8FF'], [0.45, '#9152E8'], [1, '#5B23B8']];
 const MANGO = [[0, '#FFF3B0'], [0.4, '#FFC93D'], [0.78, '#F7A01E'], [1, '#EE6B2A']];
-const TOMATO = [[0, '#FFC2B4'], [0.45, '#F43F4C'], [1, '#C21F45']];
 const CALAMANSI = [[0, '#E8FFB0'], [0.5, '#8FD13F'], [1, '#4C9A22']];
-const SPARK = [[0, '#FFFBD6'], [0.45, '#FFD84A'], [1, '#F59E0B']];
 
-const svgProps = (size, box = '0 0 48 48') => ({
-  width: size, height: size, viewBox: box, 'aria-hidden': true, focusable: 'false',
-});
-
-/** Gulay: pechay leaves at the back, an eggplant leaning out in front. */
-export function GulayMark({ size = 48 }) {
-  const k = useKit('plgg');
+function GulayPop({ size }) {
+  const k = usePopKit('plgg');
   return (
     <svg {...svgProps(size)}>
       <defs>
@@ -110,9 +204,8 @@ export function GulayMark({ size = 48 }) {
   );
 }
 
-/** Prutas: a carabao mango lying on its side, a leaf on its stem, a calamansi in front. */
-export function PrutasMark({ size = 48 }) {
-  const k = useKit('plgf');
+function PrutasPop({ size }) {
+  const k = usePopKit('plgf');
   return (
     <svg {...svgProps(size)}>
       <defs>
@@ -136,72 +229,18 @@ export function PrutasMark({ size = 48 }) {
   );
 }
 
-/* ── The band's props ─────────────────────────────────────────────────── */
+/* ── The marks ────────────────────────────────────────────────────────── */
 
-/** A loose pechay leaf, its midrib catching the light. */
-export function PlgLeaf({ size = 40, className = '' }) {
-  const k = useKit('plgpl');
-  return (
-    <svg className={className} {...svgProps(size, '0 0 40 40')}>
-      <defs>
-        <Filters id={k.id} box={[-4, -4, 48, 48]} />
-        <Grad id={`${k.id}l`} stops={LEAF} />
-      </defs>
-      <g filter={k.puff}><path d="M5 35C3 20 12 8 35 4.5c1.5 18.5-10 30.5-30 30.5z" fill={k.u('l')} /></g>
-      <path d="M7.5 32.5C15 23 23 14.5 31.5 8.5" fill="none" stroke="#EFFFF0" strokeOpacity="0.8" strokeWidth="1.6" strokeLinecap="round" />
-      {k.gloss('M10 22c2.4-5 6.4-9 12-11.6.9-.4 1.4.8.6 1.3-4.8 2.6-8.4 6.2-10.6 10.6-.4.9-2.4.6-2-.3z', 0.6)}
-    </svg>
-  );
+/** Gulay: pechay leaves at the back, an eggplant leaning out in front. */
+export function GulayMark({ size = 48, look }) {
+  return look === 'pop'
+    ? <GulayPop size={size} />
+    : <GlassMark size={size} tone={EMERALD} draw={gulayGlass} />;
 }
 
-/** A tomato, its green star cap on. */
-export function PlgTomato({ size = 40, className = '' }) {
-  const k = useKit('plgpt');
-  return (
-    <svg className={className} {...svgProps(size, '0 0 40 40')}>
-      <defs>
-        <Filters id={k.id} box={[-4, -4, 48, 48]} />
-        <Grad id={`${k.id}t`} stops={TOMATO} radial />
-        <Grad id={`${k.id}c`} stops={CAP} />
-      </defs>
-      <g filter={k.puff}><circle cx="20" cy="22" r="14.5" fill={k.u('t')} /></g>
-      <g filter={k.puff}>
-        <path d="M20 8.6l2.6 3.6 4.2-1.2-1.8 4 3.6 2.4-4.4.4-1.2 4.2-3-3.2-3 3.2-1.2-4.2-4.4-.4 3.6-2.4-1.8-4 4.2 1.2z" fill={k.u('c')} />
-      </g>
-      {k.gloss('M10 19c1-4 4-7 8-8 1-.2 1.4 1 .5 1.4-3 1.4-5 3.6-6 6.6-.4 1-2.8 1-2.5 0z', 0.8)}
-    </svg>
-  );
-}
-
-/** A calamansi, a small leaf at its top. */
-export function PlgCalamansi({ size = 32, className = '' }) {
-  const k = useKit('plgpc');
-  return (
-    <svg className={className} {...svgProps(size, '0 0 32 32')}>
-      <defs>
-        <Filters id={k.id} box={[-4, -4, 40, 40]} blur={1.1} />
-        <Grad id={`${k.id}c`} stops={CALAMANSI} radial />
-        <Grad id={`${k.id}l`} stops={LEAF} />
-      </defs>
-      <g filter={k.puff}><circle cx="15" cy="18" r="11" fill={k.u('c')} /></g>
-      <g filter={k.puff}><path d="M16 8c2-4.6 6.6-6.4 10.6-5.2-1.8 4.2-6.2 6.4-10.6 5.2z" fill={k.u('l')} /></g>
-      {k.gloss('M8 15.6c.7-2.8 2.7-4.8 5.2-5.4.8-.2 1.2.9.5 1.3-1.9.9-3.3 2.4-3.9 4.4-.3.9-2 .6-1.8-.3z', 0.85)}
-    </svg>
-  );
-}
-
-/** A four-point sparkle, gold. */
-export function PlgSparkle({ size = 28, className = '' }) {
-  const k = useKit('plgps');
-  return (
-    <svg className={className} {...svgProps(size, '0 0 32 32')}>
-      <defs>
-        <Filters id={k.id} box={[-4, -4, 40, 40]} blur={0.9} />
-        <Grad id={`${k.id}g`} stops={SPARK} />
-      </defs>
-      <g filter={k.puff}>
-        <path d="M16 1.5c1.6 8.4 4.4 11.6 14.5 14.5-10.1 2.9-12.9 6.1-14.5 14.5-1.6-8.4-4.4-11.6-14.5-14.5C11.6 13.1 14.4 9.9 16 1.5z" fill={k.u('g')} />
-      </g>
-    </svg>
-  );
+/** Prutas: a carabao mango lying on its side, a leaf on its stem, a calamansi in front. */
+export function PrutasMark({ size = 48, look }) {
+  return look === 'pop'
+    ? <PrutasPop size={size} />
+    : <GlassMark size={size} tone={ORANGE} draw={prutasGlass} />;
 }
