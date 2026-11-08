@@ -6,6 +6,7 @@ import {
 import axios from '../../lib/axios';
 import { useHeadCard } from '../../hooks/useHeadCard';
 import UserAvatar from '../ui/UserAvatar';
+import WithActiveDot from '../ui/ActiveDot';
 import './HeadCards.css';
 
 /*
@@ -115,15 +116,18 @@ export function ChatCard({ unread = 0, userId }) {
                     className={`hc-chat-row${c.unreadCount > 0 ? ' is-unread' : ''}`}
                     onClick={dismiss}
                   >
-                    <span className="hc-chat-avatar">
-                      <UserAvatar
-                        src={c.buyer?.profilePhoto}
-                        person={c.buyer}
-                        name={name}
-                        alt=""
-                        fallbackClassName="hc-chat-initial"
-                      />
-                    </span>
+                    {/* The dot: this buyer is on E-MOORM now. */}
+                    <WithActiveDot who={c.buyer} size={11}>
+                      <span className="hc-chat-avatar">
+                        <UserAvatar
+                          src={c.buyer?.profilePhoto}
+                          person={c.buyer}
+                          name={name}
+                          alt=""
+                          fallbackClassName="hc-chat-initial"
+                        />
+                      </span>
+                    </WithActiveDot>
                     <span className="hc-chat-text">
                       <span className="hc-chat-top">
                         <strong>{name}</strong>

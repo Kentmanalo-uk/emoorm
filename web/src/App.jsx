@@ -159,6 +159,10 @@ const AdminTeam = lazy(() => import('./pages/AdminTeam'));
 const SellerOffers = lazy(() => import('./pages/SellerOffers'));
 const SearchByImage = lazy(() => import('./pages/SearchByImage'));
 const AvailableToday = lazy(() => import('./pages/AvailableToday'));
+const Collection = lazy(() => import('./pages/Collection'));
+const LiveNowPage = lazy(() => import('./pages/LiveNow'));
+const ExploreMindoro = lazy(() => import('./pages/ExploreMindoro'));
+const Palengke = lazy(() => import('./pages/Palengke'));
 const SellerReturns = lazy(() => import('./pages/SellerReturns'));
 
 // Where shoppers usually go from the first page: fetched in the background
@@ -312,8 +316,13 @@ function AppRoutes() {
         <Route path="/stores" element={<Stores />} />
         <Route path="/stores/map" element={<StoreMap />} />
         <Route path="/today" element={<AvailableToday />} />
+        <Route path="/palengke" element={<Palengke />} />
         <Route path="/store/:slug" element={<StoreDetail />} />
+        <Route path="/live" element={<LiveNowPage />} />
         <Route path="/live/:id" element={<LiveWatch />} />
+        {/* Home's shortcuts: a collection's whole list, the towns in photos. */}
+        <Route path="/c/:key" element={<Collection />} />
+        <Route path="/explore" element={<ExploreMindoro />} />
         <Route path="/invite/:code" element={<InviteLanding />} />
         <Route path="/u/:id" element={<PublicProfile />} />
         <Route path="/municipality/:id" element={<MunicipalityShowcase />} />

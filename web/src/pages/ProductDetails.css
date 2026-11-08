@@ -3702,3 +3702,37 @@ button.pdp-review-media-item video {
 .pdp-review-act.is-on {
   color: var(--t-primary-700, #044a06);
 }
+
+/* A seller badge colours the price band (ProductDetails.jsx badgeBand), in the
+   badge's own colours (components/today/TodayTag.css): Pre-order pink,
+   Palengke green, DIY violet. Computers: a light tint, the price in the colour.
+   Phones: the band itself in the colour, from its deep tone to a lighter one. */
+.pdp-price-band.is-badge-pre-order { --pb-deep: var(--t-accent-600, #db2777); --pb-light: #ec4899; --pb-tint: #fdf2f8; }
+.pdp-price-band.is-badge-palengke { --pb-deep: #4d7c0f; --pb-light: #65a30d; --pb-tint: #f2f9e8; }
+.pdp-price-band.is-badge-diy { --pb-deep: #6d28d9; --pb-light: #8b5cf6; --pb-tint: #f4f0fe; }
+
+.pdp-price-band:is(.is-badge-pre-order, .is-badge-palengke, .is-badge-diy) {
+  background: var(--pb-tint);
+}
+
+.pdp-price-band:is(.is-badge-pre-order, .is-badge-palengke, .is-badge-diy) .pdp-price {
+  color: var(--pb-deep);
+}
+
+:root[data-theme="dark"] .pdp-price-band:is(.is-badge-pre-order, .is-badge-palengke, .is-badge-diy) {
+  background: color-mix(in srgb, var(--pb-deep) 22%, transparent);
+}
+
+:root[data-theme="dark"] .pdp-price-band:is(.is-badge-pre-order, .is-badge-palengke, .is-badge-diy) .pdp-price {
+  color: var(--pb-light);
+}
+
+@media (max-width: 768px) {
+  .pdp-m-price-band.is-badge-pre-order { --pb-deep: var(--t-accent-600, #db2777); --pb-light: #ec4899; }
+  .pdp-m-price-band.is-badge-palengke { --pb-deep: #4d7c0f; --pb-light: #65a30d; }
+  .pdp-m-price-band.is-badge-diy { --pb-deep: #6d28d9; --pb-light: #8b5cf6; }
+
+  .pdp-m-price-band:is(.is-badge-pre-order, .is-badge-palengke, .is-badge-diy) {
+    background: linear-gradient(95deg, var(--pb-deep) 0%, var(--pb-deep) 10%, var(--pb-light) 100%);
+  }
+}

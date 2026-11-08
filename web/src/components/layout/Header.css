@@ -1591,6 +1591,18 @@
     box-shadow: none;
   }
 
+  /* A white header (App settings, mobileHeaderStyle WHITE): a white field
+     would vanish into it, so it is the desktop field instead, off-white
+     with no outline (.header-search above). */
+  :root[data-header-style='white'] .header.is-home .header-search {
+    border-color: transparent;
+    background: #eff0f5;
+  }
+
+  :root[data-header-style='white'][data-theme='dark'] .header.is-home .header-search {
+    background: var(--t-neutral-100, #1f2937);
+  }
+
   .header.is-home .header-search-input {
     height: 100%;
     padding: 0 0 0 16px;

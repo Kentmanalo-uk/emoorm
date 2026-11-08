@@ -1,0 +1,296 @@
+/* Explore Mindoro (ExploreMindoro.jsx, /explore): a grid of town cards,
+   each a photo from the town's gallery with its name, line and counts over
+   it (a town without photos: its seal on green). On computers the first
+   town takes two columns. */
+.exm {
+  min-height: 60vh;
+  padding: 0 0 48px;
+}
+
+.exm-container {
+  max-width: 1280px;
+  margin: 0 auto;
+  padding: 0 32px;
+}
+
+.exm-crumbs {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  padding: 16px 0 6px;
+  color: var(--t-neutral-500, #636b78);
+  font-size: 14px;
+}
+
+.exm-crumbs a {
+  color: var(--t-neutral-600, #4b5563);
+  text-decoration: none;
+}
+
+.exm-crumbs a:hover {
+  color: var(--t-primary-700, #03684c);
+}
+
+.exm-crumbs span:last-child {
+  color: var(--t-neutral-900, #111827);
+}
+
+.exm-head {
+  display: flex;
+  align-items: center;
+  gap: 16px;
+  padding: 14px 0 20px;
+}
+
+.exm-art {
+  display: grid;
+  flex-shrink: 0;
+  place-items: center;
+}
+
+.exm-art svg {
+  display: block;
+}
+
+.exm-head-text {
+  min-width: 0;
+}
+
+.exm-title {
+  margin: 0;
+  color: var(--t-neutral-900, #111827);
+  font-size: 30px;
+  line-height: 1.15;
+  /* Through a variable, so the phone build keeps it bold (vite.config.js). */
+  --exm-title-weight: 800;
+  font-weight: var(--exm-title-weight);
+  letter-spacing: -0.01em;
+}
+
+.exm-line {
+  margin: 6px 0 0;
+  color: var(--t-neutral-500, #636b78);
+  font-size: 15px;
+  line-height: 1.4;
+}
+
+.exm-grid {
+  display: grid;
+  grid-template-columns: repeat(4, minmax(0, 1fr));
+  grid-auto-flow: dense;
+  gap: 14px;
+}
+
+.exm-skel {
+  display: block;
+  aspect-ratio: 4 / 5;
+}
+
+.exm-card {
+  position: relative;
+  display: block;
+  overflow: hidden;
+  aspect-ratio: 4 / 5;
+  border-radius: 18px;
+  background: var(--t-neutral-200, #e5e7eb);
+  color: #fff;
+  text-decoration: none;
+  isolation: isolate;
+}
+
+.exm-card.is-wide {
+  grid-column: span 2;
+  aspect-ratio: auto;
+}
+
+.exm-card:focus-visible {
+  outline: 3px solid var(--t-primary-600, #047857);
+  outline-offset: 3px;
+}
+
+.exm-cover {
+  position: absolute;
+  inset: 0;
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+  transition: transform 0.5s cubic-bezier(0.2, 0.7, 0.2, 1);
+}
+
+.exm-card:hover .exm-cover {
+  transform: scale(1.05);
+}
+
+/* No photos yet: the town's seal on green. */
+.exm-cover.is-logo {
+  display: grid;
+  place-items: center;
+  padding-bottom: 22%;
+  background:
+    radial-gradient(circle at 25% 15%, rgba(255, 255, 255, 0.2), transparent 55%),
+    linear-gradient(165deg, #0e7c3a, #055d07 70%);
+  color: rgba(255, 255, 255, 0.85);
+}
+
+.exm-cover.is-logo img {
+  width: 38%;
+  max-width: 120px;
+  aspect-ratio: 1;
+  border-radius: 50%;
+  background: #fff;
+  object-fit: cover;
+  box-shadow: 0 8px 24px rgba(0, 0, 0, 0.25);
+}
+
+.exm-shade {
+  position: absolute;
+  inset: 40% 0 0;
+  z-index: 0;
+  background: linear-gradient(transparent, rgba(0, 0, 0, 0.72));
+  pointer-events: none;
+}
+
+.exm-card.is-plain .exm-shade {
+  background: linear-gradient(transparent, rgba(0, 0, 0, 0.35));
+}
+
+.exm-text {
+  position: absolute;
+  right: 0;
+  bottom: 0;
+  left: 0;
+  z-index: 1;
+  display: flex;
+  flex-direction: column;
+  align-items: flex-start;
+  gap: 3px;
+  padding: 16px;
+}
+
+.exm-seal {
+  width: 34px;
+  height: 34px;
+  margin-bottom: 6px;
+  border: 2px solid #fff;
+  border-radius: 50%;
+  background: #fff;
+  object-fit: cover;
+}
+
+.exm-name {
+  font-size: 21px;
+  line-height: 1.15;
+  --exm-name-weight: 700;
+  font-weight: var(--exm-name-weight);
+  text-shadow: 0 1px 8px rgba(0, 0, 0, 0.3);
+}
+
+.exm-card.is-wide .exm-name {
+  font-size: 28px;
+}
+
+.exm-tagline {
+  display: -webkit-box;
+  overflow: hidden;
+  color: rgba(255, 255, 255, 0.88);
+  font-size: 13.5px;
+  line-height: 1.3;
+  -webkit-box-orient: vertical;
+  -webkit-line-clamp: 2;
+}
+
+.exm-meta {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 6px;
+  margin-top: 6px;
+}
+
+.exm-meta:empty {
+  display: none;
+}
+
+.exm-meta > span {
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+  height: 24px;
+  padding: 0 9px;
+  border-radius: 999px;
+  background: rgba(255, 255, 255, 0.2);
+  -webkit-backdrop-filter: blur(8px);
+  backdrop-filter: blur(8px);
+  font-size: 12px;
+  font-weight: 500;
+}
+
+@media (max-width: 1100px) {
+  .exm-grid {
+    grid-template-columns: repeat(3, minmax(0, 1fr));
+  }
+}
+
+/* Phones: the title is in the back bar (Layout); two cards a row. */
+@media (max-width: 768px) {
+  .exm-container {
+    padding: 0 12px;
+  }
+
+  .exm-head {
+    gap: 12px;
+    padding: 12px 2px 14px;
+  }
+
+  .exm-line {
+    margin: 0;
+    font-size: 14px;
+  }
+
+  .exm-grid {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+    gap: 10px;
+  }
+
+  .exm-card {
+    border-radius: 14px;
+  }
+
+  .exm-text {
+    padding: 11px;
+  }
+
+  .exm-seal {
+    width: 26px;
+    height: 26px;
+    margin-bottom: 4px;
+  }
+
+  .exm-name {
+    font-size: 16.5px;
+  }
+
+  .exm-tagline {
+    font-size: 12px;
+  }
+
+  .exm-meta {
+    gap: 4px;
+    margin-top: 4px;
+  }
+
+  .exm-meta > span {
+    height: 21px;
+    padding: 0 7px;
+    font-size: 11px;
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .exm-cover {
+    transition: none;
+  }
+
+  .exm-card:hover .exm-cover {
+    transform: none;
+  }
+}

@@ -1,0 +1,41 @@
+/* "Active now": E-MOORM's success green with a ring of the surface it sits on. */
+.active-dot-host {
+  position: relative;
+  display: inline-flex;
+  flex-shrink: 0;
+  /* As big as what it holds: never stretched by a flex or grid parent, or
+     the dot would land at that parent's edge. */
+  width: fit-content;
+  height: fit-content;
+  vertical-align: middle;
+}
+
+.active-dot {
+  position: absolute;
+  right: var(--active-dot-inset, 0px);
+  bottom: var(--active-dot-inset, 0px);
+  z-index: 3;
+  box-sizing: border-box;
+  width: var(--active-dot-size, 12px);
+  height: var(--active-dot-size, 12px);
+  border-radius: 50%;
+  background: var(--t-success-500, #22c55e);
+  border: max(2px, calc(var(--active-dot-size, 12px) / 6)) solid var(--surface-card, #fff);
+  pointer-events: none;
+}
+
+/* The words under a name in a chat's header ("Active now", "Active 12m ago"). */
+.active-label {
+  display: inline-flex;
+  align-items: center;
+  gap: 5px;
+}
+
+.active-label.is-now::before {
+  content: '';
+  width: 7px;
+  height: 7px;
+  border-radius: 50%;
+  background: var(--t-success-500, #22c55e);
+  flex-shrink: 0;
+}

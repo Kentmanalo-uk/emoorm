@@ -95,6 +95,7 @@ import {
 } from '../components/product/kinds/buying';
 import { peso } from '../lib/format';
 import { ShopLogoArt } from '../components/shop/ShopArt';
+import WithActiveDot from '../components/ui/ActiveDot';
 
 /** A package's saving: what the items cost one by one, crossed out, and how much less it is. */
 const shortPeso = (n) => `₱${Number(n || 0).toLocaleString('en-PH', { maximumFractionDigits: 2 })}`;
@@ -867,6 +868,10 @@ const ProductDetails = () => {
   const unitWords = pageUnit(product);
   // Computers: a kind's own rows make the page long, so the delivery lines join up.
   const compactRows = !isPhone && kind !== 'REGULAR';
+  // A seller's badge (Pre-order, Palengke, DIY) colours the price band to
+  // match it; none keeps the default band.
+  const badgeKey = String(product.badge || '').toLowerCase().replace(/_/g, '-');
+  const badgeBand = ['pre-order', 'palengke', 'diy'].includes(badgeKey) ? ` is-badge-${badgeKey}` : '';
   const savings = packageSavings(product);
   const wishlisted = isInWishlist(product.id);
   const toggleWishlist = () => {
@@ -1030,7 +1035,7 @@ const ProductDetails = () => {
               </div>
 
               <div className="pdp-m-price">
-                <div className="pdp-m-price-band">
+                <div className={`pdp-m-price-band${badgeBand}`}>
                   <div className="pdp-m-price-top">
                     <div className="pdp-m-price-main">
                       {fromPrice && <span className="pdp-price-from">from</span>}
@@ -1207,7 +1212,7 @@ const ProductDetails = () => {
               </div>
 
               {/* Price band */}
-              <div className={`pdp-price-band${compactRows ? ' pdp-price-band--compact' : ''}`}>
+              <div className={`pdp-price-band${compactRows ? ' pdp-price-band--compact' : ''}${badgeBand}`}>
                 <div className="pdp-price-line">
                   <div className="pdp-price">
                     {fromPrice && <span className="pdp-price-from">from </span>}
@@ -1542,11 +1547,14 @@ const ProductDetails = () => {
           {product.store && (
             <div className="pdp-store-card">
               <div className="pdp-store-left">
-                <div className="pdp-store-avatar">
-                  {product.store.logoUrl || product.store.logo
-                    ? <img src={resolveImg(product.store.logoUrl || product.store.logo)} srcSet={srcSetFor(product.store.logoUrl || product.store.logo)} sizes="64px" alt={product.store.name} loading="lazy" onError={(e) => { e.currentTarget.style.display = 'none'; }} />
-                    : <ShopLogoArt name={product.store.name} />}
-                </div>
+                {/* The dot: the shop's seller is on E-MOORM now. */}
+                <WithActiveDot who={product.store} size={14} inset={1}>
+                  <div className="pdp-store-avatar">
+                    {product.store.logoUrl || product.store.logo
+                      ? <img src={resolveImg(product.store.logoUrl || product.store.logo)} srcSet={srcSetFor(product.store.logoUrl || product.store.logo)} sizes="64px" alt={product.store.name} loading="lazy" onError={(e) => { e.currentTarget.style.display = 'none'; }} />
+                      : <ShopLogoArt name={product.store.name} />}
+                  </div>
+                </WithActiveDot>
                 <div>
                   <div className="pdp-store-name">
                     {product.store.name}

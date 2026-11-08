@@ -4,6 +4,7 @@ import LoadFailed from '../components/ui/LoadFailed';
 import { Link, useNavigate, useSearchParams } from 'react-router-dom';
 import {
   MagnifyingGlass as Search, MapPin, Package, CaretLeft as ChevronLeft, CaretRight as ChevronRight, X,
+  Clock, Storefront,
 } from '../lib/icons';
 import Layout from '../components/layout/Layout';
 import ProductImage from '../components/ProductImage';
@@ -13,15 +14,19 @@ import { readCache, writeCache } from '../lib/pageCache';
 import { usePhoneLayout } from '../hooks/useMobileNav';
 import useEntryState from '../hooks/useEntryState';
 import { useMunicipalities } from '../hooks/useReferenceData';
+import useAuthStore from '../store/authStore';
 import './Stores.css';
 import { StoreCardsSkeleton } from '../components/ui/PageSkeletons';
 import PageMenu from '../components/layout/PageMenu';
 import useStorePeek from '../components/peek/useStorePeek';
 import { ShopLogoArt } from '../components/shop/ShopArt';
+import WithActiveDot from '../components/ui/ActiveDot';
 
 const PAGE_SIZE = 20;
 // Each list as it showed last time.
-const listKey = (page, q, municipalityId) => `stores:${JSON.stringify([page, q, municipalityId])}`;
+const listKey = (page, q, municipalityId, open, pickup) => `stores:${JSON.stringify(
+  open || pickup ? [page, q, municipalityId, open, pickup] : [page, q, municipalityId],
+)}`;
 
 export default function Stores() {
   const navigate = useNavigate();
@@ -30,11 +35,22 @@ export default function Stores() {
   const { municipalities } = useMunicipalities();
   const searchQuery = searchParams.get('q') || '';
   const [inputValue, setInputValue] = useState(searchQuery);
-  const municipalityId = searchParams.get('municipalityId') || '';
+  // municipalityId=all: every town, where the pickup filter would otherwise
+  // pick the buyer's own.
+  const rawTown = searchParams.get('municipalityId') || '';
+  const municipalityId = rawTown === 'all' ? '' : rawTown;
+  // Home's shortcuts: shops open right now (?open=now), shops with pickup
+  // near the buyer (?pickup=1): in the town the page shows, else the
+  // signed-in buyer's own, else every town.
+  const openNow = searchParams.get('open') === 'now';
+  const pickup = searchParams.get('pickup') === '1';
+  const myTown = useAuthStore((s) => s.user?.municipalityId) || '';
+  const pickupTown = pickup && rawTown !== 'all' ? (municipalityId || myTown) : '';
+  const townFilter = municipalityId || pickupTown;
   // The page this visit was on, so Back from a shop finds it again.
   const [page, setPage] = useEntryState('page', 1);
   // Shown at once while it is asked for again.
-  const [kept] = useState(() => readCache(listKey(page, searchQuery, municipalityId)));
+  const [kept] = useState(() => readCache(listKey(page, searchQuery, townFilter, openNow, pickup)));
   const [stores, setStores] = useState(() => kept?.stores || []);
   const [isLoading, setIsLoading] = useState(() => !kept);
   // The list could not be asked for and nothing is saved: not "No stores yet".
@@ -45,7 +61,7 @@ export default function Stores() {
 
   const fetchStores = async () => {
     const request = ++latestRequest.current;
-    const key = listKey(page, searchQuery, municipalityId);
+    const key = listKey(page, searchQuery, townFilter, openNow, pickup);
     const saved = readCache(key);
     setLoadFailed(false);
     if (saved) {
@@ -59,7 +75,9 @@ export default function Stores() {
       const params = { page, pageSize: PAGE_SIZE };
       // The API filters on `search`; the page keeps `q` in its own URL.
       if (searchQuery) params.search = searchQuery;
-      if (municipalityId) params.municipalityId = municipalityId;
+      if (townFilter) params.municipalityId = townFilter;
+      if (openNow) params.openNow = 1;
+      if (pickup) params.pickup = 1;
 
       const response = await axios.get('/stores', { params });
       if (request !== latestRequest.current) return;
@@ -71,7 +89,7 @@ export default function Stores() {
       writeCache(key, {
         stores: list,
         pagination: response.pagination || { total: list.length, totalPages: 1 },
-      }, { visitOnly: page !== 1 || Boolean(searchQuery || municipalityId) });
+      }, { visitOnly: page !== 1 || Boolean(searchQuery || townFilter || openNow || pickup) });
     } catch (err) {
       console.error('Failed to fetch stores:', err);
       if (request === latestRequest.current && !saved) setLoadFailed(true);
@@ -83,7 +101,7 @@ export default function Stores() {
   useEffect(() => {
     fetchStores();
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [searchQuery, page, municipalityId]);
+  }, [searchQuery, page, townFilter, openNow, pickup]);
 
   // Changes the URL's q / municipalityId, keeping the other, from page 1.
   // Built from the live URL, not this render's copy (React Router's updater
@@ -126,6 +144,59 @@ export default function Stores() {
 
   const goBack = () => (window.history.length > 1 ? navigate(-1) : navigate('/'));
   const townName = municipalities.find((m) => m.id === municipalityId)?.name;
+  const pickupTownName = municipalities.find((m) => m.id === pickupTown)?.name;
+  // The town the list is in, chosen or the buyer's own for pickup.
+  const shownTownName = municipalities.find((m) => m.id === townFilter)?.name;
+  // Every town: with pickup on, the buyer's own town has to be turned away.
+  const allTowns = () => updateParams({ municipalityId: pickup && myTown ? 'all' : '' });
+  const filtered = openNow || pickup;
+  // The heading says what the list is.
+  const heading = openNow && pickup ? 'Open now for pickup' : openNow ? 'Open now' : pickup ? 'Pickup near you' : '';
+  // An empty quick-filtered list, said truly: "open now" goes by the hours
+  // a shop has posted, and a shop with none never counts as open.
+  const emptyTitle = openNow
+    ? (pickup ? 'No pickup shops show as open right now' : 'No shops show as open right now')
+    : `No shops offer pickup${pickupTownName ? ` in ${pickupTownName}` : ''} yet`;
+  const emptyText = openNow
+    ? 'No shop has posted opening hours that say it is open right now. You can still browse every shop.'
+    : 'Try every town, or see every shop.';
+  // "Open now" goes by the hours a shop has posted (shops without any are left out).
+  const pickupWhere = pickupTownName ? `in ${pickupTownName}` : 'in every town';
+  const filterNote = openNow && pickup
+    ? `Shops ${pickupWhere} that offer pickup and whose posted hours say they’re open now`
+    : openNow
+      ? 'Shops whose posted hours say they’re open right now'
+      : `Shops that offer pickup, ${pickupWhere}`;
+
+  // The two quick filters, on and off; on, a chip shows its ×.
+  const filterChips = (
+    <div className="stores-filters" role="group" aria-label="Quick filters">
+      <button
+        type="button"
+        className={`stores-fchip${openNow ? ' is-on' : ''}`}
+        aria-pressed={openNow}
+        onClick={() => updateParams({ open: openNow ? '' : 'now' })}
+      >
+        <Clock size={15} weight={openNow ? 'fill' : 'regular'} /> Open now
+        {openNow && <X size={12} weight="bold" className="stores-fchip-x" aria-hidden="true" />}
+      </button>
+      <button
+        type="button"
+        className={`stores-fchip${pickup ? ' is-on' : ''}`}
+        aria-pressed={pickup}
+        onClick={() => updateParams({ pickup: pickup ? '' : '1', municipalityId: municipalityId || '' })}
+      >
+        <Storefront size={15} weight={pickup ? 'fill' : 'regular'} /> Pickup near you
+        {pickup && <X size={12} weight="bold" className="stores-fchip-x" aria-hidden="true" />}
+      </button>
+      {!isPhone && shownTownName && (
+        <button type="button" className="stores-fchip is-on" onClick={allTowns} aria-label={`Show every town, not only ${shownTownName}`}>
+          <MapPin size={15} weight="fill" /> {shownTownName}
+          <X size={12} weight="bold" className="stores-fchip-x" aria-hidden="true" />
+        </button>
+      )}
+    </div>
+  );
 
   return (
     <Layout phoneBar={false}>
@@ -165,11 +236,11 @@ export default function Stores() {
           </div>
 
           {/* Page header */}
-          <div className="stores-hero">
+          <div className={`stores-hero${filtered ? ' is-filtered' : ''}`}>
             <div>
-              <h1 className="stores-title">{isPhone ? 'Stores' : 'Browse Stores'}</h1>
+              <h1 className="stores-title">{heading || (isPhone ? 'Stores' : 'Browse Stores')}</h1>
               <p className="stores-subtitle">
-                Discover local businesses from Oriental Mindoro
+                {filtered ? `${filterNote}.` : 'Discover local businesses from Oriental Mindoro'}
               </p>
             </div>
 
@@ -187,13 +258,15 @@ export default function Stores() {
             </form>
           </div>
 
+          {filterChips}
+
           {/* Phones: filter by town */}
           {isPhone && municipalities.length > 0 && (
             <div className="stores-m-towns" role="toolbar" aria-label="Filter by town">
               <button
                 type="button"
-                className={`stores-m-chip${!municipalityId ? ' is-active' : ''}`}
-                onClick={() => updateParams({ municipalityId: '' })}
+                className={`stores-m-chip${!townFilter ? ' is-active' : ''}`}
+                onClick={allTowns}
               >
                 All towns
               </button>
@@ -201,7 +274,7 @@ export default function Stores() {
                 <button
                   type="button"
                   key={m.id}
-                  className={`stores-m-chip${municipalityId === m.id ? ' is-active' : ''}`}
+                  className={`stores-m-chip${townFilter === m.id ? ' is-active' : ''}`}
                   onClick={() => updateParams({ municipalityId: m.id })}
                 >
                   {m.name}
@@ -211,13 +284,13 @@ export default function Stores() {
           )}
 
           {/* Results count */}
-          {!isLoading && !loadFailed && (
+          {!isLoading && !loadFailed && (pagination.total > 0 || !filtered) && (
             <p className="stores-count">
               {pagination.total > 0
                 ? <>
                     {isPhone ? <strong>{pagination.total}</strong> : pagination.total}
                     {` store${pagination.total !== 1 ? 's' : ''}`}
-                    {isPhone ? (townName ? ` in ${townName}` : '') : ' found'}
+                    {isPhone ? (shownTownName ? ` in ${shownTownName}` : '') : ' found'}
                     {isPhone && searchQuery ? ` for “${searchQuery}”` : ''}
                   </>
                 : searchQuery
@@ -236,14 +309,14 @@ export default function Stores() {
               <div className="stores-m-empty">
                 <EmptyArt name="stores" size={96} />
                 <h2>
-                  {searchQuery ? `No stores match “${searchQuery}”` : townName ? `No stores in ${townName} yet` : 'No stores yet'}
+                  {searchQuery ? `No stores match “${searchQuery}”` : filtered ? emptyTitle : townName ? `No stores in ${townName} yet` : 'No stores yet'}
                 </h2>
-                <p>{searchQuery ? 'Check the spelling or try another name.' : 'Try another town.'}</p>
-                {(searchQuery || municipalityId) && (
+                <p>{searchQuery ? 'Check the spelling or try another name.' : filtered ? emptyText : 'Try another town.'}</p>
+                {(searchQuery || municipalityId || filtered) && (
                   <button
                     type="button"
                     className="stores-m-empty-btn"
-                    onClick={() => { setInputValue(''); updateParams({ q: '', municipalityId: '' }); }}
+                    onClick={() => { setInputValue(''); updateParams({ q: '', municipalityId: '', open: '', pickup: '' }); }}
                   >
                     Show all stores
                   </button>
@@ -252,10 +325,14 @@ export default function Stores() {
             ) : (
               <div className="stores-empty">
                 <EmptyArt name="stores" size={104} />
-                <p>No stores found</p>
-                {searchQuery && (
-                  <button className="stores-clear-btn" onClick={clearSearch}>
-                    Clear search
+                <p>{filtered ? emptyTitle : 'No stores found'}</p>
+                {filtered && <p className="stores-empty-note">{emptyText}</p>}
+                {(searchQuery || filtered || municipalityId) && (
+                  <button
+                    className="stores-clear-btn"
+                    onClick={() => { setInputValue(''); updateParams({ q: '', municipalityId: '', open: '', pickup: '' }); }}
+                  >
+                    {filtered || municipalityId ? 'Show all stores' : 'Clear search'}
                   </button>
                 )}
               </div>
@@ -308,14 +385,17 @@ const logoOf = (store) => {
 function StoreLogo({ store, className }) {
   const [failed, setFailed] = useState(false);
   const src = logoOf(store);
+  // The dot on its corner: the shop's seller is on E-MOORM now.
   return (
-    <div className={className}>
-      {src && !failed ? (
-        <img src={src} srcSet={srcSetFor(src)} sizes="64px" alt="" loading="lazy" decoding="async" onError={() => setFailed(true)} />
-      ) : (
-        <ShopLogoArt name={store.name} />
-      )}
-    </div>
+    <WithActiveDot who={store} size={14} inset={-3}>
+      <div className={className}>
+        {src && !failed ? (
+          <img src={src} srcSet={srcSetFor(src)} sizes="64px" alt="" loading="lazy" decoding="async" onError={() => setFailed(true)} />
+        ) : (
+          <ShopLogoArt name={store.name} />
+        )}
+      </div>
+    </WithActiveDot>
   );
 }
 

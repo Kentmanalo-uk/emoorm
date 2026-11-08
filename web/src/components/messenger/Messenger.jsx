@@ -17,6 +17,8 @@ import { resolveImg, srcSetFor } from '../../lib/media';
 import useAuthStore from '../../store/authStore';
 import SafetyNotice from '../common/SafetyNotice';
 import UserAvatar from '../ui/UserAvatar';
+import WithActiveDot from '../ui/ActiveDot';
+import { activeLabel, isActiveNow } from '../../lib/activeStatus';
 import ProductImage from '../ProductImage';
 import MoreMenu from '../MoreMenu';
 import ReportModal from '../ReportModal';
@@ -137,6 +139,8 @@ function ConversationListItem({
     : 'Start the conversation';
 
   const avatar = isSellerView ? item.buyer?.profilePhoto : item.store?.logo;
+  // The other side: the buyer for a seller, the shop's seller for a buyer.
+  const other = isSellerView ? item.buyer : item.store;
 
   return (
     <button
@@ -145,15 +149,17 @@ function ConversationListItem({
       onClick={onClick}
       {...peek}
     >
-      <div className="msgr-avatar">
-        <UserAvatar
-          src={avatar}
-          person={isSellerView ? item.buyer : null}
-          shopName={isSellerView ? null : title}
-          name={title}
-          alt={title}
-        />
-      </div>
+      <WithActiveDot who={other}>
+        <div className="msgr-avatar">
+          <UserAvatar
+            src={avatar}
+            person={isSellerView ? item.buyer : null}
+            shopName={isSellerView ? null : title}
+            name={isActiveNow(other) ? `${title}, active now` : title}
+            alt={isActiveNow(other) ? `${title}, active now` : title}
+          />
+        </div>
+      </WithActiveDot>
       <div className="msgr-convo-body">
         <div className="msgr-convo-row">
           <span className="msgr-convo-title">{title}</span>
@@ -706,6 +712,7 @@ export default function Messenger({ role = 'buyer', className = '', title = '', 
         subtitle: 'Customer',
         avatar: activeConvo.buyer?.profilePhoto,
         person: activeConvo.buyer,
+        other: activeConvo.buyer,
         icon: <UserIcon size={16} />,
         link: activeConvo.buyer?.id ? `/u/${activeConvo.buyer.id}` : null,
       };
@@ -715,6 +722,7 @@ export default function Messenger({ role = 'buyer', className = '', title = '', 
       subtitle: 'Store · Tap to view shop',
       avatar: activeConvo.store?.logo,
       shopName: activeConvo.store?.name || 'Store',
+      other: activeConvo.store,
       icon: <StoreIcon size={16} />,
       link: activeConvo.store?.slug ? `/store/${activeConvo.store.slug}` : null,
     };
@@ -999,11 +1007,13 @@ export default function Messenger({ role = 'buyer', className = '', title = '', 
               >
                 <CaretLeft size={22} />
               </button>
-              <div className="msgr-avatar msgr-avatar-lg">
-                {activeHeader?.avatar || activeHeader?.person || activeHeader?.shopName
-                  ? <UserAvatar src={activeHeader.avatar} person={activeHeader.person} shopName={activeHeader.shopName} name={activeHeader.title} alt={activeHeader.title} />
-                  : activeHeader?.icon}
-              </div>
+              <WithActiveDot who={activeHeader?.other} className="msgr-thread-avatar">
+                <div className="msgr-avatar msgr-avatar-lg">
+                  {activeHeader?.avatar || activeHeader?.person || activeHeader?.shopName
+                    ? <UserAvatar src={activeHeader.avatar} person={activeHeader.person} shopName={activeHeader.shopName} name={activeHeader.title} alt={activeHeader.title} />
+                    : activeHeader?.icon}
+                </div>
+              </WithActiveDot>
               <div className="msgr-thread-title">
                 <div className="msgr-thread-name">
                   {activeHeader?.link ? (
@@ -1012,7 +1022,15 @@ export default function Messenger({ role = 'buyer', className = '', title = '', 
                     activeHeader?.title
                   )}
                 </div>
-                <div className="msgr-thread-sub">{activeHeader?.subtitle}</div>
+                {activeLabel(activeHeader?.other) ? (
+                  <div className="msgr-thread-active">
+                    <span className={`active-label${isActiveNow(activeHeader?.other) ? ' is-now' : ''}`}>
+                      {activeLabel(activeHeader?.other)}
+                    </span>
+                  </div>
+                ) : (
+                  <div className="msgr-thread-sub">{activeHeader?.subtitle}</div>
+                )}
               </div>
               {dealPhone && (
                 <a

@@ -21,6 +21,8 @@ import useFocusTrap from '../../hooks/useFocusTrap';
 import { chatTime } from '../../lib/format';
 import { ShopLogoArt } from '../shop/ShopArt';
 import DraggableMascot from '../avatars/DraggableMascot';
+import WithActiveDot from '../ui/ActiveDot';
+import { activeLabel } from '../../lib/activeStatus';
 
 const LIST_POLL_MS = 30000;
 const THREAD_POLL_MS = 5000;
@@ -64,6 +66,8 @@ const toItem = (c, kind, userId) => {
     name: seller ? c.buyer?.fullName || 'Buyer' : c.store?.name || 'Store',
     avatar: seller ? c.buyer?.profilePhoto : c.store?.logo,
     shopName: seller ? null : c.store?.name || 'Store',
+    // The other side, for the "active now" dot: the buyer, or the shop's seller.
+    other: seller ? c.buyer : c.store,
     subtitle: seller ? 'Customer' : 'Store',
     preview: c.lastMessage
       ? `${c.lastMessage.senderId === userId ? 'You: ' : ''}${c.lastMessage.body || 'Order update'}`
@@ -75,15 +79,15 @@ const toItem = (c, kind, userId) => {
 
 const byTimeDesc = (a, b) => new Date(b.time || 0) - new Date(a.time || 0);
 
-function Avatar({ src, name, shopName, icon: Icon }) {
-  if (!src && shopName) return <span className="cd-avatar"><ShopLogoArt name={shopName} /></span>;
-  return (
+function Avatar({ src, name, shopName, icon: Icon, who = null }) {
+  const face = !src && shopName ? <span className="cd-avatar"><ShopLogoArt name={shopName} /></span> : (
     <span className="cd-avatar">
       {src
         ? <img src={resolveImg(src)} srcSet={srcSetFor(src)} sizes="48px" alt="" />
         : Icon ? <Icon size={18} weight="fill" /> : (name || '?').charAt(0).toUpperCase()}
     </span>
   );
+  return who ? <WithActiveDot who={who} size={11}>{face}</WithActiveDot> : face;
 }
 
 /**
@@ -332,7 +336,7 @@ export default function ChatDock() {
               className={`cd-list-item${item.key === selectedKey ? ' is-active' : ''}`}
               onClick={() => select(item.kind, item.id)}
             >
-              <Avatar src={item.avatar} name={item.name} shopName={item.shopName} icon={item.kind === 'support' ? Headset : null} />
+              <Avatar src={item.avatar} name={item.name} shopName={item.shopName} icon={item.kind === 'support' ? Headset : null} who={item.other} />
               <span className="cd-list-body">
                 <span className="cd-list-top">
                   <strong>{item.name}</strong>
@@ -360,6 +364,10 @@ export default function ChatDock() {
     }
     const isSupport = selected.kind === 'support';
     const closed = isSupport && active?.status === 'CLOSED';
+    // Whether the other side is active now: from the open thread (fresher
+    // than the list) once it has loaded.
+    const other = isSupport ? null : (active ? (active.role === 'seller' ? active.buyer : active.store) : selectedItem?.other);
+    const otherLabel = activeLabel(other);
     return (
       <>
         <div className="cd-thread-head">
@@ -371,10 +379,11 @@ export default function ChatDock() {
             name={selectedItem?.name}
             shopName={selectedItem?.shopName}
             icon={isSupport ? Headset : null}
+            who={other}
           />
           <span className="cd-thread-title">
             <strong>{selectedItem?.name || (isSupport ? 'Municipal Support' : 'Conversation')}</strong>
-            <small>{closed ? 'Closed · send a message to reopen' : selectedItem?.subtitle}</small>
+            <small>{closed ? 'Closed · send a message to reopen' : otherLabel || selectedItem?.subtitle}</small>
           </span>
         </div>
         <div className="cd-messages">

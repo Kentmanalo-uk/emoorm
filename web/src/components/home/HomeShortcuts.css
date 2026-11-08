@@ -72,7 +72,7 @@
   background: var(--t-primary-500, #10b981);
 }
 
-/* Phones: two pages of ten, swiped sideways. */
+/* Phones: pages of ten, swiped sideways. */
 @media (max-width: 768px) {
   .hsc {
     margin-top: 12px;

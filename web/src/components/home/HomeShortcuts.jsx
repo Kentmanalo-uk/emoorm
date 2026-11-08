@@ -1,8 +1,10 @@
 import { useMemo, useRef } from 'react';
 import { Link } from 'react-router-dom';
 import {
-  BubbleArt, BuoyArt, CameraArt, GridArt, HeadsetArt, HeartArt, MapArt, MegaphoneArt, ParcelArt,
-  PiggyArt, PinArt, PotArt, QrArt, ReturnArt, ShopArt, SparkArt, StarArt, TagArt, TownArt, TrendArt,
+  BasketArt, BowlArt, BrushArt, BubbleArt, BuoyArt, CalendarArt, CameraArt, CapArt, ClockArt, FishArt,
+  GiftArt, GridArt, HeadsetArt, HeartArt, LiveArt, LivestockArt, MapArt, MegaphoneArt, MountainArt,
+  PackageArt, ParcelArt, PickupArt, PiggyArt, PinArt, PotArt, QrArt, ReturnArt, SaleArt, ShopArt,
+  SparkArt, StarArt, TagArt, TONES, TownArt, TrendArt,
 } from '../art/FlatArt';
 import useShortcutLook, { useShortcutScale } from '../../hooks/useShortcutLook';
 import { usePhoneLayout } from '../../hooks/useMobileNav';
@@ -10,14 +12,16 @@ import './HomeShortcuts.css';
 
 /**
  * The quick entries under the banner (the app's HomeShortcuts.js): the
- * shortest route to everything the site can already do. Phones get two pages
- * of ten, swiped sideways, with a little bar saying which page you are on;
- * computers get all twenty on one line, larger, scrolled sideways under the
+ * shortest route to everything the site can do. Phones get pages of ten,
+ * swiped sideways, with a little bar saying which page you are on;
+ * computers get every tile on one line, larger, scrolled sideways under the
  * same bar.
  *
- * The split is real, not decorative: the first ten are ways to find
- * something to buy, the second ten are your own orders and the places to get
- * help. Every tile goes somewhere that already exists.
+ * The first tiles keep the places people already know (on phones the
+ * first page is the one they have always had); the newer ones follow them,
+ * on the next pages: the market, deals and kinds of things, then ways to
+ * get them. On computers your own orders and the places to get help sit
+ * among the first ones, as before (on phones the Profile tab has those).
  *
  * Each has its own mark and colour, so the grid is scanned by colour before
  * it is read, and the marks sit uncased: no tile behind them.
@@ -25,8 +29,8 @@ import './HomeShortcuts.css';
 
 const PER_PAGE = 10;
 
+// The tiles Home has always had, in their places.
 const ENTRIES = [
-  // Ways to shop.
   { key: 'today', label: 'Today’s Menu', Art: PotArt, to: '/today' },
   { key: 'new', label: 'New Arrivals', Art: SparkArt, to: '/products?sort=newest' },
   { key: 'best', label: 'Best Sellers', Art: TrendArt, to: '/products?sort=top-sales' },
@@ -34,11 +38,10 @@ const ENTRIES = [
   { key: 'all', label: 'All Products', Art: GridArt, to: '/products' },
   { key: 'towns', label: 'Municipals', Art: TownArt, to: '/stores' },
   { key: 'map', label: 'Store Map', Art: MapArt, to: '/stores/map' },
-  { key: 'photo', label: 'Photo Search', Art: CameraArt, to: '/search/image' },
+  { key: 'live', label: 'Live Now', Art: LiveArt, to: '/live' },
   { key: 'wishlist', label: 'Wishlist', Art: HeartArt, to: '/wishlist' },
   { key: 'sell', label: 'Start Selling', Art: MegaphoneArt, to: '/sell' },
-
-  // Yours, and where to get help.
+  // Computers: yours, and where to get help.
   { key: 'orders', label: 'My Orders', Art: ParcelArt, to: '/profile/orders' },
   { key: 'offers', label: 'My Offers', Art: TagArt, to: '/profile/offers' },
   { key: 'following', label: 'Following', Art: ShopArt, to: '/profile/followed-stores' },
@@ -52,17 +55,43 @@ const ENTRIES = [
   { key: 'feedback', label: 'Feedback', Art: BubbleArt, to: '/feedback' },
 ];
 
+// The newer ones, after them: the market and deals, kinds of things, then
+// ways to get them and places to explore.
+const ADDED = [
+  { key: 'palengke', label: 'Palengke', Art: BasketArt, to: '/palengke' },
+  { key: 'sale', label: 'On Sale', Art: SaleArt, to: '/c/on-sale' },
+  { key: 'ready', label: 'Ready to Eat', Art: BowlArt, to: '/c/ready-to-eat' },
+  { key: 'pasalubong', label: 'Pasalubong', Art: GiftArt, to: '/c/pasalubong' },
+  {
+    key: 'open', label: 'Open Now', Art: ClockArt, tone: TONES.emerald, to: '/stores?open=now',
+  },
+  { key: 'preorder', label: 'Pre-order', Art: CalendarArt, to: '/c/pre-order' },
+  { key: 'diy', label: 'DIY & Crafts', Art: BrushArt, to: '/c/diy' },
+  { key: 'packages', label: 'Packages', Art: PackageArt, to: '/c/packages' },
+  { key: 'seafood', label: 'Seafood', Art: FishArt, to: '/category/seafood' },
+  { key: 'livestock', label: 'Livestock', Art: LivestockArt, to: '/category/livestock' },
+  { key: 'photo', label: 'Photo Search', Art: CameraArt, to: '/search/image' },
+  { key: 'pickup', label: 'Pickup Near Me', Art: PickupArt, to: '/stores?pickup=1' },
+  { key: 'explore', label: 'Explore Mindoro', Art: MountainArt, to: '/explore' },
+  { key: 'academy', label: 'Seller Academy', Art: CapArt, to: '/sell/academy' },
+];
+
 /* Phones: what the Profile tab already offers is left out here -- your
    orders, offers, followed shops, returns, reviews, addresses and wishlist
    are its shortcuts, help is on its strip (Customer Care and Feedback open
-   the Help Centre too) -- so Home keeps the ways to shop, with Get the App
-   where the Wishlist was: one page of ten. (Start Selling stays: Profile
-   only offers it to a signed-in buyer, Home to everyone.) */
+   the Help Centre too) -- so the first page keeps the ways to shop it has
+   always had, with Get the App where the Wishlist was, and the newer tiles
+   follow on the next pages. (Start Selling stays: Profile only offers it to
+   a signed-in buyer, Home to everyone.) */
 const IN_PROFILE = ['orders', 'offers', 'following', 'returns', 'reviews', 'addresses', 'help', 'care', 'feedback'];
 const APP = ENTRIES.find((e) => e.key === 'app');
-const PHONE_ENTRIES = ENTRIES
-  .filter((e) => e.key !== 'app' && !IN_PROFILE.includes(e.key))
-  .map((e) => (e.key === 'wishlist' ? APP : e));
+const PHONE_ENTRIES = [
+  ...ENTRIES
+    .filter((e) => e.key !== 'app' && !IN_PROFILE.includes(e.key))
+    .map((e) => (e.key === 'wishlist' ? APP : e)),
+  ...ADDED,
+];
+const DESKTOP_ENTRIES = [...ENTRIES, ...ADDED];
 
 const paged = (entries) => Array.from(
   { length: Math.ceil(entries.length / PER_PAGE) },
@@ -73,7 +102,7 @@ export default function HomeShortcuts() {
   const look = useShortcutLook();
   const scale = useShortcutScale();
   const isPhone = usePhoneLayout();
-  const pages = useMemo(() => paged(isPhone ? PHONE_ENTRIES : ENTRIES), [isPhone]);
+  const pages = useMemo(() => paged(isPhone ? PHONE_ENTRIES : DESKTOP_ENTRIES), [isPhone]);
   const count = pages.length;
   const thumbRef = useRef(null);
   const dragRef = useRef(null);
@@ -127,10 +156,10 @@ export default function HomeShortcuts() {
           {pages.map((page, p) => (
             <div className="hsc-page" key={`page-${p}`}>
               {page.map(({
-                key, label, Art, to,
+                key, label, Art, tone, to,
               }) => (
                 <Link key={key} to={to} className="hsc-tile" draggable={false}>
-                  <Art size={36} glass look={look} />
+                  <Art size={36} tone={tone} glass look={look} />
                   <span>{label}</span>
                 </Link>
               ))}

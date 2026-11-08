@@ -1,0 +1,336 @@
+/* Live Now (LiveNow.jsx, /live): a grid of the lives on now. Each card is
+   the live's picture (or the shop's logo on the shop's colour) with LIVE and
+   the viewers on it, and the title, shop and town under it. */
+.lvn {
+  min-height: 60vh;
+  padding: 0 0 48px;
+}
+
+.lvn-container {
+  max-width: 1280px;
+  margin: 0 auto;
+  padding: 0 32px;
+}
+
+.lvn-crumbs {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  padding: 16px 0 6px;
+  color: var(--t-neutral-500, #636b78);
+  font-size: 14px;
+}
+
+.lvn-crumbs a {
+  color: var(--t-neutral-600, #4b5563);
+  text-decoration: none;
+}
+
+.lvn-crumbs a:hover {
+  color: var(--t-primary-700, #03684c);
+}
+
+.lvn-crumbs span:last-child {
+  color: var(--t-neutral-900, #111827);
+}
+
+.lvn-head {
+  display: flex;
+  align-items: center;
+  gap: 16px;
+  padding: 14px 0 20px;
+}
+
+.lvn-art {
+  display: grid;
+  flex-shrink: 0;
+  place-items: center;
+}
+
+.lvn-art svg {
+  display: block;
+}
+
+.lvn-head-text {
+  min-width: 0;
+}
+
+.lvn-title {
+  margin: 0;
+  color: var(--t-neutral-900, #111827);
+  font-size: 30px;
+  line-height: 1.15;
+  /* Through a variable, so the phone build keeps it bold (vite.config.js). */
+  --lvn-title-weight: 800;
+  font-weight: var(--lvn-title-weight);
+  letter-spacing: -0.01em;
+}
+
+.lvn-line {
+  margin: 6px 0 0;
+  color: var(--t-neutral-500, #636b78);
+  font-size: 15px;
+  line-height: 1.4;
+}
+
+.lvn-grid {
+  display: grid;
+  grid-template-columns: repeat(5, minmax(0, 1fr));
+  gap: 16px 14px;
+}
+
+.lvn-skel {
+  display: block;
+  aspect-ratio: 3 / 4;
+}
+
+.lvn-card {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+  min-width: 0;
+  color: inherit;
+  text-decoration: none;
+}
+
+.lvn-media {
+  position: relative;
+  display: block;
+  overflow: hidden;
+  aspect-ratio: 3 / 4;
+  border-radius: 16px;
+  background: #1f2328;
+  isolation: isolate;
+}
+
+.lvn-thumb {
+  position: absolute;
+  inset: 0;
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+  transition: transform 0.3s ease;
+}
+
+.lvn-card:hover .lvn-thumb {
+  transform: scale(1.04);
+}
+
+/* No picture from the live yet: the shop's logo on its own colour. */
+.lvn-thumb.is-logo {
+  display: grid;
+  place-items: center;
+  background:
+    radial-gradient(circle at 30% 20%, rgba(255, 255, 255, 0.22), transparent 60%),
+    linear-gradient(160deg, var(--lvn-shop, #055d07), #0e7c3a 60%, #f43f5e);
+  color: rgba(255, 255, 255, 0.9);
+}
+
+.lvn-thumb.is-logo img {
+  width: 42%;
+  aspect-ratio: 1;
+  border: 3px solid rgba(255, 255, 255, 0.9);
+  border-radius: 50%;
+  background: #fff;
+  object-fit: cover;
+  box-shadow: 0 6px 18px rgba(0, 0, 0, 0.25);
+}
+
+/* A soft shade at the top, so the badges read on a light picture. */
+.lvn-media::after {
+  content: '';
+  position: absolute;
+  inset: 0 0 70%;
+  z-index: 0;
+  background: linear-gradient(rgba(0, 0, 0, 0.35), transparent);
+  pointer-events: none;
+}
+
+.lvn-badges {
+  position: absolute;
+  top: 9px;
+  left: 9px;
+  z-index: 1;
+  display: flex;
+  gap: 5px;
+}
+
+.lvn-live,
+.lvn-viewers {
+  display: inline-flex;
+  align-items: center;
+  gap: 5px;
+  height: 22px;
+  padding: 0 8px;
+  border-radius: 6px;
+  color: #fff;
+  font-size: 11.5px;
+  line-height: 1;
+  --lvn-badge-weight: 800;
+  font-weight: var(--lvn-badge-weight);
+  letter-spacing: 0.04em;
+}
+
+.lvn-live {
+  background: #ef4444;
+}
+
+.lvn-viewers {
+  background: rgba(0, 0, 0, 0.5);
+  --lvn-badge-weight: 600;
+  letter-spacing: 0;
+}
+
+/* Three bars rising and falling: the sign for "on air". */
+.lvn-bars {
+  display: inline-flex;
+  align-items: flex-end;
+  gap: 1.5px;
+  height: 10px;
+}
+
+.lvn-bars i {
+  width: 2px;
+  height: 100%;
+  border-radius: 1px;
+  background: #fff;
+  transform-origin: bottom;
+  animation: lvn-bar 0.9s ease-in-out infinite;
+}
+
+.lvn-bars i:nth-child(2) { animation-delay: -0.3s; }
+.lvn-bars i:nth-child(3) { animation-delay: -0.6s; }
+
+@keyframes lvn-bar {
+  0%, 100% { transform: scaleY(0.35); }
+  50% { transform: scaleY(1); }
+}
+
+.lvn-info {
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+  min-width: 0;
+  padding: 0 2px;
+}
+
+.lvn-card-title {
+  display: -webkit-box;
+  overflow: hidden;
+  color: var(--t-neutral-900, #111827);
+  font-size: 15px;
+  font-weight: 500;
+  line-height: 1.3;
+  -webkit-box-orient: vertical;
+  -webkit-line-clamp: 2;
+  overflow-wrap: anywhere;
+}
+
+.lvn-card:hover .lvn-card-title {
+  color: var(--t-primary-700, #03684c);
+}
+
+.lvn-shop {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  min-width: 0;
+  color: var(--t-neutral-700, #374151);
+  font-size: 13.5px;
+}
+
+.lvn-shop img,
+.lvn-shop-blank {
+  flex-shrink: 0;
+  width: 20px;
+  height: 20px;
+  border-radius: 50%;
+  object-fit: cover;
+  background: var(--t-neutral-100, #f3f4f6);
+}
+
+.lvn-shop-blank {
+  display: grid;
+  place-items: center;
+  color: var(--t-primary-700, #055d07);
+}
+
+.lvn-shop-name {
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.lvn-town {
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+  color: var(--t-neutral-500, #636b78);
+  font-size: 12.5px;
+}
+
+.lvn-empty {
+  margin-top: 4px;
+}
+
+@media (max-width: 1100px) {
+  .lvn-grid {
+    grid-template-columns: repeat(4, minmax(0, 1fr));
+  }
+}
+
+@media (max-width: 860px) {
+  .lvn-grid {
+    grid-template-columns: repeat(3, minmax(0, 1fr));
+  }
+}
+
+/* Phones: the title is in the back bar (Layout); the mark and the line
+   under it, then two cards a row. */
+@media (max-width: 768px) {
+  .lvn-container {
+    padding: 0 12px;
+  }
+
+  .lvn-head {
+    gap: 12px;
+    padding: 12px 2px 14px;
+  }
+
+  .lvn-line {
+    margin: 0;
+    font-size: 14px;
+  }
+
+  .lvn-grid {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+    gap: 14px 10px;
+  }
+
+  .lvn-media {
+    border-radius: 14px;
+  }
+
+  .lvn-card-title {
+    font-size: 14px;
+  }
+
+  .lvn-shop {
+    font-size: 12.5px;
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .lvn-bars i {
+    animation: none;
+    transform: scaleY(0.7);
+  }
+
+  .lvn-thumb {
+    transition: none;
+  }
+
+  .lvn-card:hover .lvn-thumb {
+    transform: none;
+  }
+}

@@ -896,3 +896,91 @@
     margin-top: 16px;
   }
 }
+
+/* Quick filters (Home's shortcuts open them: ?open=now, ?pickup=1): chips
+   that turn on and off, an × on the ones that are on. */
+.stores-filters {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px;
+  margin: -8px 0 18px;
+}
+
+.stores-fchip {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  min-height: 36px;
+  padding: 0 14px;
+  border: 1px solid var(--t-neutral-200, #e5e7eb);
+  border-radius: 999px;
+  background: var(--t-neutral-0, #fff);
+  color: var(--t-neutral-700, #374151);
+  font: inherit;
+  font-size: 14px;
+  font-weight: 500;
+  white-space: nowrap;
+  cursor: pointer;
+  transition: background-color 0.15s, border-color 0.15s, color 0.15s;
+}
+
+.stores-fchip:hover {
+  border-color: var(--t-primary-300, #6ee7b7);
+  color: var(--t-primary-700, #047857);
+}
+
+.stores-fchip.is-on {
+  border-color: var(--t-primary-600, #059669);
+  background: var(--t-primary-50, #ecfdf5);
+  color: var(--t-primary-700, #047857);
+}
+
+.stores-fchip-x {
+  margin-left: 2px;
+  opacity: 0.8;
+}
+
+.stores-fchip:focus-visible {
+  outline: 2px solid var(--t-primary-600, #059669);
+  outline-offset: 2px;
+}
+
+@media (max-width: 768px) {
+  .stores-page.is-phone .stores-filters {
+    flex-wrap: nowrap;
+    margin: 0 -12px;
+    padding: 0 12px 8px;
+    overflow-x: auto;
+    scrollbar-width: none;
+  }
+
+  .stores-page.is-phone .stores-filters::-webkit-scrollbar {
+    display: none;
+  }
+
+  .stores-page.is-phone .stores-fchip {
+    flex-shrink: 0;
+    min-height: 34px;
+    font-size: 13.5px;
+  }
+
+  /* With a quick filter on, its line says what the list is. */
+  .stores-page.is-phone .stores-hero.is-filtered .stores-subtitle {
+    display: block;
+    margin-top: 4px;
+    font-size: 13.5px;
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .stores-fchip {
+    transition: none;
+  }
+}
+
+.stores-empty p.stores-empty-note {
+  max-width: 420px;
+  margin: -8px auto 16px;
+  font-size: 14px;
+  line-height: 1.45;
+}

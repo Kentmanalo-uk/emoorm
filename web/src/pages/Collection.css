@@ -1,0 +1,254 @@
+/* A collection page (Collection.jsx, /c/:key): Home's shortcut opened into
+   its whole list. Computers: breadcrumbs, a header with the shortcut's mark,
+   the sorts beside the count, a grid of five. Phones: the title moves into
+   the back bar; the mark and the line, the sorts, a grid of two. */
+.coll {
+  min-height: 60vh;
+  padding: 0 0 48px;
+}
+
+.coll-container {
+  max-width: 1280px;
+  margin: 0 auto;
+  padding: 0 32px;
+}
+
+.coll-crumbs {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  padding: 16px 0 6px;
+  color: var(--t-neutral-500, #636b78);
+  font-size: 14px;
+}
+
+.coll-crumbs a {
+  color: var(--t-neutral-600, #4b5563);
+  text-decoration: none;
+}
+
+.coll-crumbs a:hover {
+  color: var(--t-primary-700, #03684c);
+}
+
+.coll-crumbs span:last-child {
+  color: var(--t-neutral-900, #111827);
+}
+
+.coll-head {
+  display: flex;
+  align-items: center;
+  gap: 16px;
+  padding: 14px 0 18px;
+}
+
+.coll-art {
+  display: grid;
+  flex-shrink: 0;
+  place-items: center;
+}
+
+.coll-art svg {
+  display: block;
+}
+
+.coll-head-text {
+  min-width: 0;
+}
+
+.coll-title {
+  margin: 0;
+  color: var(--t-neutral-900, #111827);
+  font-size: 30px;
+  line-height: 1.15;
+  /* Through a variable: the build turns a plain 600-900 into medium on
+     phones (vite.config.js), and this title stays bold. */
+  --coll-title-weight: 800;
+  font-weight: var(--coll-title-weight);
+  letter-spacing: -0.01em;
+}
+
+.coll-line {
+  margin: 6px 0 0;
+  color: var(--t-neutral-500, #636b78);
+  font-size: 15px;
+  line-height: 1.4;
+}
+
+/* The sorts and the count */
+.coll-bar {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 16px;
+  margin-bottom: 14px;
+}
+
+.coll-sorts {
+  display: flex;
+  gap: 8px;
+  overflow-x: auto;
+  scrollbar-width: none;
+}
+
+.coll-sorts::-webkit-scrollbar {
+  display: none;
+}
+
+.coll-sort {
+  flex-shrink: 0;
+  min-height: 36px;
+  padding: 0 16px;
+  border: 1px solid var(--t-neutral-200, #e5e7eb);
+  border-radius: 999px;
+  background: var(--t-neutral-0, #fff);
+  color: var(--t-neutral-700, #374151);
+  font: inherit;
+  font-size: 14px;
+  font-weight: 500;
+  cursor: pointer;
+  transition: background-color 0.15s ease, border-color 0.15s ease, color 0.15s ease;
+}
+
+.coll-sort:hover {
+  border-color: var(--t-primary-300, #6ee7b7);
+  color: var(--t-primary-700, #03684c);
+}
+
+.coll-sort.is-on {
+  border-color: var(--t-primary-600, #047857);
+  background: var(--t-primary-600, #047857);
+  color: var(--t-neutral-0, #fff);
+}
+
+.coll-sort:focus-visible {
+  outline: 2px solid var(--t-primary-600, #047857);
+  outline-offset: 2px;
+}
+
+.coll-count {
+  flex-shrink: 0;
+  margin: 0;
+  color: var(--t-neutral-500, #636b78);
+  font-size: 14px;
+}
+
+.coll-count strong {
+  color: var(--t-neutral-900, #111827);
+  font-weight: 600;
+}
+
+.coll-grid {
+  display: grid;
+  grid-template-columns: repeat(5, minmax(0, 1fr));
+  gap: 10px;
+}
+
+.coll-empty {
+  margin-top: 8px;
+}
+
+.coll-error {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 8px;
+  padding: 56px 24px;
+  color: var(--t-neutral-500, #636b78);
+  text-align: center;
+}
+
+.coll-error svg {
+  color: var(--t-neutral-300, #d1d5db);
+}
+
+.coll-error h2 {
+  margin: 4px 0 0;
+  color: var(--t-neutral-900, #111827);
+  font-size: 18px;
+}
+
+.coll-error p {
+  margin: 0;
+  font-size: 14px;
+}
+
+.coll-error button {
+  min-height: 40px;
+  margin-top: 8px;
+  padding: 0 20px;
+  border: 0;
+  border-radius: 999px;
+  background: var(--t-primary-600, #047857);
+  color: var(--t-neutral-0, #fff);
+  font: inherit;
+  font-weight: 500;
+  cursor: pointer;
+}
+
+@media (max-width: 1100px) {
+  .coll-grid {
+    grid-template-columns: repeat(4, minmax(0, 1fr));
+  }
+}
+
+@media (max-width: 860px) {
+  .coll-grid {
+    grid-template-columns: repeat(3, minmax(0, 1fr));
+  }
+}
+
+/* Phones: the title is in the back bar (Layout); the mark and the line
+   under it, then the sorts and the grid. */
+@media (max-width: 768px) {
+  .coll-container {
+    padding: 0 12px;
+  }
+
+  .coll-head {
+    gap: 12px;
+    padding: 12px 2px 14px;
+  }
+
+  .coll-line {
+    margin: 0;
+    font-size: 14px;
+  }
+
+  /* The sorts take the row; the count goes under them. */
+  .coll-bar {
+    flex-direction: column;
+    align-items: stretch;
+    gap: 10px;
+    margin: 0 -12px 10px;
+  }
+
+  .coll-sorts {
+    padding: 0 12px;
+  }
+
+  .coll-count {
+    padding: 0 14px;
+  }
+
+  .coll-sort {
+    min-height: 34px;
+    padding: 0 14px;
+    font-size: 13.5px;
+  }
+
+  .coll-count {
+    font-size: 13px;
+  }
+
+  .coll-grid {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+    gap: 8px;
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .coll-sort {
+    transition: none;
+  }
+}

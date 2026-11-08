@@ -1,0 +1,642 @@
+/* E-MOORM Palengke (Palengke.jsx): a market stall's striped awning over a
+   fresh green hero with a basket of produce, sort chips, then the grid.
+   Colours are tokens only, so dark mode (mirrored ramps) follows by itself. */
+
+.plg {
+  --plg-ink: var(--t-primary-950, #052e1f);
+  --plg-green: var(--t-primary-600, #047857);
+  --plg-soft: var(--t-primary-50, #ecfdf5);
+  --plg-line: var(--t-neutral-200, #e5e7eb);
+  padding-bottom: 32px;
+}
+
+.plg-wrap {
+  width: 100%;
+  max-width: 1280px;
+  margin: 0 auto;
+  padding: 0 32px;
+}
+
+/* ── Breadcrumbs (computers) ─────────────────────────────────────────── */
+.plg-crumbs {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  padding: 18px 2px 14px;
+  color: var(--t-neutral-500, #636b78);
+  font-size: 13.5px;
+}
+
+.plg-crumbs a {
+  color: var(--t-neutral-500, #636b78);
+  text-decoration: none;
+}
+
+.plg-crumbs a:hover {
+  color: var(--plg-green);
+}
+
+.plg-crumbs [aria-current] {
+  color: var(--t-neutral-800, #1f2937);
+}
+
+/* ── The hero ────────────────────────────────────────────────────────── */
+.plg-hero {
+  position: relative;
+  overflow: hidden;
+  border-radius: 22px;
+  background:
+    radial-gradient(120% 90% at 100% 0%, color-mix(in srgb, var(--t-accent-200, #fbcfe8) 55%, transparent) 0%, transparent 55%),
+    radial-gradient(90% 120% at 0% 100%, color-mix(in srgb, var(--t-primary-200, #a7f3d0) 70%, transparent) 0%, transparent 60%),
+    linear-gradient(160deg, var(--t-primary-50, #ecfdf5) 0%, var(--t-neutral-0, #fff) 100%);
+  box-shadow: inset 0 0 0 1px color-mix(in srgb, var(--t-primary-300, #6ee7b7) 35%, transparent);
+  isolation: isolate;
+}
+
+/* A market stall's awning: green and cream stripes, each ending in a
+   scallop, a soft shade under it. */
+.plg-awning {
+  --stripe: 32px;
+  --band: 14px;
+  position: relative;
+  height: calc(var(--band) + var(--stripe) / 2);
+  filter: drop-shadow(0 3px 2px color-mix(in srgb, var(--t-primary-900, #064e3b) 18%, transparent));
+}
+
+.plg-awning::before {
+  content: '';
+  position: absolute;
+  inset: 0;
+  background:
+    linear-gradient(180deg, color-mix(in srgb, var(--t-neutral-0, #fff) 22%, transparent), transparent 60%),
+    repeating-linear-gradient(
+      90deg,
+      var(--t-primary-500, #10b981) 0 var(--stripe),
+      color-mix(in srgb, var(--t-warning-50, #fffbeb) 70%, var(--t-neutral-0, #fff)) var(--stripe) calc(var(--stripe) * 2)
+    );
+  -webkit-mask:
+    linear-gradient(#000 0 0) top / 100% var(--band) no-repeat,
+    radial-gradient(circle at 50% var(--band), #000 calc(var(--stripe) / 2 - 0.5px), transparent calc(var(--stripe) / 2)) 0 0 / var(--stripe) 100% repeat-x;
+  mask:
+    linear-gradient(#000 0 0) top / 100% var(--band) no-repeat,
+    radial-gradient(circle at 50% var(--band), #000 calc(var(--stripe) / 2 - 0.5px), transparent calc(var(--stripe) / 2)) 0 0 / var(--stripe) 100% repeat-x;
+}
+
+.plg-hero-body {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) auto;
+  align-items: center;
+  gap: 24px;
+  padding: 6px 40px 26px 48px;
+}
+
+.plg-hero-copy {
+  max-width: 560px;
+}
+
+.plg-kicker {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  margin: 0 0 12px;
+  padding: 5px 11px 5px 9px;
+  border-radius: 999px;
+  background: color-mix(in srgb, var(--t-neutral-0, #fff) 75%, transparent);
+  box-shadow: inset 0 0 0 1px color-mix(in srgb, var(--t-primary-300, #6ee7b7) 55%, transparent);
+  color: var(--t-primary-700, #03684c);
+  font-size: 12.5px;
+  font-weight: 500;
+  letter-spacing: 0.02em;
+}
+
+/* The title in true bold on every screen: the weight goes through a
+   variable on purpose (the build turns a plain 600–900 into medium on
+   phones, vite.config.js), set on the spans because phones' headings are
+   held at medium (index.css). */
+.plg-title {
+  margin: 0;
+  color: var(--plg-ink);
+  line-height: 1;
+}
+
+.plg-title-brand,
+.plg-title-word {
+  --w: 800;
+  font-weight: var(--w);
+}
+
+.plg-title-brand {
+  display: block;
+  margin-bottom: 6px;
+  color: var(--plg-green);
+  font-size: 22px;
+  letter-spacing: 0.04em;
+}
+
+.plg-title-word {
+  position: relative;
+  display: inline-block;
+  font-size: 58px;
+  letter-spacing: -0.02em;
+}
+
+/* A pink brush stroke under "Palengke". */
+.plg-title-word::after {
+  content: '';
+  position: absolute;
+  left: 2%;
+  right: -2%;
+  bottom: -0.08em;
+  z-index: -1;
+  height: 0.26em;
+  border-radius: 999px 60% 999px 40%;
+  background: linear-gradient(90deg, var(--t-accent-300, #f9a8d4), color-mix(in srgb, var(--t-accent-400, #f472b6) 70%, transparent));
+  opacity: 0.75;
+  transform: rotate(-1.5deg);
+}
+
+.plg-lede {
+  margin: 18px 0 0;
+  max-width: 470px;
+  color: var(--t-neutral-600, #4b5563);
+  font-size: 16.5px;
+  line-height: 1.5;
+}
+
+.plg-count {
+  display: inline-flex;
+  align-items: center;
+  gap: 5px;
+  min-height: 30px;
+  margin: 18px 0 0;
+  padding: 0 13px;
+  border-radius: 999px;
+  background: var(--t-neutral-0, #fff);
+  box-shadow: 0 1px 2px color-mix(in srgb, var(--t-primary-900, #064e3b) 10%, transparent);
+  color: var(--t-neutral-600, #4b5563);
+  font-size: 13.5px;
+}
+
+.plg-count strong {
+  color: var(--plg-green);
+  font-weight: 700;
+}
+
+.plg-hero-art {
+  position: relative;
+  display: grid;
+  place-items: center;
+  width: 300px;
+  margin-right: 12px;
+}
+
+/* A soft sun behind the basket. */
+.plg-hero-glow {
+  position: absolute;
+  width: 84%;
+  aspect-ratio: 1;
+  border-radius: 50%;
+  background: radial-gradient(circle at 45% 40%, color-mix(in srgb, var(--t-neutral-0, #fff) 95%, transparent) 0%, color-mix(in srgb, var(--t-warning-100, #fef3c7) 70%, transparent) 45%, transparent 70%);
+}
+
+.plg-basket {
+  position: relative;
+  display: block;
+  animation: plg-bob 6s ease-in-out infinite;
+}
+
+@keyframes plg-bob {
+  0%, 100% { transform: translateY(0) rotate(0deg); }
+  50% { transform: translateY(-4px) rotate(-1deg); }
+}
+
+/* ── Sort chips and the town ─────────────────────────────────────────── */
+.plg-tools {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  margin: 18px 0 14px;
+}
+
+.plg-sorts {
+  display: flex;
+  gap: 8px;
+}
+
+.plg-chip {
+  display: inline-flex;
+  align-items: center;
+  height: 36px;
+  padding: 0 16px;
+  border: 0;
+  border-radius: 999px;
+  background: var(--t-neutral-0, #fff);
+  box-shadow: inset 0 0 0 1px var(--plg-line);
+  color: var(--t-neutral-700, #374151);
+  font: inherit;
+  font-size: 14px;
+  font-weight: 500;
+  white-space: nowrap;
+  cursor: pointer;
+  -webkit-tap-highlight-color: transparent;
+  transition: background 0.15s, color 0.15s, box-shadow 0.15s;
+}
+
+.plg-chip:hover {
+  box-shadow: inset 0 0 0 1px var(--t-primary-300, #6ee7b7);
+  color: var(--plg-green);
+}
+
+.plg-chip.is-on {
+  background: var(--plg-soft);
+  box-shadow: inset 0 0 0 1.5px var(--t-primary-500, #10b981);
+  color: var(--t-primary-700, #03684c);
+}
+
+.plg-chip:focus-visible,
+.plg-btn:focus-visible,
+.plg-round:focus-visible {
+  outline: 2px solid var(--plg-green);
+  outline-offset: 2px;
+}
+
+.plg-town-wrap {
+  position: relative;
+  flex-shrink: 0;
+  margin-left: auto;
+}
+
+.plg-town-pin {
+  position: absolute;
+  top: 50%;
+  left: 12px;
+  z-index: 1;
+  color: var(--t-accent-500, #ec4899);
+  transform: translateY(-50%);
+  pointer-events: none;
+}
+
+.plg-town-wrap .plg-town {
+  min-width: 150px;
+  min-height: 36px;
+  height: 36px;
+  padding: 0 12px 0 32px;
+  border-radius: 999px;
+  background: var(--t-neutral-0, #fff);
+  box-shadow: inset 0 0 0 1px var(--plg-line);
+  color: var(--t-neutral-700, #374151);
+  font-size: 14px;
+  font-weight: 500;
+  white-space: nowrap;
+}
+
+.plg-town-wrap.is-on .plg-town {
+  background: var(--plg-soft);
+  box-shadow: inset 0 0 0 1.5px var(--t-primary-500, #10b981);
+  color: var(--t-primary-700, #03684c);
+}
+
+/* ── The grid (the site's product grid: 5 / 4 / 3 / 2 across) ────────── */
+.plg-grid {
+  display: grid;
+  grid-template-columns: repeat(5, minmax(0, 1fr));
+  gap: 7px;
+}
+
+.plg .sk-cards {
+  grid-template-columns: repeat(5, minmax(0, 1fr));
+  gap: 7px;
+}
+
+/* ── Empty and error ─────────────────────────────────────────────────── */
+.plg-state {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  max-width: 560px;
+  margin: 12px auto 0;
+  padding: 36px 24px 40px;
+  border-radius: 18px;
+  background: var(--t-neutral-0, #fff);
+  text-align: center;
+}
+
+.plg-state-art {
+  display: grid;
+  place-items: center;
+  width: 168px;
+  height: 168px;
+  margin-bottom: 14px;
+  border-radius: 50%;
+  background: radial-gradient(circle at 40% 35%, var(--t-neutral-0, #fff) 0%, var(--plg-soft) 70%);
+}
+
+.plg-state-warn {
+  margin-bottom: 10px;
+  color: var(--t-warning-500, #f59e0b);
+}
+
+.plg-state h2 {
+  margin: 0;
+  color: var(--t-neutral-900, #111827);
+  font-size: 20px;
+  line-height: 1.3;
+}
+
+.plg-state > p {
+  max-width: 420px;
+  margin: 8px 0 0;
+  color: var(--t-neutral-600, #4b5563);
+  font-size: 14.5px;
+  line-height: 1.55;
+}
+
+.plg-state-actions {
+  display: flex;
+  flex-wrap: wrap;
+  justify-content: center;
+  gap: 10px;
+  margin-top: 20px;
+}
+
+.plg-btn {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: 6px;
+  min-height: 42px;
+  padding: 0 18px;
+  border: 0;
+  border-radius: 999px;
+  background: var(--t-neutral-100, #f3f4f6);
+  color: var(--t-neutral-800, #1f2937);
+  font: inherit;
+  font-size: 14.5px;
+  font-weight: 500;
+  text-decoration: none;
+  cursor: pointer;
+}
+
+.plg-btn.is-primary {
+  background: var(--t-primary-600, #047857);
+  color: #fff;
+}
+
+:root[data-theme='dark'] .plg-btn.is-primary {
+  background: var(--t-primary-700, #03684c);
+  color: var(--t-neutral-0, #111);
+}
+
+.plg-btn.is-primary:hover {
+  filter: brightness(1.06);
+}
+
+.plg-seller-hint {
+  display: flex;
+  align-items: flex-start;
+  gap: 10px;
+  max-width: 440px;
+  margin: 24px 0 0;
+  padding: 12px 14px;
+  border-radius: 14px;
+  background: var(--t-accent-50, #fdf2f8);
+  color: var(--t-neutral-700, #374151);
+  font-size: 13.5px;
+  line-height: 1.5;
+  text-align: left;
+}
+
+.plg-seller-hint svg {
+  flex-shrink: 0;
+  margin-top: 2px;
+  color: var(--t-accent-500, #ec4899);
+}
+
+.plg-seller-hint a {
+  color: var(--t-accent-700, #be185d);
+  font-weight: 500;
+  white-space: nowrap;
+}
+
+/* ── Narrower computers and tablets ──────────────────────────────────── */
+@media (max-width: 1100px) {
+  .plg-grid,
+  .plg .sk-cards {
+    grid-template-columns: repeat(4, minmax(0, 1fr));
+  }
+
+  .plg-title-word {
+    font-size: 50px;
+  }
+
+  .plg-hero-art {
+    width: 250px;
+  }
+}
+
+@media (max-width: 900px) {
+  .plg-grid,
+  .plg .sk-cards {
+    grid-template-columns: repeat(3, minmax(0, 1fr));
+  }
+
+  .plg-hero-body {
+    padding: 14px 32px 28px;
+  }
+}
+
+/* ── Phones ──────────────────────────────────────────────────────────── */
+@media (max-width: 768px) {
+  .plg {
+    min-height: 100vh;
+    padding-bottom: 8px;
+    background: var(--t-neutral-100, #f3f4f6);
+  }
+
+  .plg-wrap {
+    padding: 0;
+  }
+
+  .plg-hero {
+    padding-top: env(safe-area-inset-top, 0px);
+    border-radius: 0 0 22px 22px;
+    box-shadow: none;
+  }
+
+  .plg-awning {
+    --stripe: 26px;
+    --band: 10px;
+  }
+
+  .plg-hero-bar {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    height: 44px;
+    margin-top: 2px;
+    padding: 0 6px;
+  }
+
+  .plg-round {
+    display: grid;
+    place-items: center;
+    width: 40px;
+    height: 40px;
+    border: 0;
+    border-radius: 50%;
+    background: none;
+    color: var(--t-neutral-900, #111827);
+    cursor: pointer;
+    -webkit-tap-highlight-color: transparent;
+  }
+
+  .plg-round:active {
+    background: color-mix(in srgb, var(--t-neutral-900, #111827) 8%, transparent);
+  }
+
+  .plg-hero-body {
+    grid-template-columns: minmax(0, 1fr) 124px;
+    gap: 6px;
+    padding: 0 14px 18px 18px;
+  }
+
+  .plg-kicker {
+    display: none;
+  }
+
+  .plg-title-brand {
+    margin-bottom: 4px;
+    font-size: 15px;
+  }
+
+  .plg-title-word {
+    font-size: 36px;
+  }
+
+  .plg-lede {
+    margin-top: 12px;
+    font-size: 14px;
+    line-height: 1.45;
+  }
+
+  .plg-count {
+    min-height: 26px;
+    margin-top: 12px;
+    padding: 0 11px;
+    font-size: 12.5px;
+  }
+
+  .plg-hero-art {
+    width: 124px;
+    margin: 0;
+    align-self: end;
+  }
+
+  .plg-hero-glow {
+    width: 118px;
+  }
+
+  /* The chips stay at the top of the screen while the grid scrolls. */
+  .plg-tools {
+    position: sticky;
+    top: 0;
+    z-index: 30;
+    gap: 8px;
+    margin: 0;
+    padding: calc(10px + env(safe-area-inset-top, 0px)) 12px 10px;
+    margin-top: calc(-1 * env(safe-area-inset-top, 0px));
+    overflow-x: auto;
+    background: color-mix(in srgb, var(--t-neutral-100, #f3f4f6) 88%, transparent);
+    -webkit-backdrop-filter: blur(14px) saturate(1.4);
+    backdrop-filter: blur(14px) saturate(1.4);
+    scrollbar-width: none;
+  }
+
+  .plg-tools::-webkit-scrollbar {
+    display: none;
+  }
+
+  .plg-sorts {
+    gap: 6px;
+  }
+
+  .plg-chip {
+    height: 34px;
+    padding: 0 14px;
+    font-size: 13.5px;
+  }
+
+  .plg-chip:hover {
+    box-shadow: inset 0 0 0 1px var(--plg-line);
+    color: var(--t-neutral-700, #374151);
+  }
+
+  .plg-chip.is-on:hover {
+    box-shadow: inset 0 0 0 1.5px var(--t-primary-500, #10b981);
+    color: var(--t-primary-700, #03684c);
+  }
+
+  .plg-town-wrap .plg-town {
+    min-width: 0;
+    height: 34px;
+    min-height: 34px;
+    font-size: 13.5px;
+  }
+
+  .plg-grid,
+  .plg .sk-cards {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+    gap: 4px;
+    padding: 0 4px;
+  }
+
+  .plg-state {
+    margin: 4px 12px 0;
+    padding: 28px 18px 30px;
+  }
+
+  .plg-state h2 {
+    font-size: 18px;
+  }
+}
+
+@media (max-width: 360px) {
+  .plg-title-word {
+    font-size: 31px;
+  }
+
+  .plg-hero-body {
+    grid-template-columns: minmax(0, 1fr) 100px;
+  }
+
+  .plg-hero-art,
+  .plg-hero-glow {
+    width: 100px;
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .plg-basket {
+    animation: none;
+  }
+
+  .plg-chip {
+    transition: none;
+  }
+}
+
+/* Dark: the awning's light stripes and the sun behind the basket keep
+   their light (a mirrored cream or amber would turn brown). */
+:root[data-theme='dark'] .plg-awning::before {
+  background:
+    linear-gradient(180deg, rgba(255, 255, 255, 0.08), transparent 60%),
+    repeating-linear-gradient(
+      90deg,
+      var(--t-primary-500, #10b981) 0 var(--stripe),
+      color-mix(in srgb, var(--t-neutral-800, #1f2937) 80%, var(--t-primary-500, #10b981)) var(--stripe) calc(var(--stripe) * 2)
+    );
+}
+
+:root[data-theme='dark'] .plg-hero-glow {
+  background: radial-gradient(circle at 45% 40%, color-mix(in srgb, var(--t-primary-400, #34d399) 30%, transparent) 0%, color-mix(in srgb, var(--t-primary-400, #34d399) 10%, transparent) 45%, transparent 70%);
+}

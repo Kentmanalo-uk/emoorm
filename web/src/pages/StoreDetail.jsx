@@ -74,6 +74,7 @@ import useInfiniteList from '../hooks/useInfiniteList';
 import useProductPeek from '../components/peek/useProductPeek';
 import { ShopCoverArt, ShopLogoArt } from '../components/shop/ShopArt';
 import ShopInviteCard from '../components/shop/ShopInviteCard';
+import { ActiveDot } from '../components/ui/ActiveDot';
 
 // The bar to the shop's live, while it is on (loaded after the page).
 const ShopLiveBanner = lazy(() => import('../components/live/ShopLiveBanner'));
@@ -611,6 +612,8 @@ export default function StoreDetail() {
                     <div className="shop-m-logo">
                       {store.logo ? <img src={resolveImg(store.logo)} srcSet={srcSetFor(store.logo)} sizes="96px" alt="" /> : <ShopLogoArt name={store.name} />}
                     </div>
+                    {/* The seller is on E-MOORM now. */}
+                    <ActiveDot who={store} size={17} inset={2} />
                     <Suspense fallback={null}><ShopLiveRing storeId={store.id} /></Suspense>
                   </div>
                   <div className="shop-m-id-text">
@@ -874,6 +877,7 @@ export default function StoreDetail() {
                     <ShopLogoArt name={store.name} />
                   )}
                 </div>
+                <ActiveDot who={store} size={24} inset={6} />
                 <Suspense fallback={null}><ShopLiveRing storeId={store.id} /></Suspense>
               </div>
 
