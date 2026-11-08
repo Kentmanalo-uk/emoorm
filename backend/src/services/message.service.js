@@ -4,6 +4,7 @@ const orderRepository = require('../repositories/order.repository');
 const notificationService = require('./notification.service');
 const priceOfferService = require('./priceOffer.service');
 const blockService = require('./userBlock.service');
+const activeStatus = require('./activeStatus.service');
 const strikes = require('./abuseStrike.service');
 const { findBadWords } = require('../utils/badWords');
 const { ApiError } = require('../middleware/errorHandler');
@@ -121,6 +122,23 @@ const shapeMessage = (m) => ({
   readAt: m.readAt,
 });
 
+/** The person on the other side of a conversation from the viewer. */
+const otherPartyId = (conversation, viewerId) => (
+  resolveRole(conversation, viewerId) === 'buyer' ? conversation.store.ownerId : conversation.buyerId
+);
+
+/**
+ * The buyer and the shop as the viewer sees them, the other side saying
+ * whether they are active now: a buyer sees the shop's seller, the seller
+ * sees the buyer. The viewer's own side says nothing about them.
+ */
+const sidesWithStatus = (conversation, role, status, store) => {
+  const shown = status || { active: false, activeAt: null };
+  return role === 'buyer'
+    ? { buyer: conversation.buyer, store: { ...store, ...shown } }
+    : { buyer: conversation.buyer ? { ...conversation.buyer, ...shown } : conversation.buyer, store };
+};
+
 // The viewer's last read moment in a conversation, on whichever side they are.
 const lastReadFor = (conversation, viewerId) => (
   resolveRole(conversation, viewerId) === 'buyer' ? conversation.buyerLastReadAt : conversation.sellerLastReadAt
@@ -130,19 +148,18 @@ const lastReadFor = (conversation, viewerId) => (
  * One row of the chat list. The unread count and the newest message (for the
  * preview) are worked out for the whole list beforehand, in one query each.
  */
-const shapeConversationSummary = (conversation, viewerId, { unreadCount = 0, lastMessage = null } = {}) => {
+const shapeConversationSummary = (conversation, viewerId, { unreadCount = 0, lastMessage = null, status = null } = {}) => {
   const role = resolveRole(conversation, viewerId);
 
   return {
     id: conversation.id,
     role,
-    buyer: conversation.buyer,
-    store: {
+    ...sidesWithStatus(conversation, role, status, {
       id: conversation.store.id,
       name: conversation.store.name,
       slug: conversation.store.slug,
       logo: conversation.store.logo,
-    },
+    }),
     lastMessageAt: conversation.lastMessageAt,
     lastMessage: lastMessage
       ? {
@@ -179,17 +196,19 @@ const listMyConversations = async (userId) => {
     return true;
   });
 
-  // Two queries for the whole list, not two per conversation.
-  const [unreadCounts, lastMessages] = await Promise.all([
+  // A few queries for the whole list, not some per conversation.
+  const [unreadCounts, lastMessages, statuses] = await Promise.all([
     messageRepository.countUnreadByConversation(
       userId,
       unique.map((c) => ({ conversationId: c.id, since: lastReadFor(c, userId) })),
     ),
     messageRepository.latestMessages(unique.map((c) => c.id)),
+    activeStatus.statusOf(unique.map((c) => otherPartyId(c, userId))),
   ]);
   const summaries = unique.map((c) => shapeConversationSummary(c, userId, {
     unreadCount: unreadCounts.get(c.id) || 0,
     lastMessage: lastMessages.get(c.id) || null,
+    status: statuses.get(String(otherPartyId(c, userId))) || null,
   }));
 
   summaries.sort((a, b) => {
@@ -276,23 +295,24 @@ const getConversation = async (conversationId, userId, { before = null } = {}) =
 
   const role = resolveRole(conversation, userId);
   const { messages, hasEarlier } = await messageRepository.listMessages(conversationId, { before });
-  const [orders, deals] = await Promise.all([
+  const [orders, deals, status] = await Promise.all([
     messageRepository.findBuyerOrdersForStore(conversation.buyerId, conversation.storeId),
     // Livestock deals between them: each shows as a card in the chat.
     priceOfferService.forConversation(conversation.buyerId, conversation.storeId, role === 'buyer' ? 'BUYER' : 'SELLER'),
+    // Whether the other side is active now (the dot in the chat's header).
+    activeStatus.statusOfUser(otherPartyId(conversation, userId)),
   ]);
 
   return {
     id: conversation.id,
     role,
-    buyer: conversation.buyer,
-    store: {
+    ...sidesWithStatus(conversation, role, status, {
       id: conversation.store.id,
       name: conversation.store.name,
       slug: conversation.store.slug,
       logo: conversation.store.logo,
       ownerId: conversation.store.ownerId,
-    },
+    }),
     lastMessageAt: conversation.lastMessageAt,
     buyerLastReadAt: conversation.buyerLastReadAt,
     sellerLastReadAt: conversation.sellerLastReadAt,

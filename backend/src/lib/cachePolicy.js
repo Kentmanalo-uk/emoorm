@@ -90,6 +90,8 @@ const cached = {
 
   // ── Public storefronts ──
   storeList: policy('stores:list', ttl.stores, [TAGS.stores]),
+  // "Open now" moves with the clock: kept as briefly as a search.
+  storeOpenList: policy('stores:open', ttl.search, [TAGS.stores]),
   store: policy('stores:one', ttl.stores, (p) => [TAGS.stores, TAGS.store(p.id || p.slug)]),
   storefront: policy('stores:storefront', ttl.stores, (p) => [TAGS.stores, TAGS.store(p.slug || p.id)], productTagsOf),
   // The shop's Home tab: its spotlight products' prices and stock move, so

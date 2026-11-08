@@ -66,6 +66,31 @@ const awayUntil = (store, now = new Date()) => {
   return at && at > now ? at : null;
 };
 
+// Manila day key ("mon"…) and minutes since midnight. Manila has no
+// daylight saving: always UTC+8.
+const manilaNow = (now = new Date()) => {
+  const at = new Date(new Date(now).getTime() + 8 * 3600e3);
+  return {
+    day: ['sun', 'mon', 'tue', 'wed', 'thu', 'fri', 'sat'][at.getUTCDay()],
+    minutes: at.getUTCHours() * 60 + at.getUTCMinutes(),
+  };
+};
+
+/**
+ * Whether the shop's week says it is open at `now` (Manila time): true /
+ * false while that day is set, null when the shop never said. As
+ * web/src/lib/shopHours.js openNow — keep them in step.
+ */
+const openNow = (store, now = new Date()) => {
+  const week = store?.openingHours;
+  if (!week || typeof week !== 'object' || Array.isArray(week)) return null;
+  const { day, minutes: at } = manilaNow(now);
+  if (!(day in week)) return null;
+  return (Array.isArray(week[day]) ? week[day] : []).some((r) => Array.isArray(r)
+    && typeof r[0] === 'string' && typeof r[1] === 'string'
+    && at >= minutes(r[0]) && at < minutes(r[1]));
+};
+
 const manilaDate = (date) => new Date(date).toLocaleDateString('en-PH', { month: 'long', day: 'numeric', timeZone: 'Asia/Manila' });
 
 module.exports = {
@@ -75,5 +100,6 @@ module.exports = {
   normalizeVacationNote,
   normalizePrepDays,
   awayUntil,
+  openNow,
   manilaDate,
 };

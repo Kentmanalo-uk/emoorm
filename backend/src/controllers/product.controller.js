@@ -65,6 +65,12 @@ const getProducts = asyncHandler(async (req, res) => {
     type,
     kind,
     today,
+    // The names the Home shortcuts use for ?type / ?kind.
+    productType,
+    listingKind,
+    badge,
+    onSale,
+    categories,
   } = req.query;
 
   // A category page (/category/<slug>) asks by the category's slug.
@@ -73,6 +79,17 @@ const getProducts = asyncHandler(async (req, res) => {
     const category = await prisma.category.findUnique({ where: { slug: String(categorySlug) }, select: { id: true } });
     // An unknown slug finds nothing, rather than every product.
     categoryId = category?.id || '__none__';
+  }
+
+  // Several categories by slug (?categories=local-delicacies,handicrafts):
+  // products in any of them. Unknown slugs match nothing.
+  let categoryIds;
+  if (typeof categories === 'string' && categories.trim()) {
+    const slugs = [...new Set(categories.split(',').map((s) => s.trim().toLowerCase()).filter(Boolean))].slice(0, 20);
+    if (slugs.length) {
+      const rows = await prisma.category.findMany({ where: { slug: { in: slugs } }, select: { id: true } });
+      categoryIds = rows.length ? rows.map((r) => r.id) : ['__none__'];
+    }
   }
 
   // Municipal admins are scoped to their assigned municipality.
@@ -96,9 +113,14 @@ const getProducts = asyncHandler(async (req, res) => {
     sortOrder,
     // One kind of product (?type=PACKAGE), always-available or Available
     // Today ones (?kind=TODAY), or only those taking orders today (?today=1).
-    type,
-    kind,
+    type: type ?? productType,
+    kind: kind ?? listingKind,
     today,
+    // A seller's label (?badge=PALENGKE), only products on sale now (?onSale=1),
+    // and several categories at once.
+    badge,
+    onSale,
+    categoryIds,
     userId: req.user?.id,
     userRole: req.user?.role,
     isAdmin: !!req.user && (req.user.role === 'SUPER_ADMIN' || req.user.role === 'MUNICIPAL_ADMIN'),

@@ -183,6 +183,10 @@ const KNOWN_PATHS = [
   /^\/sell\/academy\/[^/]+$/,
   /^\/product\/[^/]+(\/reviews)?$/, /^\/store\/[^/]+$/, /^\/u\/[^/]+$/,
   /^\/municipality\/[^/]+(\/gallery)?$/, /^\/category\/[^/]+$/,
+  // Home's shortcuts: the market page, towns to explore, who is live, and
+  // the collections (web pages/Collection.jsx presets).
+  /^\/(palengke|explore|live)$/,
+  /^\/c\/(pasalubong|pre-order|diy|ready-to-eat|packages|on-sale)$/,
 ];
 const isKnownPath = (path) => KNOWN_PATHS.some((re) => re.test(path));
 
@@ -196,7 +200,7 @@ const PRIVATE_PREFIXES = [
   '/notifications', '/messages', '/reset-password', '/verify-email', '/u/',
   // A live lasts minutes and is gone (livestream/); the app's Go live page
   // is a seller's. Neither belongs in search results, and neither is a 404.
-  '/live/', '/app-live',
+  '/live/', '/live', '/app-live',
 ];
 
 const isPrivatePath = (pathname) =>

@@ -403,6 +403,9 @@ const findAll = async (options = {}) => {
     todayOnly,
     listingKind,
     productType,
+    badge,
+    onSale,
+    categoryIds,
     sortBy = 'createdAt',
     sortOrder = 'desc',
   } = options;
@@ -413,6 +416,10 @@ const findAll = async (options = {}) => {
 
   if (storeId) where.storeId = storeId;
   if (categoryId) where.categoryId = categoryId;
+  // Any of several categories (Pasalubong: delicacies and handicrafts).
+  if (categoryIds?.length) {
+    where.AND = [...(where.AND || []), { categoryId: { in: categoryIds } }];
+  }
   if (municipalityId) where.municipalityId = municipalityId;
   if (status) where.status = status;
   if (listingKind) where.listingKind = listingKind;
@@ -429,6 +436,32 @@ const findAll = async (options = {}) => {
   // Today rails (todayOnly) keep to what takes orders now.
   if (todayOnly) {
     where.AND = [...(where.AND || []), { listingKind: 'TODAY', availabilities: { some: liveNow(new Date()) } }];
+  }
+
+  // A seller's label. Pre-order also takes in Available Today listings
+  // posted as pre-orders that take orders now.
+  if (badge === 'PRE_ORDER') {
+    where.AND = [...(where.AND || []), {
+      OR: [
+        { badge },
+        { listingKind: 'TODAY', availabilities: { some: { ...liveNow(new Date()), mode: 'PRE_ORDER' } } },
+      ],
+    }];
+  } else if (badge) {
+    where.AND = [...(where.AND || []), { badge }];
+  }
+
+  // On sale now, by the rule of utils/variantPricing activeSalePrice: a sale
+  // price above 0 and below the price, inside its dates when they are set.
+  // (A sale is refused on products priced per option, so that part of the
+  // rule needs no check here.)
+  if (onSale) {
+    const now = new Date();
+    where.AND = [...(where.AND || []),
+      { salePrice: { gt: 0, lt: prisma.product.fields.price } },
+      { OR: [{ saleStartsAt: null }, { saleStartsAt: { lte: now } }] },
+      { OR: [{ saleEndsAt: null }, { saleEndsAt: { gt: now } }] },
+    ];
   }
 
   // A seller's "needs restock" view: out of stock or at/below the product's

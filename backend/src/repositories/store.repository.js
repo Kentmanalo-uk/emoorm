@@ -1,5 +1,6 @@
 const prisma = require('../config/database');
 const { invalidate, TAGS } = require('../lib/cachePolicy');
+const shopHours = require('../utils/shopHours');
 
 /**
  * Drop cached copies a store write makes stale. Store details are cached by
@@ -145,9 +146,53 @@ const findBySlug = async (slug) => {
   });
 };
 
+// What a shop on a list carries: its owner's name, its town, a few products.
+const LIST_INCLUDE = {
+  owner: {
+    select: {
+      id: true,
+      fullName: true,
+    },
+  },
+  municipality: {
+    select: {
+      id: true,
+      name: true,
+    },
+  },
+  products: {
+    where: {
+      deletedAt: null,
+      status: 'APPROVED',
+    },
+    select: {
+      id: true,
+      name: true,
+      images: true,
+    },
+    orderBy: { createdAt: 'desc' },
+    take: 3,
+  },
+  _count: {
+    select: {
+      products: {
+        where: {
+          deletedAt: null,
+          status: 'APPROVED',
+        },
+      },
+    },
+  },
+};
+
+// "Open now" checks the hours of at most this many matching shops.
+const OPEN_NOW_POOL = 2000;
+
 /**
  * Find all stores with filters and pagination
  * @param {Object} options - Query options
+ * @param {Boolean} [options.openNow] - only shops open now by their hours, not away
+ * @param {Boolean} [options.pickup] - only shops offering pickup
  * @returns {Promise<Object>} Stores and pagination info
  */
 const findAll = async (options = {}) => {
@@ -160,6 +205,8 @@ const findAll = async (options = {}) => {
     isApproved,
     excludeOwnerId,
     search,
+    openNow,
+    pickup,
   } = options;
 
   const where = {
@@ -177,50 +224,46 @@ const findAll = async (options = {}) => {
       { description: { contains: search } },
     ];
   }
+  // Shops buyers can pick up from.
+  if (pickup) where.fulfillmentMode = { in: ['PICKUP', 'BOTH'] };
+
+  // The newest first; the id keeps shops made at the same moment in one
+  // order from page to page.
+  const orderBy = [{ createdAt: 'desc' }, { id: 'desc' }];
+
+  // Open now: the hours are a JSON week MySQL can't check, so the matching
+  // shops that are not away are read lean (id and hours, in list order),
+  // checked here, and the page is cut from those; the total is theirs too.
+  if (openNow) {
+    const now = new Date();
+    where.AND = [{ OR: [{ vacationUntil: null }, { vacationUntil: { lte: now } }] }];
+    const candidates = await prisma.store.findMany({
+      where,
+      select: { id: true, openingHours: true },
+      orderBy,
+      take: OPEN_NOW_POOL,
+    });
+    const openIds = candidates.filter((s) => shopHours.openNow(s, now) === true).map((s) => s.id);
+    const pageIds = openIds.slice((page - 1) * pageSize, page * pageSize);
+    const rows = pageIds.length
+      ? await prisma.store.findMany({ where: { id: { in: pageIds } }, include: LIST_INCLUDE })
+      : [];
+    const byId = new Map(rows.map((s) => [s.id, s]));
+    return {
+      stores: pageIds.map((id) => byId.get(id)).filter(Boolean),
+      total: openIds.length,
+      page,
+      pageSize,
+    };
+  }
 
   const [stores, total] = await Promise.all([
     prisma.store.findMany({
       where,
-      include: {
-        owner: {
-          select: {
-            id: true,
-            fullName: true,
-          },
-        },
-        municipality: {
-          select: {
-            id: true,
-            name: true,
-          },
-        },
-        products: {
-          where: {
-            deletedAt: null,
-            status: 'APPROVED',
-          },
-          select: {
-            id: true,
-            name: true,
-            images: true,
-          },
-          orderBy: { createdAt: 'desc' },
-          take: 3,
-        },
-        _count: {
-          select: {
-            products: {
-              where: {
-                deletedAt: null,
-                status: 'APPROVED',
-              },
-            },
-          },
-        },
-      },
+      include: LIST_INCLUDE,
       skip: (page - 1) * pageSize,
       take: pageSize,
-      orderBy: { createdAt: 'desc' },
+      orderBy,
     }),
     prisma.store.count({ where }),
   ]);

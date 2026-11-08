@@ -43,6 +43,8 @@ const getStores = asyncHandler(async (req, res) => {
     isActive,
     isSuspended,
     search,
+    openNow,
+    pickup,
   } = req.query;
 
   const isAdmin = req.user && (req.user.role === 'SUPER_ADMIN' || req.user.role === 'MUNICIPAL_ADMIN');
@@ -65,6 +67,9 @@ const getStores = asyncHandler(async (req, res) => {
     // everyone else shares the cached public list).
     excludeOwnerId: !isAdmin && req.user?.role === 'SELLER' ? req.user.id : undefined,
     search: str(search),
+    // Open now by their hours and not away (?openNow=1); offering pickup (?pickup=1).
+    openNow: openNow === '1' || openNow === 'true',
+    pickup: pickup === '1' || pickup === 'true',
   };
 
   const result = await storeService.getStores(options);

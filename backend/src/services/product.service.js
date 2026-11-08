@@ -10,9 +10,10 @@ const { cached } = require('../lib/cachePolicy');
 const { cleanText, cleanFields } = require('../utils/sanitize');
 const { ApiError } = require('../middleware/errorHandler');
 const { parseImageOverlay } = require('../utils/imageOverlays');
-const { parseBadge } = require('../utils/productBadges');
+const { parseBadge, PRODUCT_BADGES } = require('../utils/productBadges');
 const photoDesignService = require('./photoDesign.service');
 const shopReadiness = require('./shopReadiness.service');
+const activeStatus = require('./activeStatus.service');
 const { markBestSellers, markBestSeller } = require('./bestSeller.service');
 const availabilityRepository = require('../repositories/availability.repository');
 const availabilityService = require('./availability.service');
@@ -699,7 +700,13 @@ const presentDetail = async (product, viewerId, viewerRole, viewerMunicipalityId
     { full, enabled: full || await product3dOn() },
   );
   if (shaped.store) {
-    shaped.store = { ...shaped.store, readyToSell: await shopReadiness.isReady(product.storeId || product.store.id) };
+    // Whether its seller is active now: asked here, after the cache.
+    const ownerId = product.store.ownerId || product.store.owner?.id;
+    const [readyToSell, status] = await Promise.all([
+      shopReadiness.isReady(product.storeId || product.store.id),
+      activeStatus.statusOfUser(ownerId),
+    ]);
+    shaped.store = { ...shaped.store, readyToSell, ...status };
   }
   // Its shop's most sold product carries a Best seller tag.
   return markBestSeller(shaped);
@@ -756,7 +763,22 @@ const normalizeListOptions = (options = {}) => {
     listingKind: options.kind === 'TODAY' || options.kind === 'REGULAR' ? options.kind : undefined,
     // One kind of product (?type=PACKAGE…).
     productType: PRODUCT_TYPES.includes(options.type) ? options.type : undefined,
+    // A seller's label (any case); an unknown one is ignored, like ?type.
+    badge: listBadge(options.badge),
+    // Only products whose sale is on now.
+    onSale: options.onSale === '1' || options.onSale === 'true' || options.onSale === true,
+    // Products in any of these categories (ids, from ?categories=<slugs>).
+    categoryIds: Array.isArray(options.categoryIds) && options.categoryIds.length
+      ? [...new Set(options.categoryIds.map(String))].sort()
+      : undefined,
   };
+};
+
+/** ?badge from a list query: one of the labels, else undefined (no filter). */
+const listBadge = (value) => {
+  if (typeof value !== 'string') return undefined;
+  const key = value.trim().toUpperCase().replace(/[\s-]+/g, '_');
+  return PRODUCT_BADGES.includes(key) ? key : undefined;
 };
 
 /**
@@ -982,6 +1004,9 @@ const getProducts = async (rawOptions) => {
     todayOnly: options.todayOnly,
     listingKind: options.listingKind,
     productType: options.productType,
+    badge: options.badge,
+    onSale: options.onSale,
+    categoryIds: options.categoryIds,
   };
 
   // Free-text search has a long tail of one-off keys, so it gets a shorter TTL

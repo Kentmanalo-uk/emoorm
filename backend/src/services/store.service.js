@@ -4,6 +4,7 @@ const prisma = require('../config/database');
 const notificationService = require('./notification.service');
 const deliveryQuoteService = require('./deliveryQuote.service');
 const shopReadiness = require('./shopReadiness.service');
+const activeStatus = require('./activeStatus.service');
 const { cleanFields } = require('../utils/sanitize');
 const { cached } = require('../lib/cachePolicy');
 const { ApiError } = require('../middleware/errorHandler');
@@ -259,8 +260,9 @@ const getStorefront = async (slug) => {
   }
 
   // Ratings and category tabs are three more queries; the whole aggregate is
-  // the same for every visitor, so it is cached as one unit.
-  return cached.storefront({ slug }, () => buildStorefront(store));
+  // the same for every visitor, so it is cached as one unit. Whether its
+  // seller is active now is added afterwards, never cached with it.
+  return activeStatus.withOneStoreActivity(await cached.storefront({ slug }, () => buildStorefront(store)));
 };
 
 /**
@@ -386,9 +388,15 @@ const getStores = async (options = {}) => {
     // Admins moderate with every field; a seller browsing other shops gets
     // the public view.
     const shape = options.isAdmin ? (s) => s : (s) => toPublicStore(s);
-    return { ...result, stores: result.stores.map((s) => ({ ...shape(s), readyToSell: ready.has(s.id) })) };
+    const stores = result.stores.map((s) => ({ ...shape(s), readyToSell: ready.has(s.id) }));
+    // Buyers see whether each shop's seller is active now (not admins: their
+    // team pages have their own "online").
+    return { ...result, stores: options.isAdmin ? stores : await activeStatus.withStoreActivity(stores) };
   }
-  return cached.storeList(
+  // Every filter is in the key. "Open now" moves with the clock, so its
+  // lists keep only briefly. Whether each seller is active now is added
+  // after the cache, never kept in it.
+  const listed = await (options.openNow ? cached.storeOpenList : cached.storeList)(
     {
       page: options.page,
       pageSize: options.pageSize,
@@ -399,6 +407,8 @@ const getStores = async (options = {}) => {
       isActive: options.isActive,
       isSuspended: options.isSuspended,
       isApproved: options.isApproved,
+      openNow: Boolean(options.openNow),
+      pickup: Boolean(options.pickup),
     },
     async () => {
       // Listed with its products either way; readyToSell says whether it
@@ -412,6 +422,7 @@ const getStores = async (options = {}) => {
       };
     }
   );
+  return { ...listed, stores: await activeStatus.withStoreActivity(listed.stores) };
 };
 
 /**
