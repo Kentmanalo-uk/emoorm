@@ -80,6 +80,7 @@ import {
 } from '../lib/availability';
 import TimeLeft from '../components/ui/TimeLeft';
 import TodayTag, {} from '../components/today/TodayTag';
+import BestSellerTag from '../components/product/BestSellerTag';
 import ProductQuestions from '../components/product/ProductQuestions';
 import { SaleWas, PriceNotes } from '../components/ui/SaleTag';
 import {
@@ -1145,6 +1146,7 @@ const ProductDetails = () => {
               )}
               <h1 className="pdp-title">
                 {isTodayProduct(product) && product.availability && <TodayTag mode={product.availability.mode} className="pdp-title-tag" />}
+                <BestSellerTag product={product} className="pdp-title-tag" />
                 {product.name}
               </h1>
               {isPhone && (
@@ -1691,7 +1693,7 @@ const ProductDetails = () => {
                 {((shelfTab === 'similar' && relatedProducts.length) || !sameShopProducts.length ? relatedProducts : sameShopProducts).slice(0, 12).map((p) => (
                   <div key={p.id} className="pdp-m-shelf-card" {...peekProduct(p)}>
                     <Link to={`/product/${p.slug}`} className="pdp-m-shelf-img"><ProductImage src={parseImages(p.images)[0]} alt={p.name} /></Link>
-                    <Link to={`/product/${p.slug}`} className="pdp-m-shelf-name">{p.name}</Link>
+                    <Link to={`/product/${p.slug}`} className="pdp-m-shelf-name"><BestSellerTag product={p} />{p.name}</Link>
                     <span className="pdp-m-shelf-foot">
                       <b><KindPrice product={p}>{peso(saleInfo(p).price)}</KindPrice></b>
                       <button type="button" aria-label={`Add ${p.name} to cart`} onClick={() => quickAdd(p)}><Plus size={14} weight="bold" /></button>

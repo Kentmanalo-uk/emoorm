@@ -2,6 +2,7 @@ const prisma = require('../config/database');
 const { ApiError } = require('../middleware/errorHandler');
 const storeRepository = require('../repositories/store.repository');
 const productRepository = require('../repositories/product.repository');
+const { markBestSellers } = require('./bestSeller.service');
 const { cached, invalidate, TAGS } = require('../lib/cachePolicy');
 const { normalizeHome, productIdsOf } = require('../utils/shopHome');
 
@@ -24,7 +25,9 @@ const liveProducts = async (storeId, ids) => {
     select: PRODUCT_FIELDS,
   });
   const stats = await productRepository.getStatsForIds(rows.map((p) => p.id));
-  return new Map(rows.map((p) => [p.id, { ...p, price: Number(p.price), ...(stats.get(p.id) || {}) }]));
+  // The shop's most sold product carries its Best seller tag here too.
+  const marked = await markBestSellers(rows.map((p) => ({ ...p, storeId, price: Number(p.price), ...(stats.get(p.id) || {}) })));
+  return new Map(marked.map((p) => [p.id, p]));
 };
 
 /**

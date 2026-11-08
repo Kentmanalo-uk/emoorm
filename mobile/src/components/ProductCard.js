@@ -9,7 +9,7 @@ import { ProductStats } from './ProductStats';
 import useOpenProduct from './useOpenProduct';
 import { sizedImg } from '../lib/media';
 import { SaleWas } from './SaleTag';
-import { ProductTodayTag } from './TodayTag';
+import { BestSellerTag, ProductTodayTag } from './TodayTag';
 import { notTakingOrders } from '../lib/availability';
 import { useProductPeek } from './peek/ProductPeek';
 import { parseImages } from './product/productLib';
@@ -105,6 +105,7 @@ function ProductCard({
       <View style={[styles.info, list && styles.infoList]}>
         <Text style={[styles.name, result && styles.nameResult]} numberOfLines={2}>
           <ProductTodayTag product={p} style={styles.tag} />
+          <BestSellerTag product={p} style={styles.tag} />
           {p.name}
         </Text>
 

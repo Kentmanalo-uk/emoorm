@@ -23,6 +23,11 @@
   background: var(--t-accent-600, #db2777);
 }
 
+/* Best seller (product/BestSellerTag.jsx): the shop's most sold product. */
+.today-tag.is-best-seller {
+  background: #b7791f;
+}
+
 /* In product cards' names. */
 .product-name .today-tag {
   font-size: 11px;

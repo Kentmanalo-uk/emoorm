@@ -12,6 +12,7 @@ const { ApiError } = require('../middleware/errorHandler');
 const { parseImageOverlay } = require('../utils/imageOverlays');
 const photoDesignService = require('./photoDesign.service');
 const shopReadiness = require('./shopReadiness.service');
+const { markBestSellers, markBestSeller } = require('./bestSeller.service');
 const availabilityRepository = require('../repositories/availability.repository');
 const availabilityService = require('./availability.service');
 const { bufferToDHash, hammingDistance, hashFromSource, HASH_BIT_LENGTH } = require('../utils/imageHash');
@@ -699,7 +700,8 @@ const presentDetail = async (product, viewerId, viewerRole, viewerMunicipalityId
   if (shaped.store) {
     shaped.store = { ...shaped.store, readyToSell: await shopReadiness.isReady(product.storeId || product.store.id) };
   }
-  return shaped;
+  // Its shop's most sold product carries a Best seller tag.
+  return markBestSeller(shaped);
 };
 
 // ── Listing option normalisation ────────────────────────────────────────
@@ -943,11 +945,13 @@ const getProducts = async (rawOptions) => {
       products.map((p) => p.storeId || p.store?.id),
       { maxAgeMs: options.isAdmin ? 0 : 15 * 1000 },
     );
+    const withReady = products.map((p) => (p.store
+      ? { ...p, store: { ...p.store, readyToSell: ready.has(p.storeId || p.store.id) } }
+      : p));
     return {
       ...result,
-      products: products.map((p) => (p.store
-        ? { ...p, store: { ...p.store, readyToSell: ready.has(p.storeId || p.store.id) } }
-        : p)),
+      // Each shop's most sold product carries a Best seller tag.
+      products: options.isAdmin ? withReady : await markBestSellers(withReady),
     };
   };
 
@@ -995,9 +999,9 @@ const getProducts = async (rawOptions) => {
 const toPublicList = async (rows) => {
   const products = rows.map((p) => toPublicProduct(p)).map(({ model3d, ...p }) => p);
   const ready = await shopReadiness.readyIds(products.map((p) => p.storeId || p.store?.id), { maxAgeMs: 15 * 1000 });
-  return products.map((p) => (p.store
+  return markBestSellers(products.map((p) => (p.store
     ? { ...p, store: { ...p.store, readyToSell: ready.has(p.storeId || p.store.id) } }
-    : p));
+    : p)));
 };
 
 /**

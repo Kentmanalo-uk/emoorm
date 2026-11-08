@@ -14,7 +14,7 @@ import { saleInfo } from '../../lib/variantPricing';
 import ProductImage from '../ProductImage';
 import { ProductStats } from '../ProductStats';
 import { SaleWas } from '../SaleTag';
-import { ProductTodayTag } from '../TodayTag';
+import { BestSellerTag, ProductTodayTag } from '../TodayTag';
 import { notTakingOrders } from '../../lib/availability';
 import { isLivestock, isStockless, minOrder, priceUnit, startsFrom } from '../orders/orderLines';
 import { cartRefusal, quickCartLine } from '../product/productLib';
@@ -128,6 +128,7 @@ export function ProductPeekCard({ product: p }) {
       <PeekBody>
         <Text style={peekText.title} numberOfLines={2}>
           <ProductTodayTag product={p} style={styles.tag} />
+          <BestSellerTag product={p} style={styles.tag} />
           {p.name}
         </Text>
         <View style={styles.priceRow}>
