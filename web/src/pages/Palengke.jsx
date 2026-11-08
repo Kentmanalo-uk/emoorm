@@ -1,36 +1,41 @@
 import { useCallback, useMemo } from 'react';
 import { Link, useNavigate, useNavigationType, useSearchParams } from 'react-router-dom';
+import { useQuery } from '@tanstack/react-query';
 import toast from 'react-hot-toast';
 import {
-  ArrowRight, CaretLeft, MapPin, Storefront, Tag, WarningCircle,
+  ArrowRight, MapPin, Tag, WarningCircle,
 } from '../lib/icons';
 import Layout from '../components/layout/Layout';
-import PageMenu from '../components/layout/PageMenu';
 import PullToRefresh from '../components/native/PullToRefresh';
 import ProductTile from '../components/product/ProductTile';
+import PalengkeBand from '../components/palengke/PalengkeBand';
 import PalengkeBasket from '../components/palengke/PalengkeBasket';
+import PalengkeCards, { PLG_KINDS } from '../components/palengke/PalengkeCards';
+import PalengkeTop from '../components/palengke/PalengkeTop';
 import ListEnd from '../components/ui/ListEnd';
 import Select from '../components/ui/Select';
 import Skeleton from '../components/ui/Skeleton';
 import useInfiniteList from '../hooks/useInfiniteList';
 import { usePhoneLayout } from '../hooks/useMobileNav';
-import { useMunicipalities } from '../hooks/useReferenceData';
+import { useCategories, useMunicipalities } from '../hooks/useReferenceData';
 import axios from '../lib/axios';
 import { parseImages } from '../lib/media';
 import { readCache, writeCache } from '../lib/pageCache';
 import { isStockless, productKind } from '../lib/productKinds';
+import { policy } from '../lib/queryKeys';
 import useSeo from '../lib/seo';
 import { saleInfo } from '../lib/variantPricing';
 import useAuthStore from '../store/authStore';
 import useCartStore from '../store/cartStore';
 import './Palengke.css';
 
-// The sort chips, as GET /products sorts (the same values as Products.jsx).
-const SORTS = [
-  { key: 'newest', label: 'Newest', sortBy: 'createdAt', sortOrder: 'desc' },
-  { key: 'top-sales', label: 'Best selling', sortBy: 'orderCount', sortOrder: 'desc' },
-  { key: 'price-low', label: 'Lowest price', sortBy: 'price', sortOrder: 'asc' },
-];
+// The orders, as GET /products sorts (the same values as Products.jsx).
+// Newest first unless a card chose another.
+const SORTS = {
+  newest: { sortBy: 'createdAt', sortOrder: 'desc' },
+  'top-sales': { sortBy: 'orderCount', sortOrder: 'desc' },
+  'price-low': { sortBy: 'price', sortOrder: 'asc' },
+};
 
 // Products per batch; the next comes on its own as the end of the grid
 // nears. Fills whole rows of the grid (5 / 4 / 3 / 2 columns).
@@ -39,11 +44,14 @@ const BATCH = 20;
 /**
  * E-MOORM Palengke (/palengke): the fresh-market products, every product a
  * seller tagged Palengke (product.badge PALENGKE), in one grid that loads
- * on as it is scrolled. A hero with a basket of produce, sort chips and a
- * town filter (kept in the address, so a view can be shared), and Back
- * finds the list and the spot in it as left (pageCache, like Products).
- * Phones: the page's own top (Back, the title, ⋯) instead of the usual bar;
- * the chips stay at the top of the screen while the grid scrolls.
+ * on as it is scrolled. On top a campaign band (PalengkeBand: a search of
+ * the palengke, the huge word, the basket), then cards that choose a kind
+ * of produce or an order, the three best sellers (only once three have
+ * really sold), and the grid with a town filter. Search, kind, order and
+ * town are kept in the address, so a view can be shared, and Back finds
+ * the list and the spot in it as left (pageCache, like Products).
+ * Phones: Back and ⋯ sit in the band instead of the usual bar; the grid's
+ * heading (with the town) stays at the top of the screen while it scrolls.
  */
 export default function Palengke() {
   useSeo({
@@ -58,20 +66,35 @@ export default function Palengke() {
   const isSeller = useAuthStore((s) => s.user?.role?.toUpperCase() === 'SELLER');
   const addItem = useCartStore((s) => s.addItem);
   const { municipalities } = useMunicipalities();
+  const { categories, isSuccess: categoriesLoaded } = useCategories();
 
-  const sortKey = SORTS.some((s) => s.key === searchParams.get('sort')) ? searchParams.get('sort') : 'newest';
-  const sort = SORTS.find((s) => s.key === sortKey);
+  // Only the kinds whose category exists (all of them until the list comes).
+  const kinds = useMemo(() => {
+    if (!categoriesLoaded) return PLG_KINDS;
+    const slugs = new Set(categories.map((c) => c.slug));
+    return PLG_KINDS.filter((k) => !k.slug || slugs.has(k.slug));
+  }, [categories, categoriesLoaded]);
+
+  const sortKey = SORTS[searchParams.get('sort')] ? searchParams.get('sort') : 'newest';
+  const sort = SORTS[sortKey];
+  const cat = PLG_KINDS.some((k) => k.slug && k.slug === searchParams.get('cat')) ? searchParams.get('cat') : '';
+  const kind = PLG_KINDS.find((k) => k.slug === cat);
+  const q = (searchParams.get('q') || '').trim().slice(0, 100);
   const town = searchParams.get('town') || '';
   const townName = municipalities.find((m) => m.id === town)?.name || '';
 
   const params = useMemo(() => {
-    const p = {
-      badge: 'PALENGKE', pageSize: BATCH, sortBy: sort.sortBy, sortOrder: sort.sortOrder,
-    };
+    const p = { badge: 'PALENGKE', pageSize: BATCH, ...sort };
+    // A search in the default order: the best matches first.
+    if (q) {
+      p.search = q;
+      if (sortKey === 'newest') p.sortBy = 'relevance';
+    }
+    if (cat) p.categorySlug = cat;
     if (town) p.municipalityId = town;
     return p;
-  }, [sort, town]);
-  const firstView = sortKey === 'newest' && !town;
+  }, [sort, sortKey, q, cat, town]);
+  const firstView = sortKey === 'newest' && !town && !cat && !q;
 
   const list = useInfiniteList({
     listKey: `palengke-list:${JSON.stringify(params)}`,
@@ -85,21 +108,37 @@ export default function Palengke() {
       };
     },
     readSaved: readCache,
-    // Back to another sort or town of this page: all of it, as it was left.
+    // Back to another view of this page: all of it, as it was left.
     restoreAll: navigationType === 'POP',
     // The device keeps the first batch of the default view; the rest, for this visit.
     save: (k, saved) => writeCache(k, saved, { visitOnly: !firstView || saved.page > 1 }),
   });
   const products = list.items;
 
-  // A sort or a town starts the list over, from the top of the grid.
+  // The three best sellers, by units sold. Shown only when all three have
+  // sold something: no ranking of products nobody has bought.
+  const top = useQuery({
+    queryKey: ['products', 'palengke-top'],
+    queryFn: async () => (await axios.get('/products', {
+      params: {
+        badge: 'PALENGKE', sortBy: 'orderCount', sortOrder: 'desc', pageSize: 3,
+      },
+      quiet: true,
+    })).data || [],
+    ...policy.catalogue,
+  });
+  const topThree = top.data || [];
+  const showTop = !q && topThree.length === 3 && topThree.every((p) => Number(p.soldCount) > 0);
+
+  // A search, a kind, an order or a town starts the list over, from the
+  // top of the grid.
   const update = (patch) => {
     const next = new URLSearchParams(searchParams);
     Object.entries(patch).forEach(([k, v]) => (v ? next.set(k, v) : next.delete(k)));
     setSearchParams(next, { replace: true });
-    const grid = document.getElementById('plg-grid-top');
-    if (grid && grid.getBoundingClientRect().top < 0) {
-      window.scrollTo({ top: window.scrollY + grid.getBoundingClientRect().top - (isPhone ? 64 : 160) });
+    const anchor = document.getElementById('plg-grid-top');
+    if (anchor && anchor.getBoundingClientRect().top < 0) {
+      window.scrollTo({ top: window.scrollY + anchor.getBoundingClientRect().top - (isPhone ? 0 : 160) });
     }
   };
 
@@ -147,14 +186,24 @@ export default function Palengke() {
 
   const goBack = () => (window.history.state?.idx > 0 ? navigate(-1) : navigate('/'));
 
+  let heading = 'All products';
+  if (q) heading = `Results for “${q}”`;
+  else if (kind?.slug) heading = kind.name;
+  else if (sortKey !== 'newest') heading = sortKey === 'top-sales' ? 'Best selling first' : 'Lowest price first';
+
   const countLine = list.loading
-    ? <Skeleton height={12} width={120} />
+    ? <Skeleton height={12} width={90} />
     : (
       <>
         <strong>{list.total}</strong> {list.total === 1 ? 'product' : 'products'}
         {townName ? <> in {townName}</> : null}
       </>
     );
+
+  // What is narrowing the list, for the empty state.
+  const narrowed = Boolean(q || cat || town);
+  const what = kind?.slug ? kind.name.toLowerCase() : 'palengke products';
+  const where = town ? ` in ${townName || 'this town'}` : '';
 
   let body;
   if (list.loading) {
@@ -169,18 +218,36 @@ export default function Palengke() {
       </div>
     );
   } else if (products.length === 0) {
+    let title = 'The palengke is still setting up';
+    let note = 'No seller has tagged a product Palengke yet. Fresh gulay, prutas and more will show here as soon as they do.';
+    if (q) {
+      title = `Nothing in the palengke matches “${q}”${where}`;
+      note = 'Try another word, or see everything in the palengke.';
+    } else if (narrowed) {
+      title = `No ${what}${where} yet`;
+      note = 'Sellers haven’t tagged any of these Palengke yet. Try another kind or all towns, or browse everything on E-MOORM.';
+    }
     body = (
       <div className="plg-state">
-        <div className="plg-state-art"><PalengkeBasket size={132} /></div>
-        <h2>{town ? `No palengke products in ${townName || 'this town'} yet` : 'The palengke is still setting up'}</h2>
-        <p>
-          {town
-            ? 'Sellers in this town haven’t tagged any products Palengke yet. Try all towns, or browse everything on E-MOORM.'
-            : 'No seller has tagged a product Palengke yet. Fresh gulay, prutas and more will show here as soon as they do.'}
-        </p>
+        <div className="plg-state-art" aria-hidden="true">
+          <span className="plg-state-sun" />
+          <PalengkeBasket size={isPhone ? 120 : 140} />
+        </div>
+        <h2>{title}</h2>
+        <p>{note}</p>
         <div className="plg-state-actions">
-          {town && <button type="button" className="plg-btn is-primary" onClick={() => update({ town: '' })}>Show all towns</button>}
-          <Link to="/products" className={`plg-btn${town ? '' : ' is-primary'}`}>Browse all products <ArrowRight size={16} /></Link>
+          {narrowed && (
+            <button
+              type="button"
+              className="plg-btn is-primary"
+              onClick={() => update({
+                q: '', cat: '', town: '', sort: '',
+              })}
+            >
+              Show everything
+            </button>
+          )}
+          <Link to="/products" className={`plg-btn${narrowed ? '' : ' is-primary'}`}>Browse all products <ArrowRight size={16} /></Link>
         </div>
         {isSeller && (
           <p className="plg-seller-hint">
@@ -216,70 +283,45 @@ export default function Palengke() {
               </nav>
             )}
 
-            <header className="plg-hero">
-              <div className="plg-awning" aria-hidden="true" />
-              {isPhone && (
-                <div className="plg-hero-bar">
-                  <button type="button" className="plg-round" onClick={goBack} aria-label="Back">
-                    <CaretLeft size={22} weight="bold" />
-                  </button>
-                  <PageMenu className="plg-menu" />
-                </div>
-              )}
-              <div className="plg-hero-body">
-                <div className="plg-hero-copy">
-                  <p className="plg-kicker"><Storefront size={15} weight="fill" /> Fresh market</p>
-                  <h1 className="plg-title">
-                    <span className="plg-title-brand">E-MOORM</span>
-                    {' '}
-                    <span className="plg-title-word">Palengke</span>
-                  </h1>
-                  <p className="plg-lede">
-                    Fresh from Mindoro’s markets — gulay, prutas and more, straight from local sellers.
-                  </p>
+            <PalengkeBand q={q} onSearch={(text) => update({ q: text })} isPhone={isPhone} onBack={goBack} />
+
+            <div className="plg-sheet">
+              <PalengkeCards
+                kinds={kinds}
+                cat={cat}
+                sort={sortKey}
+                onCat={(slug) => update({ cat: slug })}
+                onSort={(key) => update({ sort: key })}
+                isPhone={isPhone}
+              />
+
+              {showTop && <PalengkeTop products={topThree} />}
+
+              <div id="plg-grid-top" />
+              <div className="plg-listhead">
+                <div className="plg-listhead-text">
+                  <h2>{heading}</h2>
                   <p className="plg-count">{countLine}</p>
                 </div>
-                <div className="plg-hero-art">
-                  <span className="plg-hero-glow" aria-hidden="true" />
-                  <PalengkeBasket size={isPhone ? 124 : 270} className="plg-basket" />
+                <div className={`plg-town-wrap${town ? ' is-on' : ''}`}>
+                  <MapPin size={15} weight="fill" className="plg-town-pin" aria-hidden="true" />
+                  <Select
+                    aria-label="Town"
+                    value={town}
+                    onChange={(e) => update({ town: e.target.value })}
+                    className="plg-town"
+                  >
+                    <option value="">All towns</option>
+                    {municipalities.map((m) => <option key={m.id} value={m.id}>{m.name}</option>)}
+                  </Select>
                 </div>
               </div>
-            </header>
 
-            <div className="plg-tools" role="toolbar" aria-label="Sort and filter">
-              <div className="plg-sorts" role="radiogroup" aria-label="Sort by">
-                {SORTS.map((s) => (
-                  <button
-                    key={s.key}
-                    type="button"
-                    role="radio"
-                    aria-checked={sortKey === s.key}
-                    className={`plg-chip${sortKey === s.key ? ' is-on' : ''}`}
-                    onClick={() => update({ sort: s.key === 'newest' ? '' : s.key })}
-                  >
-                    {s.label}
-                  </button>
-                ))}
-              </div>
-              <div className={`plg-town-wrap${town ? ' is-on' : ''}`}>
-                <MapPin size={15} weight="fill" className="plg-town-pin" aria-hidden="true" />
-                <Select
-                  aria-label="Town"
-                  value={town}
-                  onChange={(e) => update({ town: e.target.value })}
-                  className="plg-town"
-                >
-                  <option value="">All towns</option>
-                  {municipalities.map((m) => <option key={m.id} value={m.id}>{m.name}</option>)}
-                </Select>
-              </div>
+              {body}
+              {!list.loading && !list.error && products.length > 0 && (
+                <ListEnd list={list} done={list.total > BATCH ? 'That’s everything in the palengke for now' : ''} />
+              )}
             </div>
-
-            <div id="plg-grid-top" />
-            {body}
-            {!list.loading && !list.error && products.length > 0 && (
-              <ListEnd list={list} done={list.total > BATCH ? 'That’s everything in the palengke for now' : ''} />
-            )}
           </div>
         </div>
       </PullToRefresh>

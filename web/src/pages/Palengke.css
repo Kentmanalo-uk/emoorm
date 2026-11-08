@@ -1,13 +1,52 @@
-/* E-MOORM Palengke (Palengke.jsx): a market stall's striped awning over a
-   fresh green hero with a basket of produce, sort chips, then the grid.
-   Colours are tokens only, so dark mode (mirrored ramps) follows by itself. */
+/* E-MOORM Palengke (Palengke.jsx): a campaign band in the brand's green
+   (search, the huge word, a yellow strip, the basket bursting out of it),
+   colourful cards over its bottom edge, the three best sellers, then the
+   grid. The band's colours are tokens, swapped for their mirrored steps in
+   dark mode so the band stays a deep green there; the cards and ribbons
+   keep their own hues, as the shortcut marks do.
+
+   Stacking: .plg isolates; the band's back (bg) is under the sheet that
+   overlaps its bottom, and the basket and the words are over it, so the
+   art bursts out across the edge. */
 
 .plg {
+  --plg-b1: var(--t-primary-400, #34d399);
+  --plg-b2: var(--t-primary-600, #047857);
+  --plg-b3: var(--t-primary-800, #065f46);
+  --plg-b4: var(--t-primary-900, #064e3b);
+  --plg-ext: var(--t-primary-900, #064e3b);
+  --plg-shade: var(--t-primary-950, #052e1f);
+  --plg-y1: var(--t-warning-200, #fde68a);
+  --plg-y2: var(--t-warning-300, #fcd34d);
+  --plg-y3: var(--t-warning-600, #d97706);
+  --plg-p1: var(--t-accent-300, #f9a8d4);
+  --plg-p2: var(--t-accent-500, #ec4899);
+  --plg-p3: var(--t-accent-700, #be185d);
   --plg-ink: var(--t-primary-950, #052e1f);
-  --plg-green: var(--t-primary-600, #047857);
-  --plg-soft: var(--t-primary-50, #ecfdf5);
-  --plg-line: var(--t-neutral-200, #e5e7eb);
+  --plg-gold: #f5b301;
+  position: relative;
+  isolation: isolate;
+  /* The basket and its props may reach past the screen's sides. */
+  overflow-x: clip;
   padding-bottom: 32px;
+}
+
+/* Dark: the same deep green and the same yellow and pink, read from the
+   mirrored ramps (step 600 there is light 400, and so on). */
+:root[data-theme='dark'] .plg {
+  --plg-b1: var(--t-primary-500, #10b981);
+  --plg-b2: var(--t-primary-300, #03684c);
+  --plg-b3: var(--t-primary-100, #064e3b);
+  --plg-b4: var(--t-primary-50, #052e1f);
+  --plg-ext: var(--t-primary-50, #052e1f);
+  --plg-shade: var(--t-primary-50, #052e1f);
+  --plg-y1: var(--t-warning-800, #fde68a);
+  --plg-y2: var(--t-warning-700, #fcd34d);
+  --plg-y3: var(--t-warning-400, #d97706);
+  --plg-p1: var(--t-accent-700, #f9a8d4);
+  --plg-p2: var(--t-accent-500, #ec4899);
+  --plg-p3: var(--t-accent-300, #be185d);
+  --plg-ink: var(--t-primary-50, #052e1f);
 }
 
 .plg-wrap {
@@ -22,7 +61,7 @@
   display: flex;
   align-items: center;
   gap: 8px;
-  padding: 18px 2px 14px;
+  padding: 18px 2px 46px;
   color: var(--t-neutral-500, #636b78);
   font-size: 13.5px;
 }
@@ -33,237 +72,689 @@
 }
 
 .plg-crumbs a:hover {
-  color: var(--plg-green);
+  color: var(--t-primary-600, #047857);
 }
 
 .plg-crumbs [aria-current] {
   color: var(--t-neutral-800, #1f2937);
 }
 
-/* ── The hero ────────────────────────────────────────────────────────── */
-.plg-hero {
+/* ── The band ────────────────────────────────────────────────────────── */
+.plg-band {
   position: relative;
-  overflow: hidden;
-  border-radius: 22px;
-  background:
-    radial-gradient(120% 90% at 100% 0%, color-mix(in srgb, var(--t-accent-200, #fbcfe8) 55%, transparent) 0%, transparent 55%),
-    radial-gradient(90% 120% at 0% 100%, color-mix(in srgb, var(--t-primary-200, #a7f3d0) 70%, transparent) 0%, transparent 60%),
-    linear-gradient(160deg, var(--t-primary-50, #ecfdf5) 0%, var(--t-neutral-0, #fff) 100%);
-  box-shadow: inset 0 0 0 1px color-mix(in srgb, var(--t-primary-300, #6ee7b7) 35%, transparent);
-  isolation: isolate;
+  min-height: 352px;
+  padding: 26px 52px 84px;
+  color: #fff;
 }
 
-/* A market stall's awning: green and cream stripes, each ending in a
-   scallop, a soft shade under it. */
-.plg-awning {
-  --stripe: 32px;
-  --band: 14px;
-  position: relative;
-  height: calc(var(--band) + var(--stripe) / 2);
-  filter: drop-shadow(0 3px 2px color-mix(in srgb, var(--t-primary-900, #064e3b) 18%, transparent));
-}
-
-.plg-awning::before {
-  content: '';
+.plg-band-bg {
   position: absolute;
   inset: 0;
+  z-index: 0;
+  overflow: hidden;
+  border-radius: 30px;
   background:
-    linear-gradient(180deg, color-mix(in srgb, var(--t-neutral-0, #fff) 22%, transparent), transparent 60%),
-    repeating-linear-gradient(
-      90deg,
-      var(--t-primary-500, #10b981) 0 var(--stripe),
-      color-mix(in srgb, var(--t-warning-50, #fffbeb) 70%, var(--t-neutral-0, #fff)) var(--stripe) calc(var(--stripe) * 2)
-    );
-  -webkit-mask:
-    linear-gradient(#000 0 0) top / 100% var(--band) no-repeat,
-    radial-gradient(circle at 50% var(--band), #000 calc(var(--stripe) / 2 - 0.5px), transparent calc(var(--stripe) / 2)) 0 0 / var(--stripe) 100% repeat-x;
-  mask:
-    linear-gradient(#000 0 0) top / 100% var(--band) no-repeat,
-    radial-gradient(circle at 50% var(--band), #000 calc(var(--stripe) / 2 - 0.5px), transparent calc(var(--stripe) / 2)) 0 0 / var(--stripe) 100% repeat-x;
+    radial-gradient(70% 90% at 0% 0%, color-mix(in srgb, var(--plg-b1) 75%, transparent) 0%, transparent 62%),
+    linear-gradient(160deg, var(--plg-b1) -10%, var(--plg-b2) 42%, var(--plg-b3) 82%, var(--plg-b4) 100%);
+  pointer-events: none;
 }
 
-.plg-hero-body {
-  display: grid;
-  grid-template-columns: minmax(0, 1fr) auto;
+/* Light rays turning out from behind the basket. */
+.plg-rays {
+  position: absolute;
+  top: calc(150px - 560px);
+  left: calc(100% - 230px - 560px);
+  width: 1120px;
+  height: 1120px;
+  background: repeating-conic-gradient(from 4deg, rgba(255, 255, 255, 0.1) 0deg 6deg, transparent 6deg 18deg);
+  -webkit-mask: radial-gradient(closest-side, #000 18%, transparent 92%);
+  mask: radial-gradient(closest-side, #000 18%, transparent 92%);
+}
+
+/* The pink sun the basket stands in front of: the green's complement. */
+.plg-sun {
+  position: absolute;
+  top: -86px;
+  right: 50px;
+  width: 360px;
+  height: 360px;
+  border-radius: 50%;
+  background:
+    radial-gradient(circle at 34% 30%, color-mix(in srgb, #fff 55%, var(--plg-p1)) 0%, var(--plg-p1) 26%, var(--plg-p2) 64%, var(--plg-p3) 100%);
+  box-shadow:
+    0 0 0 18px color-mix(in srgb, var(--plg-p1) 22%, transparent),
+    0 0 0 40px color-mix(in srgb, var(--plg-p1) 10%, transparent);
+}
+
+/* A faint checked floor along the bottom, laid back in perspective. */
+.plg-floor {
+  position: absolute;
+  left: -20%;
+  right: -20%;
+  bottom: 0;
+  height: 52%;
+  background: repeating-conic-gradient(rgba(255, 255, 255, 0.09) 0 25%, transparent 0 50%) 0 0 / 38px 38px;
+  -webkit-mask: linear-gradient(to top, #000 0%, transparent 100%);
+  mask: linear-gradient(to top, #000 0%, transparent 100%);
+  transform: perspective(260px) rotateX(48deg);
+  transform-origin: 50% 100%;
+}
+
+/* Confetti: few, small, away from the words. */
+.plg-bit {
+  position: absolute;
+  display: block;
+}
+
+.plg-bit.is-ring {
+  top: 40%;
+  left: 58%;
+  width: 14px;
+  height: 14px;
+  border: 3px solid var(--plg-y2);
+  border-radius: 50%;
+}
+
+.plg-bit.is-ring2 {
+  bottom: 30%;
+  right: 4%;
+  width: 11px;
+  height: 11px;
+  border: 2.5px solid #fff;
+  border-radius: 50%;
+  opacity: 0.8;
+}
+
+.plg-bit.is-dot {
+  top: 12%;
+  right: 3%;
+  width: 9px;
+  height: 9px;
+  border-radius: 50%;
+  background: var(--plg-y2);
+}
+
+.plg-bit.is-tri {
+  bottom: 24%;
+  left: 60%;
+  width: 14px;
+  height: 13px;
+  background: var(--plg-p1);
+  clip-path: polygon(50% 0, 100% 100%, 0 100%);
+  transform: rotate(18deg);
+}
+
+.plg-bit.is-plus {
+  top: 54%;
+  left: 55%;
+  width: 14px;
+  height: 14px;
+  background:
+    linear-gradient(#fff, #fff) center / 100% 3px no-repeat,
+    linear-gradient(#fff, #fff) center / 3px 100% no-repeat;
+  opacity: 0.75;
+  transform: rotate(12deg);
+}
+
+.plg-bit.is-dash {
+  top: 12%;
+  left: 47%;
+  width: 18px;
+  height: 5px;
+  border-radius: 3px;
+  background: var(--plg-p1);
+  transform: rotate(-30deg);
+}
+
+/* The search, white on the green. */
+.plg-band-bar {
+  position: relative;
+  z-index: 4;
+  display: flex;
   align-items: center;
-  gap: 24px;
-  padding: 6px 40px 26px 48px;
-}
-
-.plg-hero-copy {
+  gap: 4px;
   max-width: 560px;
 }
 
-.plg-kicker {
-  display: inline-flex;
+.plg-search {
+  flex: 1;
+  min-width: 0;
+  display: flex;
   align-items: center;
-  gap: 6px;
-  margin: 0 0 12px;
-  padding: 5px 11px 5px 9px;
+  gap: 8px;
+  height: 48px;
+  padding: 0 5px 0 17px;
   border-radius: 999px;
-  background: color-mix(in srgb, var(--t-neutral-0, #fff) 75%, transparent);
-  box-shadow: inset 0 0 0 1px color-mix(in srgb, var(--t-primary-300, #6ee7b7) 55%, transparent);
-  color: var(--t-primary-700, #03684c);
-  font-size: 12.5px;
-  font-weight: 500;
-  letter-spacing: 0.02em;
+  background: var(--t-neutral-0, #fff);
+  box-shadow:
+    0 1px 0 rgba(255, 255, 255, 0.5) inset,
+    0 10px 22px -10px rgba(2, 30, 18, 0.55);
 }
 
-/* The title in true bold on every screen: the weight goes through a
-   variable on purpose (the build turns a plain 600–900 into medium on
-   phones, vite.config.js), set on the spans because phones' headings are
-   held at medium (index.css). */
+.plg-search-icon {
+  flex-shrink: 0;
+  color: var(--t-neutral-500, #636b78);
+}
+
+.plg-search input {
+  flex: 1;
+  min-width: 0;
+  height: 100%;
+  padding: 0;
+  border: 0;
+  outline: 0;
+  background: transparent;
+  color: var(--t-neutral-900, #111827);
+  font: inherit;
+  font-size: 15.5px;
+}
+
+.plg-search input::placeholder {
+  color: var(--t-neutral-500, #636b78);
+}
+
+.plg-search input::-webkit-search-cancel-button {
+  display: none;
+}
+
+.plg-search-clear {
+  flex-shrink: 0;
+  display: grid;
+  place-items: center;
+  width: 24px;
+  height: 24px;
+  padding: 0;
+  border: 0;
+  border-radius: 50%;
+  background: var(--t-neutral-200, #e5e7eb);
+  color: var(--t-neutral-600, #4b5563);
+  cursor: pointer;
+}
+
+.plg-search-go {
+  --w: 700;
+  flex-shrink: 0;
+  height: 38px;
+  padding: 0 20px;
+  border: 0;
+  border-radius: 999px;
+  background: linear-gradient(180deg, var(--plg-p2), var(--plg-p3));
+  box-shadow: inset 0 1px 0 rgba(255, 255, 255, 0.35);
+  color: #fff;
+  font: inherit;
+  font-size: 15px;
+  font-weight: var(--w);
+  cursor: pointer;
+  -webkit-tap-highlight-color: transparent;
+}
+
+.plg-search-go:hover {
+  filter: brightness(1.06);
+}
+
+.plg-search:focus-within {
+  box-shadow:
+    0 0 0 3px color-mix(in srgb, var(--plg-y2) 85%, transparent),
+    0 10px 22px -10px rgba(2, 30, 18, 0.55);
+}
+
+/* The words. Weights go through --w on purpose: the build turns a plain
+   600–900 into medium on phones (vite.config.js). */
+.plg-band-body {
+  position: relative;
+}
+
+.plg-band-copy {
+  position: relative;
+  z-index: 3;
+  max-width: 760px;
+  margin-top: 26px;
+}
+
 .plg-title {
   margin: 0;
-  color: var(--plg-ink);
+  color: #fff;
   line-height: 1;
 }
 
-.plg-title-brand,
-.plg-title-word {
+.plg-kicker {
+  --w: 700;
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  color: rgba(255, 255, 255, 0.94);
+  font-size: 15px;
+  font-weight: var(--w);
+  letter-spacing: 0.3em;
+}
+
+.plg-kicker::before,
+.plg-kicker::after {
+  content: '';
+  width: 22px;
+  height: 2.5px;
+  border-radius: 2px;
+  background: var(--plg-y2);
+}
+
+/* The huge word: white, with a deep green side under it (a stack of
+   shadows, each a step further down and right) and a soft cast shadow. */
+.plg-word {
+  --w: 800;
+  --d: var(--plg-ext);
+  display: block;
+  margin: 6px 0 0 -0.04em;
+  font-size: 128px;
+  font-weight: var(--w);
+  line-height: 0.86;
+  letter-spacing: -0.045em;
+  text-transform: uppercase;
+  white-space: nowrap;
+  text-shadow:
+    0.01em 0.012em 0 var(--d),
+    0.02em 0.024em 0 var(--d),
+    0.03em 0.036em 0 var(--d),
+    0.04em 0.048em 0 var(--d),
+    0.05em 0.06em 0 var(--d),
+    0.06em 0.072em 0 var(--plg-shade),
+    0.08em 0.12em 0.14em rgba(2, 24, 14, 0.42);
+}
+
+/* The yellow strip, a tab of paper pressed on with a hard edge under it. */
+.plg-strip {
+  --w: 500;
+  display: inline-flex;
+  align-items: center;
+  gap: 10px;
+  margin: 26px 0 0;
+  padding: 8px 18px;
+  border-radius: 10px;
+  background: linear-gradient(180deg, var(--plg-y1), var(--plg-y2));
+  box-shadow:
+    inset 0 1px 0 rgba(255, 255, 255, 0.6),
+    0 4px 0 var(--plg-y3),
+    0 12px 20px -8px rgba(2, 24, 14, 0.55);
+  color: var(--plg-ink);
+  font-size: 20px;
+  font-weight: var(--w);
+  line-height: 1.2;
+  white-space: nowrap;
+}
+
+.plg-strip-lead {
   --w: 800;
   font-weight: var(--w);
 }
 
-.plg-title-brand {
-  display: block;
-  margin-bottom: 6px;
-  color: var(--plg-green);
-  font-size: 22px;
-  letter-spacing: 0.04em;
-}
-
-.plg-title-word {
-  position: relative;
-  display: inline-block;
-  font-size: 58px;
-  letter-spacing: -0.02em;
-}
-
-/* A pink brush stroke under "Palengke". */
-.plg-title-word::after {
-  content: '';
-  position: absolute;
-  left: 2%;
-  right: -2%;
-  bottom: -0.08em;
-  z-index: -1;
-  height: 0.26em;
-  border-radius: 999px 60% 999px 40%;
-  background: linear-gradient(90deg, var(--t-accent-300, #f9a8d4), color-mix(in srgb, var(--t-accent-400, #f472b6) 70%, transparent));
-  opacity: 0.75;
-  transform: rotate(-1.5deg);
-}
-
-.plg-lede {
-  margin: 18px 0 0;
-  max-width: 470px;
-  color: var(--t-neutral-600, #4b5563);
-  font-size: 16.5px;
-  line-height: 1.5;
-}
-
-.plg-count {
-  display: inline-flex;
-  align-items: center;
-  gap: 5px;
-  min-height: 30px;
-  margin: 18px 0 0;
-  padding: 0 13px;
-  border-radius: 999px;
-  background: var(--t-neutral-0, #fff);
-  box-shadow: 0 1px 2px color-mix(in srgb, var(--t-primary-900, #064e3b) 10%, transparent);
-  color: var(--t-neutral-600, #4b5563);
-  font-size: 13.5px;
-}
-
-.plg-count strong {
-  color: var(--plg-green);
-  font-weight: 700;
-}
-
-.plg-hero-art {
-  position: relative;
-  display: grid;
-  place-items: center;
-  width: 300px;
-  margin-right: 12px;
-}
-
-/* A soft sun behind the basket. */
-.plg-hero-glow {
-  position: absolute;
-  width: 84%;
-  aspect-ratio: 1;
+.plg-strip-dot {
+  flex-shrink: 0;
+  width: 7px;
+  height: 7px;
   border-radius: 50%;
-  background: radial-gradient(circle at 45% 40%, color-mix(in srgb, var(--t-neutral-0, #fff) 95%, transparent) 0%, color-mix(in srgb, var(--t-warning-100, #fef3c7) 70%, transparent) 45%, transparent 70%);
+  background: var(--plg-p2);
+}
+
+/* The basket and its props, over the band's top edge. */
+.plg-band-art {
+  position: absolute;
+  z-index: 2;
+  top: -146px;
+  right: 18px;
+  width: 340px;
 }
 
 .plg-basket {
   position: relative;
   display: block;
+  width: 100%;
+  height: auto;
   animation: plg-bob 6s ease-in-out infinite;
+  will-change: transform;
 }
+
+.plg-prop {
+  position: absolute;
+  z-index: 1;
+  display: block;
+  height: auto;
+  transform: rotate(var(--r, 0deg));
+  animation: plg-float 5s ease-in-out infinite;
+  will-change: transform;
+}
+
+.plg-prop.is-spark { top: 4%; left: -6%; width: 40px; animation-delay: -1s; }
+.plg-prop.is-leaf { top: 48%; left: -16%; width: 70px; --r: -24deg; animation-delay: -2.5s; }
+.plg-prop.is-tomato { bottom: -12%; right: 2%; width: 64px; animation-delay: -0.6s; }
+.plg-prop.is-lime { bottom: -9%; left: 12%; width: 44px; animation-delay: -3.4s; }
+.plg-prop.is-spark2 { top: 14%; right: -2%; width: 26px; animation-delay: -1.8s; }
 
 @keyframes plg-bob {
-  0%, 100% { transform: translateY(0) rotate(0deg); }
-  50% { transform: translateY(-4px) rotate(-1deg); }
+  0%, 100% { transform: translateY(0) rotate(-2deg); }
+  50% { transform: translateY(-6px) rotate(-3deg); }
 }
 
-/* ── Sort chips and the town ─────────────────────────────────────────── */
-.plg-tools {
+@keyframes plg-float {
+  0%, 100% { transform: translateY(0) rotate(var(--r, 0deg)); }
+  50% { transform: translateY(-7px) rotate(calc(var(--r, 0deg) + 6deg)); }
+}
+
+/* ── The sheet under the band: cards, best sellers, the grid ─────────── */
+.plg-sheet {
+  position: relative;
+  z-index: 1;
+  margin-top: -50px;
+}
+
+/* The cards: a big mark, a coloured pill. */
+.plg-cards {
+  position: relative;
   display: flex;
+  justify-content: center;
+  align-items: stretch;
+  gap: 12px;
+  padding: 0 16px 6px;
+}
+
+.plg-card {
+  position: relative;
+  flex: 0 0 136px;
+  display: flex;
+  flex-direction: column;
   align-items: center;
-  gap: 10px;
-  margin: 18px 0 14px;
-}
-
-.plg-sorts {
-  display: flex;
   gap: 8px;
-}
-
-.plg-chip {
-  display: inline-flex;
-  align-items: center;
-  height: 36px;
-  padding: 0 16px;
+  padding: 12px 8px 9px;
   border: 0;
-  border-radius: 999px;
+  border-radius: 20px;
   background: var(--t-neutral-0, #fff);
-  box-shadow: inset 0 0 0 1px var(--plg-line);
-  color: var(--t-neutral-700, #374151);
+  box-shadow:
+    0 1px 2px rgba(5, 46, 31, 0.08),
+    0 12px 24px -12px rgba(5, 46, 31, 0.35);
+  color: inherit;
   font: inherit;
-  font-size: 14px;
-  font-weight: 500;
-  white-space: nowrap;
   cursor: pointer;
   -webkit-tap-highlight-color: transparent;
-  transition: background 0.15s, color 0.15s, box-shadow 0.15s;
+  transition: transform 0.18s ease, box-shadow 0.18s ease;
 }
 
-.plg-chip:hover {
-  box-shadow: inset 0 0 0 1px var(--t-primary-300, #6ee7b7);
-  color: var(--plg-green);
+.plg-card:hover {
+  transform: translateY(-3px);
 }
 
-.plg-chip.is-on {
-  background: var(--plg-soft);
-  box-shadow: inset 0 0 0 1.5px var(--t-primary-500, #10b981);
-  color: var(--t-primary-700, #03684c);
+.plg-card-art {
+  display: grid;
+  place-items: center;
+  height: 66px;
 }
 
-.plg-chip:focus-visible,
+.plg-card-art svg {
+  display: block;
+}
+
+.plg-card-pill {
+  --w: 700;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  width: 100%;
+  height: 30px;
+  margin-top: auto;
+  padding: 3px 6px;
+  border-radius: 15px;
+  background: linear-gradient(180deg, var(--c1), var(--c2));
+  box-shadow: inset 0 1px 0 rgba(255, 255, 255, 0.35);
+  color: #fff;
+  font-size: 13.5px;
+  font-weight: var(--w);
+  line-height: 1.05;
+  text-align: center;
+  -webkit-hyphens: manual;
+  hyphens: manual;
+}
+
+.plg-card.is-on {
+  background: color-mix(in srgb, var(--c1) 13%, var(--t-neutral-0, #fff));
+  box-shadow:
+    0 0 0 2.5px var(--c2),
+    0 12px 24px -12px color-mix(in srgb, var(--c2) 70%, transparent);
+  transform: translateY(-3px);
+}
+
+.plg-card-check {
+  position: absolute;
+  top: 7px;
+  right: 7px;
+  display: grid;
+  place-items: center;
+  width: 20px;
+  height: 20px;
+  border-radius: 50%;
+  background: var(--c2);
+  color: #fff;
+}
+
+.plg-cards-gap {
+  flex: 0 0 1px;
+  margin: 26px 4px;
+  background: var(--t-neutral-200, #e5e7eb);
+}
+
+.plg-card:focus-visible,
 .plg-btn:focus-visible,
-.plg-round:focus-visible {
-  outline: 2px solid var(--plg-green);
+.plg-round:focus-visible,
+.plg-search-go:focus-visible,
+.plg-rank-card:focus-visible {
+  outline: 2px solid var(--t-primary-600, #047857);
   outline-offset: 2px;
+}
+
+/* ── Top Palengke ────────────────────────────────────────────────────── */
+.plg-top {
+  margin: 26px 0 0;
+  padding: 22px 28px 26px;
+  border-radius: 24px;
+  background:
+    radial-gradient(60% 120% at 50% 0%, color-mix(in srgb, var(--plg-gold) 12%, transparent), transparent 70%),
+    var(--t-neutral-0, #fff);
+  box-shadow: inset 0 0 0 1px var(--t-neutral-150, #eef0f3);
+}
+
+.plg-top-head {
+  display: flex;
+  align-items: baseline;
+  justify-content: center;
+  gap: 12px;
+}
+
+.plg-top-head h2 {
+  margin: 0;
+  color: var(--t-primary-700, #03684c);
+  font-size: 26px;
+  letter-spacing: -0.015em;
+}
+
+.plg-top-head h2 span {
+  --w: 800;
+  font-weight: var(--w);
+}
+
+.plg-top-head > span {
+  color: var(--t-neutral-500, #636b78);
+  font-size: 14px;
+}
+
+.plg-top-row {
+  display: grid;
+  grid-template-columns: 1fr 1.16fr 1fr;
+  align-items: end;
+  gap: 18px;
+  max-width: 680px;
+  margin: 22px auto 0;
+  padding: 0;
+  list-style: none;
+}
+
+.plg-rank { min-width: 0; }
+.plg-rank.is-1 { order: 2; }
+.plg-rank.is-2 { order: 1; }
+.plg-rank.is-3 { order: 3; }
+
+.plg-rank-card {
+  position: relative;
+  display: flex;
+  flex-direction: column;
+  border-radius: 18px;
+  background: var(--t-neutral-0, #fff);
+  box-shadow:
+    0 0 0 1px var(--t-neutral-150, #eef0f3),
+    0 10px 22px -14px rgba(5, 46, 31, 0.45);
+  color: inherit;
+  text-decoration: none;
+  transition: transform 0.18s ease;
+}
+
+.plg-rank-card:hover {
+  transform: translateY(-3px);
+}
+
+.plg-rank.is-1 .plg-rank-card {
+  box-shadow:
+    0 0 0 2.5px var(--plg-gold),
+    0 16px 30px -14px color-mix(in srgb, var(--plg-gold) 70%, transparent);
+}
+
+.plg-rank-photo {
+  display: block;
+  overflow: hidden;
+  aspect-ratio: 1;
+  border-radius: 18px 18px 0 0;
+  background: var(--t-neutral-100, #f3f4f6);
+}
+
+.plg-rank-photo img,
+.plg-rank-photo picture,
+.plg-rank-photo .product-image-fallback {
+  display: block;
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+}
+
+/* The ribbons: gold, silver and bronze, a swallowtail at the end. */
+.plg-ribbon {
+  --w: 700;
+  position: absolute;
+  top: -8px;
+  left: -6px;
+  z-index: 1;
+  display: inline-flex;
+  align-items: baseline;
+  gap: 4px;
+  padding: 5px 18px 6px 11px;
+  border-radius: 8px 2px 2px 8px;
+  background: linear-gradient(180deg, #f1f5f9, #b8c2cf);
+  box-shadow: inset 0 1px 0 rgba(255, 255, 255, 0.7);
+  color: #334155;
+  font-size: 13px;
+  font-weight: var(--w);
+  line-height: 1;
+  clip-path: polygon(0 0, 100% 0, calc(100% - 9px) 50%, 100% 100%, 0 100%);
+}
+
+.plg-ribbon-n {
+  --w: 800;
+  font-size: 18px;
+  font-weight: var(--w);
+}
+
+.plg-rank.is-1 .plg-ribbon {
+  background: linear-gradient(180deg, #ffe680, #f5b301);
+  color: #5a3a00;
+  font-size: 14px;
+}
+
+.plg-rank.is-1 .plg-ribbon-n { font-size: 21px; }
+
+.plg-rank.is-3 .plg-ribbon {
+  background: linear-gradient(180deg, #fbd0a6, #d98544);
+  color: #5b2a0a;
+}
+
+.plg-rank-info {
+  display: flex;
+  flex-direction: column;
+  gap: 3px;
+  padding: 10px 12px 12px;
+}
+
+.plg-rank-name {
+  display: -webkit-box;
+  overflow: hidden;
+  color: var(--t-neutral-800, #1f2937);
+  font-size: 14px;
+  line-height: 1.3;
+  -webkit-line-clamp: 2;
+  -webkit-box-orient: vertical;
+  min-height: 2.6em;
+}
+
+.plg-rank-price {
+  --w: 700;
+  color: var(--t-primary-700, #03684c);
+  font-size: 16px;
+  font-weight: var(--w);
+}
+
+.plg-rank-sold {
+  color: var(--t-neutral-500, #636b78);
+  font-size: 12.5px;
+}
+
+/* ── The grid's heading and the town ─────────────────────────────────── */
+.plg-listhead {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+  margin: 28px 0 14px;
+}
+
+.plg-listhead-text {
+  display: flex;
+  align-items: baseline;
+  flex-wrap: wrap;
+  gap: 4px 12px;
+  min-width: 0;
+}
+
+.plg-listhead h2 {
+  --w: 700;
+  margin: 0;
+  overflow: hidden;
+  color: var(--t-neutral-900, #111827);
+  font-size: 21px;
+  font-weight: var(--w);
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.plg-count {
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+  margin: 0;
+  color: var(--t-neutral-500, #636b78);
+  font-size: 14px;
+}
+
+.plg-count strong {
+  --w: 700;
+  color: var(--t-primary-700, #03684c);
+  font-weight: var(--w);
 }
 
 .plg-town-wrap {
   position: relative;
   flex-shrink: 0;
-  margin-left: auto;
 }
 
 .plg-town-pin {
@@ -278,12 +769,12 @@
 
 .plg-town-wrap .plg-town {
   min-width: 150px;
-  min-height: 36px;
-  height: 36px;
+  min-height: 38px;
+  height: 38px;
   padding: 0 12px 0 32px;
   border-radius: 999px;
   background: var(--t-neutral-0, #fff);
-  box-shadow: inset 0 0 0 1px var(--plg-line);
+  box-shadow: inset 0 0 0 1px var(--t-neutral-200, #e5e7eb);
   color: var(--t-neutral-700, #374151);
   font-size: 14px;
   font-weight: 500;
@@ -291,7 +782,7 @@
 }
 
 .plg-town-wrap.is-on .plg-town {
-  background: var(--plg-soft);
+  background: var(--t-primary-50, #ecfdf5);
   box-shadow: inset 0 0 0 1.5px var(--t-primary-500, #10b981);
   color: var(--t-primary-700, #03684c);
 }
@@ -308,27 +799,63 @@
   gap: 7px;
 }
 
-/* ── Empty and error ─────────────────────────────────────────────────── */
+/* ── Empty and error: a card with the basket on a little green sun ───── */
 .plg-state {
   display: flex;
   flex-direction: column;
   align-items: center;
-  max-width: 560px;
-  margin: 12px auto 0;
-  padding: 36px 24px 40px;
-  border-radius: 18px;
+  max-width: 580px;
+  margin: 8px auto 0;
+  padding: 30px 24px 36px;
+  border-radius: 24px;
   background: var(--t-neutral-0, #fff);
+  box-shadow: inset 0 0 0 1px var(--t-neutral-150, #eef0f3);
   text-align: center;
 }
 
 .plg-state-art {
+  position: relative;
   display: grid;
   place-items: center;
-  width: 168px;
-  height: 168px;
-  margin-bottom: 14px;
+  width: 180px;
+  height: 160px;
+  margin-bottom: 12px;
+}
+
+.plg-state-art svg {
+  position: relative;
+}
+
+.plg-state-sun {
+  position: absolute;
+  inset: 12px 18px 4px;
   border-radius: 50%;
-  background: radial-gradient(circle at 40% 35%, var(--t-neutral-0, #fff) 0%, var(--plg-soft) 70%);
+  background:
+    radial-gradient(circle at 36% 30%, color-mix(in srgb, #fff 40%, var(--plg-b1)) 0%, var(--plg-b1) 30%, var(--plg-b2) 75%, var(--plg-b3) 100%);
+  box-shadow: 0 0 0 10px color-mix(in srgb, var(--plg-b1) 14%, transparent);
+}
+
+.plg-state-sun::before,
+.plg-state-sun::after {
+  content: '';
+  position: absolute;
+  border-radius: 50%;
+}
+
+.plg-state-sun::before {
+  top: 2px;
+  right: -8px;
+  width: 16px;
+  height: 16px;
+  border: 3px solid var(--plg-p2);
+}
+
+.plg-state-sun::after {
+  bottom: 18px;
+  left: -10px;
+  width: 10px;
+  height: 10px;
+  background: var(--plg-y2);
 }
 
 .plg-state-warn {
@@ -337,9 +864,11 @@
 }
 
 .plg-state h2 {
+  --w: 700;
   margin: 0;
   color: var(--t-neutral-900, #111827);
   font-size: 20px;
+  font-weight: var(--w);
   line-height: 1.3;
 }
 
@@ -378,13 +907,8 @@
 }
 
 .plg-btn.is-primary {
-  background: var(--t-primary-600, #047857);
+  background: linear-gradient(180deg, var(--plg-b1) -40%, var(--plg-b2) 70%);
   color: #fff;
-}
-
-:root[data-theme='dark'] .plg-btn.is-primary {
-  background: var(--t-primary-700, #03684c);
-  color: var(--t-neutral-0, #111);
 }
 
 .plg-btn.is-primary:hover {
@@ -419,19 +943,26 @@
 }
 
 /* ── Narrower computers and tablets ──────────────────────────────────── */
+@media (max-width: 1200px) {
+  .plg-word { font-size: 112px; }
+  .plg-band-art { width: 300px; right: 8px; top: -96px; }
+  .plg-sun { width: 320px; height: 320px; right: 30px; }
+}
+
 @media (max-width: 1100px) {
   .plg-grid,
   .plg .sk-cards {
     grid-template-columns: repeat(4, minmax(0, 1fr));
   }
 
-  .plg-title-word {
-    font-size: 50px;
-  }
-
-  .plg-hero-art {
-    width: 250px;
-  }
+  .plg-band { padding: 24px 36px 84px; }
+  .plg-band-bar { max-width: 56%; }
+  .plg-card-pill.is-long { font-size: 11.5px; line-height: 0.98; }
+  .plg-word { font-size: 96px; }
+  .plg-strip { font-size: 17px; }
+  .plg-band-art { width: 260px; top: -70px; }
+  .plg-cards { justify-content: flex-start; overflow-x: auto; scrollbar-width: none; padding-top: 4px; }
+  .plg-card { flex-basis: 112px; }
 }
 
 @media (max-width: 900px) {
@@ -440,9 +971,8 @@
     grid-template-columns: repeat(3, minmax(0, 1fr));
   }
 
-  .plg-hero-body {
-    padding: 14px 32px 28px;
-  }
+  .plg-word { font-size: 80px; }
+  .plg-band-art { width: 220px; top: -40px; }
 }
 
 /* ── Phones ──────────────────────────────────────────────────────────── */
@@ -457,129 +987,309 @@
     padding: 0;
   }
 
-  .plg-hero {
-    padding-top: env(safe-area-inset-top, 0px);
-    border-radius: 0 0 22px 22px;
-    box-shadow: none;
+  /* Full width from the top of the screen, under the status bar. */
+  .plg-band {
+    min-height: 0;
+    padding: env(safe-area-inset-top, 0px) 0 46px;
   }
 
-  .plg-awning {
-    --stripe: 26px;
-    --band: 10px;
+  .plg-band-bg {
+    border-radius: 0;
   }
 
-  .plg-hero-bar {
-    display: flex;
-    align-items: center;
-    justify-content: space-between;
-    height: 44px;
-    margin-top: 2px;
-    padding: 0 6px;
+  .plg-rays {
+    top: calc(120px - 420px);
+    left: calc(100% - 92px - 420px);
+    width: 840px;
+    height: 840px;
+  }
+
+  .plg-sun {
+    top: 40px;
+    right: -46px;
+    width: 196px;
+    height: 196px;
+    box-shadow:
+      0 0 0 12px color-mix(in srgb, var(--plg-p1) 20%, transparent),
+      0 0 0 26px color-mix(in srgb, var(--plg-p1) 9%, transparent);
+  }
+
+  .plg-floor {
+    height: 46%;
+    background-size: 26px 26px;
+  }
+
+  .plg-bit.is-ring { top: 30%; left: 44%; width: 11px; height: 11px; border-width: 2.5px; }
+  .plg-bit.is-dot { top: auto; bottom: 22%; right: auto; left: 62%; width: 7px; height: 7px; }
+  .plg-bit.is-tri { bottom: auto; top: 26%; left: 6%; width: 10px; height: 9px; }
+  .plg-bit.is-plus { top: 25%; left: 30%; width: 11px; height: 11px; }
+  .plg-bit.is-dash { top: auto; bottom: 14%; left: 3%; width: 13px; height: 4px; }
+  .plg-bit.is-ring2 { bottom: auto; top: 30%; right: auto; left: 52%; width: 8px; height: 8px; border-width: 2px; }
+
+  /* Back, the search, ⋯ in one row. */
+  .plg-band-bar {
+    max-width: none;
+    height: 54px;
+    gap: 0;
+    padding: 0 2px 0 4px;
   }
 
   .plg-round {
+    flex-shrink: 0;
     display: grid;
     place-items: center;
     width: 40px;
     height: 40px;
+    padding: 0;
     border: 0;
     border-radius: 50%;
     background: none;
-    color: var(--t-neutral-900, #111827);
+    color: #fff;
     cursor: pointer;
     -webkit-tap-highlight-color: transparent;
   }
 
   .plg-round:active {
-    background: color-mix(in srgb, var(--t-neutral-900, #111827) 8%, transparent);
+    background: rgba(255, 255, 255, 0.16);
   }
 
-  .plg-hero-body {
-    grid-template-columns: minmax(0, 1fr) 124px;
+  .plg-band .page-menu-btn {
+    color: #fff;
+  }
+
+  .plg-search {
+    height: 40px;
     gap: 6px;
-    padding: 0 14px 18px 18px;
+    margin: 0 2px;
+    padding: 0 4px 0 12px;
   }
 
-  .plg-kicker {
-    display: none;
-  }
-
-  .plg-title-brand {
-    margin-bottom: 4px;
+  .plg-search input {
     font-size: 15px;
   }
 
-  .plg-title-word {
-    font-size: 36px;
-  }
-
-  .plg-lede {
-    margin-top: 12px;
-    font-size: 14px;
-    line-height: 1.45;
-  }
-
-  .plg-count {
-    min-height: 26px;
-    margin-top: 12px;
-    padding: 0 11px;
-    font-size: 12.5px;
-  }
-
-  .plg-hero-art {
-    width: 124px;
-    margin: 0;
-    align-self: end;
-  }
-
-  .plg-hero-glow {
-    width: 118px;
-  }
-
-  /* The chips stay at the top of the screen while the grid scrolls. */
-  .plg-tools {
-    position: sticky;
-    top: 0;
-    z-index: 30;
-    gap: 8px;
-    margin: 0;
-    padding: calc(10px + env(safe-area-inset-top, 0px)) 12px 10px;
-    margin-top: calc(-1 * env(safe-area-inset-top, 0px));
-    overflow-x: auto;
-    background: color-mix(in srgb, var(--t-neutral-100, #f3f4f6) 88%, transparent);
-    -webkit-backdrop-filter: blur(14px) saturate(1.4);
-    backdrop-filter: blur(14px) saturate(1.4);
-    scrollbar-width: none;
-  }
-
-  .plg-tools::-webkit-scrollbar {
-    display: none;
-  }
-
-  .plg-sorts {
-    gap: 6px;
-  }
-
-  .plg-chip {
-    height: 34px;
-    padding: 0 14px;
+  .plg-search-go {
+    height: 32px;
+    padding: 0 13px;
     font-size: 13.5px;
   }
 
-  .plg-chip:hover {
-    box-shadow: inset 0 0 0 1px var(--plg-line);
-    color: var(--t-neutral-700, #374151);
+  .plg-band-copy {
+    max-width: none;
+    margin-top: 14px;
+    padding: 0 14px 0 16px;
   }
 
-  .plg-chip.is-on:hover {
-    box-shadow: inset 0 0 0 1.5px var(--t-primary-500, #10b981);
-    color: var(--t-primary-700, #03684c);
+  .plg-kicker {
+    gap: 7px;
+    font-size: 11.5px;
+    letter-spacing: 0.28em;
+  }
+
+  .plg-kicker::before,
+  .plg-kicker::after {
+    width: 14px;
+    height: 2px;
+  }
+
+  /* The word fills the width at 360–430 (measured: 0.99 of the font size
+     per letter pair); the basket stands behind its last letters. */
+  .plg-word {
+    margin-top: 4px;
+    font-size: clamp(46px, 16.2vw, 72px);
+  }
+
+  .plg-strip {
+    gap: 7px;
+    margin-top: 16px;
+    padding: 6px 11px;
+    border-radius: 8px;
+    font-size: clamp(12px, 3.45vw, 14.5px);
+    box-shadow:
+      inset 0 1px 0 rgba(255, 255, 255, 0.6),
+      0 3px 0 var(--plg-y3),
+      0 8px 14px -6px rgba(2, 24, 14, 0.55);
+  }
+
+  .plg-strip-dot {
+    width: 5px;
+    height: 5px;
+  }
+
+  .plg-band-art {
+    top: -40px;
+    right: -6px;
+    width: min(46vw, 196px);
+  }
+
+  .plg-prop.is-spark { top: 2%; left: -10%; width: 24px; }
+  .plg-prop.is-leaf { top: 30%; left: -16%; width: 34px; }
+  .plg-prop.is-tomato { bottom: -9%; right: 4%; width: 36px; }
+  .plg-prop.is-lime { bottom: -5%; left: 22%; width: 26px; }
+  .plg-prop.is-spark2 { top: 10%; right: 2%; width: 16px; }
+
+  /* The sheet: grey with round top corners over the band's bottom. */
+  .plg-sheet {
+    margin-top: -22px;
+    padding-top: 12px;
+    border-radius: 22px 22px 0 0;
+    background: var(--t-neutral-100, #f3f4f6);
+  }
+
+  .plg-cards {
+    justify-content: flex-start;
+    gap: 8px;
+    padding: 2px 12px 10px;
+    overflow-x: auto;
+    scroll-snap-type: x proximity;
+    scroll-padding: 0 12px;
+    scrollbar-width: none;
+  }
+
+  .plg-cards::-webkit-scrollbar {
+    display: none;
+  }
+
+  .plg-card {
+    flex-basis: 80px;
+    gap: 5px;
+    padding: 8px 5px 6px;
+    border-radius: 16px;
+    scroll-snap-align: start;
+    box-shadow:
+      0 1px 2px rgba(5, 46, 31, 0.07),
+      0 6px 14px -8px rgba(5, 46, 31, 0.3);
+  }
+
+  .plg-card:hover {
+    transform: none;
+  }
+
+  .plg-card.is-on {
+    transform: none;
+  }
+
+  .plg-card-art {
+    height: 52px;
+  }
+
+  .plg-card-pill {
+    height: 28px;
+    padding: 2px 5px;
+    border-radius: 13px;
+    font-size: 12px;
+  }
+
+  .plg-card-pill.is-long {
+    font-size: 10.5px;
+  }
+
+  .plg-card-check {
+    top: 4px;
+    right: 4px;
+    width: 17px;
+    height: 17px;
+  }
+
+  .plg-cards-gap {
+    margin: 22px 2px;
+  }
+
+  .plg-top {
+    margin: 4px 10px 0;
+    padding: 14px 10px 14px;
+    border-radius: 20px;
+  }
+
+  .plg-top-head {
+    justify-content: space-between;
+    padding: 0 4px;
+  }
+
+  .plg-top-head h2 {
+    font-size: 20px;
+  }
+
+  .plg-top-head > span {
+    font-size: 12.5px;
+  }
+
+  .plg-top-row {
+    gap: 7px;
+    margin-top: 16px;
+  }
+
+  .plg-rank-card {
+    border-radius: 14px;
+  }
+
+  .plg-rank-card:hover {
+    transform: none;
+  }
+
+  .plg-rank-photo {
+    border-radius: 14px 14px 0 0;
+  }
+
+  .plg-ribbon {
+    top: -7px;
+    left: -4px;
+    padding: 4px 13px 4px 7px;
+    font-size: 11px;
+    gap: 3px;
+    clip-path: polygon(0 0, 100% 0, calc(100% - 7px) 50%, 100% 100%, 0 100%);
+  }
+
+  .plg-ribbon-n { font-size: 14px; }
+  .plg-rank.is-1 .plg-ribbon { font-size: 12px; }
+  .plg-rank.is-1 .plg-ribbon-n { font-size: 17px; }
+
+  .plg-rank-info {
+    gap: 1px;
+    padding: 6px 7px 8px;
+  }
+
+  .plg-rank-name {
+    font-size: 12.5px;
+  }
+
+  .plg-rank-price {
+    font-size: 13.5px;
+  }
+
+  .plg-rank-sold {
+    font-size: 11px;
+  }
+
+  /* The grid's heading stays at the top of the screen while it scrolls. */
+  .plg-listhead {
+    position: sticky;
+    top: 0;
+    z-index: 5;
+    gap: 8px;
+    margin: calc(6px - env(safe-area-inset-top, 0px)) 0 0;
+    padding: calc(8px + env(safe-area-inset-top, 0px)) 12px 8px 14px;
+    background: var(--t-neutral-100, #f3f4f6);
+  }
+
+  .plg-listhead-text {
+    flex-direction: column;
+    gap: 0;
+  }
+
+  .plg-listhead h2 {
+    max-width: 100%;
+    font-size: 16.5px;
+  }
+
+  .plg-count {
+    font-size: 12.5px;
   }
 
   .plg-town-wrap .plg-town {
     min-width: 0;
-    height: 34px;
-    min-height: 34px;
+    height: 36px;
+    min-height: 36px;
     font-size: 13.5px;
   }
 
@@ -592,7 +1302,7 @@
 
   .plg-state {
     margin: 4px 12px 0;
-    padding: 28px 18px 30px;
+    padding: 24px 18px 28px;
   }
 
   .plg-state h2 {
@@ -600,43 +1310,26 @@
   }
 }
 
-@media (max-width: 360px) {
-  .plg-title-word {
-    font-size: 31px;
+/* The narrowest phones: room for the whole hint in the search. */
+@media (max-width: 374px) {
+  .plg-search input {
+    font-size: 14px;
   }
 
-  .plg-hero-body {
-    grid-template-columns: minmax(0, 1fr) 100px;
-  }
-
-  .plg-hero-art,
-  .plg-hero-glow {
-    width: 100px;
+  .plg-search-go {
+    padding: 0 11px;
+    font-size: 13px;
   }
 }
 
 @media (prefers-reduced-motion: reduce) {
-  .plg-basket {
+  .plg-basket,
+  .plg-prop {
     animation: none;
   }
 
-  .plg-chip {
+  .plg-card,
+  .plg-rank-card {
     transition: none;
   }
-}
-
-/* Dark: the awning's light stripes and the sun behind the basket keep
-   their light (a mirrored cream or amber would turn brown). */
-:root[data-theme='dark'] .plg-awning::before {
-  background:
-    linear-gradient(180deg, rgba(255, 255, 255, 0.08), transparent 60%),
-    repeating-linear-gradient(
-      90deg,
-      var(--t-primary-500, #10b981) 0 var(--stripe),
-      color-mix(in srgb, var(--t-neutral-800, #1f2937) 80%, var(--t-primary-500, #10b981)) var(--stripe) calc(var(--stripe) * 2)
-    );
-}
-
-:root[data-theme='dark'] .plg-hero-glow {
-  background: radial-gradient(circle at 45% 40%, color-mix(in srgb, var(--t-primary-400, #34d399) 30%, transparent) 0%, color-mix(in srgb, var(--t-primary-400, #34d399) 10%, transparent) 45%, transparent 70%);
 }
