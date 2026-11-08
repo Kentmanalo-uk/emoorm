@@ -8,7 +8,7 @@
  *
  * The server runs it once a day itself (backend/server.js, job "backup"), since
  * Hostinger cron jobs do not run on this account. Copy the newest folder
- * somewhere off the server now and then (see HOSTINGER.md, "Backups").
+ * somewhere off the server now and then (see docs/HOSTINGER.md, "Backups").
  *
  * Off the server, automatically: with BACKUP_EMAIL_TO and BACKUP_ENCRYPTION_KEY
  * (32+ characters) set, the database dump is also emailed there, encrypted

@@ -1,5 +1,5 @@
 /*
- * The green Emoorm logo (icon/logo-green.svg, 2048 × 2048 grid), part by
+ * The green Emoorm logo (media/brand/logos/logo-green.svg, 2048 × 2048 grid), part by
  * part, for the animated loader (components/BrandLoader). Generated from the
  * SVG; edit the SVG, not this file.
  */

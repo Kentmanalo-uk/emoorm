@@ -8,7 +8,7 @@ const ROOT = path.resolve(__dirname, '..', '..');
 const sharp = require(path.join(ROOT, 'backend', 'node_modules', 'sharp'));
 const OUT = path.join(ROOT, 'web/public/splash');
 fs.mkdirSync(OUT, { recursive: true });
-const logo = fs.readFileSync(path.join(ROOT, 'icon/logo-green.svg'));
+const logo = fs.readFileSync(path.join(ROOT, 'media/brand/logos/logo-green.svg'));
 
 // CSS width × height (portrait) and pixel ratio.
 const PHONES = [

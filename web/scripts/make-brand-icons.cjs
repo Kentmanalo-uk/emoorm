@@ -1,10 +1,10 @@
 /**
- * Makes every E-MOORM brand icon from the two official logos in icon/:
+ * Makes every E-MOORM brand icon from the two official logos in media/brand/logos/:
  *
- *   icon/logo-green.svg  the green logo, drawn on white: for white and light
+ *   media/brand/logos/logo-green.svg  the green logo, drawn on white: for white and light
  *                        backgrounds (site header, footer, admin, receipts,
  *                        sign-in pages, splash screens, the browser tab)
- *   icon/logo-white.svg  the white logo, drawn on the brand green: for app
+ *   media/brand/logos/logo-white.svg  the white logo, drawn on the brand green: for app
  *                        icons and anything else on green
  *
  * Each file carries its own background (a full-size rect). App icons keep the
@@ -36,7 +36,7 @@ const path = require('path');
 const ROOT = path.resolve(__dirname, '..', '..');
 const sharp = require(path.join(ROOT, 'backend', 'node_modules', 'sharp'));
 
-const SRC = path.join(ROOT, 'icon');
+const SRC = path.join(ROOT, 'media', 'brand', 'logos');
 const GREEN_LOGO = path.join(SRC, 'logo-green.svg');
 const WHITE_LOGO = path.join(SRC, 'logo-white.svg');
 const PUBLIC = path.join(ROOT, 'web', 'public');
@@ -337,7 +337,7 @@ async function android(L) {
   }
   // The green layer as a drawable, so it is sharp at every size.
   await save(path.join(APK_RES, 'drawable', 'ic_launcher_background.xml'), Buffer.from(`<?xml version="1.0" encoding="utf-8"?>
-<!-- The app icon's green: the white logo's own background (icon/logo-white.svg). -->
+<!-- The app icon's green: the white logo's own background (media/brand/logos/logo-white.svg). -->
 <shape xmlns:android="http://schemas.android.com/apk/res/android" android:shape="rectangle">
     <solid android:color="${brand}" />
 </shape>

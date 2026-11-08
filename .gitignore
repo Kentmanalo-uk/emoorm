@@ -20,17 +20,20 @@ production-uploads/
 # web/public/downloads/ (apk/publish.cjs puts it there).
 apk/
 
-# Kept on this PC only, not part of the app: promo videos, manuals,
-# graphics, logo sources, decks, screenshots and the sister project.
-documentation/
-docs/
-graphics/
-icon/
+# Kept on this PC only, not part of the app: media/ (banners, posts,
+# videos and their engine; see media/README.md) except the Play Store
+# listing (the logo sources are media/brand/logos), docs/private/ (manuals,
+# decks, notes, screenshots) and the sister project. docs/ itself (deployment, hosting,
+# handoff, overview) is in git.
+/media/*
+!/media/store-listing/
+docs/private/
 /moormove/
+# Moved into media/ and docs/ on 8 Nov 2026 (media/MOVES.md); listed while
+# anything is left behind in them.
+documentation/
+graphics/
 ppt/
-screenshot/
 # Word and Excel lock files left while a document is open.
 ~$*
 
-# React Native APK builds: too big for GitHub (published from web/public/downloads)
-/apk-react-native/

@@ -56,7 +56,7 @@ const inspect = () => {
   for (const [name, dir] of [['UPLOAD_DIR', config.upload.uploadDir], ['PRIVATE_UPLOAD_DIR', config.upload.privateUploadDir]]) {
     const abs = path.resolve(dir);
     if (!process.env[name] || abs === appDir || abs.startsWith(appDir + path.sep)) {
-      warnings.push(`${name} is ${process.env[name] ? `inside the app (${abs})` : 'not set'}. Uploaded files there are lost on the next deploy: point it at a folder outside the app (see HOSTINGER.md).`);
+      warnings.push(`${name} is ${process.env[name] ? `inside the app (${abs})` : 'not set'}. Uploaded files there are lost on the next deploy: point it at a folder outside the app (see docs/HOSTINGER.md).`);
     }
   }
 

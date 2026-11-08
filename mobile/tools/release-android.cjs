@@ -9,7 +9,7 @@
 //    the APK stays under GitHub's 100 MB file limit).
 // 3. Signs with the release key in ../apk/keystore (read only; its password
 //    is read from keystore.properties and never printed) and verifies it.
-// 4. Copies it to ../apk-react-native/ and web/public/downloads/, removes the
+// 4. Copies it to ../apk/releases/ and web/public/downloads/, removes the
 //    old download, and rewrites web/src/data/androidApp.json (size, hashes,
 //    date). The What's New notes are kept as they are; edit them by hand.
 //
@@ -89,7 +89,7 @@ if (!fs.existsSync(unsigned)) throw new Error(`no build at ${unsigned}`);
 // is left is to put it where the APKs go and read the certificate back
 // out of it to prove which key that was.
 if (AAB) {
-  const outDir = path.join(ROOT, 'apk-react-native');
+  const outDir = path.join(ROOT, 'apk', 'releases');
   fs.mkdirSync(outDir, { recursive: true });
   // Named with the versionCode as well, because Play refuses a second
   // upload of the same one and that is the number to check.
@@ -120,7 +120,7 @@ const props = Object.fromEntries(fs.readFileSync(path.join(keyDir, 'keystore.pro
   .split(/\r?\n/).filter((l) => l && !l.startsWith('#') && l.includes('='))
   .map((l) => [l.slice(0, l.indexOf('=')).trim(), l.slice(l.indexOf('=') + 1).trim()]));
 const store = path.isAbsolute(props.storeFile) ? props.storeFile : path.join(keyDir, props.storeFile);
-const outDir = path.join(ROOT, 'apk-react-native');
+const outDir = path.join(ROOT, 'apk', 'releases');
 fs.mkdirSync(outDir, { recursive: true });
 const signed = path.join(outDir, `E-MOORM-${version}.apk`);
 const aligned = path.join(outDir, `E-MOORM-${version}-aligned.apk`);

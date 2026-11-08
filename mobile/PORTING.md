@@ -17,16 +17,16 @@ at phone size (390 px wide), pixel for pixel where React Native allows.
 
 ## The screenshots: what each screen must look like
 
-`screenshot/` (repo root) holds a full-page phone screenshot (390 × 844 at 2×)
+`docs/private/screenshots/` holds a full-page phone screenshot (390 × 844 at 2×)
 of every website page, by who is viewing:
 
-- `screenshot/guest/`, `screenshot/buyer/`, `screenshot/seller/`, `screenshot/admin/`
+- `docs/private/screenshots/guest/`, `buyer/`, `seller/`, `admin/`
 - the file name is the page's address: `/profile/orders` → `buyer/profile_orders.png`,
   `/seller/store/about` → `seller/seller_store_about.png`, `/` → `home.png`.
 
 Before building a screen, Read its screenshot(s) with the Read tool: that is the
 target, top to bottom (the whole page, not just the first screen). Every page
-in `screenshot/` must exist in the app. Then use the live comparison below to
+in `docs/private/screenshots/` must exist in the app. Then use the live comparison below to
 match it exactly, since the live page also shows states the screenshot can't
 (sheets, typing, empty and full lists). Retake them with
 `node mobile/tools/web-screens.cjs [guest|buyer|seller|admin]`.

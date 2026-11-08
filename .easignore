@@ -26,8 +26,6 @@ web/
 
 # Finished apps, 400 MB of them, and the pictures for the store listing.
 apk/
-apk-react-native/
-google-play-assets/
 
 # ── The app's own throwaways ───────────────────────────────────────────
 # EAS runs prebuild itself, so the native projects are made there; sending
@@ -45,4 +43,11 @@ mobile/credentials.json
 .claude/
 .windsurf/
 .agents/
-system-overview.txt
+
+# Kept on this PC only, not needed to build the app (EAS would upload them).
+media/
+docs/
+documentation/
+moormove/
+production-uploads/
+uploads-private/

@@ -9,7 +9,7 @@ import { Grad, VIEW, VIEWBOX } from './brand/BrandMark';
 
 /*
  * The app's loading animation: the green Emoorm logo building itself, piece
- * by piece (icon/logo-green.svg). The bag rises into place, its side panel
+ * by piece (media/brand/logos/logo-green.svg). The bag rises into place, its side panel
  * slides in, the collars pop on, the handle grows up out of them, and the
  * "e" spins in with a bounce. The finished logo gives a little nod, shrinks
  * away, and it starts again (2.2 s a round).

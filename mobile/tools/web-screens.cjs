@@ -1,6 +1,6 @@
 /*
  * Full-page phone screenshots (390 × 844, 2×) of every page of the website,
- * as a guest, a buyer, a seller and a super admin, into <repo>/screenshot/<role>/.
+ * as a guest, a buyer, a seller and a super admin, into <repo>/docs/private/screenshots/<role>/.
  *
  *   node mobile/tools/web-screens.cjs [guest|buyer|seller|admin ...]
  *
@@ -29,7 +29,7 @@ const findPuppeteer = () => {
 const puppeteer = findPuppeteer();
 
 const WEB = process.env.SCREENS_WEB || 'http://localhost:3000';
-const OUT = path.join(ROOT, 'screenshot');
+const OUT = path.join(ROOT, 'docs', 'private', 'screenshots');
 const wait = (ms) => new Promise((r) => setTimeout(r, ms));
 const prisma = new PrismaClient();
 const tag = `${Date.now()}-${Math.random().toString(36).slice(2, 6)}`;
