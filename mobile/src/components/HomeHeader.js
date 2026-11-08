@@ -60,7 +60,10 @@ function useRotatingPlaceholder() {
 export default function HomeHeader() {
   const router = useRouter();
   const insets = useSafeAreaInsets();
-  const green = useHeaderStyle() === 'GREEN';
+  const headerStyle = useHeaderStyle();
+  const green = headerStyle === 'GREEN';
+  // On a white header a white field would vanish: the website's off-white one.
+  const onWhite = headerStyle === 'WHITE';
   const [placeholder, opacity] = useRotatingPlaceholder();
   const openSearch = () => router.push('/search');
 
@@ -71,7 +74,7 @@ export default function HomeHeader() {
         <Pressable accessibilityRole="link" accessibilityLabel="Emoorm home" onPress={() => router.replace('/')}>
           <Image source={green ? LOGO_WHITE : LOGO} style={styles.logo} />
         </Pressable>
-        <View style={styles.search}>
+        <View style={[styles.search, onWhite && styles.searchOnWhite]}>
           <Pressable accessibilityRole="search" accessibilityLabel="Search products" style={styles.field} onPress={openSearch}>
             <Animated.Text style={[styles.placeholder, { opacity }]} numberOfLines={1}>{placeholder}</Animated.Text>
           </Pressable>
@@ -152,6 +155,8 @@ const styles = themed(() => StyleSheet.create({
     flex: 1, minWidth: 0, flexDirection: 'row', alignItems: 'stretch', height: 44, overflow: 'hidden',
     borderWidth: 1, borderColor: t.primary[600], backgroundColor: t.neutral[0],
   },
+  // A white header: off-white with no outline, like the website's field.
+  searchOnWhite: { borderColor: 'transparent', backgroundColor: t.neutral[100] },
   field: { flex: 1, minWidth: 0, justifyContent: 'center', paddingLeft: 16 },
   placeholder: { fontSize: 15, lineHeight: 24, color: t.neutral[400], ...font(400) },
   camera: { width: 40, alignItems: 'center', justifyContent: 'center' },

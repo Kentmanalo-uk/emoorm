@@ -4,6 +4,7 @@ import { CaretRightIcon, MapPinIcon, PackageIcon } from '../../lib/icons';
 import { font, t, themed } from '../../theme';
 import ShopTileImage from './ShopTileImage';
 import StoreListLogo from './StoreListLogo';
+import ActiveDot from '../ActiveDot';
 import { useStorePeek } from '../peek/StorePeek';
 
 // Still exported from here for older imports.
@@ -29,7 +30,11 @@ export default function StoreListCard({ store }) {
       accessibilityLabel={store.name}
     >
       <View style={styles.head}>
-        <StoreListLogo store={store} />
+        {/* The dot on its corner: the shop's seller is on E-MOORM now. */}
+        <View style={styles.logoWrap}>
+          <StoreListLogo store={store} />
+          <ActiveDot who={store} size={14} inset={-3} />
+        </View>
         <View style={styles.text}>
           <Text style={styles.name} numberOfLines={1} accessibilityRole="header">{store.name}</Text>
           <View style={styles.meta}>
@@ -68,6 +73,7 @@ const styles = themed(() => StyleSheet.create({
   },
   pressed: { transform: [{ scale: 0.99 }] },
   head: { flexDirection: 'row', alignItems: 'center', gap: 12 },
+  logoWrap: { position: 'relative', flexShrink: 0 },
   text: { flex: 1, minWidth: 0 },
   name: { marginBottom: 4, fontSize: 15.5, lineHeight: 17.825, ...font(500), color: t.neutral[900] },
   meta: { flexDirection: 'row', flexWrap: 'wrap', rowGap: 4, columnGap: 12 },

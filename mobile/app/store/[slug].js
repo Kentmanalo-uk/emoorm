@@ -36,6 +36,7 @@ import { ShopCoverArt, ShopLogoArt } from '../../src/components/shop/ShopArt';
 import ShopInviteCard from '../../src/components/shop/ShopInviteCard';
 import { savePendingInvite } from '../../src/lib/invite';
 import { ShopLiveBanner, ShopLiveRing } from '../../src/components/live/LiveNow';
+import ActiveDot from '../../src/components/ActiveDot';
 
 /*
  * A shop's page on phones (web/src/pages/StoreDetail.jsx, the is-phone
@@ -474,6 +475,8 @@ export default function StoreDetail() {
                     <Image source={{ uri: resolveImg(store.logo) }} style={styles.logoImg} />
                   ) : <ShopLogoArt name={store.name} />}
                 </View>
+                {/* The seller is on E-MOORM now. */}
+                <ActiveDot who={store} size={17} inset={2} />
                 {/* While the shop is live: a beating ring and LIVE on its logo. */}
                 <ShopLiveRing storeId={store.id} />
               </View>

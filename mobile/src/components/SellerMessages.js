@@ -10,6 +10,8 @@ import useAuthStore from '../store/authStore';
 import { font, t, themed } from '../theme';
 import EmptyState from './EmptyState';
 import ChatAvatar from './inbox/ChatAvatar';
+import ActiveDot from './ActiveDot';
+import { isActiveNow } from '../lib/activeStatus';
 import { ConversationListSkeleton } from './inbox/InboxSkeletons';
 import { foldText, formatTime } from './inbox/inboxFormat';
 import { SellerPrivateLine, useSellerTabScroll } from './seller/SellerPage';
@@ -232,12 +234,16 @@ function BuyerChatRow({ item, currentUserId, onPress, peek }) {
   return (
     <Pressable
       accessibilityRole="button"
-      accessibilityLabel={`${title}${unread ? `, ${unread} unread` : ''}`}
+      accessibilityLabel={`${title}${isActiveNow(item.buyer) ? ', active now' : ''}${unread ? `, ${unread} unread` : ''}`}
       onPress={onPress}
       {...peek}
       style={({ pressed }) => [styles.row, pressed && styles.rowPressed]}
     >
-      <ChatAvatar src={item.buyer?.profilePhoto} name={title} size={44} bg={t.success[100]} color={t.primary[600]} />
+      {/* The dot: this buyer is on E-MOORM now. */}
+      <View style={styles.rowAvatar}>
+        <ChatAvatar src={item.buyer?.profilePhoto} name={title} size={44} bg={t.success[100]} color={t.primary[600]} />
+        <ActiveDot who={item.buyer} size={13} />
+      </View>
       <View style={styles.rowBody}>
         <Text style={styles.rowTitle} numberOfLines={1}>{title}</Text>
         <Text style={[styles.rowPreview, unread > 0 && styles.rowPreviewUnread]} numberOfLines={1}>{preview}</Text>
@@ -291,6 +297,7 @@ const styles = themed(() => StyleSheet.create({
     borderBottomWidth: 1, borderBottomColor: t.neutral[100],
   },
   rowPressed: { backgroundColor: t.neutral[100] },
+  rowAvatar: { position: 'relative', flexShrink: 0 },
   rowBody: { flex: 1, minWidth: 0, paddingRight: 58, justifyContent: 'center' },
   rowTitle: { fontSize: 15, lineHeight: 18, color: t.neutral[900], ...font(500) },
   rowPreview: { marginTop: 2, fontSize: 13, lineHeight: 15.6, color: t.neutral[500], ...font(400) },

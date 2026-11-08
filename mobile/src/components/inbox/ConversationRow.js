@@ -2,6 +2,8 @@ import { Pressable, StyleSheet, Text, View } from 'react-native';
 import { StorefrontIcon } from '../../lib/icons';
 import { font, t, themed } from '../../theme';
 import ChatAvatar from './ChatAvatar';
+import ActiveDot from '../ActiveDot';
+import { isActiveNow } from '../../lib/activeStatus';
 import { GradientFill } from './InboxGradient';
 import { formatTime } from './inboxFormat';
 
@@ -23,6 +25,7 @@ export default function ConversationRow({
   let time = timeProp;
   let unread = 0;
   let pic = avatar;
+  let activeNow = false;
   if (item) {
     const isSellerView = item.role === 'seller';
     title = isSellerView ? item.buyer?.fullName || 'Buyer' : item.store?.name || 'Store';
@@ -31,24 +34,30 @@ export default function ConversationRow({
       : 'Start the conversation';
     time = formatTime(item.lastMessageAt);
     unread = item.unreadCount || 0;
+    // The other side: the buyer for a seller, the shop's seller for a buyer.
+    const other = isSellerView ? item.buyer : item.store;
+    activeNow = isActiveNow(other);
     pic = (
-      <ChatAvatar
-        src={isSellerView ? item.buyer?.profilePhoto : item.store?.logo}
-        person={isSellerView ? item.buyer : null}
-        shopName={isSellerView ? null : title}
-        name={title}
-        size={44}
-        bg={t.success[100]}
-        color={t.primary[600]}
-        fallbackIcon={isSellerView ? null : StorefrontIcon}
-      />
+      <View style={styles.avatarWrap}>
+        <ChatAvatar
+          src={isSellerView ? item.buyer?.profilePhoto : item.store?.logo}
+          person={isSellerView ? item.buyer : null}
+          shopName={isSellerView ? null : title}
+          name={title}
+          size={44}
+          bg={t.success[100]}
+          color={t.primary[600]}
+          fallbackIcon={isSellerView ? null : StorefrontIcon}
+        />
+        <ActiveDot who={other} size={13} />
+      </View>
     );
   }
   const isUnread = unread > 0;
   return (
     <Pressable
       accessibilityRole="button"
-      accessibilityLabel={`${title}${isUnread ? `, ${unread} unread` : ''}`}
+      accessibilityLabel={`${title}${activeNow ? ', active now' : ''}${isUnread ? `, ${unread} unread` : ''}`}
       onPress={onPress}
       {...peek}
       style={({ pressed }) => [styles.row, pressed && styles.pressed]}
@@ -84,6 +93,7 @@ const styles = themed(() => StyleSheet.create({
     backgroundColor: 'transparent',
   },
   pressed: { backgroundColor: t.neutral[100] },
+  avatarWrap: { position: 'relative', flexShrink: 0 },
   body: { flex: 1, minWidth: 0, paddingRight: 58, justifyContent: 'center' },
   titleRow: { flexDirection: 'row', alignItems: 'center', minWidth: 0 },
   title: { flexShrink: 1, fontSize: 15, lineHeight: 18, color: t.neutral[900], ...font(500) },

@@ -18,6 +18,8 @@ import useAuthStore from '../../src/store/authStore';
 import { font, t, themed } from '../../src/theme';
 import ShellPageMenu from '../../src/components/ShellPageMenu';
 import ChatAvatar from '../../src/components/inbox/ChatAvatar';
+import ActiveDot from '../../src/components/ActiveDot';
+import { activeLabel, isActiveNow } from '../../src/lib/activeStatus';
 import ChatBubble, { ChatDay } from '../../src/components/inbox/ChatBubble';
 import ChatComposer from '../../src/components/inbox/ChatComposer';
 import ChatPinnedOrders from '../../src/components/inbox/ChatPinnedOrders';
@@ -199,6 +201,8 @@ function StoreChat({ id, onBack }) {
         title: activeConvo.buyer?.fullName || 'Buyer',
         subtitle: 'Customer',
         avatar: activeConvo.buyer?.profilePhoto,
+        // The other side, for "active now": the buyer.
+        other: activeConvo.buyer,
         Icon: UserIcon,
         link: activeConvo.buyer?.id ? `/u/${activeConvo.buyer.id}` : null,
       };
@@ -208,6 +212,8 @@ function StoreChat({ id, onBack }) {
       subtitle: 'Store · Tap to view shop',
       avatar: activeConvo.store?.logo,
       shopName: activeConvo.store?.name || 'Store',
+      // The other side, for "active now": the shop's seller.
+      other: activeConvo.store,
       Icon: StorefrontIcon,
       link: activeConvo.store?.slug ? `/store/${activeConvo.store.slug}` : null,
     };
@@ -372,15 +378,18 @@ function StoreChat({ id, onBack }) {
         <Pressable accessibilityRole="button" accessibilityLabel="Back to conversations" onPress={onBack} style={({ pressed }) => [styles.back, pressed && styles.pressed]}>
           <CaretLeftIcon size={22} color={t.neutral[900]} />
         </Pressable>
-        <ChatAvatar
-          src={activeHeader.avatar}
-          shopName={activeHeader.shopName}
-          name={activeHeader.title}
-          size={38}
-          fallbackIcon={null}
-          style={styles.headAvatar}
-          {...(!activeHeader.avatar && !activeHeader.shopName ? { fallback: <activeHeader.Icon size={16} color={t.neutral[600]} /> } : {})}
-        />
+        <View style={styles.headAvatarWrap}>
+          <ChatAvatar
+            src={activeHeader.avatar}
+            shopName={activeHeader.shopName}
+            name={activeHeader.title}
+            size={38}
+            fallbackIcon={null}
+            style={styles.headAvatar}
+            {...(!activeHeader.avatar && !activeHeader.shopName ? { fallback: <activeHeader.Icon size={16} color={t.neutral[600]} /> } : {})}
+          />
+          <ActiveDot who={activeHeader.other} size={12} />
+        </View>
         <Pressable
           accessibilityRole={activeHeader.link ? 'link' : undefined}
           disabled={!activeHeader.link}
@@ -388,7 +397,10 @@ function StoreChat({ id, onBack }) {
           style={styles.title}
         >
           <Text style={styles.name} numberOfLines={1}>{activeHeader.title}</Text>
-          <Text style={styles.sub} numberOfLines={1}>{activeHeader.subtitle}</Text>
+          {/* "Active now" / "Active 12m ago" in place of the subtitle. */}
+          <Text style={[styles.sub, isActiveNow(activeHeader.other) && styles.subNow]} numberOfLines={1}>
+            {activeLabel(activeHeader.other) || activeHeader.subtitle}
+          </Text>
         </Pressable>
         {dealPhone ? (
           <Pressable
@@ -557,9 +569,11 @@ const styles = themed(() => StyleSheet.create({
   back: { width: 40, height: 40, borderRadius: 8, alignItems: 'center', justifyContent: 'center', flexShrink: 0 },
   pressed: { backgroundColor: t.neutral[100] },
   headAvatar: { marginHorizontal: 0 },
+  headAvatarWrap: { position: 'relative', flexShrink: 0 },
   title: { flex: 1, minWidth: 0, paddingHorizontal: 2 },
   name: { fontSize: 16, lineHeight: 25.6, color: t.neutral[900], ...font(500) },
   sub: { fontSize: 12, lineHeight: 19.2, color: t.neutral[500], ...font(400) },
+  subNow: { color: t.success[700], ...font(500) },
   messagesBox: { flex: 1, backgroundColor: t.neutral[0] },
   messages: { paddingVertical: 14, paddingHorizontal: 12, gap: 8 },
   messagesEmptyBox: { flexGrow: 1 },

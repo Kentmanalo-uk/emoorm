@@ -71,6 +71,7 @@ import PriceNotes from '../../../src/components/product/PriceNotes';
 import LivestockDeal from '../../../src/components/offers/LivestockDeal';
 import { PullScrollView } from '../../../src/components/PullList';
 import { ShopLogoArt } from '../../../src/components/shop/ShopArt';
+import ActiveDot from '../../../src/components/ActiveDot';
 
 const PLACEHOLDER = require('../../../assets/pdp-placeholder-product.png');
 const SETTLE_MS = 450;
@@ -953,7 +954,7 @@ function ProductPage({ slug, via }) {
         {product.store ? (
           <View style={styles.storeCard}>
             <View style={styles.storeLeft}>
-              <StoreAvatar uri={shopLogo} name={product.store.name} />
+              <StoreAvatar uri={shopLogo} name={product.store.name} store={product.store} />
               <View style={styles.storeText}>
                 <Text style={styles.storeName} numberOfLines={1} ellipsizeMode="clip">{product.store.name}</Text>
                 {storeFollow.count !== null ? (
@@ -1328,13 +1329,17 @@ const GalleryPager = memo(({
 }, (a, b) => a.width === b.width && a.jump === b.jump && a.name === b.name && a.slides.join() === b.slides.join()
   && a.overlay === b.overlay && a.layers === b.layers && a.store === b.store);
 
-function StoreAvatar({ uri, name }) {
+function StoreAvatar({ uri, name, store }) {
   const [failed, setFailed] = useState(false);
+  // The dot beside the round (clipped) logo: the shop's seller is on now.
   return (
-    <View style={styles.storeAvatar}>
-      {uri && !failed
-        ? <Image source={{ uri }} style={styles.storeAvatarImg} onError={() => setFailed(true)} />
-        : <ShopLogoArt name={name} />}
+    <View style={styles.storeAvatarWrap}>
+      <View style={styles.storeAvatar}>
+        {uri && !failed
+          ? <Image source={{ uri }} style={styles.storeAvatarImg} onError={() => setFailed(true)} />
+          : <ShopLogoArt name={name} />}
+      </View>
+      <ActiveDot who={store} size={13} inset={0} />
     </View>
   );
 }
@@ -1561,6 +1566,7 @@ const styles = themed(() => StyleSheet.create({
 
   storeCard: { flexDirection: 'row', alignItems: 'center', gap: 12, marginTop: 8, paddingTop: 12, paddingHorizontal: 16, paddingBottom: 6, backgroundColor: t.neutral[0] },
   storeLeft: { flex: 1, minWidth: 0, flexDirection: 'row', alignItems: 'center', gap: 12 },
+  storeAvatarWrap: { position: 'relative', flexShrink: 0 },
   storeAvatar: { width: 44, height: 44, borderRadius: 999, overflow: 'hidden', alignItems: 'center', justifyContent: 'center', backgroundColor: t.primary[50] },
   storeAvatarImg: { width: 44, height: 44 },
   storeText: { flex: 1, minWidth: 0, gap: 1 },
