@@ -17,6 +17,7 @@ import { resolveImg } from '../lib/media';
 import EmptyArt from '../components/ui/EmptyArt';
 import useAuthStore from '../store/authStore';
 import { useRefreshAdminShell } from '../hooks/useAdminShellData';
+import useMenuPresence from '../hooks/useMenuPresence';
 import { reportReason, reportStatus } from '../lib/labels';
 import { timeAgo } from '../lib/format';
 import '../components/admin/AdminLayout.css';
@@ -151,6 +152,7 @@ function ReportChat({ reportId }) {
 /** A row's other actions behind one "⋯" button. */
 function RowMenu({ report, busy, onPick }) {
   const [open, setOpen] = useState(false);
+  const menu = useMenuPresence(open);
   const wrapRef = useRef(null);
   useEffect(() => {
     if (!open) return undefined;
@@ -178,8 +180,8 @@ function RowMenu({ report, busy, onPick }) {
       >
         <DotsThree size={16} weight="bold" />
       </button>
-      {open && (
-        <div className="am-menu-list" role="menu">
+      {menu.mounted && (
+        <div className={`am-menu-list menu-pop${menu.closing ? ' is-closing' : ''}`} role="menu">
           {report.status === 'PENDING' && (
             <button type="button" role="menuitem" onClick={() => pick('UNDER_REVIEW')}>Mark as being checked</button>
           )}

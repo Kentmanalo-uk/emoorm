@@ -34,6 +34,7 @@ import AppRail from './AppRail';
 import { ChatCard, HelpCard, CardLinks } from './HeadCards';
 import { useHeadCard, useArrowAt } from '../../hooks/useHeadCard';
 import useHoverMenu from '../../hooks/useHoverMenu';
+import useMenuPresence from '../../hooks/useMenuPresence';
 import './SellerLayout.css';
 import './SellerShellMobile.css';
 import './SellerPhoneFit.css';
@@ -116,6 +117,7 @@ export default function SellerLayout() {
   const [logoutOpen, setLogoutOpen] = useState(false);
   // Phone Chat header: "with Buyers ▾" menu.
   const [chatMenuOpen, setChatMenuOpen] = useState(false);
+  const chatMenu = useMenuPresence(chatMenuOpen);
   const accountRef = useRef(null);
   // On computers the account menu opens on hover, like the other header cards.
   const accountHover = useHoverMenu(setAccountOpen);
@@ -490,10 +492,10 @@ export default function SellerLayout() {
                 >
                   Buyers <ChevronDown size={13} weight="bold" />
                 </button>
-                {chatMenuOpen && (
+                {chatMenu.mounted && (
                   <>
-                    <button type="button" className="scm-chat-scrim" aria-label="Close" onClick={() => setChatMenuOpen(false)} />
-                    <div className="scm-chat-menu" role="menu">
+                    {!chatMenu.closing && <button type="button" className="scm-chat-scrim" aria-label="Close" onClick={() => setChatMenuOpen(false)} />}
+                    <div className={`scm-chat-menu menu-pop${chatMenu.closing ? ' is-closing' : ''}`} role="menu">
                       <button type="button" role="menuitem" className="is-on" onClick={() => setChatMenuOpen(false)}>
                         <ChatCircleDots size={19} weight="fill" />
                         <span>Buyers</span>

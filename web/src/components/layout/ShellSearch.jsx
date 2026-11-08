@@ -1,5 +1,6 @@
 import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import { useNavigate } from 'react-router-dom';
+import useMenuPresence from '../../hooks/useMenuPresence';
 import { MagnifyingGlass, CircleNotch, X, Package, Storefront, User, Receipt, ClockCounterClockwise, DotsThreeVertical, PushPin, PushPinSlash } from '../../lib/icons';
 import { resolveImg } from '../../lib/media';
 import useAuthStore from '../../store/authStore';
@@ -77,6 +78,7 @@ function ResultThumb({ src, kind, alt }) {
  */
 function ResultMenu({ item, onOpen }) {
   const [open, setOpen] = useState(false);
+  const menu = useMenuPresence(open);
   const wrapRef = useRef(null);
 
   useEffect(() => {
@@ -113,8 +115,8 @@ function ResultMenu({ item, onOpen }) {
         <DotsThreeVertical size={18} weight="fill" />
       </button>
 
-      {open && (
-        <span className="shell-search-menu-pop" role="menu">
+      {menu.mounted && (
+        <span className={`shell-search-menu-pop menu-pop${menu.closing ? ' is-closing' : ''}`} role="menu">
           {actions.map((action) => (action.external ? (
             <a
               key={action.key}

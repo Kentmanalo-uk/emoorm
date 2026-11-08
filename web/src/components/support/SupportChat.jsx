@@ -20,6 +20,7 @@ import SafetyNotice from '../common/SafetyNotice';
 import './SupportChat.css';
 import { useSheetPresence } from '../../hooks/useSheetMotion';
 import useFocusTrap from '../../hooks/useFocusTrap';
+import useMenuPresence from '../../hooks/useMenuPresence';
 import useKeyboardInset from '../../lib/native/useKeyboardInset';
 import { BusyLabel } from '../ui/Spinner';
 import { pollWhileVisible } from '../../lib/visiblePoll';
@@ -122,6 +123,7 @@ function Avatar({ src, name }) {
 
 function QuickReplies({ onPick, disabled, office }) {
   const [open, setOpen] = useState(false);
+  const menu = useMenuPresence(open);
   const wrapRef = useRef(null);
 
   useEffect(() => {
@@ -152,8 +154,8 @@ function QuickReplies({ onPick, disabled, office }) {
         <Lightning size={16} />
         <CaretDown size={10} />
       </button>
-      {open && (
-        <div className="sc-quick-menu" role="menu">
+      {menu.mounted && (
+        <div className={`sc-quick-menu menu-pop${menu.closing ? ' is-closing' : ''}`} role="menu">
           <span className="sc-quick-title">Quick replies</span>
           {QUICK_REPLIES.map((q) => {
             // The town office's own address and hours when it has set them.

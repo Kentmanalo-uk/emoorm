@@ -7,6 +7,7 @@ import {
   Plus, Minus, Info, Basket, DotsThree, MagnifyingGlass,
 } from '../lib/icons';
 import axios from '../lib/axios';
+import useMenuPresence from '../hooks/useMenuPresence';
 import { resolveImg, firstImage, srcSetFor } from '../lib/media';
 import { confirmAction } from '../lib/confirm';
 import {
@@ -65,6 +66,7 @@ const ordersSpan = (w) => {
 /** ⋯ on a card: the actions that are not on its two buttons. */
 function MoreMenu({ items, label }) {
   const [open, setOpen] = useState(false);
+  const menu = useMenuPresence(open);
   const ref = useRef(null);
   useEffect(() => {
     if (!open) return undefined;
@@ -79,8 +81,8 @@ function MoreMenu({ items, label }) {
       <button type="button" className="stw-btn stw-btn--icon" aria-label={label} aria-haspopup="menu" aria-expanded={open} onClick={() => setOpen((o) => !o)}>
         <DotsThree size={22} weight="bold" />
       </button>
-      {open && (
-        <ul className="stw-menu" role="menu">
+      {menu.mounted && (
+        <ul className={`stw-menu menu-pop${menu.closing ? ' is-closing' : ''}`} role="menu">
           {items.map((it) => (
             <li key={it.label} role="none">
               <button type="button" role="menuitem" className={it.danger ? 'is-danger' : ''} onClick={() => { setOpen(false); it.onClick(); }}>

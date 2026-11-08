@@ -1,10 +1,8 @@
 import { cloneElement, isValidElement, useEffect, useRef, useState } from 'react';
 import { Link } from 'react-router-dom';
 import { DotsThree } from '../lib/icons';
+import { MENU_CLOSE_MS as CLOSE_MS } from '../hooks/useMenuPresence';
 import './MoreMenu.css';
-
-// As long as the panel's shrink-back in MoreMenu.css: it stays mounted till then.
-const CLOSE_MS = 200;
 
 // Row icons: larger, with thinner lines (a filled icon, e.g. a saved heart, stays filled).
 const rowIcon = (icon) => (isValidElement(icon)
@@ -12,11 +10,10 @@ const rowIcon = (icon) => (isValidElement(icon)
   : icon);
 
 /**
- * The "⋯" button with a small pop-over menu. The menu eases out of the
- * button's corner when it opens (no spring, no bounce), its rows fading in
- * one after another, and eases back into that corner when it closes (the
- * app's menuMotion). It closes when you pick an item, tap outside it, or
- * press Escape.
+ * The "⋯" button with a small pop-over menu. The menu grows out of the
+ * button and shrinks back into it, the same motion as the computer's hover
+ * menus (styles/menu-pop.css), its rows settling in one after another. It
+ * closes when you pick an item, tap outside it, or press Escape.
  *
  * items: [{ key, icon, label, to?, onClick?, danger? }]
  * align: the panel's edge that lines up with the button ('right' or 'left').
@@ -26,6 +23,8 @@ export default function MoreMenu({ items, label = 'More options', className = ''
   const [closing, setClosing] = useState(false);
   // Bumped on each open, so reopening while it closes plays the entrance again.
   const [round, setRound] = useState(0);
+  // Where the button's middle is, seen from the panel: it grows from there.
+  const [origin, setOrigin] = useState(null);
   const wrapRef = useRef(null);
   const timer = useRef(null);
 
@@ -39,6 +38,11 @@ export default function MoreMenu({ items, label = 'More options', className = ''
   const toggle = () => {
     if (open && !closing) { close(); return; }
     clearTimeout(timer.current);
+    const w = wrapRef.current?.offsetWidth || 40;
+    const h = wrapRef.current?.offsetHeight || 40;
+    // The panel sits 8px under the button (MoreMenu.css), lined up with its edge.
+    const x = align === 'left' ? `${w / 2}px` : `calc(100% - ${w / 2}px)`;
+    setOrigin(`${x} ${-(8 + h / 2)}px`);
     setClosing(false);
     setOpen(true);
     setRound((r) => r + 1);
@@ -76,7 +80,8 @@ export default function MoreMenu({ items, label = 'More options', className = ''
       {open && (
         <div
           key={round}
-          className={`more-menu-pop${align === 'left' ? ' is-left' : ''}${closing ? ' is-closing' : ''}`}
+          className={`more-menu-pop menu-pop${align === 'left' ? ' is-left' : ''}${closing ? ' is-closing' : ''}`}
+          style={origin ? { '--menu-pop-origin': origin } : undefined}
           role="menu"
         >
           {shown.map((item, i) => {

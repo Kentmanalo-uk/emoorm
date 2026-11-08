@@ -1,0 +1,87 @@
+/*
+ * The desktop hover menus' motion (Header.css .account-dropdown), for the
+ * menus that are put on the page when they open (the ⋯ menus, the row
+ * menus, the town picker…): the card grows out of its button and shrinks
+ * back into it on the shared ease-in-out curve (index.css --pop-ease), its
+ * contents settling in just after it grows and leaving before it shrinks.
+ *
+ * Use with hooks/useMenuPresence.js, which keeps the menu on the page for
+ * the close. Each menu says where its button is with --menu-pop-origin
+ * (defaults to its top-right corner).
+ *
+ * The class is written twice so these rules win over a menu's own older
+ * open animation in a page stylesheet that loads later.
+ */
+.menu-pop.menu-pop {
+  transform-origin: var(--menu-pop-origin, top right);
+  animation:
+    menu-pop-grow var(--pop-in) var(--pop-ease) both,
+    menu-pop-fade-in 0.16s ease both;
+  will-change: transform, opacity;
+}
+
+.menu-pop.menu-pop > * {
+  animation: menu-pop-fade-in 0.2s ease 0.1s both;
+}
+
+.menu-pop.menu-pop.is-closing {
+  pointer-events: none;
+  animation:
+    menu-pop-shrink var(--pop-out) var(--pop-ease) 0.06s both,
+    menu-pop-fade-out 0.18s ease 0.14s both;
+}
+
+.menu-pop.menu-pop.is-closing > * {
+  animation: menu-pop-fade-out 0.12s ease both;
+}
+
+@keyframes menu-pop-grow {
+  from { transform: scale(0.12); }
+  to { transform: none; }
+}
+
+@keyframes menu-pop-shrink {
+  from { transform: none; }
+  to { transform: scale(0.12); }
+}
+
+@keyframes menu-pop-fade-in {
+  from { opacity: 0; }
+  to { opacity: 1; }
+}
+
+@keyframes menu-pop-fade-out {
+  from { opacity: 1; }
+  to { opacity: 0; }
+}
+
+/* Menus that open upwards grow from their bottom edge. */
+.stw-menu.menu-pop,
+.sc-quick-menu.menu-pop {
+  --menu-pop-origin: bottom right;
+}
+
+.stw-item .stw-menu.menu-pop {
+  --menu-pop-origin: top right;
+}
+
+.sc-quick-menu.menu-pop {
+  --menu-pop-origin: 16px calc(100% + 16px);
+}
+
+.scm-chat-menu.menu-pop {
+  --menu-pop-origin: 40px -16px;
+}
+
+/* Reduced motion: no growing, only a quick fade. */
+@media (prefers-reduced-motion: reduce) {
+  .menu-pop.menu-pop,
+  .menu-pop.menu-pop > * {
+    animation: menu-pop-fade-in 0.12s linear both;
+  }
+
+  .menu-pop.menu-pop.is-closing,
+  .menu-pop.menu-pop.is-closing > * {
+    animation: menu-pop-fade-out 0.12s linear both;
+  }
+}

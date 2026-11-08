@@ -1,5 +1,6 @@
 import { useEffect, useRef, useState } from 'react';
 import { DotsThree } from '../../../lib/icons';
+import useMenuPresence from '../../../hooks/useMenuPresence';
 
 /**
  * Computers: ⋯ on a My products row, holding the actions used less often
@@ -13,6 +14,7 @@ export default function RowMenu({ label, items }) {
   const [open, setOpen] = useState(false);
   const ref = useRef(null);
   const buttonRef = useRef(null);
+  const menu = useMenuPresence(open);
 
   useEffect(() => {
     if (!open) return undefined;
@@ -57,8 +59,8 @@ export default function RowMenu({ label, items }) {
       >
         <DotsThree size={18} weight="bold" />
       </button>
-      {open && (
-        <ul className="sp-rowmenu-list" role="menu" aria-label={label} onKeyDown={onMenuKey}>
+      {menu.mounted && (
+        <ul className={`sp-rowmenu-list menu-pop${menu.closing ? ' is-closing' : ''}`} role="menu" aria-label={label} onKeyDown={onMenuKey}>
           {items.map(({ label: text, icon: Icon, onClick, danger }) => (
             <li key={text} role="none">
               <button

@@ -7,6 +7,7 @@ import './styles/motion.css';
 import './styles/iconTiles.css';
 import './styles/native-nav.css';
 import './styles/glass.css';
+import './styles/menu-pop.css';
 import App from './App.jsx';
 import { resumeLastScreen } from './lib/native/resume';
 import { startEdgeSwipeBack } from './lib/native/edgeSwipeBack';

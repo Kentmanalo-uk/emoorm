@@ -12,6 +12,7 @@ import { readCache, writeCache } from '../lib/pageCache';
 import { awayLabel, openNow } from '../lib/shopHours';
 import useSeo from '../lib/seo';
 import { usePhoneLayout } from '../hooks/useMobileNav';
+import useMenuPresence from '../hooks/useMenuPresence';
 import Spinner from '../components/ui/Spinner';
 import EmptyState from '../components/ui/EmptyState';
 import {
@@ -513,6 +514,7 @@ function StoreMapHeader({
   count, filter, onFilter, town, towns, total, onTown, townsOpen, setTownsOpen, routeOn, onRoute, onBack,
 }) {
   const menuRef = useRef(null);
+  const townsMenu = useMenuPresence(townsOpen);
   useEffect(() => {
     if (!townsOpen) return undefined;
     const onDown = (e) => { if (!menuRef.current?.contains(e.target)) setTownsOpen(false); };
@@ -557,8 +559,8 @@ function StoreMapHeader({
               <span>{town || 'All towns'}</span>
               <CaretDown size={12} weight="bold" />
             </button>
-            {townsOpen && (
-              <div className="sm-town-menu" role="listbox" aria-label="Town">
+            {townsMenu.mounted && (
+              <div className={`sm-town-menu menu-pop${townsMenu.closing ? ' is-closing' : ''}`} role="listbox" aria-label="Town">
                 <TownOption label="All towns" n={total} on={!town} onPick={() => pickTown(null)} />
                 {towns.map(([name, n]) => (
                   <TownOption key={name} label={name} n={n} on={town === name} onPick={() => pickTown(name)} />
