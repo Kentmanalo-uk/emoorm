@@ -12,6 +12,7 @@ import { resumeLastScreen } from './lib/native/resume';
 import { startEdgeSwipeBack } from './lib/native/edgeSwipeBack';
 import { startNoZoom } from './lib/native/noZoom';
 import { isStandalone } from './lib/native/env';
+import { startFixedGuard } from './lib/native/fixedGuard';
 import { startTabBarScroll } from './lib/native/tabBarScroll';
 import { loadGoogleTranslate, getCurrentLanguage } from './lib/googleTranslate';
 import { startCuratedTagalog } from './lib/tagalog';
@@ -69,6 +70,8 @@ startNoZoom();
 // ...and its page doesn't rubber-band at the top or bottom (index.css
 // :root[data-standalone]), so the header and the status bar stay put.
 if (isStandalone()) document.documentElement.dataset.standalone = '';
+// ...and its pinned bars stay pinned when an iPhone loses track of them.
+startFixedGuard();
 // The floating glass tab bar shrinks while scrolling down (styles/glass.css).
 startTabBarScroll();
 // A product's data is fetched as soon as its link is touched (lib/prefetch).

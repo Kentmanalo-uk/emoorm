@@ -910,3 +910,18 @@ input[type="radio"] {
     overscroll-behavior-y: none;
   }
 }
+
+/* The home-screen app: the pinned bars each on a layer of their own, so an
+   iPhone keeps them fixed to the screen during fast scrolls and while the
+   page grows; lib/native/fixedGuard.js re-anchors them by flipping between
+   these two equal positions. The translate property, not transform: the
+   header slides away with its own transform. */
+:root[data-standalone] :is(.mobile-bottom-nav, .sc-tabbar, .ac-tabbar, .header) {
+  translate: 0 0 0;
+  backface-visibility: hidden;
+  -webkit-backface-visibility: hidden;
+}
+
+:root[data-standalone] :is(.mobile-bottom-nav, .sc-tabbar, .ac-tabbar, .header)[data-anchor="b"] {
+  translate: 0 0 0.001px;
+}
