@@ -105,6 +105,15 @@ export default function StartSellingBubble() {
   const canSell = !isAuthenticated || user?.role === 'BUYER';
   const placed = useRef(false);
 
+  // The screen's size, kept as the same state when a layout pass reports
+  // the same size again: nothing re-places it, so it doesn't spring for
+  // nothing (web StartSellingSticker's resize).
+  const onBox = (e) => {
+    const width = Math.round(e.nativeEvent.layout.width);
+    const height = Math.round(e.nativeEvent.layout.height);
+    setBox((b) => (b && b.width === width && b.height === height ? b : { width, height }));
+  };
+
   // Back on Home: a sticker tucked away with × comes back.
   useFocusEffect(useCallback(() => { setHidden(false); }, []));
 
@@ -125,10 +134,21 @@ export default function StartSellingBubble() {
     if (!box || hidden || !canSell) return;
     if (!placed.current) {
       const b = bounds();
-      const start = { x: b.right, y: Math.max(b.top, Math.min(b.bottom, box.height * 0.6)) };
+      // Whole pixels: a fractional place blurs and roughens its edges.
+      const start = { x: Math.round(b.right), y: Math.round(Math.max(b.top, Math.min(b.bottom, box.height * 0.6))) };
       at.current = start;
       pos.setValue(start);
       placed.current = true;
+    } else {
+      // The screen changed size: back inside it, on its side, and only
+      // moved (with a spring) if it has to be.
+      const b = bounds();
+      const x = Math.round(at.current.x <= b.left + 1 ? b.left : b.right);
+      const y = Math.round(Math.max(b.top, Math.min(b.bottom, at.current.y)));
+      if (x !== at.current.x || y !== at.current.y) {
+        at.current = { x, y };
+        Animated.spring(pos, { toValue: at.current, friction: 7, tension: 60, useNativeDriver: false }).start();
+      }
     }
     Animated.spring(appear, { toValue: 1, delay: 700, friction: 5, tension: 70, useNativeDriver: true }).start();
   }, [box, hidden, canSell]); // eslint-disable-line react-hooks/exhaustive-deps
@@ -147,8 +167,8 @@ export default function StartSellingBubble() {
       const b = bounds();
       if (!b) return;
       pos.setValue({
-        x: Math.max(b.left - 6, Math.min(b.right + 6, at.current.x + g.dx)),
-        y: Math.max(b.top, Math.min(b.bottom, at.current.y + g.dy)),
+        x: Math.round(Math.max(b.left - 6, Math.min(b.right + 6, at.current.x + g.dx))),
+        y: Math.round(Math.max(b.top, Math.min(b.bottom, at.current.y + g.dy))),
       });
     },
     onPanResponderRelease: (_, g) => {
@@ -156,8 +176,8 @@ export default function StartSellingBubble() {
       const b = bounds();
       if (!b) return;
       const x = at.current.x + g.dx + g.vx * 60;
-      const y = Math.max(b.top, Math.min(b.bottom, at.current.y + g.dy + g.vy * 40));
-      const side = x + ITEM_W / 2 < box.width / 2 ? b.left : b.right;
+      const y = Math.round(Math.max(b.top, Math.min(b.bottom, at.current.y + g.dy + g.vy * 40)));
+      const side = Math.round(x + ITEM_W / 2 < box.width / 2 ? b.left : b.right);
       at.current = { x: side, y };
       Animated.parallel([
         Animated.spring(pos, { toValue: at.current, friction: 7, tension: 60, useNativeDriver: false }),
@@ -187,7 +207,7 @@ export default function StartSellingBubble() {
     <View
       pointerEvents="box-none"
       style={StyleSheet.absoluteFill}
-      onLayout={(e) => setBox({ width: e.nativeEvent.layout.width, height: e.nativeEvent.layout.height })}
+      onLayout={onBox}
     >
       {box && !hidden ? (
         <Animated.View
@@ -248,19 +268,19 @@ const styles = themed(() => StyleSheet.create({
   },
   face: {
     flex: 1, borderRadius: SIZE / 2, alignItems: 'center', justifyContent: 'center',
-    backgroundColor: t.neutral[0], borderWidth: 1.5, borderColor: t.onBrand, overflow: 'hidden',
+    backgroundColor: t.neutral[0], borderWidth: 2, borderColor: t.onBrand, overflow: 'hidden',
   },
   pressed: { transform: [{ scale: 0.94 }] },
   pill: {
     zIndex: 1, alignSelf: 'center', marginTop: -9, height: 22, paddingHorizontal: 9, borderRadius: 11,
-    justifyContent: 'center', overflow: 'hidden', borderWidth: 1.5, borderColor: t.onBrand,
+    justifyContent: 'center', overflow: 'hidden', borderWidth: 2, borderColor: t.onBrand,
     boxShadow: [{ offsetX: 0, offsetY: 3, blurRadius: 8, color: 'rgba(219, 39, 119, 0.28)' }],
   },
   pillText: { fontSize: 11, lineHeight: 14, color: t.onBrand },
   close: {
     zIndex: 2, position: 'absolute', top: -4, right: -6, width: 20, height: 20, borderRadius: 10,
     alignItems: 'center', justifyContent: 'center', backgroundColor: 'rgba(15, 23, 42, 0.62)',
-    borderWidth: 1.5, borderColor: t.onBrand,
+    borderWidth: 2, borderColor: t.onBrand,
   },
   closePressed: { backgroundColor: 'rgba(15, 23, 42, 0.85)' },
 }));

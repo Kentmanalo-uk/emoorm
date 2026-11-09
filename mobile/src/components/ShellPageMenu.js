@@ -10,7 +10,9 @@ import useAuthStore from '../store/authStore';
 import { font, ink, t, themed } from '../theme';
 import ShellBarButton from './ShellBarButton';
 import { GlassBackdrop, liquidGlass } from './Glass';
-import { closeMenu, enterRow, menuPopStyle, menuRowStyle, openMenu } from './menuMotion';
+import {
+  buttonOrigin, closeMenu, enterRow, menuPopStyle, menuRowStyle, openMenu,
+} from './menuMotion';
 
 /*
  * What the ⋯ menu at the right end of a page's top bar offers, page by page
@@ -111,6 +113,8 @@ export default function ShellPageMenu({
   // The modal's own width: the window's can differ by a scrollbar on the web.
   const [rootWidth, setRootWidth] = useState(width);
   const pop = useRef(new Animated.Value(0)).current;
+  // The panel's width once laid out: it grows from the button's middle.
+  const [panelWidth, setPanelWidth] = useState(0);
   const spin = useRef(new Animated.Value(0)).current;
 
   const items = [...extra.filter(Boolean), ...(override || shellMenuItems(pathname, { signedIn }))];
@@ -123,7 +127,8 @@ export default function ShellPageMenu({
 
   const show = () => {
     buttonRef.current?.measureInWindow((x, y, w, h) => {
-      setAnchor({ top: y + h + 8, end: x + w });
+      setAnchor({ top: y + h + 8, end: x + w, w, h });
+      setPanelWidth(0);
       setOpen(true);
       setExpanded(true);
       openMenu(pop);
@@ -142,8 +147,8 @@ export default function ShellPageMenu({
     else if (it.to) router.push(it.to);
   });
 
-  // Grows out of the ⋯ button's corner and shrinks back into it (menuMotion).
-  const popStyle = menuPopStyle(pop, 'top right');
+  // Grows out of the ⋯ button and shrinks back into it (menuMotion).
+  const popStyle = menuPopStyle(pop, buttonOrigin(anchor, panelWidth));
   const rotate = spin.interpolate({ inputRange: [0, 1], outputRange: ['0deg', '90deg'] });
 
   return (
@@ -166,10 +171,13 @@ export default function ShellPageMenu({
           accessibilityLabel="Close menu"
         />
         {anchor ? (
-          <Animated.View style={[styles.pop, liquidGlass && styles.popGlass, { top: anchor.top, right: Math.max(0, rootWidth - anchor.end) }, popStyle]} accessibilityRole="menu">
+          <Animated.View style={[styles.pop, liquidGlass && styles.popGlass, { top: anchor.top, right: Math.max(0, rootWidth - anchor.end) }, popStyle]}
+            onLayout={(e) => setPanelWidth(e.nativeEvent.layout.width)}
+            accessibilityRole="menu"
+          >
             <GlassBackdrop radius={14} />
             {items.map((it, i) => (
-              <MenuRow key={it.key} item={it} index={i} onPress={() => pick(it)} />
+              <MenuRow key={it.key} item={it} index={i} pop={pop} onPress={() => pick(it)} />
             ))}
           </Animated.View>
         ) : null}
@@ -179,13 +187,15 @@ export default function ShellPageMenu({
 }
 
 // Each row slides in a moment after the one above it.
-function MenuRow({ item: it, index, onPress }) {
+function MenuRow({
+  item: it, index, pop, onPress,
+}) {
   const enter = useRef(new Animated.Value(0)).current;
   useEffect(() => { enterRow(enter, index); }, [enter, index]);
   const color = it.danger ? t.danger[600] : t.neutral[800];
   const Icon = it.Icon;
   return (
-    <Animated.View style={menuRowStyle(enter)}>
+    <Animated.View style={menuRowStyle(enter, 6, pop)}>
       <Pressable accessibilityRole="menuitem" onPress={onPress} style={({ pressed }) => [styles.row, pressed && styles.rowPressed]}>
         {Icon ? <Icon size={28} weight="light" color={color} /> : null}
         <Text style={[styles.rowText, { color }]} numberOfLines={1}>{it.label}</Text>

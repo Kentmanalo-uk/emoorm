@@ -720,7 +720,7 @@ function ProductPage({ slug, via }) {
             or what a package saves (brand green under the price, accent pink
             on the right); then the price's notes, a line each, on white. */}
         <View style={styles.priceBand} onLayout={(e) => setBand({ w: e.nativeEvent.layout.width, h: e.nativeEvent.layout.height })}>
-          {band.w ? <BandGradient w={band.w} h={band.h} /> : null}
+          {band.w ? <BandGradient w={band.w} h={band.h} badge={product.badge} /> : null}
           <View style={styles.priceTop}>
             <View style={styles.priceLine}>
               {fromPrice ? <Text style={[styles.priceWords, styles.priceFrom]}>from</Text> : null}
@@ -1345,7 +1345,21 @@ function StoreAvatar({ uri, name, store }) {
 }
 
 /** The 95° sweep: brand green under the price, accent pink on the right. */
-function BandGradient({ w, h }) {
+// A seller's badge colours the band in the badge's own colours (web
+// ProductDetails.css .pdp-m-price-band.is-badge-*): from its deep tone to a
+// lighter one. No badge: brand green to accent pink.
+const BADGE_BANDS = {
+  PRE_ORDER: () => [t.accent[600], '#ec4899'],
+  PALENGKE: () => ['#4d7c0f', '#65a30d'],
+  DIY: () => ['#6d28d9', '#8b5cf6'],
+};
+
+function BandGradient({ w, h, badge }) {
+  const badged = BADGE_BANDS[badge]?.();
+  // [offset, colour]: the badge's deep tone holds to 10%, then lightens.
+  const stops = badged
+    ? [[0, badged[0]], [0.1, badged[0]], [1, badged[1]]]
+    : [[0, t.primary[600]], [0.06, t.primary[600]], [0.94, t.accent[500]], [1, t.accent[500]]];
   // CSS angle 95°: the line runs right and a little down, its length set so
   // the corners get the end colours (as linear-gradient() does).
   const a = (95 * Math.PI) / 180;
@@ -1365,10 +1379,7 @@ function BandGradient({ w, h }) {
           x2={cx + (dx * len) / 2}
           y2={cy + (dy * len) / 2}
         >
-          <Stop offset="0" stopColor={t.primary[600]} />
-          <Stop offset="0.06" stopColor={t.primary[600]} />
-          <Stop offset="0.94" stopColor={t.accent[500]} />
-          <Stop offset="1" stopColor={t.accent[500]} />
+          {stops.map(([offset, color]) => <Stop key={offset} offset={String(offset)} stopColor={color} />)}
         </LinearGradient>
       </Defs>
       <Rect x="0" y="0" width={w} height={h} fill="url(#pdp-band)" />

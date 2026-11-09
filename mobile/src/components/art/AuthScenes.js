@@ -2,7 +2,7 @@ import { useId } from 'react';
 import { View } from 'react-native';
 import Svg, {
   Circle, Defs, Ellipse, FeColorMatrix, FeComposite, FeFlood, FeGaussianBlur, FeMerge, FeMergeNode, FeOffset, Filter,
-  G, LinearGradient, Path, RadialGradient, Rect, Stop,
+  G, LinearGradient, Mask, Path, RadialGradient, Rect, Stop,
 } from 'react-native-svg';
 
 /*
@@ -140,10 +140,10 @@ const sparkPath = (cx, cy, r) => {
     + `Q${cx - c} ${cy + c} ${cx - r} ${cy}Q${cx - c} ${cy - c} ${cx} ${cy - r}Z`;
 };
 
-/** What every scene stands in: the disc, the shadow under the object. */
+/** What every scene stands in: the disc (left out when `k.bare`), the shadow under the object. */
 const stage = (k, { shadowX = 24, shadowW = 13 } = {}) => (
   <>
-    <Circle cx="24" cy="24.5" r="20" fill={k.lin([[0, '#FDEEF6'], [1, '#E4F8EF']], 0, 0, 1, 1)} />
+    {k.bare ? null : <Circle cx="24" cy="24.5" r="20" fill={k.lin([[0, '#FDEEF6'], [1, '#E4F8EF']], 0, 0, 1, 1)} />}
     <Ellipse cx={shadowX} cy="43.6" rx={shadowW} ry="1.9" fill="#0E3B2C" opacity={0.13} filter={k.soft} />
   </>
 );
@@ -307,12 +307,19 @@ const SCENES = {
 /**
  * One of the four doors' scenes, `size` px square.
  * name: 'signIn' | 'signUp' | 'seller' | 'sell'
+ * fade: the lower part dissolves (the sheets' first step, web
+ *   .auth-choose-art svg's mask: solid to 48%, 0.4 at 72%, gone at 94%)
+ * bare: without the pale disc behind it (the welcome pop-up, where the box
+ *   bursts straight out of the pink card)
  */
-export default function AuthScene({ name, size = 170, style }) {
+export default function AuthScene({
+  name, size = 170, style, fade = false, bare = false,
+}) {
   const id = `as${useId().replace(/[^a-zA-Z0-9]/g, '')}`;
   const k = kit(id);
+  k.bare = bare;
   const draw = SCENES[name] || SCENES.signIn;
-  const body = draw(k);
+  const body = fade ? <G mask={`url(#${id}m)`}>{draw(k)}</G> : draw(k);
   return (
     <View
       style={[{ width: size, height: size }, style]}
@@ -344,6 +351,18 @@ export default function AuthScene({ name, size = 170, style }) {
           <Filter id={`${id}s`} x="-4" y="-4" width="56" height="56" filterUnits="userSpaceOnUse">
             <FeGaussianBlur stdDeviation="0.6" />
           </Filter>
+          {fade ? (
+            <>
+              <LinearGradient id={`${id}f`} gradientUnits="userSpaceOnUse" x1="0" y1="0" x2="0" y2="48">
+                <Stop offset="0.48" stopColor={WHITE} stopOpacity={1} />
+                <Stop offset="0.72" stopColor={WHITE} stopOpacity={0.4} />
+                <Stop offset="0.94" stopColor={WHITE} stopOpacity={0} />
+              </LinearGradient>
+              <Mask id={`${id}m`} maskUnits="userSpaceOnUse" x="0" y="0" width="48" height="48">
+                <Rect x="0" y="0" width="48" height="48" fill={`url(#${id}f)`} />
+              </Mask>
+            </>
+          ) : null}
           {k.defs()}
         </Defs>
         {body}

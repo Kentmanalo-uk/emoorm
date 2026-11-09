@@ -20,6 +20,7 @@ import { fetchForYou } from '../../src/lib/forYou';
 import LiveNow from '../../src/components/live/LiveNow';
 import { setPageMoving } from '../../src/lib/pageMotion';
 import StartSellingBubble from '../../src/components/home/StartSellingBubble';
+import { VisitorWelcome } from '../../src/components/welcome/WelcomePopup';
 import { MapTrifoldIcon } from '../../src/lib/icons';
 import { MapArt } from '../../src/components/art/FlatArt';
 import {
@@ -107,6 +108,9 @@ export default function Home() {
 
   const [banners, setBanners] = useState(() => cache.banners || FALLBACK_BANNERS);
   const [popup, setPopup] = useState(null);
+  // The banners have answered (or failed): only then is it known whether the
+  // promotion opens, and the visitor's welcome may follow.
+  const [bannersSettled, setBannersSettled] = useState(false);
 
   const [categories, setCategories] = useState(() => cache.categories || []);
   const [categoryIcons, setCategoryIcons] = useState(() => cache.categoryStyle === 'ICON');
@@ -196,6 +200,8 @@ export default function Home() {
         }
       } catch {
         // keep the fallback banners
+      } finally {
+        if (!cancelled) setBannersSettled(true);
       }
     })();
     return () => { cancelled = true; };
@@ -486,6 +492,8 @@ export default function Home() {
 
       {pull.indicator}
       {popup ? <PromotionPopup banner={popup} onClose={() => setPopup(null)} /> : null}
+      {/* A signed-out visitor's welcome: once per install, 1.2 s after Home settles. */}
+      <VisitorWelcome ready={bannersSettled} promotion={Boolean(popup)} />
     </View>
   );
 }

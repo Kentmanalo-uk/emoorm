@@ -920,3 +920,201 @@ export const BellArt = memo(function BellArt({ size = 34, tone, look }) {
     </Mark>
   );
 });
+
+/* ── More of Home's shortcuts ────────────────────────────────────────── */
+
+/** Palengke: a market basket, greens and a tomato peeking out of it. */
+export const BasketArt = memo(function BasketArt({ size = 34, tone, look }) {
+  const ink = useInk(tone || GREEN, look);
+  const { tint, deep } = ink;
+  return (
+    <Mark size={size} ink={ink} pose="Basket">
+      <Path d="M10.5 24C10.5 11 16.5 5.5 24 5.5S37.5 11 37.5 24" stroke={deep} strokeWidth="3" strokeLinecap="round" fill="none" />
+      <G fill={tint}>
+        <Path d="M18 23.5C11.5 21 9.6 14 12.4 8.6c4.6 2.4 7.4 8.4 5.6 14.9z" />
+        <Path d="M21 23.5c-3.2-5.2-2.8-12.2 1.6-16.4 3.8 4.4 4 11.6.4 16.4z" />
+      </G>
+      <Circle cx="29.5" cy="18.2" r="5.6" fill={deep} />
+      <Path d="M29.5 12.6l1.6-1.8 1.8 1-1.4 1.6 2.2.4-.4 1.6-3.8-.4-3.8.4-.4-1.6 2.2-.4-1.4-1.6 1.8-1z" fill={tint} />
+      <Rect x="4" y="22" width="40" height="6.5" rx="3.25" fill={tint} />
+      <Path d="M7 27.5h34l-3 12.6a4 4 0 0 1-3.9 3.1H13.9a4 4 0 0 1-3.9-3.1z" fill={deep} />
+      <G fill={CUT}>
+        <Rect x="11.6" y="30.6" width="5.2" height="2.6" rx="1.3" />
+        <Rect x="19.2" y="30.6" width="5.2" height="2.6" rx="1.3" />
+        <Rect x="26.8" y="30.6" width="5.2" height="2.6" rx="1.3" />
+        <Rect x="34.2" y="30.6" width="3.4" height="2.6" rx="1.3" />
+        <Rect x="15.4" y="36" width="5.2" height="2.6" rx="1.3" />
+        <Rect x="23" y="36" width="5.2" height="2.6" rx="1.3" />
+        <Rect x="30.6" y="36" width="4.6" height="2.6" rx="1.3" />
+      </G>
+    </Mark>
+  );
+});
+
+/** Pre-order: a calendar page, a tick on the day it is set for. */
+export const CalendarArt = memo(function CalendarArt({ size = 34, tone, look }) {
+  const ink = useInk(tone || RED, look);
+  const { tint, deep } = ink;
+  return (
+    <Mark size={size} ink={ink} pose="Calendar">
+      <Rect x="4" y="8" width="40" height="36" rx="7" fill={deep} />
+      <Path d="M11 8h26a7 7 0 0 1 7 7v4H4v-4a7 7 0 0 1 7-7z" fill={tint} />
+      <G fill={deep}>
+        <Rect x="12.5" y="3" width="5" height="10.5" rx="2.5" />
+        <Rect x="30.5" y="3" width="5" height="10.5" rx="2.5" />
+      </G>
+      <Path d="M15 31l6 6 12-12" stroke={CUT} strokeWidth="4" strokeLinecap="round" strokeLinejoin="round" fill="none" />
+    </Mark>
+  );
+});
+
+/** Ready to Eat: a bowl of rice, chopsticks resting on it. */
+export const BowlArt = memo(function BowlArt({ size = 34, tone, look }) {
+  const ink = useInk(tone || TEAL, look);
+  const { tint, deep } = ink;
+  return (
+    <Mark size={size} ink={ink} pose="Bowl">
+      <G fill="none" stroke={tint} strokeWidth="3" strokeLinecap="round">
+        <Path d="M14 10.5c0-2.8 2.8-3.2 2.8-6" />
+        <Path d="M21.5 9.5c0-2.8 2.8-3.2 2.8-6" />
+      </G>
+      <Path d="M8 24c0-7.2 7.2-12 16-12s16 4.8 16 12z" fill={tint} />
+      <G stroke={deep} strokeWidth="3" strokeLinecap="round">
+        <Path d="M23 19.5L43.5 6" />
+        <Path d="M26.5 21.5L45.5 10.5" />
+      </G>
+      <Rect x="16" y="38" width="16" height="6" rx="3" fill={deep} />
+      <Path d="M3 23h42c0 10.5-8 18-19 18h-4C11 41 3 33.5 3 23z" fill={deep} />
+      <Rect x="9" y="28" width="30" height="3.2" rx="1.6" fill={CUT} />
+    </Mark>
+  );
+});
+
+/* The sale sticker's points: sixteen round the edge; the lit half runs from
+   the bottom left round the top to the top right, closing through the middle. */
+const saleAt = (i) => {
+  const r = i % 2 ? 17.6 : 21;
+  const a = (Math.PI / 16) * i - Math.PI / 2;
+  return `${(24 + r * Math.cos(a)).toFixed(2)},${(24 + r * Math.sin(a)).toFixed(2)}`;
+};
+const SALE_ALL = Array.from({ length: 32 }, (_, i) => saleAt(i)).join(' ');
+const SALE_LIT = Array.from({ length: 17 }, (_, i) => saleAt((20 + i) % 32)).join(' ');
+
+/** On Sale: a sale sticker with a per cent sign, its lit half paler. */
+export const SaleArt = memo(function SaleArt({ size = 34, tone, look }) {
+  const ink = useInk(tone || AMBER, look);
+  const { tint, deep } = ink;
+  return (
+    <Mark size={size} ink={ink} pose="Sale">
+      <Polygon points={SALE_ALL} fill={deep} />
+      <Polygon points={SALE_LIT} fill={tint} />
+      <G fill={CUT}>
+        <Circle cx="17.6" cy="17.6" r="3.6" />
+        <Circle cx="30.4" cy="30.4" r="3.6" />
+      </G>
+      <Path d="M31 16.5L17 31.5" stroke={CUT} strokeWidth="3.6" strokeLinecap="round" />
+    </Mark>
+  );
+});
+
+/** Seafood: a fish, its tail and fins in the paler value. */
+export const FishArt = memo(function FishArt({ size = 34, tone, look }) {
+  const ink = useInk(tone || SKY, look);
+  const { tint, deep } = ink;
+  return (
+    <Mark size={size} ink={ink} pose="Fish">
+      <G fill={tint}>
+        <Path d="M14 26L4.2 15.6c-1-1-2.6-.3-2.5 1.1L2.6 26l-.9 9.3c-.1 1.4 1.5 2.1 2.5 1.1z" />
+        <Path d="M19.5 17c1.6-5.2 6.4-8.4 12.4-8.2-.6 3.2-1.8 5.8-3.6 7.8z" />
+        <Path d="M23 34.5l-2.6 6.4c3.2.4 6.2-.4 8.4-2.6z" />
+        <Circle cx="42" cy="9" r="2.4" />
+        <Circle cx="37.6" cy="4.6" r="1.6" />
+      </G>
+      <Path d="M9.5 26c4.8-7.6 11.8-11.5 19-11.5 7.6 0 13.2 4.6 16.5 11.5-3.3 6.9-8.9 11.5-16.5 11.5-7.2 0-14.2-3.9-19-11.5z" fill={deep} />
+      <Path d="M30.5 19c2.2 4.2 2.2 9.8 0 14" stroke={CUT} strokeWidth="2.6" strokeLinecap="round" fill="none" />
+      <Circle cx="37" cy="23.6" r="3" fill={CUT} />
+      <Circle cx="37.6" cy="23.6" r="1.4" fill={deep} />
+    </Mark>
+  );
+});
+
+/** Livestock: a friendly cow's head, horns, ears and muzzle paler. */
+export const LivestockArt = memo(function LivestockArt({ size = 34, tone, look }) {
+  const ink = useInk(tone || AMBER, look);
+  const { tint, deep } = ink;
+  return (
+    <Mark size={size} ink={ink} pose="Livestock">
+      <G fill={tint}>
+        <Path d="M15 12.5c-4.4-.6-7-4-6.8-8.6 2.8 2.4 5.8 3.4 9.4 3.2z" />
+        <Path d="M33 12.5c4.4-.6 7-4 6.8-8.6-2.8 2.4-5.8 3.4-9.4 3.2z" />
+        <Ellipse cx="7.5" cy="19.5" rx="6" ry="3.4" transform="rotate(-18 7.5 19.5)" />
+        <Ellipse cx="40.5" cy="19.5" rx="6" ry="3.4" transform="rotate(18 40.5 19.5)" />
+      </G>
+      <Path d="M24 8c8.8 0 13.5 5.6 13.5 12.6 0 3.4-.8 6-2 8.4h-23c-1.2-2.4-2-5-2-8.4C10.5 13.6 15.2 8 24 8z" fill={deep} />
+      <Ellipse cx="24" cy="33.5" rx="12.5" ry="9" fill={tint} />
+      <G fill={CUT}>
+        <Circle cx="18.4" cy="20.4" r="2.8" />
+        <Circle cx="29.6" cy="20.4" r="2.8" />
+      </G>
+      <G fill={deep}>
+        <Circle cx="18.8" cy="20.8" r="1.4" />
+        <Circle cx="30" cy="20.8" r="1.4" />
+        <Ellipse cx="19.4" cy="33.8" rx="2" ry="2.6" />
+        <Ellipse cx="28.6" cy="33.8" rx="2" ry="2.6" />
+      </G>
+    </Mark>
+  );
+});
+
+/** Pickup Near Me: a shopping bag, a pin standing by it. */
+export const PickupArt = memo(function PickupArt({ size = 34, tone, look }) {
+  const ink = useInk(tone || VIOLET, look);
+  const { tint, deep } = ink;
+  return (
+    <Mark size={size} ink={ink} pose="Pickup">
+      <Path d="M11.5 19v-4.5a7 7 0 0 1 14 0V19" stroke={tint} strokeWidth="3.2" strokeLinecap="round" fill="none" />
+      <Path d="M7.4 16h22.2a3 3 0 0 1 3 2.8l1.6 21.4a3 3 0 0 1-3 3.3H5.8a3 3 0 0 1-3-3.3l1.6-21.4a3 3 0 0 1 3-2.8z" fill={deep} />
+      <G fill={CUT}>
+        <Circle cx="11.5" cy="21.5" r="1.7" />
+        <Circle cx="25.5" cy="21.5" r="1.7" />
+      </G>
+      <Path d="M36.5 17.5a9 9 0 0 1 9 9c0 6.6-9 16-9 16s-9-9.4-9-16a9 9 0 0 1 9-9z" fill={tint} stroke={CUT} strokeWidth="2.6" />
+      <Circle cx="36.5" cy="26.4" r="3.4" fill={CUT} />
+    </Mark>
+  );
+});
+
+const MOUNTAIN_WAVE = 'M2 36c3.6 0 4.4-2.4 7.6-2.4s4 2.4 7.6 2.4 4.4-2.4 7.6-2.4 4 2.4 7.6 2.4 4.4-2.4 7.6-2.4 4 2.4 6 2.4';
+
+/** Explore Mindoro: a mountain by the sea, the sun over the far peak. */
+export const MountainArt = memo(function MountainArt({ size = 34, tone, look }) {
+  const ink = useInk(tone || TEAL, look);
+  const { tint, deep } = ink;
+  return (
+    <Mark size={size} ink={ink} pose="Mountain">
+      <Circle cx="37" cy="10" r="5.6" fill={tint} />
+      <Path d="M19 37L31.3 18.2a2.6 2.6 0 0 1 4.4 0L47 36v1z" fill={tint} />
+      <Path d="M1 37L15.6 11.6a2.8 2.8 0 0 1 4.8 0L35 37z" fill={deep} />
+      <Path d={`${MOUNTAIN_WAVE}v4a4 4 0 0 1-4 4H6a4 4 0 0 1-4-4z`} fill={deep} />
+      <G fill="none" stroke={CUT} strokeWidth="2.4" strokeLinecap="round">
+        <Path d={MOUNTAIN_WAVE} />
+        <Path d="M12 40.6c2.4 0 3-1.6 5.2-1.6s2.8 1.6 5.2 1.6 3-1.6 5.2-1.6 2.8 1.6 5.2 1.6" />
+      </G>
+    </Mark>
+  );
+});
+
+/** Seller Academy: a graduation cap, its board lit, the tassel down. */
+export const CapArt = memo(function CapArt({ size = 34, tone, look }) {
+  const ink = useInk(tone || BLUE, look);
+  const { tint, deep } = ink;
+  return (
+    <Mark size={size} ink={ink} pose="Cap">
+      <Path d="M12 20v9c0 3.8 5.4 7 12 7s12-3.2 12-7v-9z" fill={deep} />
+      <Path d="M24 7l20.5 9.5L24 26 3.5 16.5z" fill={tint} stroke={tint} strokeWidth="2.4" strokeLinejoin="round" />
+      <Path d="M24 16.5l17.5 4v12" stroke={deep} strokeWidth="2.2" strokeLinecap="round" strokeLinejoin="round" fill="none" />
+      <Path d="M39.4 31.5h4.2l1.4 7.4a1.6 1.6 0 0 1-1.6 1.9h-3.8a1.6 1.6 0 0 1-1.6-1.9z" fill={deep} />
+      <Circle cx="24" cy="16.5" r="2.6" fill={CUT} />
+    </Mark>
+  );
+});

@@ -32,6 +32,7 @@ import { AppErrorScreen, keepAppOpenOnErrors, markAppUp } from '../src/component
 import { LoaderOverlayHost } from '../src/components/BrandLoader';
 import { CommerceHudHost } from '../src/components/CommerceHud';
 import { PeekHost } from '../src/components/Peek';
+import NewAccountWelcome from '../src/components/welcome/NewAccountWelcome';
 import { SwitchAccountHost } from '../src/components/SwitchAccountSheet';
 
 // Log in, Sign up and the password screens open as a sheet over the page the
@@ -243,6 +244,8 @@ function AppRoot() {
             options={({ route }) => (route.params?.q || route.params?.via === 'search' ? { animation: 'none' } : {})}
           />
           <Stack.Screen name="stores" />
+          {/* /category/:slug hands straight over to /products: no slide of its own. */}
+          <Stack.Screen name="category/[slug]" options={{ animation: 'none' }} />
           <Stack.Screen name="help-center" />
           <Stack.Screen name="conversation/[id]" />
           <Stack.Screen name="conversation/select-product" />
@@ -274,6 +277,8 @@ function AppRoot() {
       <HeroFlightHost />
       {/* Long-press previews of products, shops, chats… (components/Peek). */}
       <PeekHost />
+      {/* "Welcome, Ana!" once, on the first buyer screen after signing up. */}
+      {ready ? <NewAccountWelcome /> : null}
       {/* The opening: the logo builds itself, then fades over the first page. */}
       <BrandSplash ready={isHydrated && fontsLoaded && !requiresLogin} />
       <Toast config={toastConfig} topOffset={52} />

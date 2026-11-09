@@ -11,14 +11,21 @@ import { AuthBand } from './AuthChoose';
 import { font, t, themed } from '../../theme';
 
 const CLOSE_MS = 260;
-const DISMISS_PX = 110;
+// Let go past a quarter of the screen, or with a flick (px per ms, down),
+// and the sheet slides away (web lib/native/useSheetDrag).
+const DISMISS_SHARE = 0.25;
+const FLICK = 0.55;
+const BACK_MS = 320;
 const native = Platform.OS !== 'web';
 
 /**
  * The phone sign-in sheet (web pages/AuthSheet.css): a full-screen white
  * sheet with the bar (handle, ×, the other form) on top and the form below,
- * 20px from the sides. Dragging the bar down past 110px, or tapping ×, slides
- * it away and goes back to the page it was opened over (Home if none).
+ * 20px from the sides. Dragging the sheet down (by the bar, or anywhere while
+ * the form is scrolled to its top) past a quarter of the screen or with a
+ * flick, or tapping ×, slides it away from where it was let go and goes back
+ * to the page it was opened over (Home if none); the dimmed page behind
+ * brightens with the drag (web components/AuthSheetBar.jsx).
  *
  * switchTo / switchLabel: the bar's link; it replaces this sheet as the
  * website's does. `bar={false}` leaves the bar out (the email confirmation).
@@ -34,6 +41,10 @@ const AuthSheet = forwardRef(function AuthSheet({
   const { height: screenH } = useWindowDimensions();
   const drag = useRef(new Animated.Value(0)).current;
   const leaving = useRef(false);
+  // How far the form is scrolled: the whole sheet drags only at its top.
+  const scrollY = useRef(0);
+  const heightRef = useRef(screenH);
+  heightRef.current = screenH;
 
   const leave = () => {
     if (onClose) { onClose(); return; }
@@ -55,16 +66,29 @@ const AuthSheet = forwardRef(function AuthSheet({
     }).start(() => leave());
   };
 
-  const pan = useMemo(() => PanResponder.create({
-    onMoveShouldSetPanResponder: (_, g) => g.dy > 4 && Math.abs(g.dy) > Math.abs(g.dx),
+  const springBack = () => Animated.timing(drag, {
+    toValue: 0, duration: BACK_MS, easing: Easing.bezier(0.22, 1, 0.36, 1), useNativeDriver: native,
+  }).start();
+  const downward = (g) => g.dy > 4 && Math.abs(g.dy) > Math.abs(g.dx);
+  const gesture = {
     onPanResponderMove: (_, g) => drag.setValue(Math.max(0, g.dy)),
     onPanResponderRelease: (_, g) => {
-      if (g.dy > DISMISS_PX) { close(); return; }
-      Animated.timing(drag, { toValue: 0, duration: 200, easing: Easing.out(Easing.ease), useNativeDriver: native }).start();
+      if (g.dy > heightRef.current * DISMISS_SHARE || (g.dy > 0 && g.vy > FLICK)) { close(); return; }
+      springBack();
     },
-    onPanResponderTerminate: () => {
-      Animated.timing(drag, { toValue: 0, duration: 200, useNativeDriver: native }).start();
-    },
+    onPanResponderTerminate: springBack,
+  };
+  // The bar: always. The rest of the sheet: while the form is at its top
+  // (taken before the buttons and the scroll box, which keep taps and
+  // scrolling up).
+  const pan = useMemo(() => PanResponder.create({
+    onMoveShouldSetPanResponder: (_, g) => downward(g),
+    ...gesture,
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }), []);
+  const sheetPan = useMemo(() => PanResponder.create({
+    onMoveShouldSetPanResponderCapture: (_, g) => scrollY.current <= 0 && g.dy > 8 && Math.abs(g.dy) > Math.abs(g.dx) * 1.2,
+    ...gesture,
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }), []);
 
@@ -73,7 +97,11 @@ const AuthSheet = forwardRef(function AuthSheet({
   return (
     <View style={styles.root}>
       <Animated.View pointerEvents="none" style={[StyleSheet.absoluteFill, styles.backdrop, { opacity: backdrop }]} />
-      <Animated.View style={[styles.sheet, { transform: [{ translateY: drag }] }]}>
+      <Animated.View
+        style={[styles.sheet, { transform: [{ translateY: drag }] }]}
+        // iOS 26: the native sheet's own swipe-down closes it.
+        {...(liquidGlass ? null : sheetPan.panHandlers)}
+      >
         {/* iOS 26: the page sheet sits below the status bar, which is not ours to tint. */}
         {band ? <AuthBand top={liquidGlass ? 0 : insets.top} /> : null}
         {band && !liquidGlass ? <StatusBar style="dark" /> : null}
@@ -91,6 +119,8 @@ const AuthSheet = forwardRef(function AuthSheet({
         <KeyboardAvoidingView style={styles.flex} behavior={Platform.OS === 'ios' ? 'padding' : undefined}>
           <ScrollView showsVerticalScrollIndicator={false} showsHorizontalScrollIndicator={false}
             ref={ref}
+            onScroll={(e) => { scrollY.current = e.nativeEvent.contentOffset.y; }}
+            scrollEventThrottle={16}
             style={styles.flex}
             keyboardShouldPersistTaps="handled"
             overScrollMode="never"

@@ -26,6 +26,7 @@ const findPuppeteer = () => {
   const tries = [
     path.join(ROOT, 'node_modules/puppeteer-core'),
     path.join(ROOT, 'web/node_modules/puppeteer-core'),
+    path.join(ROOT, 'media/emoorgine/node_modules/puppeteer-core'),
     'C:/Users/Kaye/AppData/Local/Temp/claude/c--laragon-www-emoorm-app-emoorm/a02f6d7b-686e-423a-8e86-7cdf22b9afa7/scratchpad/node_modules/puppeteer-core',
   ];
   for (const t of tries) { try { return require(t); } catch { /* next */ } }

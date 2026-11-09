@@ -8,6 +8,7 @@ import ProductCard from '../ProductCard';
 import ShopTileImage from './ShopTileImage';
 import ImageOverlay from '../product/ImageOverlay';
 import { SaleWas } from '../SaleTag';
+import { BestSellerTag, ProductBadge } from '../TodayTag';
 import { saleInfo } from '../../lib/variantPricing';
 import { notTakingOrders, opensLabel } from '../../lib/availability';
 import { isStockless, priceUnit, startsFrom } from '../orders/orderLines';
@@ -66,7 +67,12 @@ function ShopProductRowBase({ product, onAdd, onBuy, closed = false }) {
         {soldOut ? <Text style={styles.soldout}>Sold out</Text> : null}
       </Pressable>
       <View style={styles.body}>
-        <Text style={styles.name} numberOfLines={2} onPress={open} onLongPress={peek.onLongPress} accessibilityRole="link">{product.name}</Text>
+        <Text style={styles.name} numberOfLines={2} onPress={open} onLongPress={peek.onLongPress} accessibilityRole="link">
+          {/* The seller's badge and Best seller before the name, as on the website's rows (.shop-m-row-name). */}
+          <ProductBadge product={product} style={styles.tag} />
+          <BestSellerTag product={product} style={styles.tag} />
+          {product.name}
+        </Text>
         <View style={styles.meta}>
           {reviews > 0 ? (
             <View style={styles.stars}>
@@ -134,6 +140,7 @@ const styles = themed(() => StyleSheet.create({
   },
   body: { flex: 1, minWidth: 0 },
   name: { fontSize: 14.5, lineHeight: 19.575, ...font(500), color: t.neutral[900] },
+  tag: { position: 'relative', top: -1 },
   meta: { flexDirection: 'row', alignItems: 'center', gap: 8, marginTop: 5 },
   metaText: { fontSize: 12, lineHeight: 19.2, ...font(400), color: t.neutral[500] },
   stars: { flexDirection: 'row', alignItems: 'center', gap: 1 },

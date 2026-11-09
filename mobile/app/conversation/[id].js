@@ -398,7 +398,7 @@ function StoreChat({ id, onBack }) {
         >
           <Text style={styles.name} numberOfLines={1}>{activeHeader.title}</Text>
           {/* "Active now" / "Active 12m ago" in place of the subtitle. */}
-          <Text style={[styles.sub, isActiveNow(activeHeader.other) && styles.subNow]} numberOfLines={1}>
+          <Text style={[styles.sub, activeLabel(activeHeader.other) && styles.subActive, isActiveNow(activeHeader.other) && styles.subNow]} numberOfLines={1}>
             {activeLabel(activeHeader.other) || activeHeader.subtitle}
           </Text>
         </Pressable>
@@ -573,6 +573,8 @@ const styles = themed(() => StyleSheet.create({
   title: { flex: 1, minWidth: 0, paddingHorizontal: 2 },
   name: { fontSize: 16, lineHeight: 25.6, color: t.neutral[900], ...font(500) },
   sub: { fontSize: 12, lineHeight: 19.2, color: t.neutral[500], ...font(400) },
+  // .msgr-thread-active: medium, a little tighter than the subtitle.
+  subActive: { lineHeight: 15.6, ...font(500) },
   subNow: { color: t.success[700], ...font(500) },
   messagesBox: { flex: 1, backgroundColor: t.neutral[0] },
   messages: { paddingVertical: 14, paddingHorizontal: 12, gap: 8 },

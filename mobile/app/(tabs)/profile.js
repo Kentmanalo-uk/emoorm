@@ -23,7 +23,7 @@ import { GoogleMark } from '../../src/components/auth/AuthForm';
 import { floatingTabBar, tabBarTop, useTabBarScroll } from '../../src/components/Glass';
 import ShellPageMenu from '../../src/components/ShellPageMenu';
 import { startAccountSwitch } from '../../src/components/RoleSwitchOverlay';
-import { GradientUserIcon, useSvgId } from '../../src/components/profile/ProfileIcons';
+import { useSvgId } from '../../src/components/profile/ProfileIcons';
 import { PfRow, PfSection, PfTitle } from '../../src/components/profile/ProfileUI';
 import { ProfileLinks, ProfileTools } from '../../src/components/profile/ProfileTools';
 import RecentlyViewed from '../../src/components/profile/RecentlyViewed';
@@ -337,22 +337,25 @@ function Guest() {
           </ProfileHeader>
         )}
       >
+        {/* The welcome card (web ProfileGuest.css .pf-guest-card): strong pink
+            behind the white welcome, fading to white below the buttons, the
+            sprout avatar, and Log in / Sign up under the welcome in bold. */}
         <View style={styles.card}>
+          <GuestCardWash />
           <View style={styles.id}>
-            <View style={styles.avatar}><AvatarTint><GradientUserIcon size={64} /></AvatarTint></View>
+            <View style={styles.avatar}><AvatarTint><Avatar name="sprout" size={64} /></AvatarTint></View>
             <View style={styles.idText}>
-              <Text style={styles.name}>Welcome to E-MOORM</Text>
-              <Text style={styles.guestText}>Log in to track orders, save favourites and chat with local sellers.</Text>
+              <Text style={styles.guestTitle} numberOfLines={1}>Welcome to E-MOORM</Text>
+              <View style={styles.guestActions}>
+                <Pressable accessibilityRole="link" onPress={() => toLogin('/profile')} style={({ pressed }) => [styles.guestBtn, pressed && { opacity: 0.9 }]}>
+                  <LoginGradient />
+                  <Text style={[styles.guestBtnText, styles.guestBtnPrimaryText]}>Log in</Text>
+                </Pressable>
+                <Pressable accessibilityRole="link" onPress={() => router.push('/register')} style={({ pressed }) => [styles.guestBtn, styles.guestBtnQuiet, pressed && { opacity: 0.9 }]}>
+                  <Text style={styles.guestBtnText}>Sign up</Text>
+                </Pressable>
+              </View>
             </View>
-          </View>
-          <View style={styles.guestActions}>
-            <Pressable accessibilityRole="link" onPress={() => toLogin('/profile')} style={({ pressed }) => [styles.guestBtn, styles.guestPrimary, pressed && { opacity: 0.9 }]}>
-              <LoginGradient />
-              <Text style={[styles.guestBtnText, { color: t.onBrand }]}>Log in</Text>
-            </Pressable>
-            <Pressable accessibilityRole="link" onPress={() => router.push('/register')} style={({ pressed }) => [styles.guestBtn, pressed && { opacity: 0.9 }]}>
-              <Text style={styles.guestBtnText}>Sign up</Text>
-            </Pressable>
           </View>
         </View>
 
@@ -532,6 +535,24 @@ function AvatarTint({ children }) {
   );
 }
 
+/** The guest card's wash: accent 600 → 500 (50%) → 200 (84%) → white, top to bottom. */
+function GuestCardWash() {
+  const id = useSvgId('pfguest');
+  return (
+    <Svg width="100%" height="100%" style={StyleSheet.absoluteFill} preserveAspectRatio="none">
+      <Defs>
+        <LinearGradient id={id} x1="0" y1="0" x2="0" y2="1">
+          <Stop offset="0" stopColor={t.accent[600]} />
+          <Stop offset="0.5" stopColor={t.accent[500]} />
+          <Stop offset="0.84" stopColor={t.accent[200]} />
+          <Stop offset="1" stopColor={t.neutral[0]} />
+        </LinearGradient>
+      </Defs>
+      <Rect width="100%" height="100%" fill={`url(#${id})`} />
+    </Svg>
+  );
+}
+
 /** Log in: E-MOORM green with a touch of pink toward its end (110deg, #059669 70% → #E0559B 175%). */
 function LoginGradient() {
   const id = useSvgId('pflogin');
@@ -612,14 +633,17 @@ const styles = themed(() => StyleSheet.create({
     flexShrink: 0, marginLeft: 6, paddingHorizontal: 8, borderRadius: 999, overflow: 'hidden',
     backgroundColor: t.warning[50], color: t.warning[700], fontSize: 11, lineHeight: 18, ...font(500),
   },
-  guestText: { fontSize: 14, lineHeight: 20.3, color: t.neutral[500], ...font(400) },
-  guestActions: { flexDirection: 'row', gap: 10, paddingHorizontal: 16, paddingBottom: 16 },
+  // The website's 19px welcome at body leading (1.6), in white on the pink.
+  guestTitle: { fontSize: 19, lineHeight: 30.4, color: '#fff', ...font(500) },
+  // Log in and Sign up side by side under it, in true bold.
+  guestActions: { flexDirection: 'row', gap: 8, marginTop: 4 },
   guestBtn: {
-    flex: 1, alignItems: 'center', justifyContent: 'center', height: 44, overflow: 'hidden',
-    borderWidth: 1, borderColor: t.primary[600], borderRadius: 12, backgroundColor: t.neutral[0],
+    flex: 1, minWidth: 0, alignItems: 'center', justifyContent: 'center', height: 38, paddingHorizontal: 12,
+    overflow: 'hidden', borderRadius: 10,
   },
-  guestPrimary: { borderColor: 'transparent' },
-  guestBtnText: { fontSize: 15, lineHeight: 20, color: t.primary[700], ...font(500) },
+  guestBtnQuiet: { backgroundColor: t.neutral[100] },
+  guestBtnText: { fontSize: 14.5, lineHeight: 18, color: t.neutral[900], ...font(700) },
+  guestBtnPrimaryText: { color: t.neutral[0] },
 
   confirm: { flexDirection: 'row', alignItems: 'center', gap: 10, marginTop: 12, paddingVertical: 10, paddingHorizontal: 12, borderRadius: 12, backgroundColor: t.warning[50] },
   confirmText: { flex: 1, minWidth: 0 },

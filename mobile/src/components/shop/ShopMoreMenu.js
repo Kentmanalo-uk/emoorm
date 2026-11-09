@@ -4,7 +4,9 @@ import { useRouter } from 'expo-router';
 import { DotsThreeIcon } from '../../lib/icons';
 import { font, ink, t, themed } from '../../theme';
 import { GlassBackdrop, liquidGlass } from '../Glass';
-import { closeMenu, enterRow, menuPopStyle, menuRowStyle, openMenu } from '../menuMotion';
+import {
+  buttonOrigin, closeMenu, enterRow, menuPopStyle, menuRowStyle, openMenu,
+} from '../menuMotion';
 
 const OUT = Easing.bezier(0.22, 1, 0.36, 1);
 
@@ -22,6 +24,8 @@ export default function ShopMoreMenu({ items, label = 'Shop options', color = t.
   const [anchor, setAnchor] = useState(null);
   const [rootWidth, setRootWidth] = useState(0);
   const pop = useRef(new Animated.Value(0)).current;
+  // The panel's width once laid out: it grows from the button's middle.
+  const [panelWidth, setPanelWidth] = useState(0);
   const spin = useRef(new Animated.Value(0)).current;
   const shown = items.filter(Boolean);
 
@@ -31,7 +35,8 @@ export default function ShopMoreMenu({ items, label = 'Shop options', color = t.
 
   const show = () => {
     buttonRef.current?.measureInWindow((x, y, w, h) => {
-      setAnchor({ top: y + h + 8, end: x + w });
+      setAnchor({ top: y + h + 8, end: x + w, w, h });
+      setPanelWidth(0);
       setOpen(true);
       setExpanded(true);
       openMenu(pop);
@@ -50,8 +55,8 @@ export default function ShopMoreMenu({ items, label = 'Shop options', color = t.
     else if (it.to) router.push(it.to);
   });
 
-  // Grows out of the ⋯ button's corner and shrinks back into it (menuMotion).
-  const popStyle = menuPopStyle(pop, 'top right');
+  // Grows out of the ⋯ button and shrinks back into it (menuMotion).
+  const popStyle = menuPopStyle(pop, buttonOrigin(anchor, panelWidth));
   const rotate = spin.interpolate({ inputRange: [0, 1], outputRange: ['0deg', '90deg'] });
 
   return (
@@ -76,9 +81,12 @@ export default function ShopMoreMenu({ items, label = 'Shop options', color = t.
           accessibilityLabel="Close menu"
         />
         {anchor && rootWidth ? (
-          <Animated.View style={[styles.pop, liquidGlass && styles.popGlass, { top: anchor.top, right: Math.max(0, rootWidth - anchor.end) }, popStyle]} accessibilityRole="menu">
+          <Animated.View style={[styles.pop, liquidGlass && styles.popGlass, { top: anchor.top, right: Math.max(0, rootWidth - anchor.end) }, popStyle]}
+            onLayout={(e) => setPanelWidth(e.nativeEvent.layout.width)}
+            accessibilityRole="menu"
+          >
             <GlassBackdrop radius={14} />
-            {shown.map((it, i) => <MenuRow key={it.key} item={it} index={i} onPress={() => pick(it)} />)}
+            {shown.map((it, i) => <MenuRow key={it.key} item={it} index={i} pop={pop} onPress={() => pick(it)} />)}
           </Animated.View>
         ) : null}
       </Modal>
@@ -86,13 +94,15 @@ export default function ShopMoreMenu({ items, label = 'Shop options', color = t.
   );
 }
 
-function MenuRow({ item: it, index, onPress }) {
+function MenuRow({
+  item: it, index, pop, onPress,
+}) {
   const enter = useRef(new Animated.Value(0)).current;
   useEffect(() => { enterRow(enter, index); }, [enter, index]);
   const color = it.danger ? t.danger[600] : t.neutral[800];
   const Icon = it.Icon;
   return (
-    <Animated.View style={menuRowStyle(enter)}>
+    <Animated.View style={menuRowStyle(enter, 6, pop)}>
       <Pressable accessibilityRole="menuitem" onPress={onPress} style={({ pressed }) => [styles.row, pressed && styles.rowPressed]}>
         {Icon ? <Icon size={24} weight="light" color={color} /> : null}
         <Text style={[styles.rowText, { color }]} numberOfLines={1}>{it.label}</Text>

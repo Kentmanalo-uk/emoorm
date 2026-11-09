@@ -32,6 +32,8 @@ import { startBuyNow } from '../../src/lib/buyNow';
 import { GRID_BLEED, GRID_GAP, gridCellWidth } from '../../src/lib/productGrid';
 import { font, t, themed } from '../../src/theme';
 import { PullScrollView } from '../../src/components/PullList';
+import ListEnd from '../../src/components/ListEnd';
+import useInfiniteList from '../../src/hooks/useInfiniteList';
 import { ShopCoverArt, ShopLogoArt } from '../../src/components/shop/ShopArt';
 import ShopInviteCard from '../../src/components/shop/ShopInviteCard';
 import { savePendingInvite } from '../../src/lib/invite';
@@ -53,11 +55,15 @@ const SORTS = [
   { key: 'best', label: 'Best Selling', sortBy: 'orderCount', sortOrder: 'desc' },
   { key: 'popular', label: 'Most Popular', sortBy: 'orderCount', sortOrder: 'desc' },
 ];
-const PAGE_SIZE = 16;
+// Products per batch; the next comes on its own as the end of the list
+// nears, so every product of the shop shows (web BATCH).
+const BATCH = 24;
 const BAR = 56;
 const storeKey = (slug) => `shop-page:store:${slug}`;
-const productsKey = (storeId, page, category, sort, search) => (
-  `shop-page:products:${storeId}:${JSON.stringify([page, category, sort, search.trim()])}`
+// Each list of a shop's products, every batch loaded so far, so Back finds
+// the list as left.
+const productsKey = (storeId, category, sort, search) => (
+  `shop-page:products-list:${storeId}:${JSON.stringify([category, sort, search.trim()])}`
 );
 const SITE = API_BASE_URL.replace(/\/api\/?$/, '');
 
@@ -89,14 +95,10 @@ export default function StoreDetail() {
   const [mobileLayout, setMobileLayout] = useState('list');
   const [searchOpen, setSearchOpen] = useState(false);
   const [focusSearch, setFocusSearch] = useState(false);
-  const [page, setPage] = useState(1);
   const [activeCategory, setActiveCategory] = useState('all');
   const [sortKey, setSortKey] = useState('newest');
   const [rawSearch, setRawSearch] = useState('');
   const search = useDebounce(rawSearch, 350);
-  const [products, setProducts] = useState([]);
-  const [pagination, setPagination] = useState({ total: 0, totalPages: 0 });
-  const [isLoadingProducts, setIsLoadingProducts] = useState(true);
   const [followBusy, setFollowBusy] = useState(false);
   const [showReport, setShowReport] = useState(false);
   const [barSolid, setBarSolid] = useState(false);
@@ -111,7 +113,9 @@ export default function StoreDetail() {
   const barAnim = useRef(new Animated.Value(0)).current;
   const scrollRef = useRef(null);
   const storeRequest = useRef(0);
-  const productsRequest = useRef(0);
+  // Where the products start in the scroll, and how far it is scrolled.
+  const productsTop = useRef(0);
+  const scrollY = useRef(0);
 
   const updateStore = useCallback((change) => setStore((cur) => {
     const next = typeof change === 'function' ? change(cur) : change;
@@ -167,43 +171,47 @@ export default function StoreDetail() {
 
   useEffect(() => { fetchStore(); }, [fetchStore]);
 
+  // The shop's products, all of them: one batch after another as the end of
+  // the list nears. A tab, a sort or a search starts again from the first
+  // batch. Keyed on the store id: following it must not reload the products.
   const storeId = store?.id;
+  const productsListKey = storeId ? productsKey(storeId, activeCategory, sortKey, search) : '';
+  const products = useInfiniteList({
+    listKey: productsListKey,
+    enabled: Boolean(storeId),
+    loadPage: async (page) => {
+      const isNewTab = activeCategory === 'new';
+      const s = SORTS.find((x) => x.key === sortKey) || SORTS[0];
+      const params = {
+        storeId,
+        page,
+        pageSize: BATCH,
+        sortBy: isNewTab ? 'createdAt' : s.sortBy,
+        sortOrder: isNewTab ? 'desc' : s.sortOrder,
+      };
+      if (activeCategory !== 'all' && activeCategory !== 'new') params.categoryId = activeCategory;
+      if (search.trim()) params.search = search.trim();
+      const res = await apiClient.get('/products', { params });
+      const list = res.data || [];
+      return { items: list, total: res.pagination?.total ?? list.length, totalPages: res.pagination?.totalPages ?? 1 };
+    },
+    readSaved: (key) => getCachedData(key) || undefined,
+    save: (key, saved) => setCachedData(key, saved),
+  });
+  const isLoadingProducts = products.loading;
   useEffect(() => {
-    if (!storeId) return undefined;
-    let live = true;
-    const request = ++productsRequest.current;
-    const key = productsKey(storeId, page, activeCategory, sortKey, search);
-    const kept = getCachedData(key);
-    if (kept) {
-      setProducts(kept.products || []);
-      if (kept.pagination) setPagination(kept.pagination);
-      setIsLoadingProducts(false);
-    } else {
-      setIsLoadingProducts(true);
-    }
-    const isNewTab = activeCategory === 'new';
-    const s = SORTS.find((x) => x.key === sortKey) || SORTS[0];
-    const params = {
-      storeId,
-      page,
-      pageSize: PAGE_SIZE,
-      sortBy: isNewTab ? 'createdAt' : s.sortBy,
-      sortOrder: isNewTab ? 'desc' : s.sortOrder,
-    };
-    if (activeCategory !== 'all' && activeCategory !== 'new') params.categoryId = activeCategory;
-    if (search.trim()) params.search = search.trim();
-    apiClient.get('/products', { params })
-      .then((res) => {
-        if (!live || request !== productsRequest.current) return;
-        const list = res.data || [];
-        setProducts(list);
-        if (res.pagination) setPagination(res.pagination);
-        setCachedData(key, { products: list, pagination: res.pagination || { total: list.length, totalPages: 1 } });
-      })
-      .catch(() => { if (live && request === productsRequest.current) toast.error('Failed to load products'); })
-      .finally(() => { if (live && request === productsRequest.current) setIsLoadingProducts(false); });
-    return () => { live = false; };
-  }, [storeId, page, activeCategory, sortKey, search]);
+    if (products.error) toast.error('Failed to load products');
+  }, [products.error]);
+  // Another tab, sort or search starts the list over: when the page is
+  // scrolled down into it, back up to where the list begins.
+  const shownList = useRef(productsListKey);
+  useEffect(() => {
+    const was = shownList.current;
+    shownList.current = productsListKey;
+    if (!was || was === productsListKey || !productsTop.current) return;
+    const top = Math.max(0, productsTop.current - BAR - insets.top - 120);
+    if (scrollY.current > top) scrollRef.current?.scrollTo({ y: top, animated: false });
+  }, [productsListKey]); // eslint-disable-line react-hooks/exhaustive-deps
 
   useEffect(() => {
     if (!storeId) return undefined;
@@ -262,9 +270,9 @@ export default function StoreDetail() {
   const deep = mix(primary, 0.63, '#000');
   const top = insets.top;
 
-  const onCategoryChange = (id) => { setActiveCategory(id); setPage(1); };
-  const onSortChange = (key) => { setSortKey(key); setPage(1); };
-  const onSearchChange = (val) => { setRawSearch(val); setPage(1); };
+  const onCategoryChange = (id) => { setActiveCategory(id); };
+  const onSortChange = (key) => { setSortKey(key); };
+  const onSearchChange = (val) => { setRawSearch(val); };
   const openSearch = () => { setMobileTab('products'); setSearchOpen(true); setFocusSearch(true); };
   const pickCategory = (id) => { onCategoryChange(id); setMobileTab('products'); };
   const goBack = () => (router.canGoBack() ? router.back() : router.replace('/stores'));
@@ -376,6 +384,9 @@ export default function StoreDetail() {
   };
 
   const onScroll = (e) => {
+    scrollY.current = e.nativeEvent.contentOffset.y;
+    // The next batch as the end of the products nears (Products tab only).
+    if (phoneTab === 'products') products.checkScroll(e);
     const solid = e.nativeEvent.contentOffset.y > 120;
     if (solid !== barSolid) setBarSolid(solid);
   };
@@ -393,7 +404,7 @@ export default function StoreDetail() {
   if (phoneTab === 'products') {
     if (isLoadingProducts) {
       productsBody = <ShopGridSkeleton width={contentW} />;
-    } else if (products.length === 0) {
+    } else if (products.items.length === 0) {
       productsBody = (
         <EmptyState
           compact
@@ -413,7 +424,7 @@ export default function StoreDetail() {
     } else if (mobileLayout === 'list') {
       productsBody = (
         <View style={styles.list}>
-          {products.map((product) => (
+          {products.items.map((product) => (
             <ShopProductRow
               key={product.id}
               product={product}
@@ -428,7 +439,7 @@ export default function StoreDetail() {
       const w = gridCellWidth(screenW);
       productsBody = (
         <View style={styles.grid}>
-          {products.map((product) => (
+          {products.items.map((product) => (
             <ShopGridCard key={product.id} product={product} accent={primary} style={{ width: w }} />
           ))}
         </View>
@@ -447,12 +458,14 @@ export default function StoreDetail() {
     <View style={styles.screen} ref={pageShot} collapsable={false}>
       <Stack.Screen options={{ headerShown: false }} />
       {shareSheet}
-      <PullScrollView onPull={fetchStore} showsVerticalScrollIndicator={false} showsHorizontalScrollIndicator={false}
+      <PullScrollView onPull={() => Promise.all([fetchStore(), products.reload()])} showsVerticalScrollIndicator={false} showsHorizontalScrollIndicator={false}
         ref={scrollRef}
         style={styles.scroll}
         contentContainerStyle={styles.scrollBody}
         onScroll={onScroll}
         scrollEventThrottle={16}
+        onLayout={phoneTab === 'products' ? products.scrollProps.onLayout : undefined}
+        onContentSizeChange={phoneTab === 'products' ? products.scrollProps.onContentSizeChange : undefined}
         keyboardShouldPersistTaps="handled"
       >
         <View style={[styles.hero, { paddingTop: BAR + top }]}>
@@ -730,30 +743,11 @@ export default function StoreDetail() {
         </View>
 
         {phoneTab === 'products' ? (
-          <View style={styles.productsSection}>
+          <View style={styles.productsSection} onLayout={(e) => { productsTop.current = e.nativeEvent.layout.y; }}>
             {productsBody}
-            {pagination.totalPages > 1 ? (
-              <View style={styles.pagination}>
-                <Pressable
-                  style={[styles.pageBtn, page <= 1 && styles.pageBtnOff]}
-                  disabled={page <= 1}
-                  onPress={() => { setPage(page - 1); scrollRef.current?.scrollTo({ y: 400, animated: true }); }}
-                  accessibilityRole="button"
-                >
-                  <CaretLeftIcon size={16} color={t.neutral[600]} />
-                  <Text style={styles.pageBtnText}>Prev</Text>
-                </Pressable>
-                <Text style={styles.pageInfo}>Page {page} of {pagination.totalPages}</Text>
-                <Pressable
-                  style={[styles.pageBtn, page >= pagination.totalPages && styles.pageBtnOff]}
-                  disabled={page >= pagination.totalPages}
-                  onPress={() => { setPage(page + 1); scrollRef.current?.scrollTo({ y: 400, animated: true }); }}
-                  accessibilityRole="button"
-                >
-                  <Text style={styles.pageBtnText}>Next</Text>
-                  <CaretRightIcon size={16} color={t.neutral[600]} />
-                </Pressable>
-              </View>
+            {/* Under the list: the next batch as the end nears, "Try again", or the end. */}
+            {!isLoadingProducts && products.items.length > 0 ? (
+              <ListEnd list={products} done={products.total > BATCH ? 'That’s every product in this shop' : ''} />
             ) : null}
           </View>
         ) : null}
@@ -992,12 +986,4 @@ const styles = themed(() => StyleSheet.create({
   grid: { flexDirection: 'row', flexWrap: 'wrap', gap: GRID_GAP, marginHorizontal: GRID_BLEED },
   // The empty list's white card on the shop's grey page.
   empty: { borderRadius: 16, backgroundColor: t.neutral[0] },
-  pagination: { flexDirection: 'row', alignItems: 'center', justifyContent: 'center', gap: 10, marginTop: 16 },
-  pageBtn: {
-    flexDirection: 'row', alignItems: 'center', gap: 4, minHeight: 44, paddingHorizontal: 14,
-    borderWidth: 1, borderColor: t.neutral[200], borderRadius: 8, backgroundColor: t.neutral[0],
-  },
-  pageBtnOff: { opacity: 0.4 },
-  pageBtnText: { fontSize: 13, lineHeight: 15.6, ...font(400), color: t.neutral[600] },
-  pageInfo: { fontSize: 13, lineHeight: 20.8, ...font(400), color: t.neutral[500] },
 }));

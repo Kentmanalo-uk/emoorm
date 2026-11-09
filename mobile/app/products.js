@@ -1,5 +1,5 @@
-import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
-import { ActivityIndicator, Image, Pressable, ScrollView, StyleSheet, Text, View, useWindowDimensions } from 'react-native';
+import { useEffect, useMemo, useRef, useState } from 'react';
+import { Image, Pressable, ScrollView, StyleSheet, Text, View, useWindowDimensions } from 'react-native';
 import { useLocalSearchParams, useRouter } from 'expo-router';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import {
@@ -20,6 +20,8 @@ import { fetchCategories, fetchMunicipalities } from '../src/lib/referenceData';
 import { GRID_EDGE, GRID_GAP, gridCellWidth } from '../src/lib/productGrid';
 import { font, t, themed } from '../src/theme';
 import { PullFlatList } from '../src/components/PullList';
+import ListEnd from '../src/components/ListEnd';
+import useInfiniteList from '../src/hooks/useInfiniteList';
 
 // The API's sortBy and sortOrder for each sort choice (web Products.jsx SORTS).
 const SORTS = {
@@ -33,11 +35,13 @@ const SORTS = {
   'name-asc': { sortBy: 'name', sortOrder: 'asc' },
   'name-desc': { sortBy: 'name', sortOrder: 'desc' },
 };
-const PAGE_SIZE = 20;
+// Products per batch; the next comes on its own as the end of the grid
+// nears (web BATCH).
+const BATCH = 20;
 
-/** GET /products parameters for the list as filtered and paged. */
-const listParams = ({ page, category, municipalityId, search, minPrice, maxPrice, sort }) => {
-  const params = { page, pageSize: PAGE_SIZE };
+/** GET /products parameters for the list as filtered (each batch adds its page). */
+const listParams = ({ category, municipalityId, search, minPrice, maxPrice, sort }) => {
+  const params = { pageSize: BATCH };
   if (category) params.categoryId = category;
   if (municipalityId) params.municipalityId = municipalityId;
   if (search) params.search = search;
@@ -47,10 +51,11 @@ const listParams = ({ page, category, municipalityId, search, minPrice, maxPrice
   return params;
 };
 
-// Each filtered list remembers what it showed, for this app run (web pageCache):
-// shown at once when asked for again, then refreshed.
+// Each filtered list remembers what it showed, every batch loaded so far,
+// for this app run (web pageCache): shown at once when asked for again,
+// then refreshed.
 const listCache = new Map();
-const listKey = (params) => `products:${JSON.stringify(params)}`;
+const listKey = (params) => `products-list:${JSON.stringify(params)}`;
 
 const str = (v) => (typeof v === 'string' ? v : '');
 
@@ -78,29 +83,35 @@ export default function Products() {
   // No sort chosen: a search ranks by best match, browsing by newest.
   const sortBy = str(params.sort) && SORTS[str(params.sort)] ? str(params.sort) : (searchQuery ? 'relevance' : 'newest');
 
-  const firstParams = useMemo(() => listParams({
-    page: 1, category: selectedCategory, municipalityId, search: searchQuery, minPrice: minParam, maxPrice: maxParam, sort: sortBy,
+  const query = useMemo(() => listParams({
+    category: selectedCategory, municipalityId, search: searchQuery, minPrice: minParam, maxPrice: maxParam, sort: sortBy,
   }), [selectedCategory, municipalityId, searchQuery, minParam, maxParam, sortBy]);
-  const saved = imageSearch ? null : listCache.get(listKey(firstParams));
 
-  const [products, setProducts] = useState(() => saved?.products || []);
-  const [total, setTotal] = useState(() => saved?.total || 0);
-  const [totalPages, setTotalPages] = useState(() => saved?.totalPages || 0);
-  const [page, setPage] = useState(1);
-  const [isLoading, setIsLoading] = useState(() => !saved);
-  const [isLoadingMore, setIsLoadingMore] = useState(false);
-  const [loadError, setLoadError] = useState('');
-  // The words the results are for, when the search had a typo.
-  const [corrected, setCorrected] = useState('');
-  const [imageSearchPreview, setImageSearchPreview] = useState('');
+  // The list, every product of it: one batch after another as the end of
+  // the grid nears. Any change of filters or sort starts again from the
+  // first batch.
+  const list = useInfiniteList({
+    listKey: listKey(query),
+    enabled: !imageSearch,
+    loadPage: async (page) => {
+      const response = await apiClient.get('/products', { params: { ...query, page } });
+      const items = response.data || [];
+      return {
+        items,
+        total: response.pagination?.total ?? items.length,
+        totalPages: response.pagination?.totalPages ?? 1,
+        extra: { corrected: response.correctedSearch || '' },
+      };
+    },
+    readSaved: (key) => listCache.get(key),
+    save: (key, saved) => listCache.set(key, saved),
+  });
   const [categories, setCategories] = useState([]);
   const [municipalities, setMunicipalities] = useState([]);
   // The filter sheet: null, or the chip that opened it ('all' | 'municipality' | 'category' | 'price').
   const [filterSheet, setFilterSheet] = useState(null);
   // iOS 26: the search bar floats over the results in Liquid Glass; the list starts under it.
   const [barH, setBarH] = useState(0);
-  // Only the latest request is shown: an earlier one can answer after it.
-  const latestRequest = useRef(0);
   const listRef = useRef(null);
 
   useEffect(() => {
@@ -110,84 +121,25 @@ export default function Products() {
     return () => { live = false; };
   }, []);
 
-  const fetchProducts = useCallback(async () => {
-    const key = listKey(firstParams);
-    const request = ++latestRequest.current;
-    // Shown before: at once, then refreshed. New filters: the skeleton.
-    const kept = listCache.get(key);
-    if (kept) {
-      setProducts(kept.products);
-      setTotal(kept.total);
-      setTotalPages(kept.totalPages);
-      setIsLoading(false);
-    } else {
-      setIsLoading(true);
-    }
-    setPage(1);
-    setLoadError('');
-    try {
-      const response = await apiClient.get('/products', { params: firstParams });
-      if (request !== latestRequest.current) return;
-      const list = response.data || [];
-      setProducts(list);
-      setCorrected(response.correctedSearch || '');
-      setTotal(response.pagination?.total || 0);
-      setTotalPages(response.pagination?.totalPages || 0);
-      listCache.set(key, { products: list, total: response.pagination?.total || 0, totalPages: response.pagination?.totalPages || 0 });
-    } catch (error) {
-      if (request !== latestRequest.current) return;
-      // Offline and the like: the list shown last time stays.
-      if (!kept) {
-        setProducts([]);
-        setLoadError(error?.message || 'Failed to load products');
-      }
-    } finally {
-      if (request === latestRequest.current) setIsLoading(false);
-    }
-  }, [firstParams]);
+  // A photo search: its results, kept from the search-by-image screen.
+  const imageStored = useMemo(() => (imageSearch ? readImageSearch() : null), [imageSearch]);
 
+  // Another filter or sort starts the list over: back to its top.
+  const shownKey = useRef(null);
+  const key = listKey(query);
   useEffect(() => {
-    if (imageSearch) {
-      latestRequest.current += 1;
-      const stored = readImageSearch();
-      setProducts(stored.results);
-      setImageSearchPreview(stored.previewUrl);
-      setTotal(stored.results.length);
-      setTotalPages(1);
-      setPage(1);
-      setLoadError('');
-      setIsLoading(false);
-      return;
-    }
-    setImageSearchPreview('');
-    fetchProducts();
-    listRef.current?.scrollToOffset?.({ offset: 0, animated: false });
-  }, [imageSearch, fetchProducts]);
+    if (shownKey.current === key) return;
+    const first = shownKey.current === null;
+    shownKey.current = key;
+    if (!first) listRef.current?.scrollToOffset?.({ offset: 0, animated: false });
+  }, [key]);
 
-  // The next page, added under the list as it scrolls near the end.
-  const loadMore = async () => {
-    if (imageSearch || isLoading || isLoadingMore || loadError || page >= totalPages) return;
-    const next = page + 1;
-    const request = latestRequest.current;
-    setIsLoadingMore(true);
-    try {
-      const response = await apiClient.get('/products', { params: { ...firstParams, page: next } });
-      if (request !== latestRequest.current) return;
-      setProducts((prev) => {
-        const seen = new Set(prev.map((p) => p.id));
-        return [...prev, ...(response.data || []).filter((p) => !seen.has(p.id))];
-      });
-      setPage(next);
-      if (response.pagination) {
-        setTotal(response.pagination.total);
-        setTotalPages(response.pagination.totalPages);
-      }
-    } catch {
-      // The next scroll asks again.
-    } finally {
-      setIsLoadingMore(false);
-    }
-  };
+  const products = imageStored ? imageStored.results : list.items;
+  const total = imageStored ? imageStored.results.length : list.total;
+  const isLoading = imageStored ? false : list.loading;
+  const loadError = imageSearch ? '' : (list.error ? (list.error.message || 'Failed to load products') : '');
+  const corrected = imageSearch ? '' : (list.extra?.corrected || '');
+  const imageSearchPreview = imageStored?.previewUrl || '';
 
   /* URL changes, as the website's updateURL: empty values drop the key. */
   const updateURL = (changes) => {
@@ -318,7 +270,7 @@ export default function Products() {
   if (isLoading) {
     body = <View style={styles.gutter}><SearchSkeletonCards count={12} /></View>;
   } else if (loadError) {
-    body = <View style={styles.gutter}><SearchResultsError message={loadError} onRetry={fetchProducts} /></View>;
+    body = <View style={styles.gutter}><SearchResultsError message={loadError} onRetry={list.reload} /></View>;
   } else if (products.length === 0) {
     body = (
       <View style={styles.gutter}>
@@ -367,7 +319,7 @@ export default function Products() {
         </View>
       </Glass>
 
-      <PullFlatList onPull={fetchProducts} showsVerticalScrollIndicator={false} showsHorizontalScrollIndicator={false}
+      <PullFlatList onPull={() => (imageSearch ? null : list.reload())} showsVerticalScrollIndicator={false} showsHorizontalScrollIndicator={false}
         ref={listRef}
         style={styles.list}
         data={body ? [] : products}
@@ -389,9 +341,10 @@ export default function Products() {
         initialNumToRender={6}
         maxToRenderPerBatch={6}
         windowSize={7}
-        onEndReached={loadMore}
-        onEndReachedThreshold={0.6}
-        ListFooterComponent={isLoadingMore ? <ActivityIndicator color={t.primary[600]} style={styles.more} /> : null}
+        {...(imageSearch ? null : list.endProps)}
+        ListFooterComponent={!imageSearch && !body && products.length > 0
+          ? <ListEnd list={list} done={total > BATCH ? 'You’ve seen everything for now' : ''} />
+          : null}
         contentContainerStyle={{ paddingTop: liquidGlass ? barH : 0, paddingBottom: 12 + insets.bottom }}
         scrollIndicatorInsets={liquidGlass ? { top: barH } : undefined}
         keyboardShouldPersistTaps="handled"
@@ -476,5 +429,4 @@ const styles = themed(() => StyleSheet.create({
   gutter: { paddingHorizontal: 12 },
   row: { gap: GRID_GAP, paddingHorizontal: GRID_EDGE, marginBottom: GRID_GAP },
   cell: { minWidth: 0 },
-  more: { marginVertical: 16 },
 }));

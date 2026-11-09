@@ -11,7 +11,9 @@ import useAuthStore from '../../store/authStore';
 import { resolveImg } from '../../lib/media';
 import ShellBarButton from '../ShellBarButton';
 import { GlassBackdrop, liquidGlass } from '../Glass';
-import { closeMenu, menuPopStyle, openMenu } from '../menuMotion';
+import {
+  closeMenu, menuBodyStyle, menuPopStyle, openMenu,
+} from '../menuMotion';
 import ShellPageMenu from '../ShellPageMenu';
 import HeaderGlow, { useHeaderInk } from '../HeaderGlow';
 import { useSellerShell } from './SellerShell';
@@ -145,7 +147,8 @@ function ChatTitle() {
   const ink = useHeaderInk();
   const adminCount = waiting['/seller/support']?.count || 0;
   // The menu opens 8px under the title row, from its left edge (.scm-chat-menu),
-  // growing out of that corner and shrinking back into it (menuMotion).
+  // growing out of the switch (40px in, 16px above: menu-pop.css) and
+  // shrinking back into it (menuMotion).
   const open = () => boxRef.current?.measureInWindow((x, y, w, h) => {
     setAnchor({ left: x, top: y + h + 8 });
     setExpanded(true);
@@ -172,24 +175,26 @@ function ChatTitle() {
         <Pressable style={StyleSheet.absoluteFill} onPress={close} accessibilityLabel="Close" />
         {anchor ? (
           <Animated.View
-            style={[styles.chatMenu, liquidGlass && styles.chatMenuGlass, { top: anchor.top, left: Math.min(anchor.left, width - 242) }, menuPopStyle(pop, 'top left')]}
+            style={[styles.chatMenu, liquidGlass && styles.chatMenuGlass, { top: anchor.top, left: Math.min(anchor.left, width - 242) }, menuPopStyle(pop, [40, -16, 0])]}
             accessibilityRole="menu"
           >
             <GlassBackdrop radius={16} />
-            <Pressable accessibilityRole="menuitem" onPress={close} style={({ pressed }) => [styles.chatRow, pressed && styles.chatRowPressed]}>
-              <ChatCircleDotsIcon size={24} weight="light" color={t.neutral[900]} />
-              <Text style={styles.chatRowText}>Buyers</Text>
-              <CheckIcon size={16} weight="bold" color={t.primary[600]} />
-            </Pressable>
-            <Pressable
-              accessibilityRole="menuitem"
-              onPress={() => { close(); router.push('/seller/support'); }}
-              style={({ pressed }) => [styles.chatRow, styles.chatRowLine, pressed && styles.chatRowPressed]}
-            >
-              <HeadsetIcon size={24} weight="light" color={t.neutral[900]} />
-              <Text style={styles.chatRowText}>Municipal admin</Text>
-              {adminCount > 0 ? <Text style={styles.chatCount}>{adminCount}</Text> : null}
-            </Pressable>
+            <Animated.View style={menuBodyStyle(pop)}>
+              <Pressable accessibilityRole="menuitem" onPress={close} style={({ pressed }) => [styles.chatRow, pressed && styles.chatRowPressed]}>
+                <ChatCircleDotsIcon size={24} weight="light" color={t.neutral[900]} />
+                <Text style={styles.chatRowText}>Buyers</Text>
+                <CheckIcon size={16} weight="bold" color={t.primary[600]} />
+              </Pressable>
+              <Pressable
+                accessibilityRole="menuitem"
+                onPress={() => { close(); router.push('/seller/support'); }}
+                style={({ pressed }) => [styles.chatRow, styles.chatRowLine, pressed && styles.chatRowPressed]}
+              >
+                <HeadsetIcon size={24} weight="light" color={t.neutral[900]} />
+                <Text style={styles.chatRowText}>Municipal admin</Text>
+                {adminCount > 0 ? <Text style={styles.chatCount}>{adminCount}</Text> : null}
+              </Pressable>
+            </Animated.View>
           </Animated.View>
         ) : null}
       </Modal>

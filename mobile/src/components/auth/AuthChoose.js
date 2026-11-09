@@ -121,15 +121,15 @@ export default function AuthChoose({
 }) {
   const insets = useSafeAreaInsets();
   const { width } = useWindowDimensions();
-  // min(170px, 46vw)
-  const artSize = Math.min(170, Math.round(width * 0.46));
+  // min(232px, 60vw): large, its lower part dissolving into the band.
+  const artSize = Math.min(232, Math.round(width * 0.6));
   return (
     <View style={styles.choose}>
       <View style={styles.hero}>
         <Text accessibilityRole="header" style={styles.title}>{title}</Text>
         <Text style={styles.sub}>{sub}</Text>
         <View style={styles.art}>
-          <AuthScene name={scene} size={artSize} />
+          <AuthScene name={scene} size={artSize} fade />
         </View>
       </View>
       <View style={styles.bodyWrap}>
@@ -170,9 +170,10 @@ const styles = themed(() => StyleSheet.create({
   // Until it is measured: the band's top edge, not a white flash.
   band: { flex: 1, backgroundColor: BAND_STATUS_BAR, overflow: 'hidden' },
 
-  choose: { flexGrow: 1 },
+  // 12px under the bar: the website's sheet puts a 12px gap between its bar and the form.
+  choose: { flexGrow: 1, paddingTop: 12 },
   // The band's words stay the light palette's: the band is light in either mode.
-  hero: { paddingBottom: 22, alignItems: 'center' },
+  hero: { alignItems: 'center' },
   title: {
     fontSize: 25,
     lineHeight: 30,
@@ -181,12 +182,16 @@ const styles = themed(() => StyleSheet.create({
     textAlign: 'center',
     ...font(500),
   },
+  // Close under the headline: one lockup.
   sub: {
-    marginTop: 6, fontSize: 14.5, lineHeight: 21.75, color: LIGHT.neutral[600], textAlign: 'center', ...font(400),
+    marginTop: 2, fontSize: 14.5, lineHeight: 19.575, color: LIGHT.neutral[600], textAlign: 'center', ...font(400),
   },
-  art: { marginTop: 6, alignItems: 'center' },
+  // The scene runs 22px under the white curve (the body is drawn over it).
+  art: {
+    marginTop: 4, marginBottom: -22, alignItems: 'center', zIndex: 0,
+  },
 
-  bodyWrap: { flexGrow: 1, marginHorizontal: -20 },
+  bodyWrap: { flexGrow: 1, marginHorizontal: -20, zIndex: 1 },
   // 28px from the curve's crest to the first button.
   body: {
     flexGrow: 1, paddingTop: 2, paddingHorizontal: 20, backgroundColor: t.neutral[0],

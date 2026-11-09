@@ -4,6 +4,7 @@ import { router, useLocalSearchParams } from 'expo-router';
 import { DeviceMobileIcon, EnvelopeSimpleIcon } from '../../src/lib/icons';
 import apiClient from '../../src/api/client';
 import useAuthStore from '../../src/store/authStore';
+import { markNewAccount } from '../../src/lib/welcome';
 import { fetchMunicipalities } from '../../src/lib/referenceData';
 import AuthSheet, { HelpLink } from '../../src/components/auth/AuthSheet';
 import {
@@ -337,6 +338,8 @@ export default function Login({ seller = false }) {
         return;
       }
       await invite.done();
+      // A new account: the welcome pop-up greets it on the next buyer screen.
+      markNewAccount(data.user);
       await finishLogin(data.user, data.accessToken, data.refreshToken);
     } catch (err) {
       setApiError(err?.message || 'Failed to complete sign-up.');

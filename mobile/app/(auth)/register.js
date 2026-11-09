@@ -5,6 +5,7 @@ import Toast from 'react-native-toast-message';
 import { DeviceMobileIcon, EnvelopeSimpleIcon } from '../../src/lib/icons';
 import apiClient from '../../src/api/client';
 import useAuthStore from '../../src/store/authStore';
+import { markNewAccount } from '../../src/lib/welcome';
 import { fetchMunicipalities } from '../../src/lib/referenceData';
 import AuthSheet, { HelpLink } from '../../src/components/auth/AuthSheet';
 import {
@@ -157,6 +158,8 @@ export default function Register() {
       const token = response.data?.accessToken;
       const userData = response.data?.user;
       if (token && userData) {
+        // A new account: the welcome pop-up greets it on the next buyer screen.
+        markNewAccount(userData);
         await storeLogin(userData, token, response.data.refreshToken);
         await invite.done();
         // A typed email gets a confirmation link in its welcome email.
