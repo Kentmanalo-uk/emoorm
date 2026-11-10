@@ -7,13 +7,14 @@ import InsightsForecast from './InsightsForecast';
 import InsightsStock from './InsightsStock';
 import InsightsBuyers from './InsightsBuyers';
 import InsightsViewed from './InsightsViewed';
+import InsightsReviews from './InsightsReviews';
 
 /*
  * Seller Center › Analytics › Insights: what the ML engine (Phase 3) works
  * out for the shop from its own data, in one answer (GET /ml/insights/mine):
  * the sales forecast, stock risk, buyer groups and products viewed but not
- * bought, with Bundle ideas (Phase 2, its own request) last. Each card is
- * left out while its part is switched off or could not be worked out; the
+ * bought, and what buyers say in their reviews (Phase 4), with Bundle
+ * ideas (Phase 2, its own request) last. Each card is left out while its part is switched off or could not be worked out; the
  * section shows only when at least one card does.
  *
  * It sits at the end of the page and appears once the answer is in, so
@@ -39,7 +40,7 @@ export default function SellerInsights({ refreshKey = 0 }) {
     return () => { live = false; };
   }, [refreshKey]);
 
-  const parts = [data?.forecast, data?.stock, data?.buyers, data?.performance];
+  const parts = [data?.forecast, data?.stock, data?.buyers, data?.performance, data?.reviews];
   const visible = settled && (parts.some(shows) || bundlesOn);
 
   return (
@@ -49,13 +50,14 @@ export default function SellerInsights({ refreshKey = 0 }) {
       {visible ? (
         <View style={styles.head}>
           <Text style={styles.title} accessibilityRole="header">Insights</Text>
-          <Text style={styles.sub}>Worked out from your shop's own sales, views and stock. They are estimates to plan with; nothing is changed for you.</Text>
+          <Text style={styles.sub}>Worked out from your shop's own sales, views, stock and reviews. They are estimates to plan with; nothing is changed for you.</Text>
         </View>
       ) : null}
       <InsightsForecast part={data?.forecast} />
       <InsightsStock part={data?.stock} />
       <InsightsBuyers part={data?.buyers} />
       <InsightsViewed part={data?.performance} />
+      <InsightsReviews part={data?.reviews} />
       <BundleIdeas refreshKey={refreshKey} onData={(d) => setBundlesOn(Boolean(d?.on))} style={styles.lastCard} />
     </View>
   );

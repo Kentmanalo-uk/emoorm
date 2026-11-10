@@ -23,6 +23,26 @@ const GRACE_MS = Math.min(5000, BUDGET_MS / 4);
 
 let busy = null; // the key of the module running now
 
+const FAILURES_TO_PAUSE = 3;
+const PAUSE_MS = 24 * 60 * 60 * 1000;
+
+/** Its last runs all failed, the latest within a day: rest. (Errors read as not paused.) */
+const pausedAfterFailures = async (key) => {
+  try {
+    const last = await require('../config/database').mlTrainingRun.findMany({
+      where: { modelKey: key, status: { not: 'RUNNING' } },
+      orderBy: { startedAt: 'desc' },
+      take: FAILURES_TO_PAUSE,
+      select: { status: true, startedAt: true },
+    });
+    return last.length === FAILURES_TO_PAUSE
+      && last.every((r) => r.status === 'FAILED' || r.status === 'TIMED_OUT')
+      && Date.now() - last[0].startedAt.getTime() < PAUSE_MS;
+  } catch {
+    return false;
+  }
+};
+
 const errorText = (err) => (err?.code === 'TIMEOUT' ? 'Ran past its time budget' : (err?.message || String(err)));
 
 /**
@@ -38,6 +58,11 @@ const runModule = async (key, { trigger = 'SCHEDULE', job } = {}) => {
   if (typeof work !== 'function') return { status: 'SKIPPED', reason: 'not available yet' };
   if (key !== 'housekeeping' && !(await settings.isOn(key))) return { status: 'SKIPPED', reason: 'switched off' };
   if (busy) return { status: 'SKIPPED', reason: `${busy} is running` };
+  // A scheduled job that failed 3 times running rests a day rather than
+  // failing again and again (an admin's Run now still tries).
+  if (trigger === 'SCHEDULE' && (await pausedAfterFailures(key))) {
+    return { status: 'SKIPPED', reason: `paused after ${FAILURES_TO_PAUSE} failed runs; run it by hand to try again` };
+  }
 
   busy = key;
   const startedAt = new Date();
@@ -135,5 +160,5 @@ const start = (runtimeStatus) => {
 };
 
 module.exports = {
-  runModule, housekeeping, start, isBusy, BUDGET_MS,
+  runModule, housekeeping, start, isBusy, pausedAfterFailures, BUDGET_MS, FAILURES_TO_PAUSE,
 };

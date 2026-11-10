@@ -10,8 +10,8 @@ built in phases; this page is updated with each one.
 | 1 Foundation | **Done** (10 Nov 2026) |
 | 2 Buyer intelligence (similar items, bought together, search, trending) | **Done** (10 Nov 2026) |
 | 3 Seller intelligence (forecast, stock risk, buyer groups, performance) | **Done** (10 Nov 2026) |
-| 4 Reviews, safety, photos (sentiment, unusual activity, photo quality, purchase prediction) | Not started |
-| 5 Hardening (evaluation vs baselines, activation rules, monitoring) | Not started |
+| 4 Reviews, safety, photos (sentiment, unusual activity, photo quality, purchase prediction) | **Done** (10 Nov 2026) |
+| 5 Hardening (evaluation vs baselines, activation rules, monitoring) | **Done** (10 Nov 2026) |
 
 ## Rules it keeps
 
@@ -115,6 +115,58 @@ stock.
 `insights.js` puts them in one answer; each part is off, insufficient (with
 what it needs), unavailable (it failed; the rest still answers) or ok.
 
+## Phase 4 modules
+
+**07 Review sentiment** (`sentiment.js`, daily). An English and Tagalog
+word list, not a downloaded model (English-only models misread Tagalog).
+A review is cut at full stops and "but / pero / kaso"; each part scores its
+words, doubled by "very / sobrang / napaka", flipped by "not / hindi /
+walang" just before; phrases like "walang lasa" and "ok lang" have their own
+meaning. Themes (taste, freshness, packaging, delivery, price, quality,
+service, size) take the feeling of the part that names them: "Masarap pero
+sira ang packaging" = taste positive, packaging negative, mixed. Shops and
+products with 5+ reviews get a summary (split, praise, complaints with short
+excerpts, months). Check: agreement with the stars (4-5 vs 1-2); a run under
+60% (once 20 can be judged) is not used. Reviews and ratings are never
+changed.
+
+**08 Unusual activity** (`anomalies.js`, daily; `alerts.js` for admins).
+Rules and robust statistics, no labelled fraud to learn from: 5+ orders in
+24 h by one buyer; an order 3x and robust-z 5 above its shop's usual (shops
+with 10+ orders); 2+ failed payment proofs in 14 days; 3+ unpaid, refused or
+uncollected orders in 60 days; an account under 2 days old ordering 5x the
+marketplace median (and ₱3,000+). Each flag is raised once, with its reason
+and a 0-1 score, for a person to mark Pending, Confirmed suspicious, Cleared
+or Escalated (audit-logged). Nothing is suspended, cancelled or blocked.
+
+**10 Photo quality** (`imageQuality.js`, on upload). sharp makes a 128 px
+greyscale copy: brightness (mean), contrast (spread), sharpness (variance of
+the Laplacian), and the size of the shorter side, with the website's ID-photo
+thresholds (600 px; dark < 60; bright > 235; blurry < 60; flat < 25). Advice
+only; it cannot tell whether a product is genuine or allowed.
+
+**05 Purchase prediction** (`purchase.js`, weekly). Logistic regression on
+order history only (no per-person views are stored): for each past order,
+the product (1) and 3 random others (0), with features as they were just
+before it (earlier orders in its category and shop, a re-buy, its
+popularity, price against their usual, same town). Time split 80/20; AUC and
+log loss against popularity alone; nothing trained under 200 purchases, and a
+model that does not beat popularity by 0.02 AUC is not used. Shown to nobody:
+never used for prices or messages.
+
+## Phase 5 (hardening)
+
+- **Gates before use:** similar items need matches for half the catalogue
+  (10+ products); forecasts must not be worse than repeating last week;
+  search must find 50% of products by their own name; sentiment must agree
+  with the stars 60%; purchase prediction must beat popularity. A run that
+  fails its gate keeps the version in use.
+- **Rest after failures:** a scheduled job whose last 3 runs failed waits a
+  day (Run now still tries), so a broken job is not retried in a loop.
+- **Versions:** each model keeps the one in use and its 10 newest others.
+- **Response times:** every guarded step records its calls, fall-backs and
+  p50/p95 times in memory: /admin/ml and `/health` (detail) show them.
+
 ## Database (migration `20261110090000_ml_foundation`)
 
 | Table | Holds | Kept |
@@ -144,10 +196,19 @@ Public (work with the engine off: a fallback or an empty list; 120 a minute per 
 | `GET /api/ml/bundles/products/:productId?limit=` | often bought together (each with `bundle: { confidence, lift }`), or [] |
 | `GET /api/ml/bundles/cart?ids=a,b&limit=` | bought with what is in the cart, not already in it, or [] |
 
+Signed in (any role): `POST /api/ml/reviews/analyze { text }` reads a text's sentiment (nothing stored).
+
+Buyers: `GET /api/ml/purchase-probability/:productId` (their own chance; not shown anywhere yet).
+
+Sellers and admins: `POST /api/ml/images/analyze` (a photo, multipart `image`, or `{ url }` of one of this server's uploads).
+
+Admins (a municipal admin: their own town): `GET /api/ml/fraud/alerts?status=&type=&page=`, `GET /api/ml/fraud/alerts/pending`, `PATCH /api/ml/fraud/alerts/:id { status, note }`, `POST /api/ml/fraud/evaluate { orderId }`.
+
 Sellers (their own shop only):
 
 | Route | Gives |
 |---|---|
+| `GET /api/ml/reviews/insights` | what buyers say in their reviews (also `reviews` in insights/mine) |
 | `GET /api/ml/bundles/mine` | `{ on, ideas, ordersWithTwoOrMore, needed }` |
 | `GET /api/ml/insights/mine` | `{ on, forecast, stock, buyers, performance }` (see insights.js) |
 | `GET /api/ml/forecast/products/:productId` | one of their products' forecast and stock outlook (another shop's: 404) |
@@ -186,6 +247,15 @@ schedule, last run and model in use, run now, versions with "Use this
 version", and every run with its time, rows and scores.
 
 ## Tests
+
+`backend/tests/ml-phase4.test.js`: sentiment on the blueprint's example,
+Tagalog, negation and lukewarm, a shop's summary and the read endpoint;
+the anomaly rules and robust z; flags raised once, scoped by town, judged
+and audit-logged, nothing else touched; photo checks on sharp, blurred,
+dark and small images and the endpoint; purchase prediction learning,
+AUC, and waiting for data; the rest after 3 failures, version clean-up and
+response times.
+
 
 `backend/tests/ml-phase3.test.js`: forecasts below the minimum, early,
 validated, rising, 90-day; MAE/RMSE/MAPE; the blueprint's stock example

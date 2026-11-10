@@ -51,6 +51,26 @@ export function useAdminAttention() {
   });
 }
 
+/**
+ * Unusual-activity flags waiting for a person (the ML engine, module 08), in
+ * the admin's scope: their own town for a municipal admin. Not part of
+ * /moderation/attention, so it is asked for on its own and joined to the
+ * waiting counts by the shell. A failed read (the engine's route missing on
+ * an older server, say) counts as none.
+ * @returns {Number}
+ */
+export function useFlagsPending() {
+  const userId = useAuthStore((s) => s.user?.id);
+  const { data } = useQuery({
+    queryKey: shellKey('flags', userId),
+    queryFn: async () => Number((await axios.get('/ml/fraud/alerts/pending')).data?.pending) || 0,
+    enabled: Boolean(userId),
+    ...COUNTS,
+    refetchInterval: 60 * 1000,
+  });
+  return data ?? 0;
+}
+
 /** The waiting counts keyed by the route they live at, for the sidebar's badges. */
 export const waitingByLink = (items) => {
   const byLink = {};
@@ -138,8 +158,8 @@ export function useAdminShellData(isSuperAdmin) {
 
 /**
  * Asks for one of the shell's reads again now, after something on the page
- * changed it: 'attention', 'notifications', 'messages', 'feedback' or
- * 'profile'. Whatever shows it (sidebar, dashboard, rail) updates together.
+ * changed it: 'attention', 'notifications', 'messages', 'feedback', 'flags'
+ * or 'profile'. Whatever shows it (sidebar, dashboard, rail) updates together.
  * @returns {Function} (kind) => Promise
  */
 export function useRefreshAdminShell() {

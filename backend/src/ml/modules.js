@@ -2,10 +2,9 @@
  * The ML engine's modules (ML_DOC.MD §4, docs/ml/README.md): what each is,
  * which phase builds it, and how often its job runs.
  *
- * A module whose `run` is missing is not built yet (Phase 2 built
- * recommendations, search and bundles; Phase 3 forecasting, buyer groups and
- * stock risk; the rest come in phase 4): its switch cannot be turned on and
- * it never runs. A phase that builds a module adds its `run`
+ * A module whose `run` is missing (and is not onDemand) is not built yet:
+ * its switch cannot be turned on and it never runs. All ten are built now
+ * (phases 2-4). A phase that builds a module adds its `run`
  * (and its `minimum`, the data it needs before it shows anything).
  *
  * `run(ctx)` gets { timeLeft(), signal, version, trigger } and returns
@@ -45,6 +44,7 @@ const MODULES = [
     key: 'purchasePrediction', number: 5, phase: 4, name: 'Purchase prediction',
     what: 'The chance a buyer orders a product soon; only once there are enough past outcomes to learn from.',
     every: 7 * DAY,
+    run: (ctx) => require('./purchase').run(ctx),
   },
   {
     key: 'inventory', number: 6, phase: 3, name: 'Stock risk',
@@ -56,11 +56,13 @@ const MODULES = [
     key: 'sentiment', number: 7, phase: 4, name: 'Review sentiment',
     what: 'Positive, negative or mixed reviews and what they mention (English and Tagalog).',
     every: DAY,
+    run: (ctx) => require('./sentiment').run(ctx),
   },
   {
     key: 'anomalies', number: 8, phase: 4, name: 'Unusual activity',
     what: 'Flags unusual orders and payment proofs for an admin to look at. Never acts on its own.',
     every: DAY,
+    run: (ctx) => require('./anomalies').run(ctx),
   },
   {
     key: 'bundles', number: 9, phase: 2, name: 'Bundles',
@@ -72,6 +74,7 @@ const MODULES = [
     key: 'imageQuality', number: 10, phase: 4, name: 'Photo quality',
     what: 'Checks a product photo\'s size, sharpness and brightness when it is uploaded.',
     every: null, // runs on upload, not on a schedule
+    onDemand: true, // built: it answers POST /api/ml/images/analyze
   },
 ];
 

@@ -517,6 +517,72 @@
   background: var(--pf-green-soft);
 }
 
+/* A photo that could look better (the photo check): a small mark on it, and
+   its tip under the photos, closable. Advice only. */
+.pf-photo-tipmark {
+  position: absolute;
+  top: 6px;
+  left: 6px;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 26px;
+  height: 26px;
+  border-radius: 50%;
+  background: rgba(255, 255, 255, 0.94);
+  color: var(--t-warning-600, #d97706);
+  pointer-events: none;
+}
+
+.pf-photo-tips {
+  display: grid;
+  gap: 8px;
+  margin: 10px 0 0;
+  padding: 0;
+  list-style: none;
+}
+
+.pf-note.pf-photo-tip {
+  padding: 10px 8px 10px 14px;
+  font-size: 13.5px;
+}
+
+.pf-photo-tip > span {
+  flex: 1;
+  min-width: 0;
+}
+
+.pf-photo-tip strong {
+  font-weight: 600;
+}
+
+.pf-photo-tip small {
+  display: block;
+  margin-top: 2px;
+  font-size: 12px;
+  opacity: 0.85;
+}
+
+.pf-photo-tip-close {
+  display: inline-flex;
+  flex-shrink: 0;
+  align-items: center;
+  justify-content: center;
+  width: 30px;
+  height: 30px;
+  margin: -4px 0 0;
+  padding: 0;
+  border: 0;
+  border-radius: 50%;
+  background: transparent;
+  color: inherit;
+  cursor: pointer;
+}
+
+.pf-photo-tip-close:hover {
+  background: rgba(146, 64, 14, 0.08);
+}
+
 /* ── Category ─────────────────────────────────────────────── */
 .pf-cat {
   display: flex;

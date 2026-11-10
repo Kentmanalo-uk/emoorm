@@ -140,6 +140,7 @@ const AdminJuniorAdmins = lazy(() => import('./pages/AdminJuniorAdmins'));
 const AdminAuditLogs = lazy(() => import('./pages/AdminAuditLogs'));
 const AdminSettings = lazy(() => import('./pages/AdminSettings'));
 const AdminMl = lazy(() => import('./pages/AdminMl'));
+const AdminFlags = lazy(() => import('./pages/AdminFlags'));
 const AdminMenu = lazy(() => import('./pages/AdminMenu'));
 const AdminTools = lazy(() => import('./pages/AdminTools'));
 const AdminSupport = lazy(() => import('./pages/AdminSupport'));
@@ -434,6 +435,7 @@ function AppRoutes() {
         <Route path="/admin/products" element={<AdminRoute><AdminProducts /></AdminRoute>} />
         <Route path="/admin/orders" element={<AdminRoute><AdminOrders /></AdminRoute>} />
         <Route path="/admin/reports" element={<AdminRoute><AdminReports /></AdminRoute>} />
+        <Route path="/admin/flags" element={<AdminRoute><AdminFlags /></AdminRoute>} />
         <Route path="/admin/support" element={<AdminRoute><AdminSupport /></AdminRoute>} />
         <Route path="/admin/users" element={<AdminRoute roles={['SUPER_ADMIN']}><AdminUsers /></AdminRoute>} />
         <Route path="/admin/categories" element={<AdminRoute roles={['SUPER_ADMIN']}><AdminCategories /></AdminRoute>} />

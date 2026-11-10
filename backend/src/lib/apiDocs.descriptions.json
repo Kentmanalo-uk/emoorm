@@ -495,5 +495,13 @@
   "GET /api/ml/bundles/cart": "Products often bought with what is in a cart (?ids=a,b,c), not already in it.",
   "GET /api/ml/bundles/mine": "The signed-in seller's bundle ideas: pairs of their own products bought together, and how many orders with two or more of their products there are so far.",
   "GET /api/ml/insights/mine": "The signed-in seller's insights for their own shop: expected sales, stock that may run out, buyer groups (counts only) and products viewed but not bought. Each part says off, not enough data yet, or its results.",
-  "GET /api/ml/forecast/products/:productId": "One of the seller's own products: its sales forecast and how long its stock may last."
+  "GET /api/ml/forecast/products/:productId": "One of the seller's own products: its sales forecast and how long its stock may last.",
+  "POST /api/ml/reviews/analyze": "How a text reads (positive, negative, mixed or neutral) and what it is about (taste, packaging, delivery…), in English or Tagalog. Nothing is stored.",
+  "GET /api/ml/reviews/insights": "The signed-in seller's reviews, summarised: the split, what buyers praise and what they complain about.",
+  "GET /api/ml/purchase-probability/:productId": "The chance the signed-in buyer orders this product within 14 days, once the engine has enough past purchases to learn from. Not used for prices or messages.",
+  "POST /api/ml/images/analyze": "A product photo's quality (size, sharpness, brightness, contrast) with advice. Send the photo (image) or the url of an uploaded one. Advice only.",
+  "GET /api/ml/fraud/alerts": "Unusual-activity flags for admins to look at (a municipal admin: their own town's), with the orders and people they are about.",
+  "GET /api/ml/fraud/alerts/pending": "How many unusual-activity flags are waiting for this admin.",
+  "PATCH /api/ml/fraud/alerts/:id": "Mark a flag after looking at it: PENDING_REVIEW, CONFIRMED_SUSPICIOUS, CLEARED or ESCALATED, with a note. Nothing else happens to the order or the account.",
+  "POST /api/ml/fraud/evaluate": "Check one order now against the unusual-activity rules (raising any flag it meets)."
 }

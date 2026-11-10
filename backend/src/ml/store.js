@@ -185,8 +185,29 @@ const purgeOld = async () => {
     }).then((r) => r.count),
   ]);
   return {
-    predictions, runs, counts, alerts,
+    predictions, runs, counts, alerts, versions: await purgeOldVersions(),
   };
+};
+
+const KEEP_VERSIONS = 10;
+
+/** Each model keeps its version in use and its newest 10 others (for a roll back). */
+const purgeOldVersions = async () => {
+  const keys = (await prisma.mlModelVersion.groupBy({ by: ['modelKey'], _count: { _all: true } }))
+    .filter((g) => g._count._all > KEEP_VERSIONS + 1)
+    .map((g) => g.modelKey);
+  let removed = 0;
+  for (const modelKey of keys) {
+    // eslint-disable-next-line no-await-in-loop
+    const keep = await prisma.mlModelVersion.findMany({
+      where: { modelKey, status: { not: 'ACTIVE' } }, orderBy: { version: 'desc' }, take: KEEP_VERSIONS, select: { id: true },
+    });
+    // eslint-disable-next-line no-await-in-loop
+    removed += (await prisma.mlModelVersion.deleteMany({
+      where: { modelKey, status: { not: 'ACTIVE' }, id: { notIn: keep.map((k) => k.id) } },
+    })).count;
+  }
+  return removed;
 };
 
 module.exports = {

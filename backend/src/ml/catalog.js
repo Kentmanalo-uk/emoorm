@@ -43,7 +43,8 @@ const loadCatalog = () => prisma.product.findMany({
 });
 
 const KIND_WORDS = {
-  READY_TO_EAT: 'ready to eat cooked meal food',
+  // No 'ready': 'Ready to Plant' seedlings are not cooked food.
+  READY_TO_EAT: 'cooked meal food ulam',
   COOK_TO_ORDER: 'cooked to order paluto meal food',
   LIVESTOCK: 'livestock animal',
   PACKAGE: 'package bundle set',

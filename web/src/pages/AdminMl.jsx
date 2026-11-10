@@ -32,6 +32,26 @@ const RUN_STATUS = {
 
 const NAMES = { housekeeping: 'Daily tidy-up' };
 
+/** The guarded steps (backend safe.guard labels) in words; others show their label. */
+const STEPS = {
+  similar: 'Similar products',
+  trending: 'Trending',
+  together: 'Bought together',
+  cart: 'Goes well with the cart',
+  'for-you': 'For you',
+  search: 'Search',
+  ideas: 'Bundle ideas',
+  purchase: 'Purchase chance',
+  photo: 'Photo check',
+  'insights-forecast': 'Insights: forecast',
+  'insights-stock': 'Insights: stock risk',
+  'insights-groups': 'Insights: buyer groups',
+  'insights-performance': 'Insights: viewed, not bought',
+  'insights-reviews': 'Insights: what buyers say',
+  'product-forecast': 'Product forecast',
+  'product-stock': 'Product stock outlook',
+};
+
 const every = (ms) => {
   if (!ms) return 'On upload';
   const h = ms / 3600e3;
@@ -49,6 +69,58 @@ const seconds = (ms) => {
 function RunBadge({ status }) {
   const s = RUN_STATUS[status] || { label: status, cls: 'admin-badge-neutral' };
   return <span className={`admin-badge ${s.cls}`}>{s.label}</span>;
+}
+
+/**
+ * How long each guarded step took since the server started, and how often
+ * it fell back (an error or too slow) to the plain answer.
+ */
+function ResponseTimes({ rows, loading }) {
+  return (
+    <div className="admin-card">
+      <div className="admin-card-header">
+        <h2 className="admin-card-title">Response times</h2>
+        <span className="aml-muted">Since the server last started; a step that fails or is too slow falls back to the plain answer.</span>
+      </div>
+      {loading ? (
+        <div className="admin-empty"><p>Loading…</p></div>
+      ) : !rows?.length ? (
+        <div className="admin-empty">
+          <EmptyArt name="analytics" size={96} />
+          <p>No calls yet since the server started. Times show once shoppers and sellers use the engine.</p>
+        </div>
+      ) : (
+        <div className="admin-table-wrap">
+          <table className="admin-table aml-latency">
+            <thead>
+              <tr><th>Step</th><th>Calls</th><th>Usual (p50)</th><th>Slow (p95)</th><th>Slowest</th><th>Fell back</th></tr>
+            </thead>
+            <tbody>
+              {rows.map((r) => (
+                <tr key={r.label}>
+                  <td>
+                    <div className="admin-user-cell-name">{STEPS[r.label] || r.label}</div>
+                    {STEPS[r.label] && <div className="admin-user-cell-email">{r.label}</div>}
+                  </td>
+                  <td>{num(r.calls)}</td>
+                  <td>{seconds(r.p50)}</td>
+                  <td>{seconds(r.p95)}</td>
+                  <td>{seconds(r.max)}</td>
+                  <td>
+                    {r.fallbacks > 0 ? (
+                      <span className="admin-badge admin-badge-pending" title={r.timeouts > 0 ? `${num(r.timeouts)} of them too slow` : 'Errors, none too slow'}>
+                        {num(r.fallbacks)}{r.timeouts > 0 ? ` · ${num(r.timeouts)} too slow` : ''}
+                      </span>
+                    ) : <span className="aml-muted">0</span>}
+                  </td>
+                </tr>
+              ))}
+            </tbody>
+          </table>
+        </div>
+      )}
+    </div>
+  );
 }
 
 /** A run's scores, short: "mae 1.5 · rows 20". */
@@ -191,7 +263,7 @@ export default function AdminMl() {
 
         <div className="an-kpi-grid">
           <KpiCard loading={loading && !status} label="Engine" value={s.enabled ? 'On' : 'Off'} hint={s.busy ? `Running: ${NAMES[s.busy] || s.busy}` : 'Idle'} />
-          <KpiCard loading={loading && !status} label="Modules on" value={`${onCount} of ${builtCount}`} hint={`${modules.length - builtCount} still to come`} />
+          <KpiCard loading={loading && !status} label="Modules on" value={`${onCount} of ${builtCount}`} hint={builtCount === modules.length ? 'Every module is built' : `${modules.length - builtCount} still to come`} />
           <KpiCard loading={loading && !status} label="Failed runs" value={num(week.failedRuns)} hint="In the last 7 days" />
           <KpiCard loading={loading && !status} label="This week" value={num(cartAdds)} hint={`Added to carts · ${num(favs)} saved (totals, no names)`} />
         </div>
@@ -220,6 +292,12 @@ export default function AdminMl() {
                           {m.built
                             ? <span className={`admin-badge ${m.on ? 'admin-badge-active' : 'admin-badge-neutral'}`}>{m.on ? 'On' : 'Off'}</span>
                             : <span className="admin-badge admin-badge-pending">Phase {m.phase}</span>}
+                          {m.paused && (
+                            <>
+                              {' '}<span className="admin-badge admin-badge-pending">Resting after 3 failed runs</span>
+                              <span className="aml-paused-hint">Its schedule waits a day. Run now tries again.</span>
+                            </>
+                          )}
                         </div>
                       </td>
                       <td>{every(m.everyMs)}</td>
@@ -275,6 +353,8 @@ export default function AdminMl() {
             </div>
           )}
         </div>
+
+        <ResponseTimes rows={s.latency} loading={loading && !status} />
 
         <div className="admin-card">
           <div className="admin-card-header">

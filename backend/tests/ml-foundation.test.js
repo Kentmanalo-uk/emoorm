@@ -49,7 +49,7 @@ test('the engine and every module start off, and a module not built yet cannot b
     if (isBuilt(m.key)) assert.equal(mlSettings.merge(null, { modules: { [m.key]: true } }).modules[m.key], true);
     else assert.throws(() => mlSettings.merge(null, { modules: { [m.key]: true } }), /not available yet/);
   }
-  assert.deepEqual(MODULES.filter((m) => isBuilt(m.key)).map((m) => m.key), ['recommendations', 'forecasting', 'search', 'segmentation', 'inventory', 'bundles']);
+  assert.deepEqual(MODULES.filter((m) => isBuilt(m.key)).map((m) => m.key), MODULES.map((m) => m.key));
   // Off is always allowed.
   assert.equal(mlSettings.merge(null, { modules: { search: false } }).modules.search, false);
 });
@@ -63,7 +63,7 @@ test('only a super admin changes the switches, and everyone can read them', asyn
   const ok = await h.api('PUT', '/app-settings', { token: h.token(admin), body: { mlSettings: { enabled: true } } });
   assert.equal(ok.status, 200);
   assert.equal(ok.body.data.mlSettings.enabled, true);
-  const bad = await h.api('PUT', '/app-settings', { token: h.token(admin), body: { mlSettings: { modules: { sentiment: true } } } });
+  const bad = await h.api('PUT', '/app-settings', { token: h.token(admin), body: { mlSettings: { modules: { teleport: true } } } });
   assert.equal(bad.status, 400);
 
   const pub = await h.api('GET', '/app-settings');
@@ -86,7 +86,7 @@ test('the ML admin API is for super admins only', async () => {
   assert.equal(res.status, 200);
   assert.equal(res.body.data.modules.length, 10);
   assert.ok(res.body.data.modules.every((m) => m.on === false));
-  assert.deepEqual(res.body.data.modules.filter((m) => m.built).map((m) => m.key), ['recommendations', 'forecasting', 'search', 'segmentation', 'inventory', 'bundles']);
+  assert.deepEqual(res.body.data.modules.filter((m) => m.built).map((m) => m.key), MODULES.map((m) => m.key));
   assert.ok('cart_add' in res.body.data.week.events);
 
   // A module that is not built cannot be run; an unknown one is not found.

@@ -19,7 +19,7 @@ import { useHeadCard, useArrowAt } from '../../hooks/useHeadCard';
 import useHoverMenu from '../../hooks/useHoverMenu';
 import NavBadge from '../layout/NavBadge';
 import {
-  useAdminAttention, useAdminShellData, useRefreshAdminShell, waitingByLink,
+  useAdminAttention, useAdminShellData, useFlagsPending, useRefreshAdminShell, waitingByLink,
 } from '../../hooks/useAdminShellData';
 import ShellSearch from '../layout/ShellSearch';
 import ToolStrip from '../layout/ToolStrip';
@@ -164,7 +164,13 @@ export default function AdminLayout({ children }) {
   // What is waiting on this admin, keyed by the route it lives at, so the
   // sidebar can say where the work is without opening every page.
   const { data: attention } = useAdminAttention();
-  const waiting = useMemo(() => waitingByLink(attention), [attention]);
+  // Unusual-activity flags are counted on their own (the ML engine), then
+  // joined in so the menu, the Tools tab and the group badge all carry them.
+  const flagsPending = useFlagsPending();
+  const waiting = useMemo(() => ({
+    ...waitingByLink(attention),
+    ...(flagsPending > 0 ? { '/admin/flags': { count: flagsPending, severity: 'low', label: 'flags waiting' } } : {}),
+  }), [attention, flagsPending]);
   const badge = (path) => <NavBadge {...(waiting[path] || {})} />;
   const municipalityName = user?.municipality?.name || '';
   const municipalityLogo = user?.municipality?.logo || '';
@@ -366,6 +372,7 @@ export default function AdminLayout({ children }) {
               <NavLink to="/admin/products" className={subNavCls}>Products{badge('/admin/products')}</NavLink>
               <NavLink to="/admin/returns" className={subNavCls}>Returns{badge('/admin/returns')}</NavLink>
               <NavLink to="/admin/reports" className={subNavCls}>Reports{badge('/admin/reports')}</NavLink>
+              <NavLink to="/admin/flags" className={subNavCls}>Unusual activity{badge('/admin/flags')}</NavLink>
             </AdminNavGroup>
 
             <NavLink to="/admin/orders" className={navCls} title="Orders">
@@ -649,7 +656,7 @@ function subNavCls({ isActive }) {
 
 /** The menu's groups and the pages in each (which group holds a page). */
 const ADMIN_NAV_GROUPS = {
-  review: ['/admin/sellers', '/admin/products', '/admin/returns', '/admin/reports'],
+  review: ['/admin/sellers', '/admin/products', '/admin/returns', '/admin/reports', '/admin/flags'],
   people: ['/admin/all-sellers', '/admin/buyers', '/admin/users', '/admin/junior-admins', '/admin/team'],
   content: ['/admin/reviews', '/admin/photo-designs', '/admin/invites'],
   talk: ['/admin/messages', '/admin/email', '/admin/notifications', '/admin/feedback'],
@@ -744,6 +751,8 @@ const REREAD_ON_LEAVE = [
   ['/admin/support', 'attention'],
   // Reading the team's chats clears the Admin team badge.
   ['/admin/team', 'attention'],
+  // Marking a flag changes the Unusual activity badge.
+  ['/admin/flags', 'flags'],
   // The municipality's page (its logo) and the admin's own profile.
   ['/admin/settings', 'profile'],
 ];
@@ -770,6 +779,7 @@ const LABELS = {
   '/admin/products': 'Products',
   '/admin/orders': 'Orders',
   '/admin/reports': 'Reports',
+  '/admin/flags': 'Unusual activity',
   '/admin/users': 'All users',
   '/admin/categories': 'Categories',
   '/admin/municipalities': 'Municipalities',

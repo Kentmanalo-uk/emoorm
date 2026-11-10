@@ -1,9 +1,12 @@
-import { useState } from 'react';
+import { useEffect, useRef, useState } from 'react';
 import {
   ActivityIndicator, Image, Platform, Pressable, StyleSheet, Text, View,
 } from 'react-native';
 import * as ImagePicker from 'expo-image-picker';
-import { CameraIcon, ImagesIcon, XIcon } from '../../../lib/icons';
+import {
+  CameraIcon, ImagesIcon, LightbulbIcon, XIcon,
+} from '../../../lib/icons';
+import apiClient from '../../../api/client';
 import { font, t, themed, veil } from '../../../theme';
 import { toast } from '../../../lib/toast';
 import { uploadImage } from '../../../lib/upload';
@@ -16,12 +19,53 @@ import { PF } from './parts';
  * The product's photos (web product-form/PhotoPicker.jsx): add from the
  * camera or gallery, remove, pick the cover. The website's file input lets
  * a phone choose the camera or the gallery; here a small sheet asks which.
+ *
+ * Each new photo is then checked in the background (POST /ml/images/analyze,
+ * the ML engine's photo quality, module 10): a photo that could be better
+ * gets a small bulb on its tile and a friendly note under the photos with
+ * what to try, which the seller can close. Advice only: it never holds up
+ * the upload or saving, and when the check is off or fails nothing shows.
  */
+
+/** A photo's quality advice, or null (switched off, good, or any error). */
+const checkPhoto = async (url) => {
+  try {
+    const res = await apiClient.post('/ml/images/analyze', { url });
+    const d = res?.data;
+    if (!d || d.status !== 'ok' || !d.verdict || d.verdict === 'good') return null;
+    const hints = (Array.isArray(d.checks) ? d.checks : [])
+      .filter((c) => c && c.ok === false && c.hint)
+      .map((c) => c.hint);
+    return hints.length ? { verdict: d.verdict, hints } : null;
+  } catch (err) {
+    console.warn('Photo check:', err?.message || err);
+    return null;
+  }
+};
 export default function PhotoPicker({ images, onChange, empty = 'Add photos' }) {
   const [uploading, setUploading] = useState(0);
   const [asking, setAsking] = useState(false);
   const [width, setWidth] = useState(0);
+  // url -> { verdict, hints }; a closed note is taken out.
+  const [advice, setAdvice] = useState({});
+  const live = useRef(true);
+  useEffect(() => { live.current = true; return () => { live.current = false; }; }, []);
   const list = Array.isArray(images) ? images : [];
+
+  const check = (url) => {
+    checkPhoto(url).then((found) => {
+      if (found && live.current) setAdvice((a) => ({ ...a, [url]: found }));
+    });
+  };
+  const dismiss = (url) => setAdvice((a) => {
+    const next = { ...a };
+    delete next[url];
+    return next;
+  });
+  // Notes for the photos still in the list, in their order.
+  const notes = list
+    .map((src, idx) => ({ src, idx, tip: advice[src] }))
+    .filter((n) => n.tip);
 
   const upload = async (assets) => {
     if (!assets.length) return;
@@ -39,6 +83,7 @@ export default function PhotoPicker({ images, onChange, empty = 'Add photos' }) 
       try {
         const res = await uploadImage(asset);
         uploaded.push(res.url);
+        check(res.url);
       } catch (err) {
         toast.error(err.message || 'A photo could not be uploaded');
       }
@@ -106,6 +151,11 @@ export default function PhotoPicker({ images, onChange, empty = 'Add photos' }) 
                 >
                   <XIcon size={14} weight="bold" color="#fff" />
                 </Pressable>
+                {advice[src] ? (
+                  <View style={styles.tipBadge} accessibilityLabel={`Photo ${idx + 1} could look better: see the note below`}>
+                    <LightbulbIcon size={14} weight="fill" color={t.warning[700]} />
+                  </View>
+                ) : null}
                 {idx === 0 ? (
                   <Text style={[styles.tag, styles.coverTag]}>Cover</Text>
                 ) : (
@@ -139,6 +189,28 @@ export default function PhotoPicker({ images, onChange, empty = 'Add photos' }) 
           ) : null}
         </View>
       ) : null}
+
+      {notes.map(({ src, idx, tip }) => (
+        <View key={`tip-${src}`} style={styles.tip} accessibilityLiveRegion="polite">
+          <Image source={{ uri: resolveImg(src) || src }} style={styles.tipThumb} accessibilityIgnoresInvertColors />
+          <View style={styles.tipBody}>
+            <Text style={styles.tipTitle}>
+              {tip.verdict === 'poor' ? `Photo ${idx + 1} could be clearer` : `Photo ${idx + 1} could look better`}
+            </Text>
+            {tip.hints.map((h) => <Text key={h} style={styles.tipText}>{h}</Text>)}
+            <Text style={styles.tipFoot}>Just a tip: you can keep this photo.</Text>
+          </View>
+          <Pressable
+            accessibilityRole="button"
+            accessibilityLabel={`Close the tip for photo ${idx + 1}`}
+            hitSlop={8}
+            onPress={() => dismiss(src)}
+            style={({ pressed }) => [styles.tipClose, pressed && styles.tipClosePressed]}
+          >
+            <XIcon size={14} weight="bold" color={t.neutral[500]} />
+          </Pressable>
+        </View>
+      ))}
 
       <Sheet variant="seller" open={asking} title="Add photos" onClose={() => setAsking(false)}>
         <SheetOption
@@ -197,5 +269,24 @@ const styles = themed(() => StyleSheet.create({
     borderWidth: 1.5, borderStyle: 'dashed', borderColor: t.neutral[300], backgroundColor: t.neutral[0],
   },
   addText: { color: PF.green, fontSize: 13, lineHeight: 20.8, ...font(600) },
+  // The photo check's bulb (top left; the remove button is top right).
+  tipBadge: {
+    position: 'absolute', top: 6, left: 6, width: 24, height: 24, borderRadius: 12,
+    backgroundColor: t.warning[50], alignItems: 'center', justifyContent: 'center',
+    borderWidth: 1, borderColor: t.warning[200],
+  },
+  tip: {
+    flexDirection: 'row', alignItems: 'flex-start', gap: 10, marginTop: 10, padding: 10,
+    borderWidth: 1, borderColor: t.warning[200], borderRadius: 12, backgroundColor: t.warning[50],
+  },
+  tipThumb: { width: 40, height: 40, borderRadius: 8, backgroundColor: t.neutral[100] },
+  tipBody: { flex: 1, minWidth: 0, gap: 2 },
+  tipTitle: { fontSize: 13, lineHeight: 18, color: t.warning[800], ...font(600) },
+  tipText: { fontSize: 12.5, lineHeight: 18, color: t.neutral[700], ...font(400) },
+  tipFoot: { marginTop: 2, fontSize: 11.5, lineHeight: 16, color: t.neutral[500], ...font(400) },
+  tipClose: {
+    width: 26, height: 26, marginTop: -2, marginRight: -2, borderRadius: 13, alignItems: 'center', justifyContent: 'center',
+  },
+  tipClosePressed: { backgroundColor: t.warning[100] },
   addCount: { color: t.neutral[500], fontSize: 11.5, lineHeight: 18.4, ...font(500) },
 }));

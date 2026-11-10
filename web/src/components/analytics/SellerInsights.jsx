@@ -14,9 +14,9 @@ import './SellerInsights.css';
 /*
  * Seller Center › Analytics › Insights: what the ML engine (backend/src/ml,
  * GET /ml/insights/mine) works out for the shop: a sales forecast, stock that
- * could run out, buyer groups, products viewed but not bought, and bundle
- * ideas (GET /ml/bundles/mine). About now and next, so not tied to the
- * page's date range.
+ * could run out, buyer groups, products viewed but not bought, what buyers
+ * say in their reviews, and bundle ideas (GET /ml/bundles/mine). About now
+ * and next, so not tied to the page's date range.
  *
  * A card whose part is switched off or failed ('off', 'unavailable') is not
  * shown; one without enough data says what it needs. The whole section is
@@ -470,7 +470,143 @@ function PerformanceCard({ performance }) {
   );
 }
 
-// ── 5. Bundle ideas (Phase 2) ──────────────────────────────────────────────
+// ── 5. What buyers say (review sentiment) ──────────────────────────────────
+
+const ASPECTS = {
+  taste: 'Taste',
+  freshness: 'Freshness',
+  packaging: 'Packaging',
+  delivery: 'Delivery',
+  price: 'Price',
+  quality: 'Quality',
+  service: 'Seller service',
+  size: 'Size and amount',
+};
+const aspectName = (key) => ASPECTS[key] || String(key || '').replace(/^./, (c) => c.toUpperCase());
+
+/** The split, most liked first; each a slice of the bar and a line in its key. */
+const FEELINGS = [
+  { key: 'positive', label: 'Happy' },
+  { key: 'mixed', label: 'Mixed' },
+  { key: 'neutral', label: 'Neutral' },
+  { key: 'negative', label: 'Unhappy' },
+];
+
+function FeelingBar({ counts = {}, total }) {
+  const sum = total || FEELINGS.reduce((s, f) => s + Number(counts[f.key] || 0), 0);
+  if (!sum) return null;
+  const label = FEELINGS.map((f) => `${num(counts[f.key] || 0)} ${f.label.toLowerCase()}`).join(', ');
+  return (
+    <div className="san-says-split">
+      <span className="san-says-bar" role="img" aria-label={`Reviews: ${label}`}>
+        {FEELINGS.map((f) => {
+          const n = Number(counts[f.key] || 0);
+          return n > 0 ? <i key={f.key} className={`is-${f.key}`} style={{ width: `${(n / sum) * 100}%` }} /> : null;
+        })}
+      </span>
+      <span className="san-says-key" aria-hidden="true">
+        {FEELINGS.map((f) => (
+          <span key={f.key}><i className={`is-${f.key}`} /> {f.label} <b>{num(counts[f.key] || 0)}</b></span>
+        ))}
+      </span>
+    </div>
+  );
+}
+
+/** Each month's reviews as one column, split by feeling (the last 6 months). */
+function FeelingMonths({ months }) {
+  if (!(months?.length > 1)) return null;
+  const totals = months.map((m) => FEELINGS.reduce((s, f) => s + Number(m[f.key] || 0), 0));
+  const max = Math.max(1, ...totals);
+  return (
+    <div className="san-months-wrap">
+      <div className="san-months-head">
+        <h3>Reviews by month</h3>
+      </div>
+      <div className="san-months san-says-months">
+        {months.map((m, i) => (
+          <div
+            key={m.month}
+            className="san-month"
+            role="img"
+            aria-label={`${monthName(m.month)}: ${FEELINGS.map((f) => `${num(m[f.key] || 0)} ${f.label.toLowerCase()}`).join(', ')}`}
+            title={`${monthName(m.month)}: ${FEELINGS.map((f) => `${num(m[f.key] || 0)} ${f.label.toLowerCase()}`).join(', ')}`}
+          >
+            <span className="san-month-bars">
+              <span className="san-says-col" style={{ height: `${Math.max(2, (totals[i] / max) * 100)}%` }}>
+                {FEELINGS.map((f) => {
+                  const n = Number(m[f.key] || 0);
+                  return n > 0 ? <i key={f.key} className={`is-${f.key}`} style={{ flexGrow: n }} /> : null;
+                })}
+              </span>
+            </span>
+            <span className="san-month-label">{monthName(m.month)}</span>
+          </div>
+        ))}
+      </div>
+    </div>
+  );
+}
+
+function ReviewsCard({ reviews }) {
+  const total = Number(reviews.reviews || 0);
+  const praise = reviews.praise || [];
+  const complaints = reviews.complaints || [];
+  return (
+    <div className="an-card san-says">
+      <div className="an-card-head">
+        <h2 className="an-card-title">What buyers say</h2>
+        <span className="an-card-sub">
+          {reviews.status === 'ok' ? `From ${plural(total, 'review')} with comments, read by their words` : 'From your reviews with comments'}
+        </span>
+      </div>
+      {reviews.status === 'insufficient' ? (
+        <EmptyState
+          art="reviews"
+          title={`Shows once ${plural(reviews.needs ?? 5, 'review')} with comments are in`}
+          message="Reviews with a written comment are read once a day. Star ratings and reviews are never changed."
+          compact
+        />
+      ) : (
+        <>
+          <FeelingBar counts={reviews.counts} />
+          <div className="san-says-lists">
+            <div className="san-says-list">
+              <h3 className="san-trend-title is-up">Buyers like</h3>
+              {praise.length ? (
+                <ul className="san-says-chips">
+                  {praise.map((p) => (
+                    <li key={p.aspect}>{aspectName(p.aspect)} <b>{num(p.count)}</b></li>
+                  ))}
+                </ul>
+              ) : <p className="san-says-none">Nothing named in particular yet.</p>}
+            </div>
+            <div className="san-says-list">
+              <h3 className="san-trend-title is-down">Buyers mention problems with</h3>
+              {complaints.length ? (
+                <ul className="san-says-problems">
+                  {complaints.map((c) => (
+                    <li key={c.aspect}>
+                      <span className="san-says-problem">
+                        {aspectName(c.aspect)} <b>{plural(c.count, 'review')}</b>
+                      </span>
+                      {(c.examples || []).slice(0, 2).map((text) => (
+                        <q key={text} className="san-says-quote">{text}</q>
+                      ))}
+                    </li>
+                  ))}
+                </ul>
+              ) : <p className="san-says-none">No problems named in reviews. Keep it up.</p>}
+            </div>
+          </div>
+          <FeelingMonths months={reviews.months} />
+        </>
+      )}
+    </div>
+  );
+}
+
+// ── 6. Bundle ideas (Phase 2) ──────────────────────────────────────────────
 
 const firstImage = (p) => (Array.isArray(p?.images) ? p.images.find(Boolean) : null) || null;
 const orderCount = (n) => plural(n, 'order');
@@ -556,8 +692,10 @@ export default function SellerInsights() {
 
   const insights = data?.insights || {};
   const bundles = data?.bundles?.on ? data.bundles : null;
-  const { forecast, stock, buyers, performance } = insights;
-  const any = [forecast, stock, buyers, performance].some(shown) || Boolean(bundles);
+  const {
+    forecast, stock, buyers, performance, reviews,
+  } = insights;
+  const any = [forecast, stock, buyers, performance, reviews].some(shown) || Boolean(bundles);
   if (!any) return null;
 
   return (
@@ -565,7 +703,7 @@ export default function SellerInsights() {
       <div className="san-insights-head">
         <h2 id="san-insights-title" className="san-insights-title">Insights</h2>
         <p className="san-insights-sub">
-          What is likely next for your shop, worked out from its own sales and views. Not tied to the dates above.
+          What is likely next for your shop, worked out from its own sales, views and reviews. Not tied to the dates above.
         </p>
       </div>
       {shown(forecast) && <ForecastKpis forecast={forecast} />}
@@ -575,7 +713,10 @@ export default function SellerInsights() {
         {shown(buyers) && <BuyersCard key="buyers" buyers={buyers} />}
         {shown(performance) && <PerformanceCard key="performance" performance={performance} />}
       </Pair>
-      {bundles && <BundleIdeas data={bundles} />}
+      <Pair>
+        {shown(reviews) && <ReviewsCard key="reviews" reviews={reviews} />}
+        {bundles && <BundleIdeas key="bundles" data={bundles} />}
+      </Pair>
     </section>
   );
 }

@@ -6,10 +6,12 @@ const forecasting = require('./forecasting');
 const inventory = require('./inventory');
 const segmentation = require('./segmentation');
 const performance = require('./performance');
+const sentiment = require('./sentiment');
 
 /**
  * A seller's insights (Seller Center › Analytics): forecast, demand, stock
- * risk, buyer groups and products viewed but not bought, all for their own
+ * risk, buyer groups, products viewed but not bought and what buyers say in
+ * reviews, all for their own
  * shop only. Each part says 'off' (switched off), 'insufficient' (not enough
  * data yet, with what it needs) or 'ok'; a part that fails is left out
  * ('unavailable') without taking the others with it.
@@ -104,27 +106,32 @@ const stockPart = async (products) => {
 /** Everything in one answer for the Insights section. */
 const mine = async (userId) => {
   const shop = await shopOf(userId);
-  const [engine, onForecast, onStock, onGroups] = await Promise.all([
-    settings.isOn(), settings.isOn('forecasting'), settings.isOn('inventory'), settings.isOn('segmentation'),
+  const [engine, onForecast, onStock, onGroups, onReviews] = await Promise.all([
+    settings.isOn(), settings.isOn('forecasting'), settings.isOn('inventory'), settings.isOn('segmentation'), settings.isOn('sentiment'),
   ]);
   const products = await productsOf(shop.id);
   const off = { status: 'off' };
   const unavailable = { status: 'unavailable' };
-  const [forecast, stock, buyers, performanceResult] = await Promise.all([
+  const [forecast, stock, buyers, performanceResult, reviews] = await Promise.all([
     onForecast ? guard('insights-forecast', () => forecastPart(products), unavailable, 3000) : off,
     onStock ? guard('insights-stock', () => stockPart(products), unavailable, 3000) : off,
     onGroups ? guard('insights-groups', async () => (await segmentation.segmentsFor(shop.id))
       || { status: 'insufficient', needs: segmentation.MIN_BUYERS }, unavailable, 3000) : off,
     engine ? guard('insights-performance', () => performance.forShop(shop.id), unavailable, 3000) : off,
+    onReviews ? guard('insights-reviews', async () => {
+      const summary = await sentiment.storeSummary(shop.id);
+      return summary ? { status: 'ok', ...summary } : { status: 'insufficient', needs: sentiment.MIN_SUMMARY };
+    }, unavailable, 3000) : off,
   ]);
   return {
     on: {
-      engine, forecasting: onForecast, inventory: onStock, segmentation: onGroups,
+      engine, forecasting: onForecast, inventory: onStock, segmentation: onGroups, sentiment: onReviews,
     },
     forecast,
     stock,
     buyers,
     performance: performanceResult,
+    reviews,
   };
 };
 

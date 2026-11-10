@@ -1,6 +1,9 @@
-import { useRef, useState } from 'react';
+import { useEffect, useRef, useState } from 'react';
 import toast from 'react-hot-toast';
-import { Camera, X, CircleNotch, Plus } from '../../../lib/icons';
+import {
+  Camera, X, CircleNotch, Plus, WarningCircle,
+} from '../../../lib/icons';
+import axios from '../../../lib/axios';
 import { uploadImage } from '../../../lib/upload';
 import { IMAGE_ACCEPT } from '../../../lib/uploadableImage';
 import { resolveImg, srcSetFor } from '../../../lib/media';
@@ -10,11 +13,50 @@ import { MAX_IMAGES } from './formState';
  * The product's photos: one big box to tap for the first photo, then the
  * first photo large with small tiles for the others. Any photo can be
  * made the first one (the one buyers see first).
+ *
+ * Each new photo is checked afterwards, in the background (the ML engine's
+ * photo check: size, sharpness, light, contrast). One that could look better
+ * gets a small mark and a tip under the photos, which the seller can close.
+ * Advice only: it never holds up the upload or the save, and when the check
+ * is off or fails nothing shows.
  */
+
+/** The failed checks' tips for a photo, or null when it looks good. */
+const checkPhoto = async (url) => {
+  try {
+    const res = await axios.post('/ml/images/analyze', { url }, { quiet: true });
+    const result = res.data || {};
+    if (result.status !== 'ok' || result.verdict === 'good') return null;
+    const rank = { high: 0, medium: 1, low: 2 };
+    const hints = (result.checks || [])
+      .filter((c) => !c.ok && c.hint)
+      .sort((a, b) => (rank[a.severity] ?? 3) - (rank[b.severity] ?? 3))
+      .map((c) => c.hint);
+    return hints.length ? hints : null;
+  } catch (err) {
+    console.warn('Photo check skipped:', err?.message || err);
+    return null;
+  }
+};
 export default function PhotoPicker({ images, onChange, invalid = false }) {
   const inputRef = useRef(null);
   const [uploading, setUploading] = useState(0);
+  // url -> tips for a photo that could look better (closed ones are removed).
+  const [tips, setTips] = useState({});
+  const mounted = useRef(true);
+  useEffect(() => () => { mounted.current = false; }, []);
   const list = Array.isArray(images) ? images : [];
+
+  const check = (url) => {
+    checkPhoto(url).then((hints) => {
+      if (hints && mounted.current) setTips((t) => ({ ...t, [url]: hints }));
+    });
+  };
+  const closeTip = (url) => setTips((t) => {
+    const next = { ...t };
+    delete next[url];
+    return next;
+  });
 
   const handleFiles = async (e) => {
     const files = Array.from(e.target.files || []);
@@ -34,6 +76,8 @@ export default function PhotoPicker({ images, onChange, invalid = false }) {
       try {
         const res = await uploadImage(file);
         uploaded.push(res.url);
+        // Not awaited: the next photo goes up while this one is checked.
+        check(res.url);
       } catch (err) {
         toast.error(err.message || 'A photo could not be added. Please try again.');
       }
@@ -52,6 +96,8 @@ export default function PhotoPicker({ images, onChange, invalid = false }) {
   const removeAt = (idx) => onChange(list.filter((_, i) => i !== idx));
   const pick = () => inputRef.current?.click();
   const canAdd = list.length + uploading < MAX_IMAGES && !uploading;
+  // Tips for the photos still here, in their order.
+  const shownTips = list.map((src, idx) => ({ src, idx, hints: tips[src] })).filter((t) => t.hints);
 
   return (
     <div className="pf-photos-wrap">
@@ -74,6 +120,11 @@ export default function PhotoPicker({ images, onChange, invalid = false }) {
           {list.map((src, idx) => (
             <div key={`${src}-${idx}`} className={`pf-photo${idx === 0 ? ' is-cover' : ''}`}>
               <img src={resolveImg(src) || src} srcSet={srcSetFor(src)} sizes="120px" alt={idx === 0 ? 'First photo' : `Photo ${idx + 1}`} />
+              {tips[src] && (
+                <span className="pf-photo-tipmark" title="This photo could look better: see the tip below">
+                  <WarningCircle size={15} weight="fill" />
+                </span>
+              )}
               <button type="button" className="pf-photo-remove" onClick={() => removeAt(idx)} aria-label={`Remove photo ${idx + 1}`}>
                 <X size={15} weight="bold" />
               </button>
@@ -96,6 +147,23 @@ export default function PhotoPicker({ images, onChange, invalid = false }) {
             </button>
           )}
         </div>
+      )}
+      {shownTips.length > 0 && (
+        <ul className="pf-photo-tips" aria-live="polite">
+          {shownTips.map(({ src, idx, hints }) => (
+            <li key={src} className="pf-note pf-note--draft pf-photo-tip">
+              <WarningCircle size={16} weight="fill" />
+              <span>
+                <strong>{idx === 0 ? 'Your first photo' : `Photo ${idx + 1}`} could look better.</strong>
+                {' '}{hints.join(' ')}
+                <small>Just a tip: you can save it as it is.</small>
+              </span>
+              <button type="button" className="pf-photo-tip-close" onClick={() => closeTip(src)} aria-label={`Close the tip for photo ${idx + 1}`}>
+                <X size={14} weight="bold" />
+              </button>
+            </li>
+          ))}
+        </ul>
       )}
     </div>
   );

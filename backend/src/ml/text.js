@@ -17,6 +17,8 @@ const STOPWORDS = new Set([
   'with', 'from', 'this', 'that', 'are', 'was', 'per', 'pcs', 'pc', 'piece', 'pieces', 'pack', 'kg', 'kilo',
   'gram', 'grams', 'g', 'ml', 'liter', 'litre', 'our', 'your', 'you', 'we', 'its', 'it', 'is', 'in', 'on', 'to',
   'by', 'or', 'as', 'be', 'at', 'all', 'more', 'very', 'made', 'available', 'order', 'orders', 'now', 'new',
+  // Says how it is sold, not what it is ('Ready to Plant', 'ready to eat').
+  'ready', 'fresh-made', 'freshly', 'brand',
   'ay', 'ito', 'iyan', 'yan', 'po', 'ko', 'mo', 'kami', 'namin', 'nyo', 'para', 'may', 'meron', 'din', 'rin',
   'lang', 'lamang', 'pa', 'ba', 'si', 'ni', 'kay', 'nang', 'pag', 'kung',
 ]);

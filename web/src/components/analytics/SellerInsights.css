@@ -506,6 +506,147 @@
   color: var(--t-neutral-500, #636b78);
 }
 
+/* ── What buyers say: the split as one bar with its key, what buyers like
+   and the problems they name (with a short quote), and the months. ── */
+.san-says-split {
+  padding: 2px 20px 14px;
+}
+
+.san-says-bar {
+  display: flex;
+  height: 10px;
+  overflow: hidden;
+  border-radius: 999px;
+  background: var(--t-neutral-100, #f1f5f9);
+}
+
+.san-says-bar i + i {
+  border-left: 2px solid var(--t-neutral-0, #fff);
+}
+
+.san-says-key {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 6px 14px;
+  margin-top: 9px;
+  font-size: 12px;
+  color: var(--t-neutral-600, #4b5563);
+}
+
+.san-says-key span {
+  display: inline-flex;
+  align-items: center;
+  gap: 5px;
+}
+
+.san-says-key i {
+  width: 9px;
+  height: 9px;
+  border-radius: 3px;
+}
+
+.san-says-key b {
+  font-weight: 600;
+  font-variant-numeric: tabular-nums;
+  color: var(--t-neutral-900, #0f172a);
+}
+
+.san-says .is-positive { background: var(--t-primary-600, #059669); }
+.san-says .is-mixed { background: var(--t-warning-400, #fbbf24); }
+.san-says .is-neutral { background: var(--t-neutral-300, #cbd5e1); }
+.san-says .is-negative { background: var(--t-danger-500, #ef4444); }
+
+.san-says-lists {
+  display: grid;
+  gap: 14px;
+  padding: 12px 20px 16px;
+  border-top: 1px solid var(--rule-hairline);
+}
+
+.san-says-chips {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 6px;
+  margin: 0;
+  padding: 0;
+  list-style: none;
+}
+
+.san-says-chips li {
+  padding: 3px 10px;
+  border-radius: 999px;
+  background: var(--t-secondary-50, #e9f7f0);
+  color: var(--t-primary-800, #065f46);
+  font-size: 12.5px;
+  font-weight: 500;
+  line-height: 1.5;
+}
+
+.san-says-chips b {
+  margin-left: 2px;
+  font-weight: 600;
+  font-variant-numeric: tabular-nums;
+}
+
+.san-says-problems {
+  display: grid;
+  gap: 10px;
+  margin: 0;
+  padding: 0;
+  list-style: none;
+}
+
+.san-says-problem {
+  display: block;
+  font-size: 13px;
+  font-weight: 600;
+  color: var(--t-neutral-900, #0f172a);
+}
+
+.san-says-problem b {
+  margin-left: 4px;
+  font-size: 12px;
+  font-weight: 400;
+  color: var(--t-neutral-500, #636b78);
+}
+
+.san-says-quote {
+  display: block;
+  margin-top: 4px;
+  padding-left: 9px;
+  border-left: 2px solid var(--t-danger-200, #fecaca);
+  font-size: 12.5px;
+  line-height: 1.45;
+  color: var(--t-neutral-600, #4b5563);
+  overflow-wrap: anywhere;
+}
+
+.san-says-none {
+  margin: 0;
+  font-size: 12.5px;
+  color: var(--t-neutral-500, #636b78);
+}
+
+/* A month: one column, its feelings stacked (most liked at the bottom). */
+.san-says-months {
+  height: 84px;
+}
+
+.san-says-col {
+  display: flex;
+  flex-direction: column-reverse;
+  width: min(18px, 46%);
+  overflow: hidden;
+  border-radius: 3px 3px 0 0;
+}
+
+.san-says-col i {
+  display: block;
+  width: 100%;
+  min-height: 2px;
+  border-radius: 0;
+}
+
 /* ── Bundle ideas: two products' photos side by side, their names, and
    "Make a package". Phones: the button under them, full width. ── */
 .san-bundle-thumbs {
@@ -610,6 +751,8 @@
   .san-fc-legend,
   .san-risk-counts,
   .san-buyer-stats,
+  .san-says-split,
+  .san-says-lists,
   .san-months-wrap,
   .san-trends,
   .san-note {

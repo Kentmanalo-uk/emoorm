@@ -1,0 +1,123 @@
+/* Admin › Unusual activity (AdminFlags.jsx): the review queues' cards and
+   table (AdminLayout.css, AdminModeration.css), with a few additions. */
+
+/* The fixed explanation above the list, as the admin pages' other notes. */
+.afl-note {
+  display: flex;
+  align-items: flex-start;
+  gap: 8px;
+  margin: 0 0 14px;
+  padding: 10px 14px;
+  border-radius: 10px;
+  background: var(--t-neutral-50, #f8fafc);
+  color: var(--t-neutral-600, #4b5563);
+  font-size: 13px;
+  line-height: 1.5;
+}
+
+.afl-note svg {
+  flex-shrink: 0;
+  margin-top: 2px;
+  color: var(--t-neutral-500, #64748b);
+}
+
+/* What was flagged: its kind and severity, then the reason. */
+.afl-what {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 4px 8px;
+}
+
+.afl-type {
+  font-weight: 600;
+  color: var(--t-neutral-900, #0f172a);
+}
+
+.afl-desc,
+.afl-note-text {
+  display: block;
+  max-width: 340px;
+  margin-top: 3px;
+  font-size: 12.5px;
+  line-height: 1.45;
+  color: var(--t-neutral-600, #475569);
+}
+
+.afl-note-text {
+  font-style: italic;
+  color: var(--t-neutral-500, #64748b);
+}
+
+/* How unusual: a short bar and its percent. */
+.afl-score {
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+  white-space: nowrap;
+}
+
+.afl-score-bar {
+  width: 56px;
+  height: 6px;
+  overflow: hidden;
+  border-radius: 999px;
+  background: var(--t-neutral-100, #f1f5f9);
+}
+
+.afl-score-bar i {
+  display: block;
+  height: 100%;
+  border-radius: inherit;
+  background: var(--t-warning-500, #f59e0b);
+}
+
+.afl-score-pct {
+  font-size: 12.5px;
+  font-variant-numeric: tabular-nums;
+  color: var(--t-neutral-700, #334155);
+}
+
+.afl-orders {
+  display: grid;
+  gap: 4px;
+  margin: 0;
+  padding: 0;
+  list-style: none;
+  font-size: 13px;
+}
+
+.afl-order-meta {
+  display: block;
+  font-size: 12px;
+  color: var(--t-neutral-500, #64748b);
+}
+
+@media (min-width: 769px) {
+  .afl-table td:first-child {
+    min-width: 210px;
+  }
+
+  .afl-table .am-row-actions {
+    flex-wrap: wrap;
+    max-width: 260px;
+    margin-left: auto;
+  }
+}
+
+@media (max-width: 768px) {
+  .afl-note {
+    margin: 0 0 12px;
+  }
+
+  .afl-desc,
+  .afl-note-text {
+    max-width: none;
+  }
+
+  /* Phones: the order's amount and shop sit beside its number. */
+  .afl-order-meta {
+    display: inline;
+    margin-left: 6px;
+  }
+}

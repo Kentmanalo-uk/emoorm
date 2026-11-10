@@ -25,6 +25,7 @@ const TOOL = {
   reviews: { to: '/admin/reviews', label: 'Reviews', Art: StarArt },
   returns: { to: '/admin/returns', label: 'Returns', Art: ReturnArt, tone: TONES.rose },
   reports: { to: '/admin/reports', label: 'Reports', Art: FlagArt },
+  flags: { to: '/admin/flags', label: 'Unusual activity', Art: ShieldArt, tone: TONES.amber },
   support: { to: '/admin/support', label: 'Support', Art: HeadsetArt },
   messages: { to: '/admin/messages', label: 'Messages', Art: ChatArt, badge: 'messages' },
   email: { to: '/admin/email', label: 'Email', Art: EnvelopeArt },
@@ -49,7 +50,7 @@ const TOOL = {
 
 /** Every card on the Tools tab. */
 const ALL_CARDS = [
-  { title: 'To review', keys: ['applications', 'products', 'returns', 'reports', 'support'] },
+  { title: 'To review', keys: ['applications', 'products', 'returns', 'reports', 'flags', 'support'] },
   { title: 'People & stores', keys: ['sellers', 'buyers', 'users', 'orders', 'reviews'] },
   { title: 'Messages', keys: ['messages', 'email', 'alerts', 'feedback'] },
   { title: 'Storefront', keys: ['banners', 'vouchers', 'couriers', 'categories'] },

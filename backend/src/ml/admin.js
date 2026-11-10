@@ -29,6 +29,8 @@ const status = async () => {
   const lastRunOf = (key) => recent.find((r) => r.modelKey === key) || null;
   const lastOkOf = (key) => recent.find((r) => r.modelKey === key && r.status === 'OK') || null;
   const jobs = require('../lib/runtimeStatus').snapshot().jobs || {};
+  const paused = Object.fromEntries(await Promise.all(MODULES.filter((m) => m.every && isBuilt(m.key))
+    .map(async (m) => [m.key, await runner.pausedAfterFailures(m.key)])));
 
   return {
     enabled: current.enabled,
@@ -48,7 +50,11 @@ const status = async () => {
       lastSuccess: lastOkOf(m.key),
       activeVersion: active.find((v) => v.modelKey === m.key) || null,
       job: jobs[`ml-${m.key}`] || null,
+      // Its last 3 scheduled runs failed: it rests a day (Run now still tries).
+      paused: paused[m.key] === true,
     })),
+    // How long each guarded step took and how often it fell back, since the server started.
+    latency: require('./safe').stats(),
     housekeeping: { lastRun: lastRunOf('housekeeping'), job: jobs['ml-housekeeping'] || null },
     week: {
       events: Object.fromEntries(counters.EVENTS.map((e) => [e, counts.find((c) => c.eventType === e)?._sum.count || 0])),

@@ -492,6 +492,10 @@ app.get('/health', async (req, res) => {
     emailOutbox: outbox,
     cache: require('./lib/cache').getStats(),
     load: overloadStats(),
+    // The ML engine (src/ml): a job running now, and each guarded step's
+    // calls, fall-backs and timings. Reported only: its jobs' lateness is in
+    // `jobs`, and a failing engine never stops the shop.
+    ml: { busy: require('./ml/runner').isBusy(), steps: require('./ml/safe').stats() },
     timestamp: new Date().toISOString(),
   };
   const status = problems.length ? 503 : 200;

@@ -65,3 +65,16 @@
   padding: 6px 11px;
   font-size: 13px;
 }
+
+/* A module resting after 3 failed scheduled runs: the badge, and what to do. */
+.aml-paused-hint {
+  display: block;
+  margin-top: 4px;
+  font-size: 12px;
+  line-height: 1.4;
+  color: var(--t-warning-800, #9a3412);
+}
+
+.aml-latency td {
+  font-variant-numeric: tabular-nums;
+}

@@ -169,6 +169,13 @@ const run = async (ctx) => {
     trendingQualified: trending.qualified,
   };
   if (!lists.size) return { skipped: true, reason: 'No two products are alike enough yet', rowsRead: catalog.length, metrics };
+  // Gate (phase 5): a run that finds alike products for under half a real
+  // catalogue is likely broken (bad text, a failed read); keep what is in use.
+  if (catalog.length >= 10 && metrics.coverage < 0.5) {
+    return {
+      skipped: true, reason: `Found similar products for only ${Math.round(metrics.coverage * 100)}% of products; the version in use is kept`, rowsRead: catalog.length, metrics,
+    };
+  }
 
   const version = await store.createVersion(MODEL, {
     algorithm: 'TF-IDF cosine + category/price/town; weighted engagement growth',

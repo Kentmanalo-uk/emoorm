@@ -201,6 +201,12 @@ const run = async (ctx) => {
       skipped: true, reason: `No product has ${LIMITS.minWeeks} weeks and ${LIMITS.minUnits} units of sales yet`, rowsRead: catalog.length, metrics,
     };
   }
+  // Gate (phase 5): on average, no worse than repeating last week.
+  if (metrics.mae != null && metrics.baselineMae != null && metrics.mae > metrics.baselineMae * 1.05) {
+    return {
+      skipped: true, reason: `Error ${metrics.mae} is worse than the naive baseline's ${metrics.baselineMae}; the version in use is kept`, rowsRead: catalog.length, metrics,
+    };
+  }
   const version = await store.createVersion(MODEL, {
     algorithm: 'Naive, 4-week average, SES or damped Holt, picked on a 4-week holdout',
     params: { limits: LIMITS, holdout: HOLDOUT, historyWeeks: HISTORY_WEEKS },
