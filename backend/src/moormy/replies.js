@@ -26,6 +26,43 @@ const LINES = {
     en: ['Sure thing! Here\'s what I found{what}.', 'Here you go: {n} {things}{what}.', 'Let me show you {n} {things}{what}.'],
     tl: ['Sige! Ito ang nahanap ko{what}.', 'Heto: {n} na produkto{what}.', 'Tingnan mo itong {n}{what}.'],
   },
+  // Results put on the site's own results page ({n} is how many it has).
+  foundOnPage: {
+    en: ['Here you go: {n} {things}{what}.', 'Opening the results{what}: {n} {things}.', 'Found {n} {things}{what}. They\'re on the page now.'],
+    tl: ['Heto: {n} na produkto{what}.', 'Binuksan ko ang resulta{what}: {n} na produkto.', 'May {n} akong nahanap{what}. Nasa page na.'],
+  },
+  refined: {
+    en: ['Done. Now showing {n} {things}{what}.', 'Updated the filters: {n} {things}{what}.'],
+    tl: ['Ayan. {n} na produkto na{what}.', 'Binago ko ang filter: {n} na produkto{what}.'],
+  },
+  cleared: {
+    en: ['Filters cleared: {n} {things}{what}.'],
+    tl: ['Tinanggal ko ang mga filter: {n} na produkto{what}.'],
+  },
+  closeOnPage: {
+    en: ['Nothing is called "{query}" exactly, so I searched for "{word}": {n} close {things}.'],
+    tl: ['Walang eksaktong "{query}", kaya hinanap ko ang "{word}": {n} na malapit.'],
+  },
+  cheaperOnPage: {
+    en: ['Done: cheaper ones first, under {cap}. {n} {things}.', 'Going easier on the budget: {n} {things} under {cap}, cheapest first.'],
+    tl: ['Ayan: mas mura muna, {cap} pababa. {n} na produkto.', 'Mas abot-kaya: {n} na produkto na {cap} pababa, pinakamura muna.'],
+  },
+  noFilters: {
+    en: ['There are no filters to clear here. Tell me what to look for.'],
+    tl: ['Walang filter na aalisin dito. Sabihin mo kung ano ang hahanapin.'],
+  },
+  opening: {
+    en: ['Opening {name}.'],
+    tl: ['Binubuksan ko ang {name}.'],
+  },
+  goingBack: {
+    en: ['Going back.'],
+    tl: ['Babalik tayo.'],
+  },
+  scrollMore: {
+    en: ['Scrolling down for more.'],
+    tl: ['Iba-scroll ko pababa para sa iba pa.'],
+  },
   none: {
     en: ['I couldn\'t find anything{what} right now.', 'Nothing{what} at the moment, sorry.'],
     tl: ['Wala akong nahanap{what} sa ngayon.', 'Pasensya, wala akong makita{what} ngayon.'],

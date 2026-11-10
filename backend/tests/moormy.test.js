@@ -208,6 +208,77 @@ test('what the page sends is cleaned: bad ids, huge quantities, unknown pages', 
   assert.deepEqual(c.cart, [{ productId: 'a1', quantity: 999 }]);
 });
 
+test('understanding: driving the results page', () => {
+  assert.equal(understand('open the first one', ref).intent, 'open');
+  assert.equal(understand('buksan ang pangalawa', ref).intent, 'open');
+  assert.equal(understand('tell me about the first one', ref).intent, 'about');
+  assert.equal(understand('go back', ref).intent, 'back');
+  assert.equal(understand('go back to my cart', ref).intent, 'navigate');
+  assert.equal(understand('clear the filters', ref).intent, 'clear_filters');
+  assert.equal(understand('any price', ref).intent, 'clear_filters');
+  assert.equal(understand('price high to low', ref).sort, 'priciest');
+  assert.equal(understand('sort by price low to high', ref).sort, 'cheapest');
+  const only = understand('from Calapan only', ref);
+  assert.equal(only.intent, 'search');
+  assert.equal(only.narrows, true);
+});
+
+test('Moormy drives the results page: search, narrow, cheaper, open, clear, back', async () => {
+  const a = await make('Honey Jar', 120);
+  const b = await make('Honey Comb', 260);
+  const c = await make('Honey Wine', 480);
+  const page = (search, listed) => ({ pageType: 'search', route: '/products', search, listed });
+
+  // A search goes to the site's own results page, with what she found.
+  const found = await turn(`honey ${tag}`);
+  assert.equal(found.intent, 'search');
+  assert.deepEqual(found.actions, [{
+    type: 'show_results',
+    search: {
+      query: `honey ${tag}`, categoryId: null, municipalityId: null, minPrice: null, maxPrice: null, sort: null,
+    },
+  }]);
+  assert.match(found.say, /3 products/);
+
+  // On that page, a filter alone narrows it: the words stay.
+  const onPage = page({ query: `honey ${tag}` }, [a.id, b.id, c.id]);
+  const under = await turn('under 300 only', found.state, onPage);
+  assert.equal(under.actions[0].type, 'show_results');
+  assert.equal(under.actions[0].search.query, `honey ${tag}`);
+  assert.equal(under.actions[0].search.maxPrice, 300);
+  assert.ok(under.cards.every((p) => Number(p.price) <= 300));
+  const newest = await turn('newest first', found.state, onPage);
+  assert.equal(newest.actions[0].search.query, `honey ${tag}`);
+  assert.equal(newest.actions[0].search.sort, 'newest');
+
+  // "Cheaper": below the middle of what the page shows, cheapest first.
+  const cheaper = await turn('cheaper', {}, onPage);
+  assert.equal(cheaper.intent, 'cheaper');
+  assert.equal(cheaper.actions[0].search.sort, 'cheapest');
+  assert.equal(cheaper.actions[0].search.maxPrice, 259);
+  assert.equal(cheaper.actions[0].search.query, `honey ${tag}`);
+  assert.deepEqual(cheaper.cards.map((p) => p.id), [a.id]);
+
+  // "The second one" is the page's second, opened on its own page.
+  const open = await turn('open the second one', {}, page({ query: `honey ${tag}` }, [c.id, b.id, a.id]));
+  assert.equal(open.intent, 'open');
+  assert.deepEqual(open.actions, [{ type: 'navigate', to: `/product/${b.slug}` }]);
+
+  // Filters cleared, the words kept.
+  const cleared = await turn('clear the filters', {}, page({ query: `honey ${tag}`, maxPrice: 200, sort: 'cheapest' }, [a.id]));
+  assert.deepEqual(cleared.actions[0].search, {
+    query: `honey ${tag}`, categoryId: null, municipalityId: null, minPrice: null, maxPrice: null, sort: null,
+  });
+
+  // More: further down the page; back: the browser's Back.
+  assert.deepEqual((await turn('show more', {}, onPage)).actions, [{ type: 'scroll' }]);
+  assert.deepEqual((await turn('go back', {}, onPage)).actions, [{ type: 'back' }]);
+
+  // Best rated stays in the panel (the page has no rating sort).
+  const rated = await turn(`best rated honey ${tag}`);
+  assert.deepEqual(rated.actions, []);
+});
+
 test('the endpoint: guests and buyers, and a request too long', async () => {
   const res = await h.api('POST', '/moormy/turn', { body: { text: `sweets ${tag}`, context: { pageType: 'home' } } });
   assert.equal(res.status, 200);

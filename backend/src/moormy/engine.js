@@ -44,6 +44,7 @@ const reference = () => refCache.get('ref', async () => {
 // ── Cleaning what the page sends ────────────────────────────────────────────
 
 const idOrNull = (v) => (typeof v === 'string' && ID.test(v) ? v : null);
+const SEARCH_SORTS = ['cheapest', 'priciest', 'popular', 'newest', 'rating'];
 // (null and '' are "no limit", not ₱0.)
 const num = (v) => (v != null && v !== '' && Number.isFinite(Number(v)) && Number(v) >= 0 ? Number(v) : null);
 
@@ -60,7 +61,7 @@ const cleanState = (s = {}) => {
       maxPrice: num(last.maxPrice),
       categoryId: idOrNull(last.categoryId),
       municipalityId: idOrNull(last.municipalityId),
-      sort: ['cheapest', 'popular', 'newest', 'rating', null].includes(last.sort) ? last.sort : null,
+      sort: SEARCH_SORTS.includes(last.sort) ? last.sort : null,
       page: Math.min(50, Math.max(1, Number(last.page) || 1)),
     } : null,
   };
@@ -78,7 +79,11 @@ const cleanContext = (c = {}) => ({
     municipalityId: idOrNull(c.search.municipalityId),
     minPrice: num(c.search.minPrice),
     maxPrice: num(c.search.maxPrice),
+    sort: SEARCH_SORTS.includes(c.search.sort) ? c.search.sort : null,
   } : null,
+  // The products on the results page, in the order they are shown: "the
+  // first one" is the page's first.
+  listed: Array.isArray(c?.listed) ? c.listed.map(idOrNull).filter(Boolean).slice(0, 24) : [],
   // The cart lives on the device; ids and quantities only, prices are read here.
   cart: Array.isArray(c?.cart) ? c.cart
     .map((l) => ({ productId: idOrNull(l?.productId), quantity: Math.min(999, Math.max(1, parseInt(l?.quantity, 10) || 1)) }))
@@ -128,6 +133,7 @@ const cards = async (ids) => {
 
 const SORTS = {
   cheapest: { sortBy: 'price', sortOrder: 'asc' },
+  priciest: { sortBy: 'price', sortOrder: 'desc' },
   popular: { sortBy: 'orderCount', sortOrder: 'desc' },
   newest: { sortBy: 'createdAt', sortOrder: 'desc' },
 };
@@ -167,17 +173,22 @@ const closeMatches = async (s) => {
   const { readQuery } = require('../ml/text');
   const words = [...readQuery(s.query).weights.entries()].sort((a, b) => b[1] - a[1]).map(([w]) => w).slice(0, 6);
   const seen = new Map();
+  // The one word that finds the most: what the results page is searched for
+  // (it searches one thing at a time).
+  let best = { word: null, total: 0, products: [] };
   for (const word of words) {
     // eslint-disable-next-line no-await-in-loop
-    const { products } = await runSearch({ ...s, query: word, sort: s.sort === 'rating' ? null : s.sort });
+    const { products, total } = await runSearch({ ...s, query: word, sort: s.sort === 'rating' ? null : s.sort });
+    if (total > best.total) best = { word, total, products };
     for (const p of products) if (!seen.has(p.id)) seen.set(p.id, p);
     if (seen.size >= PAGE) break;
   }
-  return [...seen.values()].slice(0, PAGE);
+  return { products: [...seen.values()].slice(0, PAGE), best };
 };
 
 const SORT_WORDS = {
   cheapest: ['cheapest first', 'pinakamura muna'],
+  priciest: ['highest price first', 'pinakamahal muna'],
   popular: ['most popular first', 'pinakamabenta muna'],
   newest: ['newest first', 'pinakabago muna'],
   rating: ['best rated first', 'pinakamagandang review muna'],
@@ -202,9 +213,40 @@ const describe = (s, ref, lang) => {
 // ── The product a request points at ─────────────────────────────────────────
 
 /** The product meant: "the second one" (of those shown), "this" (the page's, or the one in focus). */
+const onResults = (ctx) => ctx.pageType === 'search' || ctx.pageType === 'category';
+
+/** What "the first one" counts in: the results page in view, else what she showed. */
+const listInView = (state, ctx) => (onResults(ctx) && ctx.listed.length ? ctx.listed : state.shown);
+
+/**
+ * The search the person is looking at: the results page's own filters when
+ * they are on one (they may have changed them by hand), else her last one.
+ */
+const searchInView = (state, ctx) => {
+  if (onResults(ctx) && ctx.search) return { ...ctx.search, page: 1 };
+  return state.lastSearch ? { ...state.lastSearch, page: 1 } : null;
+};
+
+/**
+ * Show a search on the site's own results page (the page reads these from its
+ * address, as its own filters do). A best-rated list stays in the panel: the
+ * page cannot sort by rating.
+ */
+const showResults = (s) => (s.sort === 'rating' ? [] : [{
+  type: 'show_results',
+  search: {
+    query: s.query || '',
+    categoryId: s.categoryId || null,
+    municipalityId: s.municipalityId || null,
+    minPrice: s.minPrice ?? null,
+    maxPrice: s.maxPrice ?? null,
+    sort: s.sort || null,
+  },
+}]);
+
 const pointedAt = (u, state, ctx) => {
   if (u.ordinal) {
-    const list = state.shown;
+    const list = listInView(state, ctx);
     const i = u.ordinal === -1 ? list.length - 1 : u.ordinal - 1;
     if (list[i]) return list[i];
   }
@@ -258,7 +300,7 @@ const suggestFor = (ctx, lang, hadProducts, intent) => {
   if (intent === 'cart_add' || intent === 'cart_remove') return set.cart;
   if (intent === 'orders') return set.orders;
   // One product talked about: what can be asked of it, not a comparison.
-  if (intent === 'about') return set.product;
+  if (intent === 'about' || intent === 'open') return set.product;
   if (intent === 'compare') return set.afterProducts.filter((x) => !/compare|ikumpara/i.test(x));
   if (hadProducts > 1) return set.afterProducts;
   if (hadProducts === 1) return set.product;
@@ -329,19 +371,52 @@ const turn = async ({
     case 'help': return answer({ say: say('help', lang, t) });
 
     case 'search': {
-      const s = {
+      // A filter or a sort on its own ("under 200", "from Calapan only",
+      // "newest first") changes the search in view, as the page's own filters
+      // do; words of a product start another search. A category named alone
+      // ("fruits") is a new search unless it is asked as a filter ("fruits lang").
+      const inView = searchInView(state, ctx);
+      const filtersOnly = !u.query && (u.minPrice != null || u.maxPrice != null || u.town || u.category || u.sort);
+      const refine = Boolean(inView && filtersOnly && (u.narrows || !u.category));
+      const s = refine ? {
+        ...inView,
+        minPrice: u.minPrice ?? inView.minPrice ?? null,
+        maxPrice: u.maxPrice ?? inView.maxPrice ?? null,
+        categoryId: u.category?.id || inView.categoryId || null,
+        municipalityId: u.town?.id || inView.municipalityId || null,
+        sort: u.sort || inView.sort || null,
+        page: 1,
+      } : {
         query: u.query || '',
-        minPrice: u.minPrice,
-        maxPrice: u.maxPrice,
+        minPrice: u.minPrice ?? null,
+        maxPrice: u.maxPrice ?? null,
         categoryId: u.category?.id || null,
         municipalityId: u.town?.id || null,
-        sort: u.sort,
+        sort: u.sort || null,
         page: 1,
       };
+      // "Under 200" on a list from ₱300 up: the new limit wins.
+      if (s.minPrice != null && s.maxPrice != null && s.minPrice > s.maxPrice) {
+        if (u.maxPrice != null) s.minPrice = null;
+        else s.maxPrice = null;
+      }
       const { products, total } = await runSearch(s);
       const what = describe(s, ref, lang);
-      if (!products.length && s.query) {
-        const close = await closeMatches(s);
+      const things = (n) => (n === 1 ? 'product' : 'products');
+      if (!products.length && s.query && !refine) {
+        const { products: close, best } = await closeMatches(s);
+        if (close.length && best.word && s.sort !== 'rating') {
+          // The results page searches one thing: the closest word that finds the most.
+          const shownSearch = { ...s, query: best.word };
+          return answer({
+            say: say('closeOnPage', lang, t, {
+              query: s.query, word: best.word, n: best.total, things: things(best.total),
+            }),
+            cards: best.products,
+            actions: showResults(shownSearch),
+            state: { lastSearch: shownSearch, shown: best.products.map((p) => p.id), focus: null },
+          });
+        }
         if (close.length) {
           return answer({
             say: lang === 'tl'
@@ -358,15 +433,20 @@ const turn = async ({
         if (s.municipalityId) relax.push(lang === 'tl' ? `${s.query || 'Produkto'} mula sa ibang bayan` : `${s.query || 'Products'} from any town`);
         return answer({ say: say('none', lang, t, { what }), suggestions: relax.length ? relax : undefined, state: { lastSearch: s, shown: [] } });
       }
+      const rating = s.sort === 'rating';
+      const n = rating ? products.length : total;
       return answer({
-        say: say('found', lang, t, { n: products.length, things: products.length === 1 ? 'product' : 'products', what }),
+        say: say(rating ? 'found' : (refine ? 'refined' : 'foundOnPage'), lang, t, { n, things: things(n), what }),
         cards: products,
         total,
+        actions: showResults(s),
         state: { lastSearch: s, shown: products.map((p) => p.id), focus: null },
       });
     }
 
     case 'more': {
+      // On the results page: further down it (it loads more as it scrolls).
+      if (onResults(ctx)) return answer({ say: say('scrollMore', lang, t), actions: [{ type: 'scroll' }] });
       if (!state.lastSearch) return answer({ say: say('pickWhich', lang, t) });
       const s = { ...state.lastSearch, page: state.lastSearch.page + 1 };
       const { products } = await runSearch(s, s.page);
@@ -375,22 +455,75 @@ const turn = async ({
     }
 
     case 'cheaper': {
-      const base = state.lastSearch || (ctx.search ? { ...ctx.search, sort: null, page: 1 } : null);
+      const base = searchInView(state, ctx);
       // On a product page with nothing searched: similar but cheaper.
       if (!base) return turn({ text: 'similar but cheaper', state: rawState, context: rawContext, user });
-      // The last search found nothing: there is nothing to go cheaper from.
-      if (state.lastSearch && !state.shown.length) return answer({ say: say('nothingShown', lang, t) });
-      const shown = state.shown.length ? await cards(state.shown) : [];
-      const prices = shown.map(priceNow).sort((a, b) => a - b);
+      const inView = listInView(state, ctx);
+      // Nothing in view: there is nothing to go cheaper from.
+      if (!inView.length) return answer({ say: say('nothingShown', lang, t) });
+      const shown = await cards(inView);
+      const prices = shown.map(priceNow).filter((p) => p > 0).sort((a, b) => a - b);
       const median = prices.length ? prices[Math.floor((prices.length - 1) / 2)] : null;
-      const cap = median != null ? Math.max(1, median - 0.01) : (base.maxPrice ?? null);
+      // Below the middle of what is in view, in whole pesos.
+      const cap = median != null ? Math.max(1, Math.ceil(median) - 1) : (base.maxPrice ?? null);
       const s = {
         ...base, maxPrice: cap != null ? Math.min(cap, base.maxPrice ?? Infinity) : base.maxPrice, sort: 'cheapest', page: 1,
       };
-      const { products } = await runSearch(s);
+      if (s.minPrice != null && s.maxPrice != null && s.minPrice > s.maxPrice) s.minPrice = null;
+      let { products, total } = await runSearch(s);
+      // Half of them at the lowest price already ("4 at ₱120, 4 at ₱200"):
+      // cheaper than the dearest one in view, then.
+      const dearest = prices.length ? prices[prices.length - 1] : null;
+      if (!products.length && dearest != null && dearest - 1 > (s.maxPrice ?? 0) && dearest > prices[0]) {
+        s.maxPrice = Math.min(Math.ceil(dearest) - 1, base.maxPrice ?? Infinity);
+        ({ products, total } = await runSearch(s));
+      }
       if (!products.length) return answer({ say: say('noCheaper', lang, t), state: { lastSearch: base } });
-      return answer({ say: say('cheaper', lang, t), cards: products, state: { lastSearch: s, shown: products.map((p) => p.id) } });
+      return answer({
+        say: s.maxPrice != null
+          ? say('cheaperOnPage', lang, t, { cap: peso(s.maxPrice), n: total, things: total === 1 ? 'product' : 'products' })
+          : say('cheaper', lang, t),
+        cards: products,
+        actions: showResults(s),
+        state: { lastSearch: s, shown: products.map((p) => p.id) },
+      });
     }
+
+    case 'clear_filters': {
+      const inView = searchInView(state, ctx);
+      if (!inView) return answer({ say: say('noFilters', lang, t) });
+      // The words searched stay; on a category page, so does its category.
+      const s = {
+        query: inView.query || '',
+        categoryId: ctx.pageType === 'category' ? inView.categoryId : null,
+        municipalityId: null,
+        minPrice: null,
+        maxPrice: null,
+        sort: null,
+        page: 1,
+      };
+      const { products, total } = await runSearch(s);
+      return answer({
+        say: say('cleared', lang, t, { n: total, things: total === 1 ? 'product' : 'products', what: describe(s, ref, lang) }),
+        cards: products,
+        actions: showResults(s),
+        state: { lastSearch: s, shown: products.map((p) => p.id), focus: null },
+      });
+    }
+
+    case 'open': {
+      const id = pointedAt(u, state, ctx);
+      const p = id ? await productFacts(id) : null;
+      if (!p) return answer({ say: say('pickWhich', lang, t) });
+      return answer({
+        say: say('opening', lang, t, { name: p.name }),
+        actions: [{ type: 'navigate', to: `/product/${p.slug}` }],
+        state: { focus: p.id },
+      });
+    }
+
+    case 'back':
+      return answer({ say: say('goingBack', lang, t), actions: [{ type: 'back' }] });
 
     case 'similar': {
       const id = pointedAt(u, state, ctx);

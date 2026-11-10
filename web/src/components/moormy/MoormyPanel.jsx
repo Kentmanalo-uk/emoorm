@@ -3,7 +3,7 @@ import {
 } from 'react';
 import { Link, useLocation, useNavigate } from 'react-router-dom';
 import {
-  ArrowClockwise, CaretLeft, CaretRight, GearSix, Microphone, NotePencil, PaperPlaneTilt,
+  ArrowClockwise, CaretLeft, CaretRight, CaretUp, GearSix, Microphone, NotePencil, PaperPlaneTilt,
   ShoppingCart, SpeakerHigh, SpeakerSlash, Stop, Trash, WifiSlash, X,
 } from '../../lib/icons';
 import axios from '../../lib/axios';
@@ -163,6 +163,9 @@ export default function MoormyPanel({
   const [interim, setInterim] = useState('');
   const [view, setView] = useState('chat'); // chat | settings
   const [speakingId, setSpeakingId] = useState(null);
+  // Phones: after she acts on the page, a small bar instead of the sheet,
+  // so the page shows and the conversation goes on (the mic is on the bar).
+  const [mini, setMini] = useState(false);
   const endRef = useRef(null);
   const inputRef = useRef(null);
   const earRef = useRef(null); // speech recognition in progress
@@ -235,7 +238,13 @@ export default function MoormyPanel({
       const steps = planActions(d.actions, {
         signedIn, cards: d.cards, cartItems, route: context.route,
       });
-      const notes = runSteps(steps, { cart: useCartStore.getState(), navigate });
+      const notes = runSteps(steps, {
+        cart: useCartStore.getState(),
+        navigate,
+        scroll: () => window.scrollBy({ top: Math.round(window.innerHeight * 0.8), behavior: 'smooth' }),
+      });
+      // Results she put on the page are not shown again in the panel.
+      const onPage = steps.some((s) => s.kind === 'results');
       const confirm = steps.find((s) => s.kind === 'confirmRemove');
       const buttons = steps
         .filter((s) => s.kind === 'link' || s.kind === 'signIn')
@@ -248,7 +257,8 @@ export default function MoormyPanel({
         intent: d.intent,
         text: words.text,
         speak: words.speak,
-        cards: Array.isArray(d.cards) ? d.cards : [],
+        cards: !onPage && Array.isArray(d.cards) ? d.cards : [],
+        onPage,
         compare: d.compare || null,
         cart: d.cart || null,
         orders: Array.isArray(d.orders) ? d.orders : null,
@@ -263,8 +273,9 @@ export default function MoormyPanel({
       // Spoken to, she answers out loud; typed to, she stays quiet (a phone in
       // a jeepney should not suddenly talk). Any reply can be played.
       if (via === 'voice') speak(reply);
-      // Phones: the panel covers the page, so a page she opened is shown.
-      if (isPhone && steps.some((s) => ['go', 'choose', 'offer'].includes(s.kind))) setTimeout(onClose, 700);
+      // Phones: the panel covers the page, so what she did on it is shown,
+      // with her in a small bar to go on talking.
+      if (isPhone && steps.some((s) => ['go', 'results', 'back', 'scroll', 'choose', 'offer'].includes(s.kind))) setMini(true);
     } catch (err) {
       const offline = (typeof navigator !== 'undefined' && navigator.onLine === false) || (!err?.status && /network/i.test(err?.message || 'network'));
       setStatus(offline ? 'offline' : 'error');
@@ -283,7 +294,7 @@ export default function MoormyPanel({
     } finally {
       busyRef.current = false;
     }
-  }, [navigate, onClose, isPhone, speak, stopVoice, update]);
+  }, [navigate, isPhone, speak, stopVoice, update]);
 
   const send = (e) => {
     e?.preventDefault();
@@ -351,6 +362,7 @@ export default function MoormyPanel({
     earRef.current?.abort();
     stopVoice();
     setView('chat');
+    setMini(false);
     setStatus((s) => (s === 'thinking' ? s : 'idle'));
   }, [open, stopVoice]);
 
@@ -371,7 +383,7 @@ export default function MoormyPanel({
     stopSpeaking();
   }, []);
 
-  const trapRef = useFocusTrap(open, { onClose, modal: isPhone });
+  const trapRef = useFocusTrap(open && !mini, { onClose, modal: isPhone });
 
   const setMuted = (muted) => {
     setPrefs(savePrefs({ muted }));
@@ -406,6 +418,49 @@ export default function MoormyPanel({
   const onPick = isPhone ? onClose : undefined;
 
   const statusText = status === 'error' && problem ? problem : STATUS[status];
+
+  // Phones, after she acted: her last words and the mic, over the page.
+  if (isPhone && mini && open) {
+    const said = [...talk.messages].reverse().find((m) => m.role === 'assistant');
+    let line = said?.text || 'Ask me anything.';
+    if (status === 'listening') line = interim || 'Listening…';
+    else if (status === 'thinking') line = 'Thinking…';
+    else if (status === 'error' && problem) line = problem;
+    const hers = !['listening', 'thinking', 'error'].includes(status);
+    return (
+      <section className="mmg-mini" aria-label="Moormy, your shopping helper" data-status={status}>
+        <button type="button" className={`mmg-face is-${status}`} onClick={() => setMini(false)} aria-label="Open the chat with Moormy">
+          <MoormyFace size={34} />
+        </button>
+        <p
+          className={`mmg-mini-text${hers ? keepClass(said?.lang) : ''}`}
+          {...(hers ? keepLang(said?.lang) : {})}
+          role="status"
+          aria-live="polite"
+        >
+          {line}
+        </p>
+        {canHear && (
+          <button
+            type="button"
+            className={`mmg-mic${status === 'listening' ? ' is-on' : ''}`}
+            onClick={status === 'listening' ? stopListening : startListening}
+            disabled={busy}
+            aria-label={status === 'listening' ? 'Stop listening' : 'Talk to Moormy'}
+            aria-pressed={status === 'listening'}
+          >
+            <Microphone size={19} weight={status === 'listening' ? 'fill' : 'regular'} />
+          </button>
+        )}
+        <button type="button" className="mmg-icon" onClick={() => setMini(false)} aria-label="Open the chat">
+          <CaretUp size={18} weight="bold" />
+        </button>
+        <button type="button" className="mmg-icon" onClick={onClose} aria-label="Close Moormy">
+          <X size={18} weight="bold" />
+        </button>
+      </section>
+    );
+  }
 
   return (
     <section

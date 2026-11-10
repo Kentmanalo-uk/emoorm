@@ -55,6 +55,16 @@ export const orderIdFrom = (pathname = '', search = '') => {
   return null;
 };
 
+/**
+ * The results page's sorts (pages/Products.jsx ?sort=) and Moormy's names
+ * for them (backend/src/moormy). Relevance and the name sorts have none:
+ * she leaves them as they are.
+ */
+export const PAGE_SORT = {
+  cheapest: 'price-low', priciest: 'price-high', popular: 'top-sales', newest: 'newest',
+};
+const MOORMY_SORT = Object.fromEntries(Object.entries(PAGE_SORT).map(([k, v]) => [v, k]));
+
 /** The search and filters in a results address (?q=, ?category=, …), or null elsewhere. */
 export const searchFromUrl = (pathname = '', search = '') => {
   const type = pageTypeFor(pathname, search);
@@ -68,7 +78,30 @@ export const searchFromUrl = (pathname = '', search = '') => {
     municipalityId: idOrNull(p.get('municipalityId')),
     minPrice: priceOrNull(p.get('minPrice')),
     maxPrice: priceOrNull(p.get('maxPrice')),
+    sort: MOORMY_SORT[p.get('sort')] || null,
   };
+};
+
+/**
+ * The results page's address for a search Moormy shows (the page reads all
+ * of it from there, as its own filters do). Pure.
+ * @param {{ query, categoryId, municipalityId, minPrice, maxPrice, sort }} s
+ */
+export const resultsPath = (s = {}) => {
+  const p = new URLSearchParams();
+  const q = typeof s.query === 'string' ? s.query.trim().slice(0, 80) : '';
+  if (q) p.set('q', q);
+  if (idOrNull(s.categoryId)) p.set('category', s.categoryId);
+  if (idOrNull(s.municipalityId)) p.set('municipalityId', s.municipalityId);
+  const min = priceOrNull(s.minPrice);
+  const max = priceOrNull(s.maxPrice);
+  if (min != null && min > 0) p.set('minPrice', String(min));
+  if (max != null) p.set('maxPrice', String(max));
+  // Browsing everything with no sort: best sellers first, as she found them.
+  const sort = PAGE_SORT[s.sort] || (!q ? 'top-sales' : null);
+  if (sort) p.set('sort', sort);
+  const qs = p.toString();
+  return qs ? `/products?${qs}` : '/products';
 };
 
 /**
@@ -108,6 +141,10 @@ export const buildContext = ({
     storeId: pageType === 'product' || pageType === 'store' ? idOrNull(own.storeId) : null,
     orderId: orderIdFrom(pathname, search) || (pageType === 'order' ? idOrNull(own.orderId) : null),
     search: searchCtx,
+    // The products the results page lists, in order (it says so itself).
+    listed: fromUrl && typeof own.listed === 'string'
+      ? own.listed.split(',').map(idOrNull).filter(Boolean).slice(0, 24)
+      : [],
     cart: cartForContext(cartItems),
   };
 };
@@ -127,16 +164,17 @@ export const subscribeMoormyPage = (fn) => {
 export const useMoormyPageInfo = () => useSyncExternalStore(subscribeMoormyPage, getMoormyPage, () => null);
 
 /**
- * A page tells Moormy what it shows: useMoormyPage({ productId, storeId }).
+ * A page tells Moormy what it shows: useMoormyPage({ productId, storeId }),
+ * the results page also its products (listed: their ids, comma-joined, in order).
  * Kept for the address it was said on; cleared when the page goes.
  */
 export const useMoormyPage = ({
-  productId = null, storeId = null, orderId = null, categoryId = null,
+  productId = null, storeId = null, orderId = null, categoryId = null, listed = '',
 } = {}) => {
   useEffect(() => {
     if (typeof window === 'undefined') return undefined;
     const entry = {
-      path: window.location.pathname, productId, storeId, orderId, categoryId,
+      path: window.location.pathname, productId, storeId, orderId, categoryId, listed,
     };
     current = entry;
     emit();
@@ -146,5 +184,5 @@ export const useMoormyPage = ({
         emit();
       }
     };
-  }, [productId, storeId, orderId, categoryId]);
+  }, [productId, storeId, orderId, categoryId, listed]);
 };

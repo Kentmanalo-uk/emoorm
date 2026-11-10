@@ -123,8 +123,6 @@ const Products = () => {
   const pathCategorySlug = categorySlug && !searchParams.get('category') ? categorySlug : '';
   const pathCategoryId = pathCategorySlug ? (categories.find((c) => c.slug === pathCategorySlug)?.id || '') : '';
   const activeCategory = selectedCategory || pathCategoryId;
-  // Moormy knows the category in view (a /category/<slug> address has no id).
-  useMoormyPage({ categoryId: activeCategory || null });
   const [searchQuery, setSearchQuery] = useState(searchParams.get('q') || '');
   const municipalityId = searchParams.get('municipalityId') || '';
   const imageSearch = searchParams.get('imageSearch') === '1';
@@ -139,9 +137,14 @@ const Products = () => {
     const q = searchParams.get('q') || '';
     const cat = searchParams.get('category') || '';
     setSearchQuery((prev) => (prev === q ? prev : q));
-    // No sort chosen: a search ranks by best match, browsing by newest.
-    if (!searchParams.get('sort')) setSortBy(q ? 'relevance' : 'newest');
+    // The address's sort (Moormy changes it there too); none chosen: a
+    // search ranks by best match, browsing by newest.
+    setSortBy(searchParams.get('sort') || (q ? 'relevance' : 'newest'));
     setSelectedCategory((prev) => (prev === cat ? prev : cat));
+    // The price boxes show the price in the address.
+    const min = searchParams.get('minPrice') || '';
+    const max = searchParams.get('maxPrice') || '';
+    setPriceRange((prev) => (prev.min === min && prev.max === max ? prev : { min, max }));
   }, [searchParams]);
 
   // An image search: the results the image search page kept (not asked for here).
@@ -204,6 +207,12 @@ const Products = () => {
   const isLoading = imageStored ? false : list.loading;
   const loadError = imageSearch ? '' : (list.error ? (list.error.message || 'Failed to load products') : '');
   const corrected = imageSearch ? '' : (list.extra?.corrected || '');
+  // Moormy knows the category in view (a /category/<slug> address has no id)
+  // and the products listed, in order: "the first one" is the page's first.
+  useMoormyPage({
+    categoryId: activeCategory || null,
+    listed: (products || []).slice(0, 24).map((p) => p.id).join(','),
+  });
 
   const handleCategoryChange = (categoryId) => {
     setSelectedCategory(categoryId);

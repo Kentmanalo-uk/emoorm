@@ -1083,3 +1083,77 @@
     animation: none;
   }
 }
+
+/* Phones, after Moormy acted on the page: a small bar with her last words
+   and the mic, above the bottom navigation (or the page's own bar), so the
+   page shows and the conversation goes on. */
+.mmg-mini {
+  --mmy-pink: var(--t-accent-500, #ec4899);
+  --mmy-green: var(--t-primary-500, #10b981);
+  --mmy-gradient: linear-gradient(135deg, var(--mmy-pink), var(--mmy-green));
+  position: fixed;
+  right: 10px;
+  bottom: calc(var(--tabbar-space, 68px + env(safe-area-inset-bottom, 0px)) + 8px);
+  left: 10px;
+  z-index: 900;
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  padding: 8px 8px 8px 10px;
+  border: 1px solid var(--t-neutral-200, #e5e7eb);
+  border-radius: 18px;
+  background: var(--t-neutral-0, #fff);
+  box-shadow: 0 12px 32px rgba(15, 23, 42, 0.2), 0 2px 6px rgba(15, 23, 42, 0.08);
+  color: var(--t-neutral-900, #111827);
+  animation: mmg-mini-in 0.28s cubic-bezier(0.34, 1.3, 0.64, 1);
+}
+
+body.no-bottom-nav .mmg-mini {
+  bottom: calc(env(safe-area-inset-bottom, 0px) + 10px);
+}
+
+body:has(.pdp-m-actionbar) .mmg-mini {
+  bottom: calc(env(safe-area-inset-bottom, 0px) + 72px);
+}
+
+body:has(.cart-m-bar) .mmg-mini {
+  bottom: calc(var(--tabbar-space, 68px + env(safe-area-inset-bottom, 0px)) + 76px);
+}
+
+.mmg-mini .mmg-face {
+  padding: 0;
+  border: 0;
+  background: none;
+  cursor: pointer;
+}
+
+.mmg-mini-text {
+  display: -webkit-box;
+  flex: 1;
+  min-width: 0;
+  margin: 0;
+  overflow: hidden;
+  font-size: 14px;
+  line-height: 1.35;
+  -webkit-line-clamp: 2;
+  line-clamp: 2;
+  -webkit-box-orient: vertical;
+}
+
+.mmg-mini[data-status="listening"] .mmg-mini-text,
+.mmg-mini[data-status="thinking"] .mmg-mini-text {
+  color: var(--t-neutral-500, #6b7280);
+}
+
+.mmg-mini .mmg-icon {
+  flex-shrink: 0;
+}
+
+@keyframes mmg-mini-in {
+  from { opacity: 0; transform: translateY(16px); }
+  to { opacity: 1; transform: none; }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .mmg-mini { animation: none; }
+}

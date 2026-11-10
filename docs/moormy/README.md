@@ -116,11 +116,33 @@ the page sends is cleaned (ids, numbers, page types, at most 100 cart lines).
 **Never:** places, pays for or cancels an order; changes an address; asks for
 a password or a code; invents a product, a price or a feature.
 
+## Moormy drives the site (11 Nov 2026, the owner's request)
+
+Moormy works the site's own pages the way a person taps them, rather than only answering in her panel.
+
+| Said | What happens |
+|---|---|
+| "Find me a pasalubong" | The results page opens, searched (`/products?q=…`). If nothing has the word itself, she searches the closest word that finds the most and says so. |
+| "Cheaper" | The page's own price filter and Price sort change: below the middle price in view, or below the dearest one if half of them are already at the lowest price. |
+| "Under 200", "from Calapan only", "newest first", "price high to low" | The search in view is narrowed; its words are kept. |
+| "Clear the filters", "any price" | Filters off; the words searched stay. |
+| "Open the first one" | The page's first product opens. The results page tells her what it lists, in order (`useMoormyPage({ listed })`). |
+| "Go back" | The browser's Back. |
+| "Show more" | The results page scrolls on; it loads more as it goes. |
+
+"Best rated" stays in her panel, because the page has no rating sort.
+
+How it works:
+
+- The engine proposes `show_results` with the search, or `back` or `scroll`.
+- The page writes the search as the results address (`web/src/lib/moormy/pageContext.js` `resultsPath`), and the page reads it from there exactly as its own filters do.
+- On phones, after she acts, her panel shrinks to a small bar with her last line and the mic, so the page shows and the talk goes on.
+
 ## API
 
 `POST /api/moormy/turn` (anyone; signed in adds their orders; 40 a minute):
 
-    { text, state?, context?: { pageType, productId, storeId, orderId, search, cart: [{ productId, quantity }] } }
+    { text, state?, context?: { pageType, productId, storeId, orderId, search, listed: [productId], cart: [{ productId, quantity }] } }
     -> { intent, lang, say, speak, cards, compare?, cart?, orders?, actions, suggestions, state }
 
 `actions` are proposals: `{ type: 'cart_add', productId, quantity }`,

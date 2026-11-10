@@ -1,6 +1,7 @@
 import { saleInfo } from '../variantPricing';
 import { parseImages } from '../media';
 import { productKind } from '../productKinds';
+import { resultsPath } from './pageContext';
 
 /**
  * Moormy's actions (docs/moormy, Phase 5). The server only proposes them
@@ -10,6 +11,9 @@ import { productKind } from '../productKinds';
  *
  * Steps:
  *   { kind: 'go', to }                    go there now
+ *   { kind: 'results', to }               the results page, searched and filtered
+ *   { kind: 'back' }                      the browser's Back
+ *   { kind: 'scroll' }                    further down the page
  *   { kind: 'link', to, label }           a button; the person decides
  *   { kind: 'signIn', to, why }           a Sign in button (why: 'cart' | 'page')
  *   { kind: 'add', productId, quantity, product }
@@ -58,6 +62,17 @@ export const planActions = (actions, {
         steps.push({ kind: 'go', to, place: a.place || null });
         went = true;
       }
+    } else if (a.type === 'show_results' && a.search && typeof a.search === 'object') {
+      // Her search on the site's own results page; one page per reply.
+      if (went) continue;
+      steps.push({ kind: 'results', to: resultsPath(a.search) });
+      went = true;
+    } else if (a.type === 'back') {
+      if (went) continue;
+      steps.push({ kind: 'back' });
+      went = true;
+    } else if (a.type === 'scroll') {
+      steps.push({ kind: 'scroll' });
     } else if (a.type === 'cart_add') {
       const product = byId.get(a.productId);
       if (!product) continue;
@@ -118,10 +133,19 @@ export const cartLineFor = (product) => ({
  * { kind, ok, text?, to? }. `cart` is the cart store's state (addItem),
  * `navigate` the router's.
  */
-export const runSteps = (steps, { cart, navigate }) => {
+export const runSteps = (steps, { cart, navigate, scroll }) => {
   const notes = [];
   for (const step of steps) {
-    if (step.kind === 'go') {
+    if (step.kind === 'results') {
+      navigate(step.to);
+      notes.push({ kind: 'results', ok: true, to: step.to });
+    } else if (step.kind === 'back') {
+      navigate(-1);
+      notes.push({ kind: 'back', ok: true });
+    } else if (step.kind === 'scroll') {
+      scroll?.();
+      notes.push({ kind: 'scroll', ok: true });
+    } else if (step.kind === 'go') {
       navigate(step.to);
       notes.push({ kind: 'go', ok: true, to: step.to });
     } else if (step.kind === 'add') {

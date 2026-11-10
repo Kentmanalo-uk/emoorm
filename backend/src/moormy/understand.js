@@ -108,7 +108,8 @@ const THIS = /\b(this|this one|it|that one|ito|iyan|yan|yung ito|eto|nito|ganito
 // ── Sorting ─────────────────────────────────────────────────────────────────
 
 const sortOf = (text) => {
-  if (has(text, /\b(cheapest|lowest price|pinakamura|pinaka mura|least expensive)\b/)) return 'cheapest';
+  if (has(text, /\b(most expensive|highest price|high to low|expensive first|pinakamahal|mahal muna)\b/)) return 'priciest';
+  if (has(text, /\b(cheapest|lowest price|low to high|pinakamura|pinaka mura|least expensive|mura muna)\b/)) return 'cheapest';
   if (has(text, /\b(best[- ]rated|top[- ]rated|highest rated|pinakamagaling|magandang review|good reviews?|best reviews?)\b/)) return 'rating';
   if (has(text, /\b(best[- ]?sell(?:er|ers|ing)|most popular|popular|mabenta|pinakamabenta|sikat)\b/)) return 'popular';
   if (has(text, /\b(newest|latest|new arrivals?|pinakabago|bagong labas)\b/)) return 'newest';
@@ -213,6 +214,9 @@ const understand = (raw, ref = {}) => {
     pointsHere: THIS.test(text),
     town: namedIn(text, towns),
     category: namedIn(text, categories),
+    // "Only from Calapan", "sort by newest", "fruits na lang": changes the
+    // search in view rather than starting another (engine.js decides).
+    narrows: /\b(only|just|lang|na lang|filter|sort|instead|naman|then|now)\b/.test(text),
     quantity: Number((text.match(/\b(\d{1,2})\s*(?:pcs|pieces?|piraso|kilos?|packs?|x)\b/) || [])[1]) || null,
   };
   const out = (intent, extra = {}) => ({ intent, ...base, ...extra });
@@ -221,6 +225,12 @@ const understand = (raw, ref = {}) => {
   if (GREETING.test(text)) return out('greeting');
   if (THANKS.test(text)) return out('thanks');
   if (BYE.test(text)) return out('bye');
+
+  // The search page's filters: "clear the filters", "show all prices".
+  if (/\b(clear|remove|reset|alisin|tanggalin|wala nang|no more)\b.*\bfilters?\b|\b(any price|kahit anong presyo|all prices|show all|lahat)\b/.test(text)
+    && !/\b(cart|basket|bayong)\b/.test(text)) {
+    return out('clear_filters');
+  }
 
   const cartWord = /\b(cart|basket|bayong)\b/.test(text);
   if (/\b(remove|delete|take out|tanggalin|alisin|bawasan|i-?remove)\b/.test(text) && (cartWord || base.ordinal || base.pointsHere || /\bitem\b/.test(text))) {
@@ -235,6 +245,8 @@ const understand = (raw, ref = {}) => {
     && !/\b(cheaper|similar|compare)\b/.test(text)) {
     return out('navigate', { place: place[0], to: place[2] });
   }
+  // "Go back": the page before, as the browser's Back does.
+  if (/^(go back|back|balik|bumalik|bumalik ka|previous page|back please|ibalik mo)\b/.test(text) && !place) return out('back');
 
   const ordersWords = /\b(orders?|parcel|package ko|delivery ko|deliveries)\b/.test(text);
   if (ordersWords && /\b(where|nasaan|nasan|asan|status|track|tracking|kailan|when will|dumating na|darating|my|ko|ko ba|nakuha)\b/.test(text)
@@ -257,6 +269,11 @@ const understand = (raw, ref = {}) => {
   if (/^(more|show more|iba pa|more please|next|marami pa|meron pa|any others?|others)\b/.test(text)) return out('more');
 
   const asksAboutThing = base.pointsHere || base.ordinal;
+  // "Open the first one": its page, unless a question is asked about it.
+  if (base.ordinal && /\b(open|view|see|go to|show me|check|click|tap|tingnan|buksan|ipakita|silipin|pindutin)\b/.test(text)
+    && !/\b(about|tell|how much|magkano|price|presyo|good|maganda|masarap|who|sino|stock|reviews?|details)\b/.test(text)) {
+    return out('open');
+  }
   if (asksAboutThing && /\b(good|okay|ok|maganda|masarap|how much|magkano|price|presyo|available|in stock|stock|may stock|sino|who sells|seller|nagbebenta|rating|reviews?|tell me|about|ano ito|ano yan|describe|details|ilan|gift|regalo|pasalubong|fresh|sariwa|delivery|deliver|pickup|kailan)\b/.test(text)) {
     return out('about');
   }

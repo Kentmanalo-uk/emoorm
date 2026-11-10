@@ -39,13 +39,13 @@ describe('pageTypeFor', () => {
 describe('searchFromUrl', () => {
   it('reads the query and filters of a results page', () => {
     expect(searchFromUrl('/search', '?q=%20rice%20&category=cat-1&municipalityId=town-2&minPrice=50&maxPrice=100')).toEqual({
-      query: 'rice', categoryId: 'cat-1', municipalityId: 'town-2', minPrice: 50, maxPrice: 100,
+      query: 'rice', categoryId: 'cat-1', municipalityId: 'town-2', minPrice: 50, maxPrice: 100, sort: null,
     });
   });
 
   it('leaves out what is missing or not a valid id or price', () => {
     expect(searchFromUrl('/products', '?category=bad id!&minPrice=-5&maxPrice=abc')).toEqual({
-      query: '', categoryId: null, municipalityId: null, minPrice: null, maxPrice: null,
+      query: '', categoryId: null, municipalityId: null, minPrice: null, maxPrice: null, sort: null,
     });
   });
 
