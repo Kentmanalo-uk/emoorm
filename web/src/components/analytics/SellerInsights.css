@@ -1,0 +1,680 @@
+/* Seller Center › Analytics › Insights (SellerInsights.jsx): the analytics
+   cards (an-card, an-toplist, an-reasons, an-kpi) with a few additions. */
+
+/* Its own column of cards, spaced like the page's (20px on computers). */
+.san-insights {
+  display: flex;
+  flex-direction: column;
+  gap: 16px;
+  padding-top: 12px;
+}
+
+.san-insights > *,
+.san-insights > .an-grid-2 > .an-card {
+  margin: 0;
+}
+
+@media (min-width: 769px) {
+  .san-insights {
+    gap: 20px;
+  }
+}
+
+.san-insights-head {
+  margin-bottom: -6px;
+}
+
+.san-insights-title {
+  margin: 0 0 4px;
+  font-size: 19px;
+  font-weight: 500;
+  color: var(--t-neutral-900, #0f172a);
+}
+
+.san-insights-sub {
+  margin: 0;
+  max-width: 640px;
+  font-size: 13px;
+  line-height: 1.45;
+  color: var(--t-neutral-500, #636b78);
+}
+
+/* Two expected-sales figures side by side (the Seller Center's number
+   strip would make room for four). */
+.san-kpis,
+.seller-dashboard .seller-container .san-insights .an-kpi-grid.san-kpis {
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+}
+
+/* A small grey line under a card: what the list leaves out. */
+.san-note {
+  margin: 0;
+  padding: 10px 20px 16px;
+  font-size: 12px;
+  line-height: 1.45;
+  color: var(--t-neutral-500, #636b78);
+}
+
+/* "Show all 14" under a list cut short. */
+.san-more {
+  display: block;
+  width: 100%;
+  padding: 11px 20px;
+  border: 0;
+  border-top: 1px solid var(--rule-hairline);
+  background: none;
+  font: inherit;
+  font-size: 13px;
+  font-weight: 600;
+  color: var(--t-primary-600, #059669);
+  text-align: center;
+  cursor: pointer;
+}
+
+.san-more:hover {
+  color: var(--t-primary-700, #047857);
+  background: var(--t-neutral-50, #f9fafb);
+}
+
+/* A small grey label: "Early estimate". */
+.san-tag {
+  display: inline-block;
+  margin-left: 6px;
+  padding: 1px 7px;
+  border-radius: 999px;
+  background: var(--t-neutral-100, #f3f4f6);
+  color: var(--t-neutral-600, #4b5563);
+  font-size: 11px;
+  font-weight: 600;
+  white-space: nowrap;
+  cursor: help;
+}
+
+/* A row's Restock / Edit button. */
+.an-icon-btn.san-row-btn {
+  flex-shrink: 0;
+  gap: 2px;
+  padding: 7px 10px 7px 12px;
+  font-size: 12.5px;
+  text-decoration: none;
+  white-space: nowrap;
+}
+
+/* ── Sales forecast ── */
+.san-fc-legend {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 14px;
+  padding: 0 20px 6px;
+  font-size: 11.5px;
+  color: var(--t-neutral-500, #636b78);
+}
+
+.san-fc-legend span {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+}
+
+.san-fc-legend i {
+  display: inline-block;
+}
+
+.san-fc-legend .is-line {
+  width: 14px;
+  height: 2px;
+  border-radius: 2px;
+  background: var(--t-primary-600, #059669);
+}
+
+.san-fc-legend .is-dot {
+  width: 7px;
+  height: 7px;
+  border-radius: 50%;
+  background: var(--t-warning-500, #f59e0b);
+  box-shadow: 0 -5px 0 -2px var(--t-warning-200, #fde68a), 0 5px 0 -2px var(--t-warning-200, #fde68a);
+}
+
+.san-spark {
+  flex-shrink: 0;
+  width: 120px;
+  height: 34px;
+  overflow: visible;
+}
+
+.san-spark-base {
+  stroke: var(--rule-hairline, #e5e7eb);
+  stroke-width: 1;
+}
+
+.san-spark-line {
+  fill: none;
+  stroke: var(--t-primary-600, #059669);
+  stroke-width: 1.6;
+  stroke-linejoin: round;
+  stroke-linecap: round;
+}
+
+.san-spark-next {
+  stroke: var(--t-warning-500, #f59e0b);
+  stroke-width: 1.4;
+  stroke-dasharray: 2.5 2.5;
+}
+
+.san-spark-range {
+  stroke: var(--t-warning-200, #fde68a);
+  stroke-width: 5;
+  stroke-linecap: round;
+}
+
+.san-spark-dot {
+  stroke: var(--t-warning-500, #f59e0b);
+  stroke-width: 6;
+  stroke-linecap: round;
+}
+
+.san-fc-metric {
+  display: flex;
+  flex-direction: column;
+  align-items: flex-end;
+  gap: 1px;
+  flex-shrink: 0;
+  min-width: 120px;
+  text-align: right;
+}
+
+.san-fc-metric strong {
+  font-size: 13.5px;
+  font-weight: 700;
+  color: var(--t-neutral-900, #0f172a);
+}
+
+.san-fc-metric small {
+  font-size: 11.5px;
+  color: var(--t-neutral-500, #636b78);
+}
+
+/* Selling more / less lately: two short lists side by side. */
+.san-trends {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(220px, 1fr));
+  gap: 4px 20px;
+  padding: 12px 20px 4px;
+  border-top: 1px solid var(--rule-hairline);
+}
+
+.san-trend-title {
+  display: flex;
+  align-items: center;
+  gap: 5px;
+  margin: 0 0 6px;
+  font-size: 12.5px;
+  font-weight: 600;
+}
+
+.san-trend-title.is-up {
+  color: var(--t-primary-700, #047857);
+}
+
+.san-trend-title.is-down {
+  color: var(--t-danger-700, #b91c1c);
+}
+
+.san-trend-list ul {
+  margin: 0 0 8px;
+  padding: 0;
+  list-style: none;
+}
+
+.san-trend-list li {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  padding: 4px 0;
+  min-width: 0;
+}
+
+.san-trend-list .an-toplist-thumb {
+  width: 28px;
+  height: 28px;
+  border-radius: 6px;
+}
+
+/* ── Stock risk ── */
+.san-risk-counts {
+  display: grid;
+  grid-template-columns: repeat(4, minmax(0, 1fr));
+  gap: 8px;
+  margin: 0;
+  padding: 2px 20px 12px;
+  list-style: none;
+}
+
+.san-count {
+  display: flex;
+  flex-direction: column;
+  gap: 1px;
+  padding: 9px 12px;
+  border-radius: 10px;
+  background: var(--t-neutral-50, #f9fafb);
+}
+
+.san-count strong {
+  font-size: 19px;
+  font-weight: 700;
+  line-height: 1.2;
+  font-variant-numeric: tabular-nums;
+  color: var(--t-neutral-900, #0f172a);
+}
+
+.san-count span {
+  font-size: 12px;
+  color: var(--t-neutral-600, #4b5563);
+}
+
+.san-count.is-danger {
+  background: var(--t-danger-50, #fef2f2);
+}
+
+.san-count.is-danger strong {
+  color: var(--t-danger-700, #b91c1c);
+}
+
+.san-count.is-warning {
+  background: var(--t-warning-50, #fffbeb);
+}
+
+.san-count.is-warning strong {
+  color: var(--t-warning-700, #b45309);
+}
+
+.san-count.is-ok {
+  background: var(--t-secondary-50, #e9f7f0);
+}
+
+.san-count.is-ok strong {
+  color: var(--t-primary-700, #047857);
+}
+
+/* The risk badge in a row. */
+.san-risk {
+  display: inline-block;
+  padding: 3px 9px;
+  border-radius: 999px;
+  font-size: 11.5px;
+  font-weight: 600;
+  white-space: nowrap;
+  background: var(--t-neutral-100, #f3f4f6);
+  color: var(--t-neutral-700, #374151);
+}
+
+.san-risk.is-danger {
+  background: var(--t-danger-50, #fef2f2);
+  color: var(--t-danger-700, #b91c1c);
+}
+
+.san-risk.is-warning {
+  background: var(--t-warning-100, #fef3c7);
+  color: var(--t-warning-700, #b45309);
+}
+
+.san-risk.is-ok {
+  background: var(--t-secondary-50, #e9f7f0);
+  color: var(--t-primary-700, #047857);
+}
+
+/* The rows: a table on wide screens, stacked on phones. */
+.san-stock-row {
+  display: grid;
+  grid-template-columns: minmax(0, 2.6fr) minmax(52px, 0.6fr) minmax(0, 1fr) minmax(0, 1fr) minmax(0, 1fr) minmax(0, 1.1fr) auto;
+  align-items: center;
+  gap: 12px;
+  padding: 11px 20px;
+  border-top: 1px solid var(--rule-hairline);
+  font-size: 13px;
+  color: var(--t-neutral-700, #334155);
+}
+
+.san-stock-row.is-head {
+  padding-top: 9px;
+  padding-bottom: 9px;
+  background: var(--t-neutral-50, #f8fafc);
+  font-size: 12px;
+  font-weight: 600;
+  color: var(--t-neutral-500, #64748b);
+}
+
+.san-stock-product {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  min-width: 0;
+}
+
+.san-stock-cell small {
+  display: none;
+}
+
+.san-stock-cell {
+  font-variant-numeric: tabular-nums;
+}
+
+/* ── Buyer groups ── */
+.san-buyer-stats {
+  flex-wrap: wrap;
+  gap: 10px 28px;
+  padding: 2px 20px 14px;
+}
+
+.san-groups li {
+  grid-template-columns: minmax(150px, 1.4fr) minmax(0, 1.6fr) auto;
+}
+
+.san-groups .an-reasons-name {
+  display: flex;
+  flex-direction: column;
+  gap: 1px;
+}
+
+.san-group-name {
+  font-weight: 600;
+}
+
+.san-groups small {
+  font-size: 11.5px;
+  line-height: 1.35;
+  color: var(--t-neutral-500, #636b78);
+}
+
+.san-months-wrap {
+  padding: 12px 20px 16px;
+  border-top: 1px solid var(--rule-hairline);
+}
+
+.san-months-head {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  justify-content: space-between;
+  gap: 6px 12px;
+  margin-bottom: 8px;
+}
+
+.san-months-head h3 {
+  margin: 0;
+  font-size: 13px;
+  font-weight: 600;
+  color: var(--t-neutral-800, #1e293b);
+}
+
+.san-months-legend {
+  display: inline-flex;
+  gap: 12px;
+  font-size: 11.5px;
+  color: var(--t-neutral-500, #636b78);
+}
+
+.san-months-legend span {
+  display: inline-flex;
+  align-items: center;
+  gap: 5px;
+}
+
+.san-months-legend i {
+  width: 9px;
+  height: 9px;
+  border-radius: 3px;
+}
+
+.san-months {
+  display: flex;
+  gap: 8px;
+  height: 104px;
+}
+
+.san-month {
+  flex: 1 1 0;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 5px;
+  min-width: 0;
+}
+
+.san-month-bars {
+  flex: 1;
+  display: flex;
+  align-items: flex-end;
+  justify-content: center;
+  gap: 3px;
+  width: 100%;
+  border-bottom: 1px solid var(--rule-hairline, #e5e7eb);
+}
+
+.san-month-bars i {
+  width: min(14px, 38%);
+  border-radius: 3px 3px 0 0;
+}
+
+.san-months-legend .is-new,
+.san-month-bars .is-new {
+  background: var(--t-primary-600, #059669);
+}
+
+.san-months-legend .is-returning,
+.san-month-bars .is-returning {
+  background: var(--t-primary-300, #6ee7b7);
+}
+
+.san-month-label {
+  font-size: 11px;
+  line-height: 1;
+  color: var(--t-neutral-500, #636b78);
+}
+
+/* ── Viewed but not bought ── */
+.san-perf-row {
+  align-items: flex-start;
+}
+
+.san-perf-row .an-toplist-thumb {
+  margin-top: 2px;
+}
+
+.san-hints {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 5px;
+  margin: 5px 0 0;
+  padding: 0;
+  list-style: none;
+}
+
+.san-hints li {
+  padding: 2px 8px;
+  border-radius: 6px;
+  background: var(--t-warning-50, #fffbeb);
+  color: var(--t-warning-800, #92400e);
+  font-size: 11.5px;
+  font-weight: 500;
+  line-height: 1.5;
+}
+
+.san-hints-none {
+  margin-top: 3px;
+  font-size: 12px;
+  color: var(--t-neutral-500, #636b78);
+}
+
+/* ── Bundle ideas: two products' photos side by side, their names, and
+   "Make a package". Phones: the button under them, full width. ── */
+.san-bundle-thumbs {
+  display: flex;
+  flex-shrink: 0;
+  gap: 4px;
+}
+
+.an-icon-btn.san-bundle-btn {
+  flex-shrink: 0;
+  text-decoration: none;
+}
+
+/* ── Narrower screens ── */
+@media (max-width: 1100px) {
+  .san-pair .san-groups li {
+    grid-template-columns: minmax(0, 1fr) auto;
+  }
+
+  .san-pair .san-groups .an-reasons-bar {
+    grid-column: 1 / -1;
+    grid-row: 2;
+  }
+}
+
+@media (max-width: 900px) {
+  .san-stock-row.is-head {
+    display: none;
+  }
+
+  /* A row: the product and its badge, then its four numbers, then
+     Restock. Wrapping lines, so the badge keeps its own width. */
+  .san-stock-row {
+    display: flex;
+    flex-wrap: wrap;
+    align-items: flex-start;
+    gap: 10px 8px;
+    padding: 12px 16px;
+  }
+
+  .san-stock-product {
+    flex: 1 1 calc(100% - 160px);
+    order: 0;
+  }
+
+  /* A fixed width, so the numbers always start a line of their own. */
+  .san-stock-cell.is-risk {
+    display: flex;
+    flex: 0 0 150px;
+    justify-content: flex-end;
+    order: 1;
+  }
+
+  .san-stock-cell {
+    order: 2;
+    flex: 1 1 calc(25% - 8px);
+    min-width: 0;
+    font-size: 13px;
+    line-height: 1.35;
+  }
+
+  .san-stock-cell:nth-child(2) {
+    flex-basis: calc(14% - 8px);
+  }
+
+  .san-stock-cell:nth-child(4),
+  .san-stock-cell:nth-child(5) {
+    flex-basis: calc(29% - 8px);
+  }
+
+  .san-stock-cell small {
+    display: block;
+    margin-bottom: 2px;
+    font-size: 11px;
+    color: var(--t-neutral-500, #636b78);
+  }
+
+  .san-stock-cell.is-action {
+    flex: 1 1 100%;
+    order: 3;
+  }
+
+  .san-stock-cell.is-action .san-row-btn {
+    width: 100%;
+    justify-content: center;
+  }
+}
+
+@media (max-width: 768px) {
+  .san-insights {
+    gap: 12px;
+  }
+
+  .san-kpis {
+    grid-template-columns: repeat(2, minmax(0, 1fr)) !important;
+  }
+
+  .san-kpis .an-kpi-value {
+    font-size: 21px;
+  }
+
+  .san-fc-legend,
+  .san-risk-counts,
+  .san-buyer-stats,
+  .san-months-wrap,
+  .san-trends,
+  .san-note {
+    padding-left: 16px;
+    padding-right: 16px;
+  }
+
+  .san-risk-counts {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+  }
+}
+
+@media (max-width: 560px) {
+  /* Forecast row: photo and name, then the weekly line and how many. */
+  .san-fc-row {
+    display: grid;
+    grid-template-columns: 36px minmax(0, 1fr) auto;
+    align-items: center;
+    gap: 6px 12px;
+  }
+
+  .san-fc-row .an-toplist-body {
+    grid-column: 2 / -1;
+  }
+
+  .san-fc-row .san-spark {
+    grid-column: 2;
+    grid-row: 2;
+    width: 100%;
+    height: 30px;
+  }
+
+  .san-fc-row .san-fc-metric {
+    grid-column: 3;
+    grid-row: 2;
+  }
+
+  .san-fc-metric {
+    min-width: 0;
+  }
+
+  .san-perf-row {
+    flex-wrap: wrap;
+  }
+
+  .san-perf-row .san-row-btn {
+    flex: 1 1 100%;
+    justify-content: center;
+  }
+
+  .san-buyer-stats {
+    gap: 10px 20px;
+  }
+}
+
+@media (max-width: 480px) {
+  .san-bundle-row {
+    flex-wrap: wrap;
+  }
+
+  .san-bundle-row .an-toplist-body {
+    flex: 1 1 0;
+  }
+
+  .an-icon-btn.san-bundle-btn {
+    flex: 1 1 100%;
+  }
+}

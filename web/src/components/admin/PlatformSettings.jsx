@@ -690,3 +690,52 @@ export function InviteSettings() {
     </>
   );
 }
+
+/**
+ * The ML engine's switches (/admin/ml): the whole engine, then one per
+ * module. A module not built yet shows its phase and cannot be turned on.
+ * @param {Array} modules - from GET /ml/status
+ * @param {Function} onSaved - reload the page's status after a change
+ */
+export function MlEngineSettings({ modules = [], onSaved }) {
+  const { settings } = useAppSettings();
+  const { save, saving } = useSaveSettings();
+  const ml = settings.mlSettings || { enabled: false, modules: {} };
+  const engineOn = ml.enabled === true;
+  const flip = async (changes, done) => {
+    if (await save({ mlSettings: changes }, done)) onSaved?.();
+  };
+  return (
+    <SettingsCard
+      id="ml-engine"
+      title="Switches"
+      hint="Everything starts off. A module works only while the engine and the module are both on; turning one off brings back the shop's usual behaviour straight away."
+    >
+      <SwitchRow
+        label="ML engine"
+        help={engineOn
+          ? 'On: the engine counts cart and favourite totals (no names) and runs the modules switched on below.'
+          : 'Off: nothing is counted or worked out, and the shop runs exactly as before.'}
+        checked={engineOn}
+        disabled={saving}
+        text="Turn on the ML engine"
+        confirm={(v) => (v ? null : {
+          title: 'Turn off the ML engine?',
+          message: 'Every module stops and the shop goes back to its usual lists and search. Results already worked out are kept until they expire.',
+        })}
+        onChange={(v) => flip({ enabled: v }, v ? 'The ML engine is on' : 'The ML engine is off')}
+      />
+      {modules.map((m) => (
+        <SwitchRow
+          key={m.key}
+          label={`${m.number}. ${m.name}`}
+          help={m.built ? m.what : `${m.what} Comes in phase ${m.phase}.`}
+          checked={m.built && ml.modules?.[m.key] === true}
+          disabled={saving || !m.built}
+          text={`Turn on ${m.name}`}
+          onChange={(v) => flip({ modules: { [m.key]: v } }, v ? `${m.name} is on` : `${m.name} is off`)}
+        />
+      ))}
+    </SettingsCard>
+  );
+}

@@ -127,4 +127,16 @@ const vocabularyOf = (names) => {
   return vocab;
 };
 
-module.exports = { termsOf, variantsOf, whereFor, scoreOf, correct, vocabularyOf };
+/**
+ * One spelling for a word and all its synonyms and plurals (the first of its
+ * group), so "mangga", "mango" and "mangoes" count as one word (src/ml).
+ */
+const canonicalOf = (word) => {
+  const base = singular(word);
+  const group = SYNONYMS.get(word) || SYNONYMS.get(base);
+  return group ? group[0] : base;
+};
+
+module.exports = {
+  termsOf, variantsOf, whereFor, scoreOf, correct, vocabularyOf, canonicalOf, STOPWORDS,
+};

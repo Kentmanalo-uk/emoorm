@@ -1,0 +1,67 @@
+/* Super admin › ML engine (AdminMl.jsx): the admin pages' own cards and
+   tables (AdminLayout.css), with a few small additions. */
+
+.aml-page .ps-card { margin-bottom: 20px; }
+
+.aml-muted {
+  color: var(--t-neutral-500, #64748b);
+  font-size: 13px;
+}
+
+.aml-error {
+  margin-top: 4px;
+  max-width: 340px;
+  font-size: 12px;
+  line-height: 1.4;
+  color: var(--t-danger-600, #dc2626);
+}
+
+.aml-metrics {
+  font-size: 12.5px;
+  font-variant-numeric: tabular-nums;
+  color: var(--t-neutral-700, #334155);
+}
+
+.aml-actions {
+  white-space: nowrap;
+  text-align: right;
+}
+
+.aml-actions .admin-btn + .admin-btn { margin-left: 6px; }
+
+.aml-actions .admin-btn svg { vertical-align: -2px; }
+
+.aml-versions {
+  margin-top: 16px;
+  padding-top: 16px;
+  border-top: 1px solid var(--t-neutral-150, #eef0f3);
+}
+
+.aml-versions h3 {
+  margin: 0 0 10px;
+  font-size: 15px;
+  font-weight: 600;
+}
+
+.aml-filter {
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+  font-size: 13px;
+  color: var(--t-neutral-600, #475569);
+}
+
+.aml-filter select {
+  height: 36px;
+  padding: 0 10px;
+  border: 1px solid var(--t-neutral-200, #e2e8f0);
+  border-radius: 8px;
+  background: var(--t-neutral-0, #fff);
+  color: var(--t-neutral-800, #1e293b);
+  font: inherit;
+}
+
+.aml-page .admin-btn.aml-btn-sm {
+  padding: 6px 11px;
+  font-size: 13px;
+}

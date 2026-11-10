@@ -9,6 +9,7 @@ import {
 import { BarChart, StatusDonut, TrendLine } from '../../src/components/seller/analytics/charts';
 import SalesTable from '../../src/components/seller/analytics/SalesTable';
 import DayDetailSheet from '../../src/components/seller/analytics/DayDetailSheet';
+import SellerInsights from '../../src/components/seller/analytics/SellerInsights';
 import { defaultMonth } from '../../src/components/seller/analytics/DateRangePicker';
 import {
   num, peso, shareCsv, shortDate, toCSV,
@@ -22,7 +23,9 @@ import { font, t, themed } from '../../src/theme';
  * period, four figures, the growth line, sales by day/month/year, the
  * orders trend (phones leave out the revenue trend, which repeats Sales
  * analytics), daily sales (a day opens its orders), best sellers, sales by
- * category, views to orders, order status and low stock.
+ * category, views to orders, order status and low stock, then Insights (the
+ * ML engine: forecast, stock risk, buyer groups, viewed but not bought and
+ * bundle ideas; each hidden while it is off).
  */
 export default function SellerAnalyticsScreen() {
   const [range, setRange] = useState(defaultMonth);
@@ -32,6 +35,9 @@ export default function SellerAnalyticsScreen() {
   const [error, setError] = useState(null);
   const [selectedDate, setSelectedDate] = useState(null);
   const [pulled, setPulled] = useState(false); // pull to refresh, not a chip or Refresh
+  // Insights ask again on a pull or Refresh (not on a period change: they are not for a period).
+  const [ideasKey, setIdeasKey] = useState(0);
+  const refresh = () => { setIdeasKey((key) => key + 1); return load(); };
 
   const load = useCallback(async () => {
     setLoading(true);
@@ -79,11 +85,11 @@ export default function SellerAnalyticsScreen() {
   );
 
   return (
-    <SellerPage refreshing={pulled} onRefresh={async () => { setPulled(true); await load(); setPulled(false); }}>
+    <SellerPage refreshing={pulled} onRefresh={async () => { setPulled(true); await refresh(); setPulled(false); }}>
       <PeriodActions
         range={range}
         onRange={setRange}
-        onRefresh={load}
+        onRefresh={refresh}
         refreshing={loading}
         refreshDisabled={loading}
         onExport={exportCsv}
@@ -187,6 +193,8 @@ export default function SellerAnalyticsScreen() {
           emptyMessage="All products well-stocked."
         />
       </AnCard>
+
+      <SellerInsights refreshKey={ideasKey} />
 
       <DayDetailSheet date={selectedDate} onClose={() => setSelectedDate(null)} />
     </SellerPage>

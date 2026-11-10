@@ -27,6 +27,7 @@ import {
   BannerCarousel, FALLBACK_BANNERS, PromotionPopup,
 } from '../../src/components/home/HomeBanners';
 import HomeShortcuts from '../../src/components/home/HomeShortcuts';
+import HomeTrending from '../../src/components/home/HomeTrending';
 import {
   CategoryStrip, HomeEmpty, HomeStoreRow, MunicipalityRail, SectionHeader,
 } from '../../src/components/home/HomeSections';
@@ -39,7 +40,8 @@ import { font, t, themed } from '../../src/theme';
  * Home (web/src/pages/Home.jsx, phone view): quick search words, the banner
  * carousel, the quick entries (HomeShortcuts, which the website's phone view
  * shows too; its two side banners are for computers), Shop by Category, Available Today,
- * Suggested for You, Stores Near You, Explore Municipals, Discover Stores
+ * Suggested for You, Trending now (the ML engine; hidden when it has
+ * nothing), Stores Near You, Explore Municipals, Discover Stores
  * (the map) and Explore Products, which loads its next batch on its own as
  * the page nears the bottom (one request at a time, small batches). The
  * website's footer lives on the About page in the app (app/about.js).
@@ -117,6 +119,8 @@ export default function Home() {
   const [municipalities, setMunicipalities] = useState(() => cache.municipalities || []);
   const [featured, setFeatured] = useState(() => cache.featured || []);
   const [nearbyStores, setNearbyStores] = useState(() => cache.nearbyStores || []);
+  // Trending now: asked for with the sections below the first screen.
+  const [trending, setTrending] = useState(() => cache.trending || []);
   // Below the first screen (the towns, the nearby shops, the first Explore
   // batch): asked for once the page is scrolled a little or after a short
   // wait, so the first screen's requests go out alone (as the website's
@@ -275,6 +279,13 @@ export default function Home() {
         patchCache({ explore: fresh, explorePage: 1, exploreHasMore: hasNext });
       },
     ), load(
+      apiClient.get('/ml/recommendations/trending', { params: { limit: 12 } }),
+      (res) => {
+        const list = res.data?.products || [];
+        setTrending(list);
+        patchCache({ trending: list });
+      },
+    ), load(
       apiClient.get('/stores', { params: { pageSize: 6, municipalityId: townId } }),
       (res) => {
         setNearbyStores(res.data || []);
@@ -415,6 +426,9 @@ export default function Home() {
             />
           )}
         </View>
+
+        {/* Trending now (hidden when there is nothing) */}
+        <HomeTrending products={trending} />
 
         {/* Stores Near You */}
         <View style={styles.listSection}>

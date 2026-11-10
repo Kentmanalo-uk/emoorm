@@ -3,6 +3,7 @@ const config = require('../config/env');
 const { cached, invalidate, TAGS } = require('../lib/cachePolicy');
 const { ApiError } = require('../middleware/errorHandler');
 const referralSettings = require('../lib/referralSettings');
+const mlSettings = require('../ml/settings');
 
 const DEFAULT_SETTINGS = {
   id: 'global',
@@ -32,6 +33,8 @@ const DEFAULT_SETTINGS = {
   product3dEnabled: true,
   // Invites: null is lib/referralSettings' defaults (all off).
   referralSettings: null,
+  // The ML engine: null is src/ml/settings' defaults (everything off).
+  mlSettings: null,
 };
 
 // How the homepage shows its categories.
@@ -313,8 +316,13 @@ const sanitize = (input = {}, current = null) => {
     data.referralSettings = referralSettings.merge(current?.referralSettings, input.referralSettings);
   }
 
+  // The ML engine: the master switch and one per module, merged onto what is stored.
+  if (input.mlSettings !== undefined) {
+    data.mlSettings = mlSettings.merge(current?.mlSettings, input.mlSettings);
+  }
+
   if (Object.keys(data).length === 0) {
-    throw new ApiError('Provide an app logo, product placeholder image, theme, checkout pricing, delivery by distance, verification, category style, Available Today, admin team, order confirm window, MoorMove, 3D views or invites setting', 400);
+    throw new ApiError('Provide an app logo, product placeholder image, theme, checkout pricing, delivery by distance, verification, category style, Available Today, admin team, order confirm window, MoorMove, 3D views, invites or ML setting', 400);
   }
   return data;
 };
@@ -368,12 +376,18 @@ const get = async () => {
     const row = await appSettingRepository.findGlobal();
     return row || DEFAULT_SETTINGS;
   });
-  return { ...settings, referralSettings: referralSettings.read(settings.referralSettings) };
+  return {
+    ...settings,
+    referralSettings: referralSettings.read(settings.referralSettings),
+    mlSettings: mlSettings.read(settings.mlSettings),
+  };
 };
 
 const update = async (input) => {
   // The stored row, not get(): the JSON is merged onto what is really stored.
-  const current = input?.referralSettings !== undefined ? await appSettingRepository.findGlobal() : null;
+  const current = input?.referralSettings !== undefined || input?.mlSettings !== undefined
+    ? await appSettingRepository.findGlobal()
+    : null;
   const settings = await appSettingRepository.upsertGlobal(sanitize(input, current));
   await invalidate(TAGS.appSettings);
   // MoorMove switched on or off: its status and the shops it makes ready to
@@ -382,7 +396,11 @@ const update = async (input) => {
     require('./moormove.client').clearStatusCache();
     require('./shopReadiness.service').forget();
   }
-  return { ...settings, referralSettings: referralSettings.read(settings.referralSettings) };
+  return {
+    ...settings,
+    referralSettings: referralSettings.read(settings.referralSettings),
+    mlSettings: mlSettings.read(settings.mlSettings),
+  };
 };
 
 /**

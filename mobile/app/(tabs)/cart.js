@@ -85,7 +85,9 @@ export default function Cart() {
     return () => { cancelled = true; };
   }, [isAuthenticated, pullKey])); // eslint-disable-line react-hooks/exhaustive-deps
 
-  // "You may also like": products from the cart's categories, then the newest.
+  // "You may also like": what is often bought with the cart's products (the
+  // ML engine; usually none), then products from the cart's categories, then
+  // the newest.
   const [suggestions, setSuggestions] = useState([]);
   const [suggestionsLoading, setSuggestionsLoading] = useState(false);
   // Refetch only when the set of products changes, not on quantity edits.
@@ -98,7 +100,15 @@ export default function Cart() {
       try {
         const inCart = new Set(cartProductKey ? cartProductKey.split(',') : []);
         const categoryIds = cartCategoryKey ? cartCategoryKey.split(',').slice(0, 2) : [];
+        // Bought together with what is in the cart: first. A failure (or the
+        // engine off) leaves the usual suggestions.
+        const together = inCart.size
+          ? apiClient.get('/ml/bundles/cart', { params: { ids: [...inCart].join(','), limit: SUGGESTION_COUNT } })
+            .then((res) => ({ data: res.data?.products || [] }))
+            .catch((err) => { console.warn('Bought together:', err?.message || err); return { data: [] }; })
+          : Promise.resolve({ data: [] });
         const requests = [
+          together,
           ...categoryIds.map((categoryId) => apiClient.get('/products', { params: { categoryId, pageSize: SUGGESTION_COUNT } })),
           // Newest products fill the rest (and cover empty carts).
           apiClient.get('/products', { params: { pageSize: SUGGESTION_COUNT + inCart.size, sortBy: 'createdAt', sortOrder: 'desc' } }),

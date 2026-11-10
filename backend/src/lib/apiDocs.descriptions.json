@@ -483,5 +483,17 @@
   "GET /api/seller-assistant": "Greeting, suggested questions, shop snapshot.",
   "POST /api/seller-assistant/chat": "Ask a selling question (English/Tagalog).",
   "GET /api/buyer-assistant": "Greeting, suggested questions, order snapshot.",
-  "POST /api/buyer-assistant/chat": "Ask a shopping question."
+  "POST /api/buyer-assistant/chat": "Ask a shopping question.",
+  "GET /api/ml/status": "The ML engine at a glance: the master switch, each module (built, on, last run, model in use), this week's totals and failed runs.",
+  "GET /api/ml/runs": "Runs of the ML jobs, newest first: when, how long, rows, scores, or why one failed. Filter with ?module=.",
+  "GET /api/ml/models/:key/versions": "A model's versions, newest first, with their scores and which one is in use.",
+  "POST /api/ml/models/:key/versions/:version/activate": "Put a model version in use (rolls back when it is an older one). Recorded in the audit log.",
+  "POST /api/ml/modules/:key/run": "Run a module's job now, in the background (it must be built and switched on). The run shows in the runs list when it ends.",
+  "GET /api/ml/recommendations/similar/:productId": "Products similar to this one, worked out by the ML engine from their words, category, price and town. With the engine off, the same category as before.",
+  "GET /api/ml/recommendations/trending": "Products whose views, cart adds, saves and orders grew over the last two weeks. Empty when nothing trends yet.",
+  "GET /api/ml/bundles/products/:productId": "Products often bought together with this one, from completed orders (each with its confidence and lift). Empty until there is enough to learn from.",
+  "GET /api/ml/bundles/cart": "Products often bought with what is in a cart (?ids=a,b,c), not already in it.",
+  "GET /api/ml/bundles/mine": "The signed-in seller's bundle ideas: pairs of their own products bought together, and how many orders with two or more of their products there are so far.",
+  "GET /api/ml/insights/mine": "The signed-in seller's insights for their own shop: expected sales, stock that may run out, buyer groups (counts only) and products viewed but not bought. Each part says off, not enough data yet, or its results.",
+  "GET /api/ml/forecast/products/:productId": "One of the seller's own products: its sales forecast and how long its stock may last."
 }

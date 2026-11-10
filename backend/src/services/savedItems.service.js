@@ -1,5 +1,6 @@
 const prisma = require('../config/database');
 const { ApiError } = require('../middleware/errorHandler');
+const mlTrack = require('../ml/track');
 
 /**
  * The cart and wishlist, saved to the account so they follow the buyer to
@@ -90,6 +91,8 @@ const putCart = async (userId, lines) => {
   })).map((p) => p.id));
   const keep = wanted.filter((l) => existing.has(l.productId));
 
+  // What was in it before, for the ML engine's cart totals (only while it is on).
+  const before = await mlTrack.savedBefore('cart', userId);
   await prisma.$transaction([
     prisma.cartItem.deleteMany({ where: { userId } }),
     prisma.cartItem.createMany({
@@ -102,6 +105,7 @@ const putCart = async (userId, lines) => {
       })),
     }),
   ]);
+  mlTrack.savedAfter('cart', userId, before, keep.map((l) => l.productId));
   return { saved: keep.length };
 };
 
@@ -121,10 +125,12 @@ const putWishlist = async (userId, productIds) => {
   if (ids.length > MAX_WISHLIST) throw new ApiError(`A wishlist holds at most ${MAX_WISHLIST} products`, 400);
   const existing = (await prisma.product.findMany({ where: { id: { in: ids } }, select: { id: true } })).map((p) => p.id);
   const have = new Set(existing);
+  const before = await mlTrack.savedBefore('wishlist', userId);
   await prisma.$transaction([
     prisma.wishlistItem.deleteMany({ where: { userId } }),
     prisma.wishlistItem.createMany({ data: ids.filter((id) => have.has(id)).map((productId) => ({ userId, productId })) }),
   ]);
+  mlTrack.savedAfter('wishlist', userId, before, [...have]);
   return { saved: have.size };
 };
 

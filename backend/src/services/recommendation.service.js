@@ -2,6 +2,9 @@ const prisma = require('../config/database');
 const productRepository = require('../repositories/product.repository');
 const productService = require('./product.service');
 const referralService = require('./referral.service');
+const mlSettings = require('../ml/settings');
+const mlRecommendations = require('../ml/recommendations');
+const { guard } = require('../ml/safe');
 
 /**
  * "For you": the catalogue, ordered by what this person has shown interest in.
@@ -25,6 +28,12 @@ const referralService = require('./referral.service');
  *
  * The score uses no randomness beyond a small nudge that changes daily, so
  * pages of one feed agree with each other and the order still turns over.
+ *
+ * With the ML engine's recommendations on (src/ml/recommendations), two more
+ * parts join the score: how alike a product is to the ones this person
+ * engaged with (by their words, not just their category), and whether it is
+ * trending; those alike products join the pool too. Off, or on any error,
+ * the feed is exactly as above.
  */
 
 // How much each signal says about a person, strongest first.
@@ -40,7 +49,11 @@ const SCORE = {
   seen: -1.5, bought: -3, inCart: -2, soldOut: -4,
   // A shop a seller invite rewarded (store_boosts), for a few days.
   boosted: 3,
+  // The ML engine (0 to 1 each): alike what they engaged with; trending.
+  related: 5, trending: 1.5,
 };
+// Products alike what they engaged with, added to the pool.
+const RELATED_POOL = 60;
 const FRESH_DAYS = 30;
 const SOLD_ENOUGH = 50; // Units at which the sold part of a score is full.
 
@@ -97,7 +110,7 @@ const isSoldOut = (p) => p.stock <= 0 && p.listingKind === 'REGULAR' && p.produc
 /** How well one product suits a profile. */
 const scoreProduct = (p, profile, context) => {
   const {
-    topCategory, topStore, termHits, seen, bought, carted, boosted, now, day,
+    topCategory, topStore, termHits, seen, bought, carted, boosted, now, day, related, trending,
   } = context;
   const ageDays = (now - new Date(p.createdAt).getTime()) / 86400e3;
   const rated = p.reviewCount > 0 ? (p.ratingAvg - 3) / 2 : 0;
@@ -107,7 +120,9 @@ const scoreProduct = (p, profile, context) => {
     + SCORE.sold * Math.min(1, Math.log1p(p.soldCount) / Math.log1p(SOLD_ENOUGH))
     + SCORE.rating * rated
     + SCORE.fresh * Math.exp(-ageDays / FRESH_DAYS)
-    + SCORE.nudge * dailyNudge(p.id, day);
+    + SCORE.nudge * dailyNudge(p.id, day)
+    + SCORE.related * (related.get(p.id) || 0)
+    + SCORE.trending * (trending.get(p.id) || 0);
   if (seen.has(p.id)) score += SCORE.seen;
   if (bought.has(p.id)) score += SCORE.bought;
   if (carted.has(p.id)) score += SCORE.inCart;
@@ -134,15 +149,18 @@ const mixShops = (sorted) => {
  * @param {Array} pool - Light product rows
  * @param {Object} profile - From buildProfile
  * @param {Object} [options] - termHits (Map of id to 0..1), seen, bought,
- *   carted and excluded (Sets of ids), boosted (Set of shop ids), now (ms)
+ *   carted and excluded (Sets of ids), boosted (Set of shop ids), now (ms),
+ *   related and trending (Maps of id to 0..1, from the ML engine)
  * @returns {Array} The rows, best first
  */
 const rankPool = (pool, profile, {
   termHits = new Map(), seen = new Set(), bought = new Set(), carted = new Set(), excluded = new Set(),
-  boosted = new Set(), now = Date.now(),
+  boosted = new Set(), now = Date.now(), related = new Map(), trending = new Map(),
 } = {}) => {
   const context = {
     termHits,
+    related,
+    trending,
     seen,
     bought,
     carted,
@@ -197,6 +215,20 @@ const searchSignals = async (terms, ownerId) => {
   return { termHits, termCategories, matches: rows.flat() };
 };
 
+/**
+ * The ML engine's part (null when it is off, has nothing, or fails): how
+ * alike each product is to what this person engaged with, and what trends.
+ */
+const mlSignals = (signalIds) => guard('for-you', async () => {
+  if (!(await mlSettings.isOn('recommendations'))) return null;
+  const [related, trendingIds] = await Promise.all([
+    mlRecommendations.relatedScores(signalIds),
+    mlRecommendations.trendingIds(),
+  ]);
+  const trending = new Map(trendingIds.map((id, i) => [id, 1 - i / Math.max(1, trendingIds.length)]));
+  return related.size || trending.size ? { related, trending } : null;
+}, null, 800);
+
 /** This feed's product ids, best first. */
 const rankedIds = async ({ userId, ownerId, viewedIds, terms }) => {
   const [account, viewed, search, boosted] = await Promise.all([
@@ -221,12 +253,26 @@ const rankedIds = async ({ userId, ownerId, viewedIds, terms }) => {
   ]);
   const pool = new Map([...search.matches, ...fromCategories, ...fromStores, ...popular, ...newest].map((p) => [p.id, p]));
 
+  // The ML engine: alike what they ordered, carted, saved and viewed.
+  const signalIds = [...account.orders, ...account.cart, ...account.wishlist].map((p) => p.id).concat(viewedIds);
+  // (Trending applies to a new visitor too.)
+  const ml = await mlSignals(signalIds);
+  if (ml?.related.size) {
+    const missing = [...ml.related.keys()].filter((id) => !pool.has(id)).slice(0, RELATED_POOL);
+    if (missing.length) {
+      const extra = await productRepository.findRecommendable({ ownerId, where: { id: { in: missing } }, take: RELATED_POOL });
+      extra.forEach((p) => pool.set(p.id, p));
+    }
+  }
+
   return rankPool([...pool.values()], profile, {
     termHits: search.termHits,
     seen: new Set(viewedIds),
     bought: new Set(account.orders.map((p) => p.id)),
     carted: new Set(account.cart.map((p) => p.id)),
     boosted,
+    related: ml?.related,
+    trending: ml?.trending,
   }).map((p) => p.id);
 };
 

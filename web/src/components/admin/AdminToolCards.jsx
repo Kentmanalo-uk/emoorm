@@ -2,7 +2,7 @@ import { Link } from 'react-router-dom';
 import { CaretRight } from '../../lib/icons';
 import {
   BellArt, BubbleArt, ChartArt, ChatArt, ClockArt, EnvelopeArt, FlagArt, GearArt, GiftArt, GridArt,
-  HeadsetArt, IdCardArt, MapArt, PackageArt, PeopleArt, PictureArt, QrArt, ReceiptArt, ReturnArt,
+  HeadsetArt, IdCardArt, MapArt, SparkArt, PackageArt, PeopleArt, PictureArt, QrArt, ReceiptArt, ReturnArt,
   ShieldArt, ShopArt, StarArt, TONES, TownArt, TruckArt,
 } from '../art/FlatArt';
 import useShortcutLook, { useShortcutScale } from '../../hooks/useShortcutLook';
@@ -40,6 +40,7 @@ const TOOL = {
   vouchers: { to: '/admin/vouchers', label: 'Vouchers', Art: GiftArt, superOnly: true },
   couriers: { to: '/admin/couriers', label: 'Couriers', Art: TruckArt, superOnly: true },
   appUsers: { to: '/admin/app-users', label: 'App users', Art: QrArt, tone: TONES.green, superOnly: true },
+  ml: { to: '/admin/ml', label: 'ML engine', Art: SparkArt, superOnly: true },
   team: { to: '/admin/team', label: 'Admin team', Art: PeopleArt, tone: TONES.blue, municipalOnly: true },
   // Settings: the town's page for a municipal admin; the platform's for the super admin.
   settings: { to: '/admin/settings', label: 'Settings', Art: GearArt },
@@ -53,7 +54,7 @@ const ALL_CARDS = [
   { title: 'Messages', keys: ['messages', 'email', 'alerts', 'feedback'] },
   { title: 'Storefront', keys: ['banners', 'vouchers', 'couriers', 'categories'] },
   // The super admin's platform; a municipal admin's town office.
-  { title: 'Platform', keys: ['municipalities', 'admins', 'appUsers', 'analytics', 'auditLogs', 'settings'], superOnly: true },
+  { title: 'Platform', keys: ['municipalities', 'admins', 'appUsers', 'analytics', 'ml', 'auditLogs', 'settings'], superOnly: true },
   { title: 'Town office', keys: ['team', 'townPage', 'analytics', 'auditLogs', 'settings'], municipalOnly: true },
 ];
 

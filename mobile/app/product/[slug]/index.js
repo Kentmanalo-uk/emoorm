@@ -54,7 +54,7 @@ import PhotoViewer from '../../../src/components/product/PhotoViewer';
 import { useCartSettings } from '../../../src/components/cart/cartSettings';
 import IdentityDialog from '../../../src/components/product/IdentityDialog';
 import ProductSection, { SectionBody, SectionHead, SectionTitle } from '../../../src/components/product/ProductSection';
-import { RelatedGrid, ShopShelf } from '../../../src/components/product/ProductShelves';
+import { RelatedGrid, ShopShelf, TogetherShelf } from '../../../src/components/product/ProductShelves';
 import {
   awayUntil, cartRefusal, dayLabel, estimate, fetchIdentityStatus, followStore, getFollowStatus, localDate, money,
   orderEta, parseImages, peso, quickCartLine, rangeLabel, readyDay, recordView, shortDate, storeServiceLines, subscribeToFollowChanges,
@@ -150,6 +150,8 @@ function ProductPage({ slug, via }) {
   const [selectedVariations, setSelectedVariations] = useState({});
   const [relatedProducts, setRelatedProducts] = useState([]);
   const [sameShopProducts, setSameShopProducts] = useState([]);
+  // "Often bought together" (the ML engine; empty: no shelf).
+  const [togetherProducts, setTogetherProducts] = useState([]);
   const [reviews, setReviews] = useState([]);
   const [ratingStats, setRatingStats] = useState(null);
 
@@ -198,6 +200,23 @@ function ProductPage({ slug, via }) {
     }
   };
 
+  // "Similar items" from the ML engine (with the engine off it answers with
+  // the same category, as before); on an error, the category as before.
+  const similarTo = async (productId, categoryId) => {
+    try {
+      const res = await apiClient.get(`/ml/recommendations/similar/${productId}`, { params: { limit: 8 } });
+      return (res.data?.products || []).filter((p) => p.id !== productId).slice(0, 6);
+    } catch (err) {
+      console.warn('Similar items:', err?.message || err);
+      return categoryId ? productsAround({ categoryId }, productId) : [];
+    }
+  };
+
+  // Bought with this product in the same orders (empty: no shelf).
+  const boughtWith = (productId) => apiClient.get(`/ml/bundles/products/${productId}`, { params: { limit: 6 } })
+    .then((res) => (res.data?.products || []).filter((p) => p.id !== productId))
+    .catch((err) => { console.warn('Often bought together:', err?.message || err); return []; });
+
   useEffect(() => {
     let live = true;
     (async () => {
@@ -232,13 +251,15 @@ function ProductPage({ slug, via }) {
     if (!settled || !aroundId) return undefined;
     let live = true;
     Promise.all([
-      aroundCategory ? productsAround({ categoryId: aroundCategory }, aroundId) : [],
+      similarTo(aroundId, aroundCategory),
       aroundStore ? productsAround({ storeId: aroundStore }, aroundId) : [],
       apiClient.get(`/reviews/product/${aroundId}`).catch(() => null),
-    ]).then(([related, sameShop, review]) => {
+      boughtWith(aroundId),
+    ]).then(([related, sameShop, review, together]) => {
       if (!live) return;
       setRelatedProducts(related);
       setSameShopProducts(sameShop);
+      setTogetherProducts(together);
       if (review) {
         setReviews(review.data || []);
         setRatingStats(review.ratingStats || null);
@@ -989,6 +1010,8 @@ function ProductPage({ slug, via }) {
           </View>
         ) : null}
         <ShopShelf sameShop={sameShopProducts} related={relatedProducts} onQuickAdd={onQuickAdd} />
+        {/* Often bought together (hidden when there is nothing) */}
+        <TogetherShelf products={togetherProducts} onQuickAdd={onQuickAdd} />
 
         {/* Details: the specifications as chips, then the description */}
         <ProductSection sectionRef={sectionRef('details')}>

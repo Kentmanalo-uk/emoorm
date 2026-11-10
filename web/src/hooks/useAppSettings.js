@@ -44,6 +44,8 @@ export const DEFAULT_APP_SETTINGS = {
   // Invites (referrals): off until the super admin turns them on. The
   // server sends every key; this is only the shape before it answers.
   referralSettings: { enabled: false },
+  // The ML engine (backend src/ml): everything off until a super admin says.
+  mlSettings: { enabled: false, modules: {} },
 };
 
 /**

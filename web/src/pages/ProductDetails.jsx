@@ -1,5 +1,5 @@
 import {
-  useState, useEffect, useLayoutEffect, useMemo, useCallback, lazy, Suspense,
+  useState, useEffect, useLayoutEffect, useMemo, useCallback, useRef, lazy, Suspense,
 } from 'react';
 import EmptyArt from '../components/ui/EmptyArt';
 import { Link, useParams, useNavigate, useLocation } from 'react-router-dom';
@@ -228,6 +228,11 @@ const ProductDetails = () => {
   const [variationError, setVariationError] = useState('');
   const [relatedProducts, setRelatedProducts] = useState([]);
   const [sameShopProducts, setSameShopProducts] = useState([]);
+  // "Often bought together" (the ML engine): none until it has some.
+  const [togetherProducts, setTogetherProducts] = useState([]);
+  // The product the shelves were asked for, so a slow answer for the one
+  // before is dropped.
+  const shelvesFor = useRef(null);
   const [reviews, setReviews] = useState([]);
   // Helpful marks, the comment sheet, and the full-screen viewer a review
   // photo opens. The viewer pages across every photo on this product, so
@@ -327,7 +332,12 @@ const ProductDetails = () => {
     setSelectedVariations({});
     setVariationError('');
     const loadAround = (item) => {
-      if (item?.categoryId) fetchRelated(item.categoryId, item.id);
+      if (item?.id && shelvesFor.current !== item.id) {
+        shelvesFor.current = item.id;
+        setTogetherProducts([]);
+      }
+      if (item?.id) fetchRelated(item.categoryId, item.id);
+      if (item?.id) fetchTogether(item.id);
       if (item?.storeId) fetchSameShop(item.storeId, item.id);
       if (item?.id) fetchReviews(item.id);
     };
@@ -365,14 +375,49 @@ const ProductDetails = () => {
     }
   };
 
+  // Similar items: the ML engine's (its own fallback is this category's
+  // best sellers); if that request fails, the category as before.
   const fetchRelated = async (categoryId, productId) => {
+    const show = (list) => {
+      if (shelvesFor.current !== productId) return;
+      setRelatedProducts((list || []).filter((p) => p.id !== productId).slice(0, 6));
+    };
+    try {
+      const res = await axios.get(`/ml/recommendations/similar/${productId}`, { params: { limit: 8 } });
+      show(res.data?.products);
+      return;
+    } catch (err) {
+      console.error('Failed to fetch similar items:', err);
+    }
+    if (!categoryId) return;
     try {
       const res = await axios.get('/products', { params: { categoryId, pageSize: 8 } });
-      setRelatedProducts((res.data || []).filter((p) => p.id !== productId).slice(0, 6));
+      show(res.data);
     } catch (err) {
       console.error('Failed to fetch related products:', err);
     }
   };
+
+  // Often bought together (the ML engine): no shelf while it has none.
+  const fetchTogether = async (productId) => {
+    try {
+      const res = await axios.get(`/ml/bundles/products/${productId}`, { params: { limit: 6 } });
+      if (shelvesFor.current !== productId) return;
+      setTogetherProducts((res.data?.products || []).filter((p) => p.id !== productId).slice(0, 6));
+    } catch (err) {
+      console.error('Failed to fetch bought-together items:', err);
+    }
+  };
+
+  // Phones: the shelves in one panel, a tab each (only those with products):
+  // the same shop's, what is bought with this one, then similar items. The
+  // tab picked, or the first one there is.
+  const phoneShelves = [
+    ['same', 'Same store', sameShopProducts],
+    ['together', 'Bought together', togetherProducts],
+    ['similar', 'Similar items', relatedProducts],
+  ].filter(([, , list]) => list.length > 0);
+  const phoneShelf = phoneShelves.find(([key]) => key === shelfTab) || phoneShelves[0];
 
   const fetchSameShop = async (storeId, productId) => {
     try {
@@ -1689,22 +1734,17 @@ const ProductDetails = () => {
           )}
 
           {/* Phones: the same shop's products, or similar ones, in a row. */}
-          {isPhone && (sameShopProducts.length > 0 || relatedProducts.length > 0) && (
+          {isPhone && phoneShelves.length > 0 && (
             <div className="pdp-m-shelf">
               <div className="pdp-m-shelf-tabs" role="tablist">
-                {[['same', 'Same store', sameShopProducts], ['similar', 'Similar items', relatedProducts]]
-                  .filter(([, , list]) => list.length > 0)
-                  .map(([key, label], i, all) => {
-                    const active = shelfTab === key || (all.length === 1) || (!all.some(([k]) => k === shelfTab) && i === 0);
-                    return (
-                      <button type="button" role="tab" key={key} aria-selected={active} className={active ? 'is-active' : ''} onClick={() => setShelfTab(key)}>
-                        {label}
-                      </button>
-                    );
-                  })}
+                {phoneShelves.map(([key, label]) => (
+                  <button type="button" role="tab" key={key} aria-selected={key === phoneShelf[0]} className={key === phoneShelf[0] ? 'is-active' : ''} onClick={() => setShelfTab(key)}>
+                    {label}
+                  </button>
+                ))}
               </div>
               <div className="pdp-m-shelf-row">
-                {((shelfTab === 'similar' && relatedProducts.length) || !sameShopProducts.length ? relatedProducts : sameShopProducts).slice(0, 12).map((p) => (
+                {phoneShelf[2].slice(0, 12).map((p) => (
                   <div key={p.id} className="pdp-m-shelf-card" {...peekProduct(p)}>
                     <Link to={`/product/${p.slug}`} className="pdp-m-shelf-img"><ProductImage src={parseImages(p.images)[0]} alt={p.name} /></Link>
                     <Link to={`/product/${p.slug}`} className="pdp-m-shelf-name"><ProductBadge product={p} /><BestSellerTag product={p} />{p.name}</Link>
@@ -1730,6 +1770,20 @@ const ProductDetails = () => {
               <div className="pdp-shelf-row">
                 {sameShopProducts.map((p) => (
                   <ProductTile key={p.id} product={p} store={product.store} />
+                ))}
+              </div>
+            </div>
+          )}
+
+          {/* Often bought together (the ML engine; only when it has some) */}
+          {!isPhone && togetherProducts.length > 0 && (
+            <div className="pdp-shelf pdp-shelf-card pdp-shelf-together">
+              <div className="pdp-shelf-head">
+                <h2>Often Bought Together</h2>
+              </div>
+              <div className="pdp-shelf-row">
+                {togetherProducts.map((p) => (
+                  <ProductTile key={p.id} product={p} />
                 ))}
               </div>
             </div>

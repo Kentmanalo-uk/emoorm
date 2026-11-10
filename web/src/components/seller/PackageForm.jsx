@@ -119,7 +119,15 @@ export default function PackageForm({
   const navigate = useNavigate();
   const location = useLocation();
   const [params] = useSearchParams();
-  const [initial] = useState(() => (!product && copyFrom ? copyState(copyFrom) : toFormState(product)));
+  const [initial] = useState(() => {
+    if (!product && copyFrom) return copyState(copyFrom);
+    const start = toFormState(product);
+    // A new package from Analytics' "Make a package": its products ticked.
+    const picked = !product && Array.isArray(location.state?.packageItems)
+      ? location.state.packageItems.filter((p) => p?.id && canHold(p)) : [];
+    if (picked.length) start.items = picked.map((p) => ({ productId: p.id, quantity: 1, product: p }));
+    return start;
+  });
   const [form, setForm] = useState(initial);
   const [errors, setErrors] = useState({});
   const [saving, setSaving] = useState(false);

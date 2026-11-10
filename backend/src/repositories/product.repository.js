@@ -496,6 +496,10 @@ const findAll = async (options = {}) => {
     if (Number.isFinite(max)) where.price.lte = max;
   }
 
+  // The filters without the words, for meaning matches (src/ml/search) that
+  // must still respect the town, category, price and shop filters.
+  const baseWhere = { ...where, ...(where.AND ? { AND: [...where.AND] } : {}) };
+
   // Every word found somewhere (name, description, category, shop), each
   // through its Tagalog/English synonyms and plural (utils/searchTerms).
   const words = search ? termsOf(search) : [];
@@ -510,7 +514,8 @@ const findAll = async (options = {}) => {
 
   // Best match: rank the matches by where the words were found.
   if (words.length && sortBy === 'relevance') {
-    const result = await rankedSearch(where, words, search, page, pageSize);
+    const meaning = await meaningOf(search);
+    const result = await rankedSearch(where, words, search, page, pageSize, meaning, baseWhere);
     return result.total || options.noCorrection ? result : correctedSearch(options, words, result);
   }
 
@@ -549,24 +554,57 @@ const findAll = async (options = {}) => {
 };
 
 const RANK_POOL = 300;
+// How much a meaning match (0 to 1) adds to a keyword score (utils/searchTerms
+// scoreOf: about 15 per word in the name, up to 100 for the whole name).
+const MEANING_WEIGHT = 30;
 
-/** One page of matches in best-match order. */
-const rankedSearch = async (where, words, search, page, pageSize) => {
+/**
+ * The ML engine's meaning scores for a query (src/ml/search): id -> 0..1, or
+ * null while it is off or on any error (then the search is as before).
+ * Loaded on use: the engine itself reads products through this file.
+ */
+const meaningOf = async (search) => {
+  const { guard } = require('../ml/safe');
+  return guard('search', async () => {
+    if (!(await require('../ml/settings').isOn('search'))) return null;
+    const scores = await require('../ml/search').rank(search);
+    return scores.size ? scores : null;
+  }, null, 600);
+};
+
+/**
+ * One page of matches in best-match order. With meaning scores, products
+ * that match the meaning but not every word join (still within the other
+ * filters), and meaning adds to every product's score.
+ */
+const rankedSearch = async (where, words, search, page, pageSize, meaning = null, baseWhere = null) => {
+  const select = { id: true, name: true, createdAt: true, soldCount: true };
   const pool = await prisma.product.findMany({
     where,
-    select: { id: true, name: true, createdAt: true, soldCount: true },
+    select,
     // One order every time (newest first), so equal scores stay in the same
     // order from page to page.
     orderBy: [{ createdAt: 'desc' }, { id: 'desc' }],
     take: RANK_POOL,
   });
-  const ranked = pool
-    .map((p) => ({ id: p.id, score: scoreOf(p, words, search) }))
+  const keyword = new Set(pool.map((p) => p.id));
+  let extra = [];
+  if (meaning && baseWhere) {
+    const ids = [...meaning.keys()].filter((id) => !keyword.has(id));
+    if (ids.length) {
+      extra = await prisma.product.findMany({ where: { AND: [baseWhere, { id: { in: ids } }] }, select });
+    }
+  }
+  const ranked = [...pool, ...extra]
+    .map((p) => ({
+      id: p.id,
+      score: (keyword.has(p.id) ? scoreOf(p, words, search) : 0) + MEANING_WEIGHT * (meaning?.get(p.id) || 0),
+    }))
     .sort((a, b) => b.score - a.score);
   const ids = ranked.slice((page - 1) * pageSize, page * pageSize).map((r) => r.id);
   const rows = ids.length ? await prisma.product.findMany({ where: { id: { in: ids } }, include: LIST_INCLUDE }) : [];
   const byId = new Map(rows.map((r) => [r.id, r]));
-  const total = pool.length < RANK_POOL ? pool.length : await prisma.product.count({ where });
+  const total = (pool.length < RANK_POOL ? pool.length : await prisma.product.count({ where })) + extra.length;
   return { products: await withStatsList(ids.map((id) => byId.get(id)).filter(Boolean)), total, page, pageSize };
 };
 

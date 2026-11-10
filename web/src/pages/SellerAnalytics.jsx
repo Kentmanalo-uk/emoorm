@@ -9,6 +9,7 @@ import DateRangePicker from '../components/analytics/DateRangePicker';
 import GranularityToggle from '../components/analytics/GranularityToggle';
 import SalesTable from '../components/analytics/SalesTable';
 import DayDetailModal from '../components/analytics/DayDetailModal';
+import SellerInsights from '../components/analytics/SellerInsights';
 import { peso, num, shortDate, toCSV, downloadCSV } from '../components/analytics/format';
 import SellerPageHead from '../components/seller/SellerPageHead';
 import LoadFailed from '../components/ui/LoadFailed';
@@ -236,6 +237,10 @@ export default function SellerAnalytics() {
                 />
               </div>
             </div>
+
+            {/* Forecast, stock risk, buyer groups, viewed but not bought and
+                bundle ideas (the ML engine), about now and next. */}
+            <SellerInsights />
           </>
         )}
       </div>

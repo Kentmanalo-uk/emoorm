@@ -425,6 +425,7 @@ export default function AdminLayout({ children }) {
               {isSuperAdmin && <NavLink to="/admin/municipalities" className={subNavCls}>Municipalities</NavLink>}
               {isSuperAdmin && <NavLink to="/admin/app-users" className={subNavCls}>App users</NavLink>}
               <NavLink to="/admin/analytics" className={subNavCls}>Analytics</NavLink>
+              {isSuperAdmin && <NavLink to="/admin/ml" className={subNavCls}>ML engine</NavLink>}
               <NavLink to="/admin/audit-logs" className={subNavCls}>Audit log</NavLink>
               <NavLink to="/admin/settings" className={subNavCls}>Settings</NavLink>
             </AdminNavGroup>
@@ -653,7 +654,7 @@ const ADMIN_NAV_GROUPS = {
   content: ['/admin/reviews', '/admin/photo-designs', '/admin/invites'],
   talk: ['/admin/messages', '/admin/email', '/admin/notifications', '/admin/feedback'],
   storefront: ['/admin/banners', '/admin/vouchers', '/admin/couriers', '/admin/categories'],
-  platform: ['/admin/municipalities', '/admin/app-users', '/admin/analytics', '/admin/audit-logs', '/admin/settings'],
+  platform: ['/admin/municipalities', '/admin/app-users', '/admin/analytics', '/admin/ml', '/admin/audit-logs', '/admin/settings'],
 };
 const REVIEW_PAGES = ADMIN_NAV_GROUPS.review;
 
@@ -789,6 +790,7 @@ const LABELS = {
   '/admin/team': 'Admin team',
   '/admin/junior-admins': 'Municipal admins',
   '/admin/audit-logs': 'Audit log',
+  '/admin/ml': 'ML engine',
   '/admin/settings': 'Settings',
   '/admin/menu': 'Me',
   '/admin/tools': 'Tools',

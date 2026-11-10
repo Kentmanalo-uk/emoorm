@@ -99,7 +99,9 @@ const Cart = () => {
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [isAuthenticated]);
 
-  // "You may also like" — products from similar categories as cart items
+  // "You may also like": first what is often bought with the cart's products
+  // (the ML engine; none while it has nothing), then products from the same
+  // categories as the cart's, then the newest.
   const [suggestions, setSuggestions] = useState([]);
   const [suggestionsLoading, setSuggestionsLoading] = useState(false);
 
@@ -119,8 +121,16 @@ const Cart = () => {
           // Newest products fill the rest (and cover empty carts).
           axios.get('/products', { params: { pageSize: SUGGESTION_COUNT + inCart.size, sortBy: 'createdAt', sortOrder: 'desc' } }),
         ];
-        const results = await Promise.allSettled(requests);
+        const together = inCart.size
+          ? axios.get('/ml/bundles/cart', { params: { ids: cartProductKey, limit: 8 } })
+            .then((res) => res.data?.products || [])
+            .catch((err) => { console.error('Failed to fetch bought-together suggestions:', err); return []; })
+          : Promise.resolve([]);
+        const [first, results] = await Promise.all([together, Promise.allSettled(requests)]);
         const unique = new Map();
+        first.forEach((product) => {
+          if (product?.id && !inCart.has(product.id) && !unique.has(product.id)) unique.set(product.id, product);
+        });
         results
           .filter((r) => r.status === 'fulfilled')
           .flatMap((r) => r.value.data || [])

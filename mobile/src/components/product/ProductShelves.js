@@ -28,21 +28,48 @@ export const ShopShelf = memo(({ sameShop, related, onQuickAdd }) => {
           );
         })}
       </View>
-      <ScrollView showsVerticalScrollIndicator={false} horizontal showsHorizontalScrollIndicator={false} style={styles.rail} contentContainerStyle={styles.row}>
-        {list.slice(0, 12).map((p) => (
-          <ProductCard
-            key={p.id}
-            product={p}
-            variant="home"
-            style={styles.card}
-            photoExtra={(
-              <CardPhotoButton label={`Add ${p.name} to cart`} onPress={() => onQuickAdd(p)}>
-                <PlusIcon size={15} weight="bold" color={t.onBrand} />
-              </CardPhotoButton>
-            )}
-          />
-        ))}
-      </ScrollView>
+      <ShelfRail products={list} onQuickAdd={onQuickAdd} />
+    </View>
+  );
+});
+
+/** The shelf's grey row of cards, each with a quick add. */
+function ShelfRail({ products, onQuickAdd }) {
+  return (
+    <ScrollView showsVerticalScrollIndicator={false} horizontal showsHorizontalScrollIndicator={false} style={styles.rail} contentContainerStyle={styles.row}>
+      {products.slice(0, 12).map((p) => (
+        <ProductCard
+          key={p.id}
+          product={p}
+          variant="home"
+          style={styles.card}
+          photoExtra={(
+            <CardPhotoButton label={`Add ${p.name} to cart`} onPress={() => onQuickAdd(p)}>
+              <PlusIcon size={15} weight="bold" color={t.onBrand} />
+            </CardPhotoButton>
+          )}
+        />
+      ))}
+    </ScrollView>
+  );
+}
+
+/**
+ * "Often bought together": what buyers took in the same orders as this
+ * product (the ML engine), a shelf of its own in the same look. Nothing at
+ * all when there is nothing to show.
+ */
+export const TogetherShelf = memo(({ products, onQuickAdd }) => {
+  if (!products.length) return null;
+  return (
+    <View style={[styles.shelf, styles.together]}>
+      <View style={styles.tabs}>
+        <View style={styles.tab}>
+          <Text style={[styles.tabText, styles.tabTextOn]} accessibilityRole="header">Often bought together</Text>
+          <View style={styles.tabLine} />
+        </View>
+      </View>
+      <ShelfRail products={products} onQuickAdd={onQuickAdd} />
     </View>
   );
 });
@@ -81,6 +108,7 @@ const styles = themed(() => StyleSheet.create({
   rail: { backgroundColor: t.neutral[100] },
   row: { gap: GRID_GAP, padding: GRID_EDGE },
   card: { width: 150 },
+  together: { marginTop: 8 },
 
   related: { marginTop: 8, paddingTop: 14, paddingHorizontal: GRID_EDGE, paddingBottom: 8 },
   relatedHead: { flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between', gap: 12, height: 32, marginBottom: 10, paddingHorizontal: 10 },

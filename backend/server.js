@@ -221,6 +221,12 @@ const startServer = async () => {
       );
       setTimeout(purgeSessions, 90 * 1000).unref();
       setInterval(purgeSessions, 24 * 60 * 60 * 1000).unref();
+
+      // The ML engine (src/ml): its counts are written once a minute, its
+      // daily tidy-up runs, and each built module runs on its own schedule
+      // (doing nothing while switched off). All in this process, one ML job
+      // at a time, each within its time budget.
+      require('./src/ml/runner').start(runtimeStatus);
     });
   } catch (error) {
     console.error('Failed to start server:', error);

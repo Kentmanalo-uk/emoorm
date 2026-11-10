@@ -47,6 +47,7 @@ const MODULE_TEXT = {
   '/municipalities': 'The 15 towns of Oriental Mindoro and their pages.',
   '/notifications': 'Your notifications.',
   '/offers': 'Price offers for live animals.',
+  '/ml': 'The ML engine: similar products, trending and bought together for everyone, bundle ideas for sellers, and its state, runs and model versions for super admins.',
   '/orders': 'Placing, tracking and handling orders.',
   '/partner': 'Calls from partner systems.',
   '/products': 'Products: browse, search, and seller listings.',

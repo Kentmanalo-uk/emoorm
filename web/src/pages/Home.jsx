@@ -54,6 +54,18 @@ const exploreColumns = () => {
 // How many "Suggested for You" shows. A saved page may hold more, from before.
 const SUGGESTED = 6;
 
+// Trending Now (the ML engine): up to two rows of six; phones, three rows of two.
+const TRENDING = 12;
+const TRENDING_PHONE = 6;
+// Whole rows only, once there is at least one: the .products-section grid
+// is 6 / 4 / 3 / 2 across (Home.css).
+const wholeRows = (list, max) => {
+  const width = typeof window === 'undefined' ? 1280 : window.innerWidth;
+  const cols = width <= 480 ? 2 : width <= 768 ? 3 : width <= 1024 ? 4 : 6;
+  const n = Math.min(list.length, max);
+  return list.slice(0, n >= cols ? n - (n % cols) : n);
+};
+
 const Home = () => {
   useSeo({
     title: 'E-MOORM — Shop local from Oriental Mindoro',
@@ -197,6 +209,7 @@ const Home = () => {
   const mapRef = useRef(null);
   const townsRef = useRef(null);
   const exploreRef = useRef(null);
+  const trendingRef = useRef(null);
   // 300px ahead: enough to load before a section scrolls in, short enough
   // that on a phone nothing below the first screen and a half counts at once.
   const NEAR = { enabled: featuredReady, margin: '300px' };
@@ -204,6 +217,9 @@ const Home = () => {
   const mapNear = useNearScreen(mapRef, NEAR);
   const townsNear = useNearScreen(townsRef, NEAR);
   const exploreNear = useNearScreen(exploreRef, NEAR);
+  const trendingNear = useNearScreen(trendingRef, NEAR);
+  // Trending Now: asked for once near; no row while it has nothing.
+  const [trendingProducts, setTrendingProducts] = useState(() => homeCache.trending || []);
   const [storesLoaded, setStoresLoaded] = useState(() => Boolean(homeCache.nearbyStores));
   const [mapLoaded, setMapLoaded] = useState(() => Boolean(homeCache.mappedStores));
   const { municipalities, isFetched: townsLoaded } = useMunicipalities({ enabled: townsNear });
@@ -296,6 +312,20 @@ const Home = () => {
       .finally(() => { if (!cancelled) setStoresLoaded(true); }));
     return () => { cancelled = true; };
   }, [storesNear, user?.municipalityId, refreshRound]);
+
+  useEffect(() => {
+    if (!trendingNear) return undefined;
+    let cancelled = false;
+    inRound(axios.get('/ml/recommendations/trending', { params: { limit: TRENDING } })
+      .then((res) => {
+        if (cancelled) return;
+        const list = Array.isArray(res.data?.products) ? res.data.products : [];
+        setTrendingProducts(list);
+        patchCache('home', { trending: list });
+      })
+      .catch((err) => console.error('Failed to load trending products:', err)));
+    return () => { cancelled = true; };
+  }, [trendingNear, refreshRound]);
 
   // Every public shop with a spot: its pin, or placed from its address
   // (pinned: false, drawn with a dashed ring).
@@ -505,6 +535,24 @@ const Home = () => {
           )}
         </div>
       </section>
+
+      {/* Trending Now (the ML engine): only when it has products. Until then
+          just a mark, so it can tell when it is near. */}
+      <div ref={trendingRef} className="home-trending-mark" aria-hidden="true" />
+      {trendingProducts.length > 0 && (
+        <section className="products-section home-trending-section">
+          <div className="container">
+            <div className="section-header">
+              <h2 className="section-title title-medium">Trending Now</h2>
+            </div>
+            <div className="products-grid">
+              {wholeRows(trendingProducts, isPhone ? TRENDING_PHONE : TRENDING).map((product) => (
+                <ProductTile key={product.id} product={product} onAddToCart={handleAddToCart} />
+              ))}
+            </div>
+          </div>
+        </section>
+      )}
 
       {/* Stores Section */}
       <section className="stores-section" ref={storesRef}>

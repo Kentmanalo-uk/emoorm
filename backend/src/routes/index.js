@@ -88,6 +88,8 @@ mount('/admin-team', require('./adminTeam.routes'));
 mount('/offers', require('./priceOffer.routes'));
 mount('/today', require('./availability.routes'));
 mount('/push', require('./push.routes'));
+// The ML engine's admin API (src/ml).
+mount('/ml', require('./ml.routes'));
 mount('/auth/phone', require('./phoneVerify.routes'));
 mount('/municipalities', municipalityRoutes);
 mount('/categories', categoryRoutes);
