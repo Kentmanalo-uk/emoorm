@@ -94,6 +94,10 @@ model AppSetting {
   /// the defaults, which have the whole feature off.
   referralSettings Json? @map("referral_settings")
 
+  /// The ML engine (src/ml/settings.js): the master switch and one per
+  /// module. Null, or a key left out, is off.
+  mlSettings Json? @map("ml_settings")
+
   createdAt          DateTime @default(now()) @map("created_at")
   updatedAt          DateTime @updatedAt @map("updated_at")
 
@@ -2535,4 +2539,103 @@ model ReviewCommentFlag {
   @@index([authorId])
   @@index([status, createdAt])
   @@map("review_comment_flags")
+}
+
+// ── ML engine (src/ml, docs/ml/README.md) ─────────────────────────────────
+// Its own storage beside the shop's tables; nothing here is read by the
+// shop's own features, and nothing acts on its own.
+
+/// Totals per product, Manila day and kind of event (cart_add, cart_remove,
+/// favorite_add, favorite_remove). No buyer is recorded.
+model MlEventCount {
+  day       DateTime @db.Date
+  eventType String   @map("event_type") @db.VarChar(40)
+  productId String   @map("product_id")
+  count     Int      @default(0)
+
+  @@id([day, eventType, productId])
+  @@index([productId, eventType, day], map: "ml_event_counts_product_idx")
+  @@map("ml_event_counts")
+}
+
+/// A result worked out ahead of time, one per model, kind and thing.
+model MlPrediction {
+  id             String   @id @default(uuid())
+  modelKey       String   @map("model_key") @db.VarChar(40)
+  modelVersion   Int      @map("model_version")
+  predictionType String   @map("prediction_type") @db.VarChar(40)
+  entityType     String   @map("entity_type") @db.VarChar(20)
+  entityId       String   @map("entity_id")
+  value          Json
+  meta           Json?
+  generatedAt    DateTime @default(now()) @map("generated_at")
+  expiresAt      DateTime @map("expires_at")
+
+  @@unique([modelKey, predictionType, entityType, entityId], map: "ml_predictions_entity_key")
+  @@index([expiresAt], map: "ml_predictions_expires_idx")
+  @@map("ml_predictions")
+}
+
+/// A model's parameters and scores. One ACTIVE per model; CANDIDATE until
+/// it passes its checks; RETIRED kept for a roll back.
+model MlModelVersion {
+  id          String    @id @default(uuid())
+  modelKey    String    @map("model_key") @db.VarChar(40)
+  version     Int
+  algorithm   String    @db.VarChar(80)
+  params      Json?
+  metrics     Json?
+  status      String    @default("CANDIDATE") @db.VarChar(12)
+  trainedAt   DateTime  @default(now()) @map("trained_at")
+  activatedAt DateTime? @map("activated_at")
+
+  @@unique([modelKey, version], map: "ml_model_versions_key_version_key")
+  @@index([modelKey, status], map: "ml_model_versions_status_idx")
+  @@map("ml_model_versions")
+}
+
+/// One run of a module's job (RUNNING, OK, SKIPPED, FAILED, TIMED_OUT).
+model MlTrainingRun {
+  id           String    @id @default(uuid())
+  modelKey     String    @map("model_key") @db.VarChar(40)
+  modelVersion Int?      @map("model_version")
+  trigger      String    @default("SCHEDULE") @db.VarChar(12)
+  status       String    @default("RUNNING") @db.VarChar(12)
+  startedAt    DateTime  @default(now()) @map("started_at")
+  completedAt  DateTime? @map("completed_at")
+  durationMs   Int?      @map("duration_ms")
+  rowsRead     Int?      @map("rows_read")
+  rowsWritten  Int?      @map("rows_written")
+  metrics      Json?
+  errorSummary String?   @map("error_summary") @db.VarChar(500)
+
+  @@index([modelKey, startedAt], map: "ml_training_runs_key_idx")
+  @@index([startedAt], map: "ml_training_runs_started_idx")
+  @@map("ml_training_runs")
+}
+
+/// Something for a person to look at. Statuses: PENDING_REVIEW,
+/// CONFIRMED_SUSPICIOUS, CLEARED, ESCALATED (anomalies); RESOLVED (stock).
+model MlAlert {
+  id             String    @id @default(uuid())
+  alertType      String    @map("alert_type") @db.VarChar(40)
+  entityType     String    @map("entity_type") @db.VarChar(20)
+  entityId       String    @map("entity_id")
+  storeId        String?   @map("store_id")
+  municipalityId String?   @map("municipality_id")
+  dedupeKey      String    @map("dedupe_key")
+  severity       String    @default("MEDIUM") @db.VarChar(10)
+  score          Float?
+  description    String    @db.VarChar(500)
+  details        Json?
+  status         String    @default("PENDING_REVIEW") @db.VarChar(24)
+  reviewedById   String?   @map("reviewed_by_id")
+  createdAt      DateTime  @default(now()) @map("created_at")
+  resolvedAt     DateTime? @map("resolved_at")
+
+  @@unique([alertType, dedupeKey], map: "ml_alerts_dedupe_key")
+  @@index([status, createdAt], map: "ml_alerts_status_idx")
+  @@index([storeId, status], map: "ml_alerts_store_idx")
+  @@index([municipalityId, status], map: "ml_alerts_municipality_idx")
+  @@map("ml_alerts")
 }
