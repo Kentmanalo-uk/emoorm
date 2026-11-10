@@ -19,46 +19,118 @@ import { createMatcher } from './voice';
 
 const WORKLET = '/moormy/capture-worklet.js';
 
+// The mic needs only these; the audio worklet is used where there is one,
+// an older way where not (some phone browsers).
 export const micSupported = () => typeof window !== 'undefined'
   && !!navigator.mediaDevices?.getUserMedia
-  && !!(window.AudioContext || window.webkitAudioContext)
-  && typeof AudioWorkletNode !== 'undefined';
+  && !!(window.AudioContext || window.webkitAudioContext);
 
-/** Why the mic could not be opened, in words a person can act on. */
+// The browsers inside other apps (Facebook, Messenger, Instagram, TikTok,
+// LINE, WeChat): most never share the microphone with a page.
+const IN_APP = /FBAN|FBAV|FB_IAB|FBIOS|Instagram|Messenger|TikTok|musical_ly|Line\/|MicroMessenger/i;
+export const inAppBrowser = () => typeof navigator !== 'undefined' && IN_APP.test(navigator.userAgent || '');
+
+/**
+ * Why the mic could not be opened, as a word the settings explain:
+ * 'inapp' | 'insecure' | 'blocked' | 'none' | 'busy' | 'failed'.
+ */
 export const micProblem = (err) => {
   const name = err?.name || '';
-  if (name === 'NotAllowedError' || name === 'SecurityError') return 'blocked';
-  if (name === 'NotFoundError' || name === 'OverconstrainedError') return 'none';
-  if (name === 'NotReadableError' || name === 'AbortError') return 'busy';
+  if (typeof window !== 'undefined' && window.isSecureContext === false) return 'insecure';
+  if (inAppBrowser() && name !== 'NotFoundError') return 'inapp';
+  if (name === 'NotAllowedError' || name === 'SecurityError' || name === 'PermissionDeniedError') return 'blocked';
+  if (name === 'NotFoundError' || name === 'OverconstrainedError' || name === 'DevicesNotFoundError') return 'none';
+  if (name === 'NotReadableError' || name === 'TrackStartError') return 'busy';
   return 'failed';
+};
+
+/** The browser's own name for what went wrong, for the small print. */
+export const micDetail = (err) => String(err?.name || err?.message || '').slice(0, 60);
+
+const wait = (ms) => new Promise((r) => { setTimeout(r, ms); });
+
+/**
+ * Takes the mic's audio at the browser's rate and hands it on in pieces of
+ * 2048 samples at 16 kHz, as the worklet does (public/moormy/capture-worklet.js).
+ */
+const resamplerTo16k = (rate, onChunk) => {
+  const step = rate / 16000;
+  let pos = 0;
+  let sum = 0;
+  let count = 0;
+  let out = new Float32Array(2048);
+  let n = 0;
+  return (input) => {
+    for (let i = 0; i < input.length; i += 1) {
+      sum += input[i];
+      count += 1;
+      pos += 1;
+      if (pos >= step) {
+        pos -= step;
+        out[n] = sum / count;
+        n += 1;
+        sum = 0;
+        count = 0;
+        if (n === out.length) {
+          onChunk(out);
+          out = new Float32Array(2048);
+          n = 0;
+        }
+      }
+    }
+  };
 };
 
 /** Opens the mic and calls onChunk(Float32Array at 16 kHz) until closed. */
 const openMic = async (onChunk) => {
-  const stream = await navigator.mediaDevices.getUserMedia({
-    audio: {
-      channelCount: 1, echoCancellation: true, noiseSuppression: true, autoGainControl: true,
-    },
-  });
+  // The sound side is made first, before anything is waited for: phones
+  // (iPhones above all) let a page start sound only straight from a tap.
   const Ctx = window.AudioContext || window.webkitAudioContext;
   const ctx = new Ctx();
+  const resuming = ctx.state === 'suspended' ? ctx.resume().catch(() => {}) : null;
+  let stream;
   try {
-    if (ctx.state === 'suspended') await ctx.resume();
-    await ctx.audioWorklet.addModule(WORKLET);
+    stream = await navigator.mediaDevices.getUserMedia({
+      audio: {
+        channelCount: 1, echoCancellation: true, noiseSuppression: true, autoGainControl: true,
+      },
+    });
+  } catch (err) {
+    ctx.close().catch(() => {});
+    throw err;
+  }
+  try {
+    // (A phone that never answers resume() is not waited for forever.)
+    if (resuming) await Promise.race([resuming, wait(1500)]);
     const source = ctx.createMediaStreamSource(stream);
-    const node = new AudioWorkletNode(ctx, 'moormy-capture');
-    node.port.onmessage = (e) => onChunk(e.data);
+    let node = null;
+    let usesWorklet = false;
+    if (ctx.audioWorklet && typeof AudioWorkletNode !== 'undefined') {
+      try {
+        await ctx.audioWorklet.addModule(WORKLET);
+        node = new AudioWorkletNode(ctx, 'moormy-capture');
+        node.port.onmessage = (e) => onChunk(e.data);
+        usesWorklet = true;
+      } catch {
+        node = null; // the older way, below
+      }
+    }
+    if (!node) {
+      node = ctx.createScriptProcessor(4096, 1, 1);
+      const take = resamplerTo16k(ctx.sampleRate, onChunk);
+      node.onaudioprocess = (e) => take(e.inputBuffer.getChannelData(0));
+    }
     source.connect(node);
-    // Not connected to the speakers: the worklet runs as long as it has input
-    // in Chromium; Safari and Firefox want the graph to reach an output, so a
-    // silent gain does that without making any sound.
+    // Not to the speakers: a silent gain lets the graph reach an output,
+    // which Safari and Firefox want before they run it.
     const mute = ctx.createGain();
     mute.gain.value = 0;
     node.connect(mute).connect(ctx.destination);
     return {
       stream,
       close: () => {
-        node.port.onmessage = null;
+        if (usesWorklet) node.port.onmessage = null;
+        else node.onaudioprocess = null;
         try { source.disconnect(); node.disconnect(); mute.disconnect(); } catch { /* already gone */ }
         stream.getTracks().forEach((t) => t.stop());
         ctx.close().catch(() => {});

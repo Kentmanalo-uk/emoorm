@@ -1,6 +1,8 @@
 import { useEffect, useRef, useState, useSyncExternalStore } from 'react';
 import { Check, Microphone, Trash, Waveform } from '../../lib/icons';
-import { micProblem, micSupported, recordSaying } from '../../lib/moormy/wake/listener';
+import {
+  micDetail, micProblem, micSupported, recordSaying,
+} from '../../lib/moormy/wake/listener';
 import { learnVoice, takeSaying } from '../../lib/moormy/wake/voice';
 import * as wake from '../../lib/moormy/wakeControl';
 
@@ -17,11 +19,31 @@ const TAKE_TIP = {
   long: 'That was a bit long. Say just “Hey Moormy”, then stop.',
 };
 
+const isIPhone = () => typeof navigator !== 'undefined'
+  && (/iPhone|iPad|iPod/.test(navigator.userAgent) || (/Macintosh/.test(navigator.userAgent) && navigator.maxTouchPoints > 1));
+const isAndroid = () => typeof navigator !== 'undefined' && /Android/.test(navigator.userAgent);
+
+/** How to let the microphone in, on this kind of phone. */
+const allowSteps = () => {
+  if (isIPhone()) return 'On iPhone: tap “aA” in the address bar › Website Settings › Microphone › Allow (or Settings › Safari › Microphone), then try again.';
+  if (isAndroid()) return 'On Android: tap the icon left of the address › Permissions › Microphone › Allow, then try again.';
+  return 'Click the icon left of the address › Microphone › Allow, then try again.';
+};
+
 const MIC_TIP = {
-  blocked: 'The microphone is blocked. Allow it for this site in your browser’s settings, then try again.',
+  inapp: 'This app’s built-in browser doesn’t share the microphone. Open emoorm.shop in Chrome or Safari (⋯ › Open in browser) and set it up there.',
+  insecure: 'The microphone works only on the secure site. Open https://emoorm.shop and try again.',
+  blocked: `The microphone is blocked for this site. ${allowSteps()}`,
   none: 'No microphone was found on this device.',
-  busy: 'Another app is using the microphone. Close it and try again.',
-  failed: 'The microphone couldn’t be opened. Try again.',
+  busy: 'Another app is using the microphone (a call, a recorder, a video app). Close it and try again.',
+  failed: 'The microphone couldn’t be opened. Try again, or open emoorm.shop in Chrome or Safari.',
+};
+
+/** What to tell the person, with the browser's own name for it in brackets. */
+const micTip = (err) => {
+  const detail = micDetail(err);
+  const tip = MIC_TIP[micProblem(err)];
+  return detail ? `${tip} (${detail})` : tip;
 };
 
 const STATE_TEXT = {
@@ -62,7 +84,7 @@ function Teach({ onDone, onCancel, hasVoice }) {
     try {
       samples = await recordSaying({ maxMs: 3000, onLevel: setLevel, signal: abort.signal });
     } catch (err) {
-      setTip(MIC_TIP[micProblem(err)]);
+      setTip(micTip(err));
     } finally {
       release();
       setRecording(false);
