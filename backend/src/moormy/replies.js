@@ -51,6 +51,64 @@ const LINES = {
     en: ['There are no filters to clear here. Tell me what to look for.'],
     tl: ['Walang filter na aalisin dito. Sabihin mo kung ano ang hahanapin.'],
   },
+  // The screen.
+  pressing: {
+    en: ['Tapping "{what}".', 'Got it: "{what}".'],
+    tl: ['Pinindot ko ang "{what}".', 'Sige: "{what}".'],
+  },
+  pressAsk: {
+    en: ['Tap "{what}"? Say yes, or tap below.'],
+    tl: ['Pindutin ko ba ang "{what}"?'],
+  },
+  handsOff: {
+    en: ['"{what}" is one for you to tap yourself. I don\'t pay, place orders, delete, sign out or send anything for you.'],
+    tl: ['Ikaw na ang pumindot ng "{what}". Hindi ako nagbabayad, nag-oorder, nagbubura, nagsa-sign out o nagpapadala para sa iyo.'],
+  },
+  notOnScreen: {
+    en: ['I can\'t find "{what}" on this page.'],
+    tl: ['Wala akong makitang "{what}" sa page na ito.'],
+  },
+  whichOne: {
+    en: ['Which one: {list}?'],
+    tl: ['Alin dito: {list}?'],
+  },
+  typing: {
+    en: ['Typed "{value}" in "{what}".'],
+    tl: ['Isinulat ko ang "{value}" sa "{what}".'],
+  },
+  noField: {
+    en: ['I can\'t find a "{what}" box on this page.'],
+    tl: ['Walang "{what}" na kahon sa page na ito.'],
+  },
+  // Typed in the chat: she says where, and leaves the tapping to them.
+  pressOffer: {
+    en: ['That\'s the "{what}" button. Tap it below and I\'ll press it.'],
+    tl: ['Iyan ang "{what}". Pindutin sa ibaba at pipindutin ko.'],
+  },
+  typeOffer: {
+    en: ['Tap below and I\'ll type "{value}" in "{what}".'],
+    tl: ['Pindutin sa ibaba at isusulat ko ang "{value}" sa "{what}".'],
+  },
+  openLink: {
+    en: ['Here\'s {name}.'],
+    tl: ['Heto ang {name}.'],
+  },
+  navigateLink: {
+    en: ['Here\'s the link.'],
+    tl: ['Heto ang link.'],
+  },
+  byVoice: {
+    en: ['I move the page when you talk to me: hold Moormy, or tap the mic, and say it.'],
+    tl: ['Ginagalaw ko ang page kapag kinausap mo ako: pindutin nang matagal si Moormy, o ang mic, at sabihin mo.'],
+  },
+  leftIt: {
+    en: ['Okay, I left it as it is.'],
+    tl: ['Sige, hindi ko na ginalaw.'],
+  },
+  scrolling: {
+    en: ['Scrolling.'],
+    tl: ['Sige, iniiscroll ko.'],
+  },
   opening: {
     en: ['Opening {name}.'],
     tl: ['Binubuksan ko ang {name}.'],

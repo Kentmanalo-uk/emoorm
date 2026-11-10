@@ -227,10 +227,12 @@ test('Moormy drives the results page: search, narrow, cheaper, open, clear, back
   const a = await make('Honey Jar', 120);
   const b = await make('Honey Comb', 260);
   const c = await make('Honey Wine', 480);
-  const page = (search, listed) => ({ pageType: 'search', route: '/products', search, listed });
+  const page = (search, listed) => ({
+    pageType: 'search', route: '/products', search, listed, drive: true,
+  });
 
   // A search goes to the site's own results page, with what she found.
-  const found = await turn(`honey ${tag}`);
+  const found = await turn(`honey ${tag}`, {}, { drive: true });
   assert.equal(found.intent, 'search');
   assert.deepEqual(found.actions, [{
     type: 'show_results',
@@ -277,6 +279,76 @@ test('Moormy drives the results page: search, narrow, cheaper, open, clear, back
   // Best rated stays in the panel (the page has no rating sort).
   const rated = await turn(`best rated honey ${tag}`);
   assert.deepEqual(rated.actions, []);
+});
+
+test('typos are forgiven: her words, towns and products', () => {
+  const { correctText, vocabularyOf } = require('../src/moormy/spell');
+  const vocab = vocabularyOf({ towns: [{ name: 'Calapan City' }], categories: [{ name: 'Seafood' }], productWords: ['honey', 'tilapia'] });
+  const fix = (t) => correctText(t, vocab).text;
+  assert.equal(fix('fnd me pasalubng'), 'find me pasalubong');
+  assert.equal(fix('cheeper'), 'cheaper');
+  assert.equal(fix('opne the frist one'), 'open the first one');
+  assert.equal(fix('ad to cart'), 'add to cart');
+  assert.equal(fix('clera the fliters'), 'clear the filters');
+  assert.equal(fix('hony from calapn'), 'honey from calapan');
+  // Real words are left alone, Tagalog included.
+  assert.equal(fix('yung isa na mura'), 'yung isa na mura');
+  assert.equal(fix('sweet treats under 100'), 'sweet treats under 100');
+  // And the whole way through: a typo'd request does what the right one does.
+  assert.equal(understand(fix('opne the frist one'), ref).intent, 'open');
+});
+
+test('Moormy works the screen: presses, types, asks first, keeps her hands off money', async () => {
+  const screen = [
+    { i: 0, label: 'Best Sellers', kind: 'link' },
+    { i: 1, label: 'Follow', kind: 'button' },
+    { i: 2, label: 'Quantity', kind: 'input' },
+    { i: 3, label: 'Red', kind: 'button' },
+    { i: 4, label: 'Place Order', kind: 'button' },
+    { i: 5, label: 'Remove', kind: 'button' },
+    { i: 6, label: 'Fruits', kind: 'check' },
+    { i: 7, label: 'Fresh Fruits', kind: 'link' },
+  ];
+  const ctx = { pageType: 'product', screen, drive: true };
+  const act = async (text, state = {}) => turn(text, state, ctx);
+
+  assert.deepEqual((await act('tap best selers')).actions, [{ type: 'press', i: 0, label: 'Best Sellers' }]);
+  // Said as it is named on the screen: pressed, like a tap.
+  assert.deepEqual((await act('best sellers')).actions, [{ type: 'press', i: 0, label: 'Best Sellers' }]);
+  assert.deepEqual((await act('follow this shop')).actions, [{ type: 'press', i: 1, label: 'Follow' }]);
+  assert.deepEqual((await act('choose red')).actions, [{ type: 'press', i: 3, label: 'Red' }]);
+  assert.deepEqual((await act('set quantity to 3')).actions, [{
+    type: 'fill', i: 2, label: 'Quantity', value: '3',
+  }]);
+  assert.deepEqual((await act('select fruits')).actions, [{ type: 'press', i: 6, label: 'Fruits' }]);
+
+  // Money, deleting, signing out, sending: never, said plainly.
+  const order = await act('tap place order');
+  assert.deepEqual(order.actions, []);
+  assert.match(order.say, /for you to tap yourself/);
+  // Not on this page: still refused, and nothing else pressed in its place.
+  const elsewhere = await turn('tap place order', {}, { ...ctx, screen: [{ i: 0, label: 'Order now', kind: 'button' }] });
+  assert.deepEqual(elsewhere.actions, []);
+
+  // "Remove": asked first; a spoken yes presses it as the screen is then.
+  const ask = await act('press remove');
+  assert.deepEqual(ask.actions, [{
+    type: 'press', i: 5, label: 'Remove', confirm: true,
+  }]);
+  const yes = await turn('oo', ask.state, { ...ctx, screen: [{ i: 9, label: 'Remove', kind: 'button' }] });
+  assert.deepEqual(yes.actions, [{ type: 'press', i: 9, label: 'Remove' }]);
+  const no = await turn('no', ask.state, ctx);
+  assert.deepEqual(no.actions, []);
+  assert.equal(no.state.pending, null);
+
+  // Not on the screen: said, not guessed.
+  const missing = await act('tap something weird');
+  assert.deepEqual(missing.actions, []);
+  assert.match(missing.say, /can't find/);
+
+  // Typed in the chat: the same proposal, in words that offer it.
+  const typed = await turn('tap best sellers', {}, { ...ctx, drive: false });
+  assert.match(typed.say, /Tap it below/);
 });
 
 test('the endpoint: guests and buyers, and a request too long', async () => {

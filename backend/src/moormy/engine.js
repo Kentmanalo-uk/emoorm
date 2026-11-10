@@ -4,6 +4,7 @@ const productRepository = require('../repositories/product.repository');
 const guide = require('../services/buyerAssistantGuide');
 const buyerAssistant = require('../services/buyerAssistant.service');
 const { understand } = require('./understand');
+const { correctText, vocabularyOf, editDistance } = require('./spell');
 const { say, peso } = require('./replies');
 const { memo } = require('../ml/memo');
 const { isStockless } = require('../utils/productKinds');
@@ -32,7 +33,16 @@ const PAGE_TYPES = ['home', 'search', 'category', 'product', 'cart', 'checkout',
 
 // ── Reference data (towns, categories) ──────────────────────────────────────
 
-const refCache = memo({ ttlMs: 10 * 60 * 1000, max: 2 });
+const refCache = memo({ ttlMs: 10 * 60 * 1000, max: 4 });
+/** Every word she knows, for correcting typos (spell.js); rebuilt every 10 minutes. */
+const vocabulary = () => refCache.get('vocab', async () => {
+  const [ref, productWords] = await Promise.all([
+    reference(),
+    productRepository.searchVocabulary().catch(() => new Set()),
+  ]);
+  return vocabularyOf({ ...ref, productWords: [...productWords] });
+});
+
 const reference = () => refCache.get('ref', async () => {
   const [towns, categories] = await Promise.all([
     prisma.municipality.findMany({ where: { isActive: true }, select: { id: true, name: true } }),
@@ -45,6 +55,43 @@ const reference = () => refCache.get('ref', async () => {
 
 const idOrNull = (v) => (typeof v === 'string' && ID.test(v) ? v : null);
 const SEARCH_SORTS = ['cheapest', 'priciest', 'popular', 'newest', 'rating'];
+const SCREEN_KINDS = ['button', 'link', 'tab', 'input', 'select', 'check'];
+
+// ── The screen ──────────────────────────────────────────────────────────────
+
+// Never pressed for anyone: money, deleting, leaving, speaking for them.
+const HANDS_OFF = /\b(place (my |the )?order|pay|payment|pay now|confirm (order|payment|purchase)|delete|deactivate|remove (my )?account|cancel (my |the |this )?order|log ?out|sign ?out|report|block|send|submit|withdraw|transfer|i-?send|ipadala|burahin)\b/i;
+// Pressed only after a yes in the panel.
+const ASK_FIRST = /\b(remove|clear (the )?cart|empty (the )?cart|unfollow|tanggalin|alisin)\b/i;
+const SCREEN_STOP = new Set(['the', 'a', 'an', 'this', 'that', 'it', 'one', 'button', 'link', 'tab', 'please', 'po', 'ang', 'yung', 'ng', 'sa', 'na', 'mga', 'my', 'me', 'on', 'for', 'to']);
+const wordsOfLabel = (t) => String(t || '').toLowerCase().normalize('NFD').replace(/[̀-ͯ]/g, '')
+  .split(/[^a-z0-9ñ₱]+/).filter((w) => w && !SCREEN_STOP.has(w));
+const sameWord = (a, b) => a === b
+  || (a.length >= 4 && b.length >= 4 && (a.startsWith(b) || b.startsWith(a)))
+  || (Math.min(a.length, b.length) >= 4 && editDistance(a, b, 1) <= 1);
+
+/**
+ * The screen's items most like what was said, best first, each with a score
+ * (0..1): the words said found in its label count most, its label's words
+ * found in what was said a little less; the same words exactly, 1.
+ */
+const onScreen = (target, screen, kinds = null) => {
+  const said = wordsOfLabel(target);
+  if (!said.length) return [];
+  const joined = said.join(' ');
+  return screen
+    .filter((x) => !kinds || kinds.includes(x.kind))
+    .map((x) => {
+      const label = wordsOfLabel(x.label);
+      if (!label.length) return { x, score: 0 };
+      if (label.join(' ') === joined) return { x, score: 1 };
+      const saidIn = said.filter((w) => label.some((l) => sameWord(w, l))).length / said.length;
+      const labelIn = label.filter((l) => said.some((w) => sameWord(w, l))).length / label.length;
+      return { x, score: Math.round((0.6 * saidIn + 0.4 * labelIn) * 100) / 100 };
+    })
+    .filter((m) => m.score > 0)
+    .sort((a, b) => b.score - a.score);
+};
 // (null and '' are "no limit", not ₱0.)
 const num = (v) => (v != null && v !== '' && Number.isFinite(Number(v)) && Number(v) >= 0 ? Number(v) : null);
 
@@ -54,6 +101,10 @@ const cleanState = (s = {}) => {
     lang: s?.lang === 'tl' ? 'tl' : (s?.lang === 'en' ? 'en' : null),
     turn: Math.min(1e6, Math.max(0, Number(s?.turn) || 0)),
     focus: idOrNull(s?.focus),
+    // A press she asked about ("Tap Remove?"), waiting for a yes: by its label,
+    // found again on the screen as it is then.
+    pending: typeof s?.pending?.label === 'string' && s.pending.label.trim()
+      ? { label: s.pending.label.trim().slice(0, 80) } : null,
     shown: Array.isArray(s?.shown) ? s.shown.map(idOrNull).filter(Boolean).slice(0, 24) : [],
     lastSearch: last ? {
       query: typeof last.query === 'string' ? last.query.slice(0, 80) : '',
@@ -83,7 +134,21 @@ const cleanContext = (c = {}) => ({
   } : null,
   // The products on the results page, in the order they are shown: "the
   // first one" is the page's first.
+  // Spoken to (the mic, held, "Hey Moormy"): she works the screen. Typed
+  // in the chat: she answers there, with links and buttons to tap.
+  drive: c?.drive === true,
   listed: Array.isArray(c?.listed) ? c.listed.map(idOrNull).filter(Boolean).slice(0, 24) : [],
+  // What can be pressed or typed in on the screen, as the page lists it
+  // (labels only, never what is typed in a field): i is the page's own number.
+  screen: Array.isArray(c?.screen) ? c.screen
+    .filter((x) => x && Number.isInteger(x.i) && x.i >= 0 && x.i < 1000 && typeof x.label === 'string' && x.label.trim())
+    .map((x) => ({
+      i: x.i,
+      label: x.label.replace(/\s+/g, ' ').trim().slice(0, 80),
+      kind: SCREEN_KINDS.includes(x.kind) ? x.kind : 'button',
+      on: x.on === true,
+    }))
+    .slice(0, 160) : [],
   // The cart lives on the device; ids and quantities only, prices are read here.
   cart: Array.isArray(c?.cart) ? c.cart
     .map((l) => ({ productId: idOrNull(l?.productId), quantity: Math.min(999, Math.max(1, parseInt(l?.quantity, 10) || 1)) }))
@@ -342,27 +407,83 @@ const orderLine = (o, lang) => ({
  * @param {Object} input - { text, state, context, user }
  * @returns {Promise<Object>} { say, speak, lang, intent, cards, compare?, orders?, cart?, actions, suggestions, state }
  */
+/** A few things on the screen to suggest pressing, when what was asked is not there. */
+const screenHints = (ctx, lang) => ctx.screen
+  .filter((x) => (x.kind === 'tab' || x.kind === 'button') && x.label.length <= 24 && !HANDS_OFF.test(x.label))
+  .slice(0, 3)
+  .map((x) => (lang === 'tl' ? `Pindutin ang ${x.label}` : `Tap ${x.label}`));
+
 const turn = async ({
-  text, state: rawState, context: rawContext, user = null,
+  text, state: rawState, context: rawContext, user = null, nested = false,
 }) => {
   const ref = await reference();
   const state = cleanState(rawState);
   const ctx = cleanContext(rawContext);
-  const u = understand(String(text || '').slice(0, 500), ref);
+  // Typos forgiven first ("fnd me pasalubng" -> "find me pasalubong").
+  const spelled = correctText(String(text || '').slice(0, 500), await vocabulary());
+  const u = understand(spelled.text, ref);
   const lang = languageOf(u.text) || state.lang || 'en';
   const t = state.turn;
   const next = { ...state, lang, turn: t + 1 };
+  // A product word read differently from how it was typed: said, so a wrong
+  // guess is seen (her own words corrected are not worth a mention).
+  const readAs = u.intent === 'search'
+    ? spelled.fixes.filter(([, to]) => String(u.query || '').split(/\s+/).includes(to))
+    : [];
+  const readNote = readAs.length
+    ? (lang === 'tl'
+      ? ` (Binasa ko ang "${readAs[0][0]}" bilang "${readAs[0][1]}".)`
+      : ` (I read "${readAs[0][0]}" as "${readAs[0][1]}".)`)
+    : '';
   const answer = (fields) => ({
     intent: u.intent,
     lang,
     cards: [],
     actions: [],
     ...fields,
+    say: fields.say ? `${fields.say}${readNote}` : fields.say,
     speak: fields.speak || fields.say,
     suggestions: fields.suggestions || suggestFor(ctx, lang, fields.cards?.length || 0, u.intent),
     state: { ...next, ...(fields.state || {}) },
   });
   const firstName = user?.fullName ? ` ${String(user.fullName).trim().split(/\s+/)[0]}` : '';
+
+  /** Press one thing on the screen (or say why not, or ask first). */
+  const pressAnswer = (x) => {
+    if (HANDS_OFF.test(x.label)) return answer({ say: say('handsOff', lang, t, { what: x.label }) });
+    const confirm = ASK_FIRST.test(x.label);
+    return answer({
+      say: say(confirm ? 'pressAsk' : (ctx.drive ? 'pressing' : 'pressOffer'), lang, t, { what: x.label }),
+      actions: [{
+        type: 'press', i: x.i, label: x.label, ...(confirm ? { confirm: true } : {}),
+      }],
+      state: { pending: confirm ? { label: x.label } : null },
+    });
+  };
+
+  // The answer to "Tap Remove?": yes presses it (if it is still there), no leaves it.
+  if (state.pending && !nested) {
+    if (/^(yes|yeah|yep|yup|oo|opo|sige|go ahead|do it|ok|okay|sure|tama)\b/.test(u.text)) {
+      const again = ctx.screen.find((x) => x.label.toLowerCase() === state.pending.label.toLowerCase());
+      if (!again) return answer({ say: say('notOnScreen', lang, t, { what: state.pending.label }), state: { pending: null } });
+      return answer({
+        say: say('pressing', lang, t, { what: again.label }),
+        actions: [{ type: 'press', i: again.i, label: again.label }],
+        state: { pending: null },
+      });
+    }
+    if (/^(no|nope|hindi|huwag|wag|cancel|never mind|wag na|huwag na)\b/.test(u.text)) {
+      return answer({ say: say('leftIt', lang, t), state: { pending: null } });
+    }
+  }
+
+  // Said the name of something on the screen ("Best Sellers", "open Today's
+  // Menu", "Livestock"): it is pressed, as a tap on it would be.
+  if (!nested && ctx.screen.length && ['search', 'guide', 'help'].includes(u.intent)) {
+    const bare = u.text.replace(/^(open|go to|show me|show|view|see|tingnan|buksan|ipakita|punta sa|pumunta sa)\s+/, '');
+    const [hit] = HANDS_OFF.test(bare) ? [] : onScreen(bare, ctx.screen, ['button', 'link', 'tab']);
+    if (hit && hit.score >= 0.95 && wordsOfLabel(bare).length <= 5) return pressAnswer(hit.x);
+  }
 
   switch (u.intent) {
     case 'greeting': return answer({ say: say('greeting', lang, t, { name: firstName }) });
@@ -436,7 +557,7 @@ const turn = async ({
       const rating = s.sort === 'rating';
       const n = rating ? products.length : total;
       return answer({
-        say: say(rating ? 'found' : (refine ? 'refined' : 'foundOnPage'), lang, t, { n, things: things(n), what }),
+        say: say(rating || !ctx.drive ? 'found' : (refine ? 'refined' : 'foundOnPage'), lang, t, { n, things: things(n), what }),
         cards: products,
         total,
         actions: showResults(s),
@@ -446,7 +567,7 @@ const turn = async ({
 
     case 'more': {
       // On the results page: further down it (it loads more as it scrolls).
-      if (onResults(ctx)) return answer({ say: say('scrollMore', lang, t), actions: [{ type: 'scroll' }] });
+      if (onResults(ctx)) return answer({ say: say(ctx.drive ? 'scrollMore' : 'byVoice', lang, t), actions: [{ type: 'scroll' }] });
       if (!state.lastSearch) return answer({ say: say('pickWhich', lang, t) });
       const s = { ...state.lastSearch, page: state.lastSearch.page + 1 };
       const { products } = await runSearch(s, s.page);
@@ -516,14 +637,66 @@ const turn = async ({
       const p = id ? await productFacts(id) : null;
       if (!p) return answer({ say: say('pickWhich', lang, t) });
       return answer({
-        say: say('opening', lang, t, { name: p.name }),
+        say: say(ctx.drive ? 'opening' : 'openLink', lang, t, { name: p.name }),
         actions: [{ type: 'navigate', to: `/product/${p.slug}` }],
         state: { focus: p.id },
       });
     }
 
     case 'back':
-      return answer({ say: say('goingBack', lang, t), actions: [{ type: 'back' }] });
+      return answer({ say: say(ctx.drive ? 'goingBack' : 'byVoice', lang, t), actions: [{ type: 'back' }] });
+
+    case 'scroll':
+      return answer({ say: say(ctx.drive ? 'scrolling' : 'byVoice', lang, t), actions: [{ type: 'scroll', dir: u.dir }] });
+
+    case 'press': {
+      // Asked for by name ("tap place order"): refused before anything is matched,
+      // so nothing nearby is pressed in its place.
+      if (HANDS_OFF.test(u.target)) return answer({ say: say('handsOff', lang, t, { what: u.target }) });
+      const found = onScreen(u.target, ctx.screen, ['button', 'link', 'tab', 'check', 'select']);
+      const best = found[0];
+      if (!best || best.score < 0.6) {
+        // Not on this screen: what it means as a request ("select Fruits": Fruits).
+        if (!nested) {
+          const again = understand(u.target, ref);
+          // Only what names a place, a filter or a list ("Fruits", "my cart",
+          // "the newest"), not any words at all.
+          const means = ['navigate', 'open', 'cart_view', 'orders', 'back', 'clear_filters'].includes(again.intent)
+            || (again.intent === 'search' && !again.query);
+          if (means) {
+            return turn({
+              text: u.target, state: rawState, context: rawContext, user, nested: true,
+            });
+          }
+        }
+        return answer({ say: say('notOnScreen', lang, t, { what: u.target }), suggestions: screenHints(ctx, lang) });
+      }
+      // Two different things fit as well: which one?
+      const alike = found.filter((m) => m.score >= best.score - 0.05 && m.x.label.toLowerCase() !== best.x.label.toLowerCase());
+      if (alike.length) {
+        const names = [...new Set([best, ...alike].map((m) => m.x.label))].slice(0, 3);
+        return answer({
+          say: say('whichOne', lang, t, { list: names.map((n) => `"${n}"`).join(lang === 'tl' ? ' o ' : ' or ') }),
+          suggestions: names.map((n) => (lang === 'tl' ? `Pindutin ang ${n}` : `Tap ${n}`)),
+        });
+      }
+      return pressAnswer(best.x);
+    }
+
+    case 'type': {
+      if (HANDS_OFF.test(u.target)) return answer({ say: say('handsOff', lang, t, { what: u.target }) });
+      const found = onScreen(u.target, ctx.screen, ['input', 'select']);
+      const best = found[0];
+      if (!best || best.score < 0.5) return answer({ say: say('noField', lang, t, { what: u.target }), suggestions: screenHints(ctx, lang) });
+      if (HANDS_OFF.test(best.x.label)) return answer({ say: say('handsOff', lang, t, { what: best.x.label }) });
+      const value = String(u.value || '').slice(0, 200);
+      return answer({
+        say: say(ctx.drive ? 'typing' : 'typeOffer', lang, t, { value, what: best.x.label }),
+        actions: [{
+          type: 'fill', i: best.x.i, label: best.x.label, value,
+        }],
+      });
+    }
 
     case 'similar': {
       const id = pointedAt(u, state, ctx);
@@ -732,7 +905,7 @@ const turn = async ({
     }
 
     case 'navigate':
-      return answer({ say: say('navigate', lang, t), actions: [{ type: 'navigate', to: u.to, place: u.place }] });
+      return answer({ say: say(ctx.drive ? 'navigate' : 'navigateLink', lang, t), actions: [{ type: 'navigate', to: u.to, place: u.place }] });
 
     default: {
       // How-to questions: the shopping guide (no outside AI).

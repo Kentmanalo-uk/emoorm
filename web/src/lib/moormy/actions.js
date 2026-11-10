@@ -2,6 +2,7 @@ import { saleInfo } from '../variantPricing';
 import { parseImages } from '../media';
 import { productKind } from '../productKinds';
 import { resultsPath } from './pageContext';
+import { pressOn, fillIn, scrollPage } from './screen';
 
 /**
  * Moormy's actions (docs/moormy, Phase 5). The server only proposes them
@@ -13,7 +14,15 @@ import { resultsPath } from './pageContext';
  *   { kind: 'go', to }                    go there now
  *   { kind: 'results', to }               the results page, searched and filtered
  *   { kind: 'back' }                      the browser's Back
- *   { kind: 'scroll' }                    further down the page
+ *   { kind: 'scroll', dir }               up, down, top or bottom
+ *   { kind: 'press', i, label }           tap what is on the screen
+ *   { kind: 'fill', i, label, value }     type in a field on the screen
+ *   { kind: 'confirmPress', i, label }    asked in the panel first ("Remove")
+ *   { kind: 'offerPress' | 'offerFill' }  typed in the chat: a button to do it
+ *
+ * Typed in the chat (drive: false), nothing moves the page: places become
+ * links, and what is on the screen becomes a button the person taps. Spoken
+ * to (drive: true), she works the screen herself.
  *   { kind: 'link', to, label }           a button; the person decides
  *   { kind: 'signIn', to, why }           a Sign in button (why: 'cart' | 'page')
  *   { kind: 'add', productId, quantity, product }
@@ -40,10 +49,10 @@ const hasOptions = (product) => Array.isArray(product?.variations) && product.va
 /**
  * Turn the server's proposals into steps.
  * @param {Object[]} actions - from the turn
- * @param {{ signedIn: boolean, cards?: Object[], cartItems?: Object[], route?: string }} ctx
+ * @param {{ signedIn: boolean, cards?: Object[], cartItems?: Object[], route?: string, drive?: boolean }} ctx
  */
 export const planActions = (actions, {
-  signedIn = false, cards = [], cartItems = [], route = '/',
+  signedIn = false, cards = [], cartItems = [], route = '/', drive = true,
 } = {}) => {
   const steps = [];
   const byId = new Map((cards || []).map((p) => [p.id, p]));
@@ -56,7 +65,7 @@ export const planActions = (actions, {
       if (isLogin(to)) {
         // "Please sign in first": a button, coming back to this page.
         if (!signedIn) steps.push({ kind: 'signIn', to: signInPath(route), why: 'page' });
-      } else if (a.optional || went) {
+      } else if (a.optional || went || !drive) {
         steps.push({ kind: 'link', to, label: a.label || null });
       } else {
         steps.push({ kind: 'go', to, place: a.place || null });
@@ -64,15 +73,29 @@ export const planActions = (actions, {
       }
     } else if (a.type === 'show_results' && a.search && typeof a.search === 'object') {
       // Her search on the site's own results page; one page per reply.
-      if (went) continue;
-      steps.push({ kind: 'results', to: resultsPath(a.search) });
+      const to = resultsPath(a.search);
+      if (!drive || went) {
+        steps.push({ kind: 'link', to, label: 'See them on the page' });
+        continue;
+      }
+      steps.push({ kind: 'results', to });
       went = true;
     } else if (a.type === 'back') {
-      if (went) continue;
+      if (went || !drive) continue;
       steps.push({ kind: 'back' });
       went = true;
     } else if (a.type === 'scroll') {
-      steps.push({ kind: 'scroll' });
+      if (!drive) continue;
+      steps.push({ kind: 'scroll', dir: ['up', 'down', 'top', 'bottom'].includes(a.dir) ? a.dir : 'down' });
+    } else if (a.type === 'press' && Number.isInteger(a.i) && typeof a.label === 'string') {
+      if (!drive) steps.push({ kind: 'offerPress', i: a.i, label: a.label });
+      else if (a.confirm) steps.push({ kind: 'confirmPress', i: a.i, label: a.label });
+      else steps.push({ kind: 'press', i: a.i, label: a.label });
+    } else if (a.type === 'fill' && Number.isInteger(a.i) && typeof a.label === 'string') {
+      const value = String(a.value ?? '').slice(0, 200);
+      steps.push({
+        kind: drive ? 'fill' : 'offerFill', i: a.i, label: a.label, value,
+      });
     } else if (a.type === 'cart_add') {
       const product = byId.get(a.productId);
       if (!product) continue;
@@ -80,9 +103,13 @@ export const planActions = (actions, {
       if (!signedIn) {
         steps.push({ kind: 'signIn', to: signInPath(route), why: 'cart', product });
       } else if (productKind(product) === 'LIVESTOCK') {
-        steps.push({ kind: 'offer', to, product });
+        steps.push({
+          kind: 'offer', to, product, go: drive,
+        });
       } else if (hasOptions(product)) {
-        steps.push({ kind: 'choose', to, product });
+        steps.push({
+          kind: 'choose', to, product, go: drive,
+        });
       } else {
         steps.push({
           kind: 'add', productId: product.id, quantity: Math.max(1, Math.min(999, parseInt(a.quantity, 10) || 1)), product,
@@ -133,7 +160,9 @@ export const cartLineFor = (product) => ({
  * { kind, ok, text?, to? }. `cart` is the cart store's state (addItem),
  * `navigate` the router's.
  */
-export const runSteps = (steps, { cart, navigate, scroll }) => {
+export const runSteps = (steps, {
+  cart, navigate, scroll, refs,
+}) => {
   const notes = [];
   for (const step of steps) {
     if (step.kind === 'results') {
@@ -143,8 +172,14 @@ export const runSteps = (steps, { cart, navigate, scroll }) => {
       navigate(-1);
       notes.push({ kind: 'back', ok: true });
     } else if (step.kind === 'scroll') {
-      scroll?.();
+      (scroll || scrollPage)(step.dir);
       notes.push({ kind: 'scroll', ok: true });
+    } else if (step.kind === 'press') {
+      const ok = pressOn(refs?.get(step.i));
+      notes.push(ok ? { kind: 'press', ok } : { kind: 'press', ok, text: `"${step.label}" isn't on the page any more.` });
+    } else if (step.kind === 'fill') {
+      const ok = fillIn(refs?.get(step.i), step.value);
+      notes.push(ok ? { kind: 'fill', ok } : { kind: 'fill', ok, text: `I couldn't type in "${step.label}".` });
     } else if (step.kind === 'go') {
       navigate(step.to);
       notes.push({ kind: 'go', ok: true, to: step.to });
@@ -156,10 +191,10 @@ export const runSteps = (steps, { cart, navigate, scroll }) => {
         notes.push({ kind: 'add', ok: false, text: err?.message || "Couldn't add it to your cart." });
       }
     } else if (step.kind === 'choose') {
-      navigate(step.to);
+      if (step.go !== false) navigate(step.to);
       notes.push({ kind: 'choose', ok: false, to: step.to, text: `${step.product.name} has options. Pick one on its page, then add it to your cart.` });
     } else if (step.kind === 'offer') {
-      navigate(step.to);
+      if (step.go !== false) navigate(step.to);
       notes.push({ kind: 'offer', ok: false, to: step.to, text: 'Live animals are bought by making an offer to the seller on their page.' });
     } else if (step.kind === 'signIn' && step.why === 'cart') {
       notes.push({ kind: 'signIn', ok: false, text: `Sign in first, then I can add ${step.product?.name || 'it'} to your cart.` });

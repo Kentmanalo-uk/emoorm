@@ -136,6 +136,52 @@ Moormy works the site's own pages the way a person taps them, rather than only a
 
 **The screen glow:** while she listens, thinks or speaks, and for about 2.4 seconds after she changes the page, pink and light green light runs around the screen edges. It takes no clicks and stays still for people who ask for reduced motion.
 
+### Voice works the screen; the typed chat only offers (owner's rule, 11 Nov 2026)
+
+- **Spoken to** (the mic, press and hold, "Hey Moormy"; `context.drive: true`): she does it on the page.
+- **Typed in the chat** (or a suggestion tapped): nothing on the page moves.
+  - Places and results become links ("See them on the page").
+  - What she would press or type becomes a button ("Tap “Best Sellers”"), which is the person's own tap.
+  - Her words say so ("That's the "Best Sellers" button. Tap it below…").
+
+### Anything on the screen
+
+Each request carries the screen as the page lists it: `web/src/lib/moormy/screen.js` `collectScreen`.
+
+- **What is listed:** buttons, links, tabs, ticks, lists and fields, by their labels (aria-label, label, text). Those in view come first, up to 160.
+- **What is never listed:** Moormy's own controls, hidden or disabled ones, password and card fields.
+- **What is never sent:** what is typed in a field.
+
+What she understands:
+
+| Said | What she does |
+|---|---|
+| "tap / click / press / select / choose / pindutin X" | Presses X. |
+| "follow this shop", "save", "buy now" | Presses the button named by what it does. |
+| "type X in Y", "set quantity to 3" | Types in the field, the way the page's own code hears it. |
+| "scroll up / down / to the top" | Scrolls the page. |
+| The exact name of something on the screen ("Today's Menu") | Presses it, like a tap. |
+
+How she matches and acts:
+
+- **Matching** (engine.js `onScreen`): the words said against each label, close spellings counting. Two different labels that fit as well are asked about: "Which one: …?"
+- **Not on the screen:** a filter or place name becomes that request ("select vegetables" searches Vegetables). Anything else is said not to be there; nothing near it is pressed.
+- **On the page:** the element she presses gets a pink-and-green ring for a moment.
+
+Hands off:
+
+- **Never pressed for anyone:** paying, placing or confirming orders, deleting, cancelling an order, signing out, reporting, blocking, sending, submitting. Refused by the words said too, so nothing nearby is pressed in their place.
+- **Asked first:** "Remove", clearing the cart, unfollowing. A spoken yes ("oo", "sige") or a tap in the panel presses it as the screen is then; no leaves it.
+
+### Typos
+
+`backend/src/moormy/spell.js` corrects each word she doesn't know to the closest one she does, before the request is read:
+
+- **What she knows:** her own words in English and Tagalog, the shopping concepts, towns, categories, and the words of live product names.
+- **How far a fix may go:** three-letter words only to her own words, one letter off; longer ones one letter, eight or more two. Swapped letters count as one.
+- **Examples:** "fnd me pasalubng", "cheeper", "opne the frist one", "ad to cart", "calapn".
+- **Saying so:** a product word read differently is mentioned: (I read "hony" as "honey").
+
 How it works:
 
 - The engine proposes `show_results` with the search, or `back` or `scroll`.

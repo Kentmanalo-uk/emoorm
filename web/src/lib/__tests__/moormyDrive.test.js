@@ -37,16 +37,80 @@ describe('Moormy drives the results page', () => {
     ]);
     expect(steps).toEqual([
       { kind: 'results', to: '/products?q=honey&sort=price-low' },
-      { kind: 'scroll' },
+      { kind: 'scroll', dir: 'down' },
     ]);
     const navigate = vi.fn();
     const scroll = vi.fn();
     const notes = runSteps([...steps, { kind: 'back' }], { cart: {}, navigate, scroll });
     expect(navigate).toHaveBeenNthCalledWith(1, '/products?q=honey&sort=price-low');
     expect(navigate).toHaveBeenNthCalledWith(2, -1);
-    expect(scroll).toHaveBeenCalledOnce();
+    expect(scroll).toHaveBeenCalledWith('down');
     expect(notes.map((n) => n.kind)).toEqual(['results', 'scroll', 'back']);
     // A malformed proposal does nothing.
     expect(planActions([{ type: 'show_results' }, { type: 'show_results', search: 'x' }])).toEqual([]);
+  });
+});
+
+describe('typed in the chat, nothing moves; spoken to, she works the screen', () => {
+  const proposals = [
+    { type: 'show_results', search: { query: 'honey' } },
+    { type: 'navigate', to: '/cart' },
+    { type: 'back' },
+    { type: 'scroll', dir: 'up' },
+    { type: 'press', i: 4, label: 'Follow' },
+    { type: 'press', i: 7, label: 'Remove', confirm: true },
+    {
+      type: 'fill', i: 2, label: 'Quantity', value: '3',
+    },
+  ];
+
+  it('typed: links and buttons to tap, no page moves', () => {
+    const steps = planActions(proposals, { drive: false });
+    expect(steps).toEqual([
+      { kind: 'link', to: '/products?q=honey', label: 'See them on the page' },
+      { kind: 'link', to: '/cart', label: null },
+      { kind: 'offerPress', i: 4, label: 'Follow' },
+      { kind: 'offerPress', i: 7, label: 'Remove' },
+      {
+        kind: 'offerFill', i: 2, label: 'Quantity', value: '3',
+      },
+    ]);
+    const navigate = vi.fn();
+    runSteps(steps, { cart: {}, navigate });
+    expect(navigate).not.toHaveBeenCalled();
+  });
+
+  it('spoken: the page moves, presses and types, asks before "Remove"', () => {
+    const steps = planActions(proposals, { drive: true });
+    expect(steps.map((s) => s.kind)).toEqual(['results', 'link', 'scroll', 'press', 'confirmPress', 'fill']);
+    // Stand-ins for a button and a field (no browser here).
+    const element = (tag) => {
+      const events = {};
+      return {
+        tagName: tag,
+        isConnected: true,
+        value: '',
+        classList: { add: vi.fn(), remove: vi.fn() },
+        scrollIntoView: vi.fn(),
+        focus: vi.fn(),
+        click: vi.fn(),
+        dispatchEvent: (e) => { (events[e.type] ||= vi.fn())(e); return true; },
+        events,
+      };
+    };
+    const press = element('BUTTON');
+    const field = element('INPUT');
+    const refs = new Map([[4, press], [2, field]]);
+    const notes = runSteps(steps, {
+      cart: {}, navigate: vi.fn(), scroll: vi.fn(), refs,
+    });
+    expect(press.click).toHaveBeenCalledOnce();
+    expect(press.classList.add).toHaveBeenCalledWith('mmg-target');
+    expect(field.value).toBe('3');
+    expect(field.events.input).toHaveBeenCalled();
+    expect(notes.filter((n) => n.kind === 'press' || n.kind === 'fill').every((n) => n.ok)).toBe(true);
+    // Gone from the page by then: said, not pressed.
+    const gone = runSteps([{ kind: 'press', i: 9, label: 'Old' }], { cart: {}, navigate: vi.fn(), refs: new Map() });
+    expect(gone[0]).toMatchObject({ ok: false });
   });
 });

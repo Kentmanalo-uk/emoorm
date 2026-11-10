@@ -953,6 +953,7 @@ module.exports = {
   findRecommendable,
   findManyLight,
   findListByIds,
+  searchVocabulary,
   updateProduct,
   adjustStock,
   softDeleteProduct,

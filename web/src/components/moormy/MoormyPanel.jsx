@@ -15,6 +15,9 @@ import useFocusTrap from '../../hooks/useFocusTrap';
 import { buildContext, getMoormyPage, pageTypeFor } from '../../lib/moormy/pageContext';
 import { planActions, replyFor, runSteps } from '../../lib/moormy/actions';
 import {
+  collectScreen, findOnScreen, pressOn, fillIn,
+} from '../../lib/moormy/screen';
+import {
   loadTalk, saveTalk, clearTalk, loadPrefs, savePrefs,
 } from '../../lib/moormy/talk';
 import {
@@ -230,28 +233,46 @@ export default function MoormyPanel({
       messages: [...c.messages.filter((m) => !m.error), ...(userMsg ? [userMsg] : [])],
     }));
     const cartItems = useCartStore.getState().items;
-    const context = buildContext({
-      pathname: window.location.pathname, search: window.location.search, page: getMoormyPage(), cartItems,
-    });
+    // Spoken to, she works the screen; typed to, she answers in the chat
+    // with links and buttons (the owner's rule: the chat never moves the page).
+    const drive = via === 'voice';
+    const shot = collectScreen();
+    const context = {
+      ...buildContext({
+        pathname: window.location.pathname, search: window.location.search, page: getMoormyPage(), cartItems,
+      }),
+      drive,
+      screen: shot.items,
+    };
     const state = talkRef.current.state || (getCurrentLanguage() === 'tl' ? { lang: 'tl' } : null);
     try {
       const res = await axios.post('/moormy/turn', { text: question, state, context }, { quiet: true });
       const d = res?.data || {};
       const signedIn = useAuthStore.getState().isAuthenticated;
       const steps = planActions(d.actions, {
-        signedIn, cards: d.cards, cartItems, route: context.route,
+        signedIn, cards: d.cards, cartItems, route: context.route, drive,
       });
       const notes = runSteps(steps, {
         cart: useCartStore.getState(),
         navigate,
-        scroll: () => window.scrollBy({ top: Math.round(window.innerHeight * 0.8), behavior: 'smooth' }),
+        refs: shot.refs,
       });
       // Results she put on the page are not shown again in the panel.
       const onPage = steps.some((s) => s.kind === 'results');
       const confirm = steps.find((s) => s.kind === 'confirmRemove');
       const buttons = steps
-        .filter((s) => s.kind === 'link' || s.kind === 'signIn')
-        .map((s) => ({ to: s.to, label: s.kind === 'signIn' ? 'Sign in' : (s.label || 'Open') }));
+        .filter((s) => s.kind === 'link' || s.kind === 'signIn' || ((s.kind === 'choose' || s.kind === 'offer') && s.go === false))
+        .map((s) => ({
+          to: s.to,
+          label: s.kind === 'signIn' ? 'Sign in' : (s.product ? `Open ${s.product.name}` : (s.label || 'Open')),
+        }));
+      // Typed in the chat: what she would press or type, as a button to tap.
+      const offers = steps
+        .filter((s) => s.kind === 'offerPress' || s.kind === 'offerFill')
+        .map((s) => ({
+          kind: s.kind === 'offerFill' ? 'fill' : 'press', label: s.label, value: s.value, status: 'ask',
+        }));
+      const askPress = steps.find((s) => s.kind === 'confirmPress');
       const words = replyFor(d, notes);
       const reply = {
         id: newId('a'),
@@ -270,6 +291,8 @@ export default function MoormyPanel({
         notes: words.notes,
         buttons,
         confirm: confirm ? { productId: confirm.productId, name: confirm.name, status: 'ask' } : null,
+        offers,
+        askPress: askPress ? { label: askPress.label, status: 'ask' } : null,
       };
       update((c) => ({ messages: [...c.messages, reply], state: d.state || c.state }));
       setStatus('idle');
@@ -278,7 +301,8 @@ export default function MoormyPanel({
       if (via === 'voice') speak(reply);
       // Phones: the panel covers the page, so what she did on it is shown,
       // with her in a small bar to go on talking.
-      const acted = steps.some((s) => ['go', 'results', 'back', 'scroll', 'choose', 'offer'].includes(s.kind));
+      const acted = steps.some((s) => ['go', 'results', 'back', 'scroll', 'press', 'fill'].includes(s.kind)
+        || (['choose', 'offer'].includes(s.kind) && s.go !== false));
       if (isPhone && acted) setMini(true);
       if (acted) {
         setActing(true);
@@ -430,6 +454,32 @@ export default function MoormyPanel({
         ...x,
         confirm: { ...x.confirm, status: yes ? 'done' : 'kept' },
       } : x)),
+    }));
+  };
+
+  // A button from the chat ("Tap Follow"), or the yes to "Tap Remove?": done
+  // on the screen as it is now, found again by its label.
+  const doOnScreen = (m, field, o, yes = true) => {
+    let status = 'kept';
+    if (yes) {
+      const el = findOnScreen(o.label, o.kind === 'fill' ? 'input' : null) || findOnScreen(o.label);
+      const ok = o.kind === 'fill' ? fillIn(el, o.value) : pressOn(el);
+      status = ok ? 'done' : 'gone';
+      if (ok) {
+        setActing(true);
+        clearTimeout(actingTimer.current);
+        actingTimer.current = setTimeout(() => setActing(false), 2400);
+        if (isPhone) setMini(true);
+      }
+    }
+    update((c) => ({
+      // A yes or no in the panel answers her question: none is left waiting.
+      state: c.state ? { ...c.state, pending: null } : c.state,
+      messages: c.messages.map((x) => {
+        if (x.id !== m.id) return x;
+        if (field === 'offers') return { ...x, offers: x.offers.map((y) => (y === o ? { ...y, status } : y)) };
+        return { ...x, askPress: { ...x.askPress, status } };
+      }),
     }));
   };
 
@@ -635,6 +685,33 @@ export default function MoormyPanel({
                         {m.confirm.status === 'done' ? `Removed ${m.confirm.name} from your cart.` : 'Okay, I left it in your cart.'}
                       </p>
                     )
+                  )}
+                  {m.askPress && (
+                    m.askPress.status === 'ask' ? (
+                      <div className="mmg-confirm" role="group" aria-label={`Tap ${m.askPress.label}?`}>
+                        <button type="button" className="mmg-action is-danger" onClick={() => doOnScreen(m, 'askPress', { kind: 'press', label: m.askPress.label }, true)}>
+                          Yes, tap “{m.askPress.label}”
+                        </button>
+                        <button type="button" className="mmg-action is-quiet" onClick={() => doOnScreen(m, 'askPress', { kind: 'press', label: m.askPress.label }, false)}>No</button>
+                      </div>
+                    ) : (
+                      <p className={`mmg-note${m.askPress.status === 'done' ? ' is-ok' : ''}`}>
+                        {{ done: `Tapped “${m.askPress.label}”.`, kept: 'Okay, I left it.', gone: 'That isn’t on the page any more.' }[m.askPress.status]}
+                      </p>
+                    )
+                  )}
+                  {m.offers?.length > 0 && (
+                    <div className="mmg-buttons">
+                      {m.offers.map((o) => (o.status === 'ask' ? (
+                        <button key={`${o.kind}${o.label}`} type="button" className="mmg-action" onClick={() => doOnScreen(m, 'offers', o)}>
+                          {o.kind === 'fill' ? `Type “${o.value}” in “${o.label}”` : `Tap “${o.label}”`}
+                        </button>
+                      ) : (
+                        <p key={`${o.kind}${o.label}`} className={`mmg-note${o.status === 'done' ? ' is-ok' : ''}`}>
+                          {o.status === 'done' ? (o.kind === 'fill' ? `Typed in “${o.label}”.` : `Tapped “${o.label}”.`) : 'That isn’t on the page any more.'}
+                        </p>
+                      )))}
+                    </div>
                   )}
                   {(m.buttons?.length > 0 || m.links?.length > 0) && (
                     <div className="mmg-buttons">

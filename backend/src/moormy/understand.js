@@ -195,6 +195,23 @@ const THANKS = /^(thanks?|thank you|salamat|maraming salamat|ty|tnx|ok thanks|ok
 const BYE = /^(bye|goodbye|see you|paalam|sige na|that'?s all|wala na)[!.\s]*$/;
 const HOW = /^(how|paano|pano|panu|can i|could i|pwede ba|puwede ba|what if|bakit|why|what is|what are|ano ang|anong)\b/;
 
+// Pressing what is on the screen: "tap Best Sellers", "pindutin ang Follow",
+// "select Fruits", "check Pickup".
+const PRESS = /^(?:please |pls |can you |could you |paki-?)?(click|tap|press|hit|push|pindutin|pindot|pakipindot|i-?click|i-?tap|select|choose|pick|piliin|check|tick|uncheck|untick|toggle|turn on|turn off|enable|disable)\s+(?:on\s+)?(.+)$/;
+// Buttons named by what they do: "follow this shop", "save it", "buy now".
+const LABELLED = /^(?:please |pls |paki-?)?(follow|unfollow|save|unsave|favorite|favourite|like|share|buy now|chat with|message the)\b/;
+// Typing: "type 'near the church' in landmark", "set quantity to 3".
+const TYPE = /^(?:please |pls |paki-?)?(?:type|write|enter|input|isulat|i-?type)\s+["“']?(.+?)["”']?\s+(?:in|into|on|as|sa)\s+(.+)$/;
+const SET = /^(?:please |pls |paki-?)?(?:set|change|make|gawing|palitan)\s+(?:the\s+|ang\s+)?(.+?)\s+(?:to|into|as|sa|ng)\s+(.+)$/;
+const SCROLL = /^(?:please |pls |paki-?)?(?:scroll|go|move)\s+(up|down|to the top|to the bottom|top|bottom|pataas|pababa)\s*$/;
+
+/** What is to be pressed or typed in, without "the", "button", "po". */
+const cleanTarget = (t) => String(t || '')
+  .replace(/^(the|ang|yung|sa|on)\s+/, '')
+  .replace(/\s+(button|link|tab|field|box|option|po|please)$/g, '')
+  .replace(/["“”']/g, '')
+  .trim();
+
 /**
  * @param {string} raw - what the person said or typed
  * @param {{ towns: Array<{id,name}>, categories: Array<{id,name}> }} [ref]
@@ -225,6 +242,26 @@ const understand = (raw, ref = {}) => {
   if (GREETING.test(text)) return out('greeting');
   if (THANKS.test(text)) return out('thanks');
   if (BYE.test(text)) return out('bye');
+
+  // ── The screen: anything on it, by what it says (engine.js matches it
+  // with what the page lists as there: its buttons, links, tabs, fields).
+  const scroll = SCROLL.exec(text);
+  if (scroll) {
+    const dir = /top/.test(scroll[1]) ? 'top' : /bottom/.test(scroll[1]) ? 'bottom' : /up|pataas/.test(scroll[1]) ? 'up' : 'down';
+    return out('scroll', { dir });
+  }
+  const typed = TYPE.exec(text);
+  if (typed) return out('type', { value: typed[1].trim(), target: cleanTarget(typed[2]) });
+  const set = SET.exec(text);
+  if (set && !/\b(cart|filter|price)\b/.test(set[1])) return out('type', { value: set[2].trim(), target: cleanTarget(set[1]) });
+  const press = PRESS.exec(text);
+  // ("Choose the second one" is a product of the list: open, below.)
+  // ("Check my order" is a question about it, not a box to tick.)
+  const asking = press && /^check$/.test(press[1]) && /\b(orders?|cart|status|delivery|parcel|stock|price|reviews?)\b/.test(press[2]);
+  if (press && !asking && !(ordinalOf(press[2]) && /^(the |ang |yung )?\w+( one| item| product| isa)?$/.test(press[2].trim()))) {
+    return out('press', { target: cleanTarget(press[2]) });
+  }
+  if (LABELLED.test(text)) return out('press', { target: cleanTarget(text) });
 
   // The search page's filters: "clear the filters", "show all prices".
   if (/\b(clear|remove|reset|alisin|tanggalin|wala nang|no more)\b.*\bfilters?\b|\b(any price|kahit anong presyo|all prices|show all|lahat)\b/.test(text)
