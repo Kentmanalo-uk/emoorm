@@ -285,32 +285,36 @@ export default function Palengke() {
           {showTop ? <PalengkeTop products={topThree} /> : null}
         </View>
 
-        <View style={styles.listhead} onLayout={(e) => { gridTop.current = e.nativeEvent.layout.y; }}>
-          <View style={styles.listheadText}>
-            <Text style={styles.heading} numberOfLines={1} accessibilityRole="header">{heading}</Text>
-            <Text style={styles.count}>
-              {list.loading ? ' ' : (
-                <>
-                  <Text style={styles.countStrong}>{list.total}</Text>
-                  {` ${list.total === 1 ? 'product' : 'products'}`}
-                  {townName ? ` in ${townName}` : ''}
-                </>
-              )}
-            </Text>
-          </View>
-          <View style={styles.townWrap}>
-            <Select
-              accessibilityLabel="Town"
-              title="Town"
-              value={town}
-              options={townOptions}
-              onChange={(v) => update({ town: v })}
-              caretColor={t.neutral[500]}
-              style={[styles.town, town && styles.townOn]}
-              textStyle={[styles.townText, town && styles.townTextOn]}
-            />
-            <View style={styles.townPin} pointerEvents="none">
-              <MapPinIcon size={15} weight="fill" color={t.accent[500]} />
+        {/* Sticky: React Native replaces the sticky child's own style on phones,
+            so the row lives one level in. */}
+        <View onLayout={(e) => { gridTop.current = e.nativeEvent.layout.y; }}>
+          <View style={styles.listhead}>
+            <View style={styles.listheadText}>
+              <Text style={styles.heading} numberOfLines={1} accessibilityRole="header">{heading}</Text>
+              <Text style={styles.count}>
+                {list.loading ? ' ' : (
+                  <>
+                    <Text style={styles.countStrong}>{list.total}</Text>
+                    {` ${list.total === 1 ? 'product' : 'products'}`}
+                    {townName ? ` in ${townName}` : ''}
+                  </>
+                )}
+              </Text>
+            </View>
+            <View style={styles.townWrap}>
+              <Select
+                accessibilityLabel="Town"
+                title="Town"
+                value={town}
+                options={townOptions}
+                onChange={(v) => update({ town: v })}
+                caretColor={t.neutral[500]}
+                style={[styles.town, town && styles.townOn]}
+                textStyle={[styles.townText, town && styles.townTextOn]}
+              />
+              <View style={styles.townPin} pointerEvents="none">
+                <MapPinIcon size={15} weight="fill" color={t.accent[500]} />
+              </View>
             </View>
           </View>
         </View>
@@ -356,7 +360,9 @@ const styles = themed(() => StyleSheet.create({
     paddingLeft: 30.5, paddingRight: 10.5, borderWidth: 1.5, borderColor: t.primary[500], backgroundColor: t.primary[50],
   },
   townText: {
-    flexGrow: 0, flexShrink: 1, flexBasis: 'auto', fontSize: 13.5, lineHeight: 17.55, ...font(500), color: t.neutral[700],
+    // Sized by its words: the Select's own flex: 1 leaves it 0 wide in a pill
+    // that is only as wide as its content (phones).
+    flex: 0, flexShrink: 1, fontSize: 13.5, lineHeight: 17.55, ...font(500), color: t.neutral[700],
   },
   townTextOn: { color: t.primary[700] },
   townPin: { position: 'absolute', left: 12, top: 0, bottom: 0, justifyContent: 'center' },
