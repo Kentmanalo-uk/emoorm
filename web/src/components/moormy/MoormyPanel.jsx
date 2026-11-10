@@ -151,7 +151,7 @@ function Orders({ orders, onPick }) {
 }
 
 export default function MoormyPanel({
-  open, onClose, wakeTick = 0, onWakeReady, isPhone,
+  open, onClose, wakeTick = 0, voiceTick = 0, onWakeReady, isPhone,
 }) {
   const navigate = useNavigate();
   const location = useLocation();
@@ -166,6 +166,9 @@ export default function MoormyPanel({
   // Phones: after she acts on the page, a small bar instead of the sheet,
   // so the page shows and the conversation goes on (the mic is on the bar).
   const [mini, setMini] = useState(false);
+  // A moment after she changes the page, the screen's glow says it was her.
+  const [acting, setActing] = useState(false);
+  const actingTimer = useRef(null);
   const endRef = useRef(null);
   const inputRef = useRef(null);
   const earRef = useRef(null); // speech recognition in progress
@@ -275,7 +278,13 @@ export default function MoormyPanel({
       if (via === 'voice') speak(reply);
       // Phones: the panel covers the page, so what she did on it is shown,
       // with her in a small bar to go on talking.
-      if (isPhone && steps.some((s) => ['go', 'results', 'back', 'scroll', 'choose', 'offer'].includes(s.kind))) setMini(true);
+      const acted = steps.some((s) => ['go', 'results', 'back', 'scroll', 'choose', 'offer'].includes(s.kind));
+      if (isPhone && acted) setMini(true);
+      if (acted) {
+        setActing(true);
+        clearTimeout(actingTimer.current);
+        actingTimer.current = setTimeout(() => setActing(false), 2400);
+      }
     } catch (err) {
       const offline = (typeof navigator !== 'undefined' && navigator.onLine === false) || (!err?.status && /network/i.test(err?.message || 'network'));
       setStatus(offline ? 'offline' : 'error');
@@ -333,16 +342,37 @@ export default function MoormyPanel({
     });
   }, [canHear, lang, ask, stopVoice]);
 
+  // Started from outside (a wake, a long press): the newest startListening,
+  // so a re-render in between cannot cancel the start.
+  const startRef = useRef(startListening);
+  useEffect(() => { startRef.current = startListening; }, [startListening]);
+
   // "Hey Moormy" heard: she opens (MoormyGlobal) and listens for the request.
-  const lastWake = useRef(wakeTick);
+  // (From 0: the panel may first load with the tick already counted.)
+  const lastWake = useRef(0);
   useEffect(() => {
-    if (wakeTick === lastWake.current) return;
+    if (!wakeTick || wakeTick === lastWake.current) return undefined;
     lastWake.current = wakeTick;
     setView('chat');
     // A moment for the panel to show, and for the wake listener to let go of the mic.
-    const t = setTimeout(startListening, 250);
+    const t = setTimeout(() => startRef.current(), 250);
     return () => clearTimeout(t);
-  }, [wakeTick, startListening]);
+  }, [wakeTick]);
+
+  // Moormy pressed and held: the small bar, listening at once (where the
+  // browser can hear; elsewhere the chat, to type).
+  const lastVoice = useRef(0);
+  useEffect(() => {
+    if (!voiceTick || voiceTick === lastVoice.current) return undefined;
+    lastVoice.current = voiceTick;
+    setView('chat');
+    setMini(canHear);
+    if (!canHear) return undefined;
+    const t = setTimeout(() => startRef.current(), 200);
+    return () => clearTimeout(t);
+  }, [voiceTick, canHear]);
+
+  useEffect(() => () => clearTimeout(actingTimer.current), []);
 
   // The wake controller, when this device has a voice (its badge in MoormyGlobal).
   useEffect(() => {
@@ -419,27 +449,44 @@ export default function MoormyPanel({
 
   const statusText = status === 'error' && problem ? problem : STATUS[status];
 
-  // Phones, after she acted: her last words and the mic, over the page.
-  if (isPhone && mini && open) {
+  // The screen's edge lit pink and green while she has it: listening,
+  // thinking, speaking, or just after she changed the page.
+  const glowing = open && (['listening', 'thinking', 'speaking'].includes(status) || acting);
+  const glow = glowing
+    ? <div className={`mmg-glow is-${['listening', 'thinking', 'speaking'].includes(status) ? status : 'acting'}`} aria-hidden="true" />
+    : null;
+
+  // The small bar (phones after she acted, or Moormy pressed and held):
+  // what you say as you say it, then her answer, and the mic.
+  if (mini && open) {
     const said = [...talk.messages].reverse().find((m) => m.role === 'assistant');
+    const asked = [...talk.messages].reverse().find((m) => m.role === 'user');
     let line = said?.text || 'Ask me anything.';
     if (status === 'listening') line = interim || 'Listening…';
     else if (status === 'thinking') line = 'Thinking…';
     else if (status === 'error' && problem) line = problem;
     const hers = !['listening', 'thinking', 'error'].includes(status);
     return (
-      <section className="mmg-mini" aria-label="Moormy, your shopping helper" data-status={status}>
+      <>
+      {glow}
+      <section className={`mmg-mini${isPhone ? '' : ' is-wide'}`} aria-label="Moormy, your shopping helper" data-status={status}>
         <button type="button" className={`mmg-face is-${status}`} onClick={() => setMini(false)} aria-label="Open the chat with Moormy">
           <MoormyFace size={34} />
         </button>
-        <p
-          className={`mmg-mini-text${hers ? keepClass(said?.lang) : ''}`}
-          {...(hers ? keepLang(said?.lang) : {})}
-          role="status"
-          aria-live="polite"
-        >
-          {line}
-        </p>
+        <div className="mmg-mini-body">
+          {asked && status !== 'listening' && (
+            <span className="mmg-mini-you notranslate" translate="no">“{asked.text}”</span>
+          )}
+          <p
+            className={`mmg-mini-text${status === 'listening' ? ' is-live' : ''}${hers ? keepClass(said?.lang) : ''}${status === 'listening' ? ' notranslate' : ''}`}
+            {...(hers ? keepLang(said?.lang) : {})}
+            {...(status === 'listening' ? { translate: 'no' } : {})}
+            role="status"
+            aria-live="polite"
+          >
+            {line}
+          </p>
+        </div>
         {canHear && (
           <button
             type="button"
@@ -459,10 +506,13 @@ export default function MoormyPanel({
           <X size={18} weight="bold" />
         </button>
       </section>
+      </>
     );
   }
 
   return (
+    <>
+    {glow}
     <section
       ref={trapRef}
       className={`mmg-panel${open ? ' is-open' : ''}${isPhone ? ' is-phone' : ''}`}
@@ -658,5 +708,6 @@ export default function MoormyPanel({
         </>
       )}
     </section>
+    </>
   );
 }

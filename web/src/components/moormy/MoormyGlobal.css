@@ -1157,3 +1157,147 @@ body:has(.cart-m-bar) .mmg-mini {
 @media (prefers-reduced-motion: reduce) {
   .mmg-mini { animation: none; }
 }
+
+/* The hint under "Ask Moormy". */
+.mmg-dock .mmd-say small {
+  display: block;
+  margin-top: 1px;
+  color: var(--t-neutral-500, #6b7280);
+  font-size: 11.5px;
+}
+
+/* The press: the button sinks a little while held. */
+.mmg-btn {
+  -webkit-touch-callout: none;
+  user-select: none;
+  touch-action: manipulation;
+}
+
+.mmg-btn:active {
+  scale: 0.94;
+  transition: scale 0.45s ease;
+}
+
+/* The small bar's words: what was asked, small, over her answer; while
+   listening, what is being said, as it is said. */
+.mmg-mini-body {
+  display: flex;
+  flex: 1;
+  flex-direction: column;
+  gap: 1px;
+  min-width: 0;
+}
+
+.mmg-mini-you {
+  overflow: hidden;
+  color: var(--t-neutral-500, #6b7280);
+  font-size: 12px;
+  line-height: 1.3;
+  white-space: nowrap;
+  text-overflow: ellipsis;
+}
+
+.mmg-mini .mmg-mini-text.is-live {
+  color: var(--t-neutral-900, #111827);
+  font-size: 15.5px;
+  font-weight: 500;
+}
+
+/* Computers (Moormy pressed and held): the bar at the bottom middle. */
+@media (min-width: 769px) {
+  .mmg-mini.is-wide {
+    right: auto;
+    bottom: 28px;
+    left: 50%;
+    width: min(600px, calc(100vw - 48px));
+    padding: 10px 12px 10px 14px;
+    translate: -50% 0;
+  }
+}
+
+/*
+ * The screen's edge, lit while Moormy has it (listening, thinking, speaking,
+ * or just after she changed the page): pink and light green running around
+ * the edge, a sharp line and a soft light fading inward. Nothing can be
+ * clicked through it wrongly: it takes no clicks.
+ */
+@property --mmg-spin {
+  syntax: "<angle>";
+  inherits: false;
+  initial-value: 0deg;
+}
+
+.mmg-glow {
+  --mmg-ring: conic-gradient(from var(--mmg-spin),
+    #ec4899, #f9a8d4 14%, #a7f3d0 30%, #34d399 42%, #a7f3d0 55%, #f9a8d4 70%, #ec4899 85%, #f472b6);
+  position: fixed;
+  inset: 0;
+  z-index: 2147483000;
+  pointer-events: none;
+  animation: mmg-glow-in 0.35s ease both;
+}
+
+.mmg-glow::before,
+.mmg-glow::after {
+  content: "";
+  position: absolute;
+  inset: 0;
+  background: var(--mmg-ring);
+  animation: mmg-spin 3.2s linear infinite;
+}
+
+/* The line along the edge. */
+.mmg-glow::before {
+  padding: 3px;
+  -webkit-mask: linear-gradient(#000 0 0) content-box, linear-gradient(#000 0 0);
+  -webkit-mask-composite: xor;
+  mask: linear-gradient(#000 0 0) content-box, linear-gradient(#000 0 0);
+  mask-composite: exclude;
+}
+
+/* The light it gives, fading in from every edge. */
+.mmg-glow::after {
+  opacity: 0.75;
+  -webkit-mask:
+    linear-gradient(to right, #000, transparent 34px, transparent calc(100% - 34px), #000),
+    linear-gradient(to bottom, #000, transparent 34px, transparent calc(100% - 34px), #000);
+  mask:
+    linear-gradient(to right, #000, transparent 34px, transparent calc(100% - 34px), #000),
+    linear-gradient(to bottom, #000, transparent 34px, transparent calc(100% - 34px), #000);
+  animation: mmg-spin 3.2s linear infinite, mmg-breathe 2.2s ease-in-out infinite;
+}
+
+/* Listening: breathing with the voice; thinking: running faster. */
+.mmg-glow.is-listening::after {
+  animation: mmg-spin 3.2s linear infinite, mmg-breathe 1.4s ease-in-out infinite;
+}
+
+.mmg-glow.is-thinking::before,
+.mmg-glow.is-thinking::after {
+  animation-duration: 1.1s, 2.2s;
+}
+
+.mmg-glow.is-acting::after {
+  opacity: 0.95;
+}
+
+@keyframes mmg-spin {
+  to { --mmg-spin: 360deg; }
+}
+
+@keyframes mmg-breathe {
+  0%, 100% { opacity: 0.45; }
+  50% { opacity: 0.95; }
+}
+
+@keyframes mmg-glow-in {
+  from { opacity: 0; }
+  to { opacity: 1; }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .mmg-glow::before,
+  .mmg-glow::after {
+    animation: none;
+  }
+}

@@ -54,6 +54,9 @@ export default function MoormyGlobal() {
   const [tucked, setTucked] = useState(readTucked);
   // Bumped by "Hey Moormy": the panel starts listening for a request.
   const [wakeTick, setWakeTick] = useState(0);
+  // Pressed and held: straight to talking (the small bar, listening).
+  const [voiceTick, setVoiceTick] = useState(0);
+  const press = useRef(null);
   const [ear, setEar] = useState('off');
   const [look, setLook] = useState({ x: 0, y: 0 });
 
@@ -97,6 +100,33 @@ export default function MoormyGlobal() {
     return w.subscribeWake(() => setEar(w.getWake().state));
   }, [openPanel]);
 
+  const HOLD_MS = 450;
+  const endPress = () => {
+    clearTimeout(press.current?.timer);
+  };
+  const startPress = (e) => {
+    if (e.button != null && e.button !== 0) return;
+    setLoaded(true); // the panel loads while the finger is still down
+    const entry = { long: false };
+    entry.timer = setTimeout(() => {
+      entry.long = Date.now();
+      try { navigator.vibrate?.(25); } catch { /* no buzz here */ }
+      setOpen(true);
+      setVoiceTick((n) => n + 1);
+    }, HOLD_MS);
+    press.current = entry;
+  };
+  // A tap opens the chat; the tap that ends a long press does nothing more.
+  const tapped = () => {
+    // (Only just after it: a later tap, or Enter, opens the chat as usual.)
+    if (press.current?.long && Date.now() - press.current.long < 1500) {
+      press.current = null;
+      return;
+    }
+    endPress();
+    openPanel();
+  };
+
   const tuck = (on) => {
     setTucked(on);
     saveTucked(on);
@@ -127,14 +157,19 @@ export default function MoormyGlobal() {
           onPointerLeave={() => setLook({ x: 0, y: 0 })}
         >
           <span className="mmd-say" aria-hidden="true">
-            Shopping for something? <b>Ask Moormy</b>
+            Shopping for something? <b>Ask Moormy</b><small>Hold to talk</small>
           </span>
           <button
             type="button"
             className="mmd-btn mmg-btn"
-            onClick={openPanel}
+            onClick={tapped}
             onPointerEnter={() => setLoaded(true)}
-            aria-label="Ask Moormy, your shopping helper"
+            onPointerDown={startPress}
+            onPointerUp={endPress}
+            onPointerLeave={endPress}
+            onPointerCancel={endPress}
+            onContextMenu={(e) => e.preventDefault()}
+            aria-label="Ask Moormy, your shopping helper. Press and hold to talk"
             aria-haspopup="dialog"
           >
             <WavingMoormy />
@@ -151,6 +186,7 @@ export default function MoormyGlobal() {
             open={open && !hidden}
             onClose={() => setOpen(false)}
             wakeTick={wakeTick}
+            voiceTick={voiceTick}
             onWakeReady={onWakeReady}
             isPhone={isPhone}
           />

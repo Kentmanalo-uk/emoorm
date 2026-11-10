@@ -132,6 +132,10 @@ Moormy works the site's own pages the way a person taps them, rather than only a
 
 "Best rated" stays in her panel, because the page has no rating sort.
 
+**Press and hold Moormy** (about half a second; phones buzz): she opens straight into the small bar and listens. Your words show as you say them, then your request in quotes above her answer. A tap still opens the chat. Where the browser cannot hear (Firefox), holding opens the chat instead.
+
+**The screen glow:** while she listens, thinks or speaks, and for about 2.4 seconds after she changes the page, pink and light green light runs around the screen edges. It takes no clicks and stays still for people who ask for reduced motion.
+
 How it works:
 
 - The engine proposes `show_results` with the search, or `back` or `scroll`.
