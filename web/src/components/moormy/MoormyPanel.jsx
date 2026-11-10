@@ -66,7 +66,7 @@ const keepLang = (lang) => (lang === 'tl' ? { translate: 'no' } : {});
 const keepClass = (lang) => (lang === 'tl' ? ' notranslate' : '');
 
 export default function MoormyPanel({
-  open, onClose, wakeTick = 0, voiceTick = 0, onWakeReady, isPhone,
+  open, onClose, wakeTick = 0, voiceTick = 0, voiceText = '', onWakeReady, isPhone,
 }) {
   const navigate = useNavigate();
   const location = useLocation();
@@ -295,18 +295,23 @@ export default function MoormyPanel({
     return () => clearTimeout(t);
   }, [wakeTick]);
 
-  // Moormy pressed and held: the small bar, listening at once (where the
-  // browser can hear; elsewhere the chat, to type).
+  // "Hey Moormy" heard: the small bar. What was said with it ("…, find me
+  // pasalubong") is asked at once; just her name, she listens for it.
+  const askRef = useRef(ask);
+  useEffect(() => { askRef.current = ask; }, [ask]);
   const lastVoice = useRef(0);
   useEffect(() => {
     if (!voiceTick || voiceTick === lastVoice.current) return undefined;
     lastVoice.current = voiceTick;
     setView('chat');
-    setMini(canHear);
-    if (!canHear) return undefined;
-    const t = setTimeout(() => startRef.current(), 200);
+    setMini(true);
+    const said = String(voiceText || '').trim();
+    const t = setTimeout(() => {
+      if (said) askRef.current(said, 'voice');
+      else if (canHear) startRef.current();
+    }, 200);
     return () => clearTimeout(t);
-  }, [voiceTick, canHear]);
+  }, [voiceTick, voiceText, canHear]);
 
   useEffect(() => () => clearTimeout(actingTimer.current), []);
 

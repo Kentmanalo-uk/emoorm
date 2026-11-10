@@ -16,7 +16,7 @@ import MoreMenu from '../MoreMenu';
 import ReplyText from './ReplyText';
 import MoormyAvatar from './MoormyAvatar';
 import MoormyVoiceSheet from './MoormyVoiceSheet';
-import { micSupported } from '../../lib/moormy/wake/listener';
+import { speechWakeSupported } from '../../lib/moormy/wake/speechWake';
 import './Moormy.css';
 
 /*
@@ -52,7 +52,7 @@ const UI = {
     offline: "I couldn't reach Emoorm just now. Check your connection and try again.",
     typing: 'Moormy is typing',
     voice: 'Voice assistant',
-    voiceCta: 'Set up “Hey Moormy”',
+    voiceCta: 'Turn on “Hey Moormy”',
   },
   tl: {
     role: 'AI shopping helper',
@@ -67,7 +67,7 @@ const UI = {
     offline: 'Hindi ko maabot ang Emoorm ngayon. Tingnan ang koneksyon mo at subukan ulit.',
     typing: 'Nagta-type si Moormy',
     voice: 'Voice assistant',
-    voiceCta: 'I-set up ang “Hey Moormy”',
+    voiceCta: 'I-on ang “Hey Moormy”',
   },
 };
 const LANG_KEY = 'emoorm-moormy-lang';
@@ -98,7 +98,7 @@ export default function MoormyThread({ userId, pendingAsk, onAsked, onBack }) {
   const [busy, setBusy] = useState(false);
   // "Hey Moormy" is set up here (there is no Moormy sticker on the pages).
   const [voiceOpen, setVoiceOpen] = useState(false);
-  const canVoice = micSupported();
+  const canVoice = speechWakeSupported();
   const endRef = useRef(null);
   const inputRef = useRef(null);
   const handledAsk = useRef(null);

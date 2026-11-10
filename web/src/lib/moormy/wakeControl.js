@@ -1,17 +1,21 @@
-import { createListener, micSupported } from './wake/listener';
-import { loadVoice, saveVoice, forgetVoice } from './wake/voice';
+import { createSpeechWake, speechWakeSupported } from './wake/speechWake';
+import { forgetVoice } from './wake/voice';
 import { loadPrefs, savePrefs } from './talk';
 
 /**
- * "Hey Moormy" for the whole site (docs/moormy, "Teach Moormy your voice"):
- * one listener, shared by the floating Moormy (whose badge shows it is
- * listening) and the panel's settings. Off by default.
+ * "Hey Moormy" for the whole site (docs/moormy): one listener, shared by
+ * the page (MoormyGlobal: what a wake does, the dot) and her settings.
+ * Off by default.
  *
- * The listener is paused whenever something else needs the mic or would be
- * heard by it: the browser's speech recognition, Moormy speaking, a take
- * being recorded. hold() returns the matching release, safe to call twice.
+ * It listens with the browser's own speech service (wake/speechWake.js; the
+ * owner's choice, 11 Nov 2026, instead of teaching a voice): no set-up but
+ * the switch. While it is on, what is said near the device goes to that
+ * service; the settings say so.
  *
- * Browsers open the mic only from a tap: turnOn() is called from one, and
+ * The listener lets go of the mic whenever Moormy hears a request or
+ * speaks: hold() returns the matching release, safe to call twice.
+ *
+ * Browsers start listening only from a tap: turnOn() is called from one, and
  * after a reload with listening left on, armOnFirstTap() waits for the next
  * tap anywhere on the page.
  */
@@ -21,7 +25,7 @@ let onWakeHandler = null;
 let testing = false;
 let armed = null;
 let snap = {
-  state: 'off', problem: null, heard: [], voice: null, listen: false, sensitivity: 1,
+  state: 'off', problem: null, heard: [], listen: false,
 };
 const listeners = new Set();
 
@@ -30,27 +34,25 @@ const set = (patch) => {
   listeners.forEach((fn) => fn());
 };
 
-const prefs = loadPrefs();
-snap = {
-  ...snap, voice: loadVoice(), listen: prefs.listen, sensitivity: prefs.sensitivity,
-};
+snap = { ...snap, listen: loadPrefs().listen };
+// Voices taught before (the earlier way) are not used any more: not kept.
+forgetVoice();
 
-export const supported = () => micSupported();
+export const supported = () => speechWakeSupported();
 export const getWake = () => snap;
 export const subscribeWake = (fn) => {
   listeners.add(fn);
   return () => listeners.delete(fn);
 };
 
-/** What opening Moormy on a wake does (the floating Moormy sets it). */
+/** What hearing "Hey Moormy" does: handler(rest), rest = what followed it. */
 export const setWakeHandler = (fn) => { onWakeHandler = fn; };
-/** The settings' Test view: wakes are shown there instead of opening a request. */
+/** The settings' test view: wakes are shown there instead of opening Moormy. */
 export const setTesting = (on) => { testing = Boolean(on); };
 
 const makeEar = () => {
   ear?.destroy();
-  ear = createListener({
-    sensitivity: snap.sensitivity,
+  ear = createSpeechWake({
     onState: (state, problem) => {
       set({ state, problem: state === 'error' ? problem || 'failed' : null });
       // A blocked or missing mic turns listening off; it stays chosen off.
@@ -59,9 +61,12 @@ const makeEar = () => {
         set({ listen: false });
       }
     },
-    onHeard: (h) => set({ heard: [{ ...h, at: Date.now() }, ...snap.heard].slice(0, 8) }),
-    onWake: () => {
-      if (!testing) onWakeHandler?.();
+    onHeard: (h) => {
+      if (!h.final && !h.matched) return; // the test view lists whole pieces
+      set({ heard: [{ ...h, at: Date.now() }, ...snap.heard].slice(0, 8) });
+    },
+    onWake: (rest) => {
+      if (!testing) onWakeHandler?.(rest);
     },
   });
   return ear;
@@ -77,38 +82,26 @@ const disarm = () => {
 /** Start listening. Call from a tap. */
 export const turnOn = async () => {
   disarm();
-  if (!snap.voice || !micSupported()) return;
+  if (!speechWakeSupported()) return;
   savePrefs({ listen: true });
   set({ listen: true, problem: null });
-  await (ear || makeEar()).start(snap.voice);
+  (ear || makeEar()).start();
 };
 
 /** Stop listening; the mic is let go at once. */
 export const turnOff = () => {
   disarm();
   savePrefs({ listen: false });
-  set({ listen: false });
+  set({ listen: false, heard: [] });
   ear?.stop();
 };
 
 /** Listening was left on: start again on the next tap anywhere (browsers need one). */
 export const armOnFirstTap = () => {
-  if (armed || !snap.listen || !snap.voice || !micSupported() || ear?.state === 'listening') return;
+  if (armed || !snap.listen || !speechWakeSupported() || ear?.state === 'listening') return;
   armed = () => { turnOn(); };
   document.addEventListener('pointerdown', armed, true);
   document.addEventListener('keydown', armed, true);
-};
-
-/** How close a saying must be: 0.85 strict, 1 normal, 1.2 easy. Call from a tap. */
-export const setSensitivity = async (s) => {
-  const sensitivity = [0.85, 1, 1.2].includes(s) ? s : 1;
-  savePrefs({ sensitivity });
-  set({ sensitivity });
-  const was = snap.listen && ear && ear.state !== 'off';
-  ear?.destroy();
-  ear = null;
-  set({ state: 'off' });
-  if (was) await turnOn();
 };
 
 /** Hold the mic off while something else uses it. Returns release(). */
@@ -122,19 +115,4 @@ export const hold = () => {
     released = true;
     held.resume();
   };
-};
-
-/** A voice just learned: kept on this device. */
-export const keepVoice = (voice) => {
-  saveVoice(voice);
-  set({ voice, heard: [] });
-};
-
-/** Forget the voice and stop listening. */
-export const forget = () => {
-  turnOff();
-  ear?.destroy();
-  ear = null;
-  forgetVoice();
-  set({ voice: null, heard: [], state: 'off', problem: null });
 };

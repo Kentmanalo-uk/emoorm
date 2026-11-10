@@ -27,7 +27,23 @@ only". E-MOORM is commercial, so on 10 Nov 2026 the owner chose a tap on
 Moormy and the mic button instead. To revisit: a wake-word engine licensed
 for commercial use, or a model trained only on commercially licensed data.
 
-## The wake word: "Teach Moormy your voice" (chosen 10 Nov 2026)
+## The wake word now: the browser's speech service, no teaching (11 Nov 2026)
+
+The owner chose "No-teach only for now". "Hey Moormy" is one switch: on, the browser's own speech service listens all the time (`web/src/lib/moormy/wake/speechWake.js`: continuous recognition, en-PH, restarted when the service ends a session, backing off when offline). Each piece of heard text is checked for her name (`findWake`):
+
+- **How her name is found:** after a greeting ("hey", "hi", "ok"…), or alone at the start. Close spellings count ("mormy", "moor me", "Murphy"), but not real words like "money" or "Mary".
+- **What follows her name is the request** ("Hey Moormy, find me pasalubong"). Just her name: she listens for one.
+
+Costs and safeguards:
+
+- **Disclosed in the settings:** while it is on, what is said near the device goes to Google (Chrome, Edge) or Apple (Safari). It also uses battery and data.
+- **The chime:** some Android phones may chime when a session restarts.
+- **Firefox** has no speech service, so it is not offered there.
+- **Old taught voices** on a device are cleared.
+
+The "teach your voice" code (below: dsp.js, voice.js, listener.js) is kept, unused, for if on-device listening is wanted again.
+
+## The wake word before: "Teach Moormy your voice" (10 Nov 2026, replaced)
 
 No pre-trained model and no training data (so no licence question): each
 person says "Hey Moormy" three times in Moormy's settings; the browser keeps

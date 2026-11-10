@@ -12,9 +12,9 @@ import './MoormyGlobal.css';
  * hears "Hey Moormy", as the small bar at the bottom with the screen's glow,
  * already listening for the request, and goes when she is done.
  *
- * "Hey Moormy" is taught and switched on in her chat in Messages (⋯ ›
- * Voice assistant; MoormyVoiceSheet). While it listens, a small dot in the
- * corner says the microphone is on. Browsers open the mic only from a tap:
+ * "Hey Moormy" is switched on in her chat in Messages (⋯ › Voice assistant;
+ * MoormyVoiceSheet); the browser's speech service listens for it. While it
+ * listens, a small dot in the corner says the microphone is on. Browsers open the mic only from a tap:
  * after a reload, listening starts again on the next tap anywhere.
  *
  * Not on: Seller Center and admin (their own Moormy), the sign-in pages, the
@@ -38,16 +38,19 @@ export default function MoormyGlobal() {
   const [loaded, setLoaded] = useState(false);
   // Bumped by "Hey Moormy": the small bar, listening for the request.
   const [voiceTick, setVoiceTick] = useState(0);
+  // What was said with "Hey Moormy" ("…, find me pasalubong"), asked at once.
+  const [voiceText, setVoiceText] = useState('');
   const [ear, setEar] = useState('off');
 
   const hidden = moormyHiddenOn(pathname) || (isPhone && pathname === '/checkout');
   const hiddenRef = useRef(hidden);
   useEffect(() => { hiddenRef.current = hidden; }, [hidden]);
 
-  const wakeUp = useCallback(() => {
+  const wakeUp = useCallback((rest = '') => {
     if (hiddenRef.current) return;
     setLoaded(true);
     setOpen(true);
+    setVoiceText(typeof rest === 'string' ? rest.slice(0, 500) : '');
     setVoiceTick((n) => n + 1);
   }, []);
 
@@ -92,6 +95,7 @@ export default function MoormyGlobal() {
             open={open && !hidden}
             onClose={() => setOpen(false)}
             voiceTick={voiceTick}
+            voiceText={voiceText}
             onWakeReady={onWakeReady}
             isPhone={isPhone}
           />
