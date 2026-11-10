@@ -1,21 +1,42 @@
 import { useCallback, useEffect, useRef, useState } from 'react';
-import { Link } from 'react-router-dom';
+import { Link, useNavigate } from 'react-router-dom';
 import {
-  ArrowClockwise, CaretLeft, CaretRight, NotePencil, PaperPlaneTilt, Question, Translate,
+  ArrowClockwise, CaretLeft, CaretRight, Microphone, NotePencil, PaperPlaneTilt, Question, Translate,
 } from '../../lib/icons';
 import axios from '../../lib/axios';
 import { getCurrentLanguage } from '../../lib/googleTranslate';
 import { setMoormyChat, useMoormyChat } from '../../lib/moormyChat';
+import useCartStore from '../../store/cartStore';
+import { buildContext } from '../../lib/moormy/pageContext';
+import { planActions, replyFor, runSteps } from '../../lib/moormy/actions';
+import {
+  Cards, Compare, CartSummary, Orders,
+} from './MoormyAnswer';
 import MoreMenu from '../MoreMenu';
 import ReplyText from './ReplyText';
 import MoormyAvatar from './MoormyAvatar';
+import MoormyVoiceSheet from './MoormyVoiceSheet';
+import { micSupported } from '../../lib/moormy/wake/listener';
 import './Moormy.css';
 
 /*
- * The buyer's chat with Moormy, in the Messages thread pane: questions
- * about shopping on Emoorm, answered in English or Tagalog, with suggested
- * questions to tap and links to the page an answer is about.
+ * The buyer's chat with Moormy, in the Messages thread pane: the same
+ * Moormy as the floating one (POST /moormy/turn: finding products, cheaper,
+ * comparing, the cart, orders, how-to questions), in English or Tagalog.
+ *
+ * Typed chat: she never moves the page from here (the owner's rule); places
+ * and results come as links, products as cards to tap. Adding to the cart
+ * happens in place; removing asks first.
  */
+
+// Shopping things to ask, beside the how-to questions of the intro.
+const STARTERS = {
+  en: ['Find pasalubong under ₱200', 'Show me fresh vegetables', "What's in my cart?"],
+  tl: ['Pasalubong na 200 pababa', 'Ipakita ang sariwang gulay', 'Ano ang laman ng cart ko?'],
+};
+
+/** A suggestion as the chips want it: from the intro ({ id, question }) or from her (a string). */
+const chipOf = (p) => (typeof p === 'string' ? { id: p, question: p } : p);
 
 const UI = {
   en: {
@@ -30,6 +51,8 @@ const UI = {
     cantLoad: "Moormy can't load right now.",
     offline: "I couldn't reach Emoorm just now. Check your connection and try again.",
     typing: 'Moormy is typing',
+    voice: 'Voice assistant',
+    voiceCta: 'Set up “Hey Moormy”',
   },
   tl: {
     role: 'AI shopping helper',
@@ -43,6 +66,8 @@ const UI = {
     cantLoad: 'Hindi ma-load si Moormy ngayon.',
     offline: 'Hindi ko maabot ang Emoorm ngayon. Tingnan ang koneksyon mo at subukan ulit.',
     typing: 'Nagta-type si Moormy',
+    voice: 'Voice assistant',
+    voiceCta: 'I-set up ang “Hey Moormy”',
   },
 };
 const LANG_KEY = 'emoorm-moormy-lang';
@@ -64,12 +89,16 @@ const tlProps = (lang) => (lang === 'tl' ? { translate: 'no', className: 'notran
  * as the chat opens (onAsked then clears it).
  */
 export default function MoormyThread({ userId, pendingAsk, onAsked, onBack }) {
+  const navigate = useNavigate();
   const chat = useMoormyChat(userId);
   const { messages, asked } = chat;
   const [lang, setLang] = useState(loadLang);
   const [intro, setIntro] = useState(null); // null loading, false failed
   const [draft, setDraft] = useState('');
   const [busy, setBusy] = useState(false);
+  // "Hey Moormy" is set up here (there is no Moormy sticker on the pages).
+  const [voiceOpen, setVoiceOpen] = useState(false);
+  const canVoice = micSupported();
   const endRef = useRef(null);
   const inputRef = useRef(null);
   const handledAsk = useRef(null);
@@ -95,16 +124,48 @@ export default function MoormyThread({ userId, pendingAsk, onAsked, onBack }) {
   const ask = useCallback(async (request) => {
     setBusy(true);
     try {
-      const res = await axios.post('/buyer-assistant/chat', request.presetId
-        ? { presetId: request.presetId, history: request.history, asked: request.asked, lang: request.lang }
-        : { question: request.question, history: request.history, asked: request.asked, lang: request.lang },
-      { quiet: true });
+      const cartItems = useCartStore.getState().items;
+      const context = {
+        ...buildContext({
+          pathname: window.location.pathname, search: window.location.search, page: null, cartItems,
+        }),
+        drive: false,
+      };
+      const state = request.state || { lang: request.lang };
+      const res = await axios.post('/moormy/turn', { text: request.question, state, context }, { quiet: true });
       const d = res.data || {};
+      const steps = planActions(d.actions, {
+        signedIn: true, cards: d.cards, cartItems, route: context.route, drive: false,
+      });
+      // Only what happens in place runs (adding to the cart); nothing moves the page.
+      const notes = runSteps(steps, { cart: useCartStore.getState(), navigate });
+      const words = replyFor(d, notes);
+      const links = [
+        ...steps
+          .filter((x) => x.kind === 'link' || x.kind === 'signIn' || ((x.kind === 'choose' || x.kind === 'offer') && x.go === false))
+          .map((x) => ({
+            to: x.to,
+            label: x.kind === 'signIn' ? 'Sign in' : (x.product ? `Open ${x.product.name}` : (x.label || 'Open')),
+          })),
+        ...(Array.isArray(d.links) ? d.links.filter((l) => l?.to && l?.label) : []),
+      ];
+      const remove = steps.find((x) => x.kind === 'confirmRemove');
       update((c) => ({
         ...c,
-        asked: request.presetId && !c.asked.includes(request.presetId) ? [...c.asked, request.presetId] : c.asked,
+        state: d.state || c.state,
         messages: [...c.messages, {
-          id: `a${Date.now()}`, role: 'assistant', text: d.reply, lang: d.lang, links: d.links || [], suggestions: d.suggestions || [],
+          id: `a${Date.now()}`,
+          role: 'assistant',
+          text: words.text,
+          lang: words.lang,
+          links,
+          suggestions: Array.isArray(d.suggestions) ? d.suggestions.slice(0, 4) : [],
+          cards: Array.isArray(d.cards) ? d.cards : [],
+          compare: d.compare || null,
+          cart: d.cart || null,
+          orders: Array.isArray(d.orders) ? d.orders : null,
+          notes: notes.filter((n) => n.text && n.kind === 'add').map((n) => ({ ok: n.ok, text: n.text })),
+          confirm: remove ? { productId: remove.productId, name: remove.name, status: 'ask' } : null,
         }],
       }));
     } catch (err) {
@@ -121,7 +182,7 @@ export default function MoormyThread({ userId, pendingAsk, onAsked, onBack }) {
     } finally {
       setBusy(false);
     }
-  }, [update]);
+  }, [update, navigate]);
 
   const send = useCallback(({ text, presetId }) => {
     if (busy) return;
@@ -134,8 +195,10 @@ export default function MoormyThread({ userId, pendingAsk, onAsked, onBack }) {
       setDraft('');
       if (inputRef.current) inputRef.current.style.height = '';
     }
-    ask({ question, presetId, history, asked, lang });
-  }, [busy, messages, asked, lang, update, ask]);
+    ask({
+      question, presetId, history, asked, lang, state: chat.state,
+    });
+  }, [busy, messages, asked, lang, update, ask, chat.state]);
 
   // The question typed in the intro card: asked once, as the chat opens.
   useEffect(() => {
@@ -150,8 +213,19 @@ export default function MoormyThread({ userId, pendingAsk, onAsked, onBack }) {
     ask(failed.retry);
   };
 
+  // "Remove … from your cart?" answered here.
+  const answerRemove = (m, yes) => {
+    if (yes) useCartStore.getState().removeItem(m.confirm.productId);
+    update((c) => ({
+      ...c,
+      messages: c.messages.map((x) => (x.id === m.id ? { ...x, confirm: { ...x.confirm, status: yes ? 'done' : 'kept' } } : x)),
+    }));
+  };
+
   const chooseLang = (next) => {
     setLang(next);
+    // She answers in the language chosen from now on.
+    update((c) => ({ ...c, state: { ...(c.state || {}), lang: next } }));
     try {
       localStorage.setItem(LANG_KEY, next);
     } catch { /* chosen for this visit only */ }
@@ -167,8 +241,8 @@ export default function MoormyThread({ userId, pendingAsk, onAsked, onBack }) {
   const lastAssistant = [...messages].reverse().find((m) => m.role === 'assistant' && !m.error);
   const chips = (list, listLang) => (
     <div className="mmy-chips" {...tlProps(listLang)}>
-      {list.map((p) => (
-        <button key={p.id} type="button" className="mmy-chip" disabled={busy} onClick={() => send({ presetId: p.id, text: p.question })}>
+      {list.map(chipOf).map((p) => (
+        <button key={p.id} type="button" className="mmy-chip" disabled={busy} onClick={() => send({ text: p.question })}>
           {p.question}
         </button>
       ))}
@@ -192,7 +266,13 @@ export default function MoormyThread({ userId, pendingAsk, onAsked, onBack }) {
           label="Moormy options"
           iconSize={22}
           items={[
-            messages.length > 0 && { key: 'new', icon: <NotePencil size={17} />, label: t.newChat, onClick: () => update((c) => ({ ...c, messages: [], asked: [] })) },
+            messages.length > 0 && { key: 'new', icon: <NotePencil size={17} />, label: t.newChat, onClick: () => update((c) => ({
+              ...c, messages: [], asked: [], state: { lang },
+            })),
+            },
+            canVoice && {
+              key: 'voice', icon: <Microphone size={17} />, label: t.voice, onClick: () => setVoiceOpen(true),
+            },
             { key: 'lang', icon: <Translate size={17} />, label: t.switchLang, onClick: () => chooseLang(lang === 'tl' ? 'en' : 'tl') },
             { key: 'help', icon: <Question size={17} />, label: t.help, to: '/help' },
           ]}
@@ -204,6 +284,11 @@ export default function MoormyThread({ userId, pendingAsk, onAsked, onBack }) {
           <MoormyAvatar size={64} />
           <strong>Moormy</strong>
           <small>{t.note}</small>
+          {canVoice && (
+            <button type="button" className="mmy-voice-cta" onClick={() => setVoiceOpen(true)}>
+              <Microphone size={15} /> {t.voiceCta}
+            </button>
+          )}
         </div>
 
         {intro === false && (
@@ -224,7 +309,7 @@ export default function MoormyThread({ userId, pendingAsk, onAsked, onBack }) {
         {intro && !messages.length && !busy && (
           <div className="mmy-suggest">
             <span className="mmy-suggest-label" {...tlProps(intro.lang)}>{UI[intro.lang]?.suggested || t.suggested}</span>
-            {chips(intro.presets, intro.lang)}
+            {chips([...(STARTERS[intro.lang] || STARTERS.en), ...intro.presets], intro.lang)}
           </div>
         )}
 
@@ -243,6 +328,29 @@ export default function MoormyThread({ userId, pendingAsk, onAsked, onBack }) {
                   </button>
                 )}
               </div>
+              {m.role === 'assistant' && m.notes?.map((n) => (
+                <p key={n.text} className={`mmg-note${n.ok ? ' is-ok' : ''}`}>{n.text}</p>
+              ))}
+              {m.role === 'assistant' && (
+                <>
+                  <Cards cards={m.compare ? [] : m.cards} />
+                  <Compare compare={m.compare} />
+                  <CartSummary cart={m.cart} />
+                  <Orders orders={m.orders} />
+                </>
+              )}
+              {m.role === 'assistant' && m.confirm && (
+                m.confirm.status === 'ask' ? (
+                  <div className="mmg-confirm" role="group" aria-label={`Remove ${m.confirm.name}?`}>
+                    <button type="button" className="mmg-action is-danger" onClick={() => answerRemove(m, true)}>Remove</button>
+                    <button type="button" className="mmg-action is-quiet" onClick={() => answerRemove(m, false)}>Keep it</button>
+                  </div>
+                ) : (
+                  <p className={`mmg-note${m.confirm.status === 'done' ? ' is-ok' : ''}`}>
+                    {m.confirm.status === 'done' ? `Removed ${m.confirm.name} from your cart.` : 'Okay, I left it in your cart.'}
+                  </p>
+                )
+              )}
               {m.role === 'assistant' && m.links?.length > 0 && (
                 <div className="mmy-links">
                   {m.links.map((l) => (
@@ -292,6 +400,7 @@ export default function MoormyThread({ userId, pendingAsk, onAsked, onBack }) {
           </button>
         </div>
       </form>
+      {voiceOpen && <MoormyVoiceSheet onClose={() => setVoiceOpen(false)} />}
     </div>
   );
 }

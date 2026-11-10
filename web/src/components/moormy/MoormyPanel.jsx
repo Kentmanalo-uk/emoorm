@@ -4,10 +4,9 @@ import {
 import { Link, useLocation, useNavigate } from 'react-router-dom';
 import {
   ArrowClockwise, CaretLeft, CaretRight, CaretUp, GearSix, Microphone, NotePencil, PaperPlaneTilt,
-  ShoppingCart, SpeakerHigh, SpeakerSlash, Stop, Trash, WifiSlash, X,
+  SpeakerHigh, SpeakerSlash, Stop, Trash, WifiSlash, X,
 } from '../../lib/icons';
 import axios from '../../lib/axios';
-import { peso } from '../../lib/format';
 import { getCurrentLanguage } from '../../lib/googleTranslate';
 import useAuthStore from '../../store/authStore';
 import useCartStore from '../../store/cartStore';
@@ -23,8 +22,10 @@ import {
 import {
   recognitionSupported, listenOnce, hearProblem, say, stopSpeaking,
 } from '../../lib/moormy/speech';
-import ProductTile from '../product/ProductTile';
 import MoormyFace from './MoormyFace';
+import {
+  Cards, Compare, CartSummary, Orders,
+} from './MoormyAnswer';
 import ReplyText from './ReplyText';
 import MoormyVoiceSettings from './MoormyVoiceSettings';
 import './Moormy.css';
@@ -63,95 +64,6 @@ const newId = (p) => `${p}${Date.now().toString(36)}${Math.random().toString(36)
 /** Her Tagalog is left as it is by the site's page translation. */
 const keepLang = (lang) => (lang === 'tl' ? { translate: 'no' } : {});
 const keepClass = (lang) => (lang === 'tl' ? ' notranslate' : '');
-
-function Cards({ cards, onPick }) {
-  if (!cards?.length) return null;
-  return (
-    <div className="mmg-cards" onClick={(e) => { if (e.target.closest('a')) onPick?.(); }}>
-      {cards.map((p) => (
-        <div key={p.id} className="mmg-card"><ProductTile product={p} /></div>
-      ))}
-    </div>
-  );
-}
-
-function Compare({ compare }) {
-  const [a, b] = compare?.products || [];
-  if (!a || !b) return null;
-  const rows = [
-    ['Price', (p) => peso(p.price)],
-    ['Rating', (p) => (p.rating != null ? `${Number(p.rating).toFixed(1)} ★ (${p.reviews})` : 'No reviews yet')],
-    ['Sold', (p) => (p.sold ? `${p.sold}` : '—')],
-    ['Stock', (p) => (p.stock == null ? 'Made to order' : p.stock > 0 ? `${p.stock}` : 'Out of stock')],
-    ['Shop', (p) => p.shop || '—'],
-    ['Town', (p) => p.town || '—'],
-  ];
-  const cheaper = Number(a.price) === Number(b.price) ? null : (Number(a.price) < Number(b.price) ? a.id : b.id);
-  return (
-    <table className="mmg-compare">
-      <thead>
-        <tr>
-          <th scope="col"><span className="sr-only">Detail</span></th>
-          {[a, b].map((p) => <th key={p.id} scope="col" className="mmg-compare-name">{p.name}</th>)}
-        </tr>
-      </thead>
-      <tbody>
-        {rows.map(([label, value]) => (
-          <tr key={label}>
-            <th scope="row">{label}</th>
-            {[a, b].map((p) => (
-              <td key={p.id} className={label === 'Price' && cheaper === p.id ? 'is-best' : ''}>
-                {label === 'Price' ? <span className="mmg-compare-price">{value(p)}</span> : value(p)}
-              </td>
-            ))}
-          </tr>
-        ))}
-      </tbody>
-    </table>
-  );
-}
-
-function CartSummary({ cart, onPick }) {
-  if (!cart?.lines?.length) return null;
-  return (
-    <div className="mmg-cart">
-      <ul>
-        {cart.lines.map((l) => (
-          <li key={l.id}>
-            <span className="mmg-cart-name">{l.name}</span>
-            <span className="mmg-cart-qty">× {l.quantity}</span>
-            <span className="mmg-cart-price">{peso(l.subtotal)}</span>
-          </li>
-        ))}
-      </ul>
-      <div className="mmg-cart-total">
-        <span>{cart.items} item{cart.items === 1 ? '' : 's'}</span>
-        <strong className="mmg-cart-price">{peso(cart.total)}</strong>
-      </div>
-      <Link to="/cart" className="mmg-action" onClick={onPick}><ShoppingCart size={15} /> Go to cart</Link>
-    </div>
-  );
-}
-
-function Orders({ orders, onPick }) {
-  if (!orders?.length) return null;
-  return (
-    <ul className="mmg-orders">
-      {orders.map((o) => (
-        <li key={o.id}>
-          <Link to={`/profile/orders?id=${encodeURIComponent(o.id)}`} onClick={onPick}>
-            <span className="mmg-order-top">
-              <strong>{o.orderNumber}</strong>
-              <span className="mmg-order-price">{peso(o.total)}</span>
-            </span>
-            <span className="mmg-order-shop">{o.shop}</span>
-            <span className={`mmg-order-status is-${String(o.status).toLowerCase()}`}>{o.statusText}</span>
-          </Link>
-        </li>
-      ))}
-    </ul>
-  );
-}
 
 export default function MoormyPanel({
   open, onClose, wakeTick = 0, voiceTick = 0, onWakeReady, isPhone,
@@ -397,6 +309,16 @@ export default function MoormyPanel({
   }, [voiceTick, canHear]);
 
   useEffect(() => () => clearTimeout(actingTimer.current), []);
+
+  // Called up by voice: done, and nothing more said for a while, she goes
+  // (the bar should not stay on the screen; "Hey Moormy" brings her back).
+  const closeRef = useRef(onClose);
+  useEffect(() => { closeRef.current = onClose; }, [onClose]);
+  useEffect(() => {
+    if (!open || !mini || status !== 'idle') return undefined;
+    const t = setTimeout(() => closeRef.current?.(), 12000);
+    return () => clearTimeout(t);
+  }, [open, mini, status, talk.messages.length]);
 
   // The wake controller, when this device has a voice (its badge in MoormyGlobal).
   useEffect(() => {

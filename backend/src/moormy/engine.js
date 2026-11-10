@@ -57,6 +57,25 @@ const idOrNull = (v) => (typeof v === 'string' && ID.test(v) ? v : null);
 const SEARCH_SORTS = ['cheapest', 'priciest', 'popular', 'newest', 'rating'];
 const SCREEN_KINDS = ['button', 'link', 'tab', 'input', 'select', 'check'];
 
+// What a link to each place says (a typed chat gives links, not trips).
+const PLACE_LABELS = {
+  cart: ['Go to cart', 'Pumunta sa cart'],
+  orders: ['My orders', 'Mga order ko'],
+  home: ['Home', 'Home'],
+  today: ["Today's Menu", "Today's Menu"],
+  palengke: ['Palengke', 'Palengke'],
+  map: ['Store map', 'Mapa ng tindahan'],
+  stores: ['Stores', 'Mga tindahan'],
+  wishlist: ['Wishlist', 'Wishlist'],
+  messages: ['Messages', 'Messages'],
+  notifications: ['Notifications', 'Notifications'],
+  live: ['Live', 'Live'],
+  profile: ['My profile', 'Profile ko'],
+  help: ['Help Center', 'Help Center'],
+  sell: ['Start selling', 'Magbenta'],
+};
+const placeLabel = (place, lang) => PLACE_LABELS[place]?.[lang === 'tl' ? 1 : 0] || null;
+
 // ── The screen ──────────────────────────────────────────────────────────────
 
 // Never pressed for anyone: money, deleting, leaving, speaking for them.
@@ -638,7 +657,7 @@ const turn = async ({
       if (!p) return answer({ say: say('pickWhich', lang, t) });
       return answer({
         say: say(ctx.drive ? 'opening' : 'openLink', lang, t, { name: p.name }),
-        actions: [{ type: 'navigate', to: `/product/${p.slug}` }],
+        actions: [{ type: 'navigate', to: `/product/${p.slug}`, label: p.name }],
         state: { focus: p.id },
       });
     }
@@ -905,7 +924,12 @@ const turn = async ({
     }
 
     case 'navigate':
-      return answer({ say: say(ctx.drive ? 'navigate' : 'navigateLink', lang, t), actions: [{ type: 'navigate', to: u.to, place: u.place }] });
+      return answer({
+        say: say(ctx.drive ? 'navigate' : 'navigateLink', lang, t),
+        actions: [{
+          type: 'navigate', to: u.to, place: u.place, label: placeLabel(u.place, lang),
+        }],
+      });
 
     default: {
       // How-to questions: the shopping guide (no outside AI).

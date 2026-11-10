@@ -264,7 +264,7 @@ test('Moormy drives the results page: search, narrow, cheaper, open, clear, back
   // "The second one" is the page's second, opened on its own page.
   const open = await turn('open the second one', {}, page({ query: `honey ${tag}` }, [c.id, b.id, a.id]));
   assert.equal(open.intent, 'open');
-  assert.deepEqual(open.actions, [{ type: 'navigate', to: `/product/${b.slug}` }]);
+  assert.deepEqual(open.actions, [{ type: 'navigate', to: `/product/${b.slug}`, label: b.name }]);
 
   // Filters cleared, the words kept.
   const cleared = await turn('clear the filters', {}, page({ query: `honey ${tag}`, maxPrice: 200, sort: 'cheapest' }, [a.id]));

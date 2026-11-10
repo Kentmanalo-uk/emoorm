@@ -1319,3 +1319,111 @@ body:has(.cart-m-bar) .mmg-mini {
 @media (prefers-reduced-motion: reduce) {
   .mmg-target { animation: none; }
 }
+
+/* "Hey Moormy" is listening: a small dot in the corner (the mic is on).
+   Above the phone's bottom navigation, clear of everything; takes no clicks. */
+.mmg-ear-dot {
+  position: fixed;
+  right: 10px;
+  bottom: calc(var(--tabbar-space, 68px + env(safe-area-inset-bottom, 0px)) + 8px);
+  z-index: 880;
+  width: 10px;
+  height: 10px;
+  border: 2px solid #fff;
+  border-radius: 50%;
+  background: var(--t-accent-500, #ec4899);
+  pointer-events: none;
+  animation: mmg-ear 1.8s ease-out infinite;
+}
+
+body.no-bottom-nav .mmg-ear-dot {
+  bottom: calc(env(safe-area-inset-bottom, 0px) + 10px);
+}
+
+@media (min-width: 769px) {
+  .mmg-ear-dot {
+    right: 14px;
+    bottom: 14px;
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .mmg-ear-dot { animation: none; }
+}
+
+/* The voice assistant's settings, opened from her chat in Messages. */
+.mmy-voice-backdrop {
+  position: fixed;
+  inset: 0;
+  z-index: 1100;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  padding: 16px;
+  background: rgba(15, 23, 42, 0.45);
+}
+
+.mmy-voice-sheet {
+  display: flex;
+  flex-direction: column;
+  width: min(460px, 100%);
+  max-height: min(720px, calc(100vh - 32px));
+  max-height: min(720px, calc(100dvh - 32px));
+  overflow-y: auto;
+  border-radius: 20px;
+  background: var(--t-neutral-0, #fff);
+  box-shadow: 0 24px 60px rgba(15, 23, 42, 0.25);
+  color: var(--t-neutral-900, #111827);
+}
+
+.mmy-voice-head {
+  display: flex;
+  align-items: flex-start;
+  justify-content: space-between;
+  gap: 12px;
+  padding: 16px 14px 4px 18px;
+}
+
+.mmy-voice-head strong {
+  display: block;
+  font-size: 17px;
+}
+
+.mmy-voice-head small {
+  display: block;
+  margin-top: 2px;
+  color: var(--t-neutral-500, #6b7280);
+  font-size: 13px;
+  line-height: 1.35;
+}
+
+/* In her chat: the way to set "Hey Moormy" up. */
+.mmy-voice-cta {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  margin-top: 10px;
+  padding: 7px 14px;
+  border: 1px solid var(--t-accent-200, #fbcfe8);
+  border-radius: 999px;
+  background: var(--t-accent-50, #fdf2f8);
+  color: var(--t-accent-700, #be185d);
+  font-size: 13px;
+  font-weight: 600;
+  cursor: pointer;
+}
+
+@media (max-width: 768px) {
+  .mmy-voice-backdrop {
+    align-items: flex-end;
+    padding: 0;
+  }
+
+  .mmy-voice-sheet {
+    width: 100%;
+    max-height: 92vh;
+    max-height: 92dvh;
+    border-radius: 20px 20px 0 0;
+    padding-bottom: env(safe-area-inset-bottom, 0px);
+  }
+}

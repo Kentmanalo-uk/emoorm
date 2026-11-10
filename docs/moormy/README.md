@@ -132,7 +132,12 @@ Moormy works the site's own pages the way a person taps them, rather than only a
 
 "Best rated" stays in her panel, because the page has no rating sort.
 
-**Press and hold Moormy** (about half a second; phones buzz): she opens straight into the small bar and listens. Your words show as you say them, then your request in quotes above her answer. A tap still opens the chat. Where the browser cannot hear (Firefox), holding opens the chat instead.
+**No sticker on the pages (owner, 11 Nov 2026; it took space).** The floating Moormy and its press-and-hold are gone from buyer pages.
+
+- **"Hey Moormy" brings her:** she appears as the small bar at the bottom with the screen glow, already listening. Your words show as you say them, then your request in quotes above her answer. She goes about 12 seconds after she is done; the arrow opens her full panel.
+- **Setting it up:** her chat in Messages has a "Set up “Hey Moormy”" button and ⋯ › Voice assistant (`MoormyVoiceSheet`): read replies aloud, teach your voice, switch listening on.
+- **While listening:** a small pink dot in the corner says the mic is on. After a reload, listening starts again on the first tap anywhere, because browsers only open the mic from a tap.
+- **Typed chat** with Moormy is in Messages.
 
 **The screen glow:** while she listens, thinks or speaks, and for about 2.4 seconds after she changes the page, pink and light green light runs around the screen edges. It takes no clicks and stays still for people who ask for reduced motion.
 
