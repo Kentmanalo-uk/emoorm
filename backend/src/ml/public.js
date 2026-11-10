@@ -6,6 +6,7 @@ const recommendations = require('./recommendations');
 const bundles = require('./bundles');
 const { cardsFor } = require('./catalog');
 const { guard } = require('./safe');
+const why = require('./why');
 
 /**
  * What buyers and sellers get from the engine (routes/ml.routes.js). Every
@@ -26,6 +27,14 @@ const idOrThrow = (id) => {
 const similar = async (rawId, rawLimit) => {
   const productId = idOrThrow(rawId);
   const limit = clampLimit(rawLimit, 12, 24);
+  const product = await prisma.product.findUnique({
+    where: { id: productId },
+    select: {
+      name: true, price: true, salePrice: true, categoryId: true, municipalityId: true,
+    },
+  });
+  // Why each one is shown ('Also honey', 'Lower price'): true of the two cards as they are.
+  const explained = (list) => (product ? list.map((p) => ({ ...p, why: why.similarWhy(product, p) })) : list);
   const fromMl = await guard('similar', async () => {
     if (!(await settings.isOn('recommendations'))) return null;
     const ids = await recommendations.similarIds(productId);
@@ -33,15 +42,14 @@ const similar = async (rawId, rawLimit) => {
     const products = await cardsFor(ids.slice(0, limit));
     return products.length ? products : null;
   }, null, 1500);
-  if (fromMl) return { products: fromMl, source: 'ml' };
+  if (fromMl) return { products: explained(fromMl), source: 'ml' };
 
   // As before: the same category, best sellers first.
-  const product = await prisma.product.findUnique({ where: { id: productId }, select: { categoryId: true } });
   if (!product) return { products: [], source: 'none' };
   const rows = await productRepository.findRecommendable({
     where: { categoryId: product.categoryId, id: { not: productId } }, take: limit, orderBy: { soldCount: 'desc' },
   });
-  return { products: await cardsFor(rows.map((r) => r.id)), source: 'category' };
+  return { products: explained(await cardsFor(rows.map((r) => r.id))), source: 'category' };
 };
 
 /** Home's trending row (empty: no row). */
@@ -50,7 +58,7 @@ const trending = async (rawLimit) => {
   const products = await guard('trending', async () => {
     if (!(await settings.isOn('recommendations'))) return [];
     const ids = await recommendations.trendingIds();
-    return ids.length ? cardsFor(ids.slice(0, limit)) : [];
+    return ids.length ? (await cardsFor(ids.slice(0, limit))).map((p) => ({ ...p, why: [why.TRENDING] })) : [];
   }, [], 1500);
   return { products, source: products.length ? 'ml' : 'none' };
 };
@@ -65,7 +73,7 @@ const together = async (rawId, rawLimit) => {
     if (!rules.length) return null;
     const products = await cardsFor(rules.map((r) => r.id));
     const byId = new Map(rules.map((r) => [r.id, r]));
-    return products.map((p) => ({ ...p, bundle: { confidence: byId.get(p.id).confidence, lift: byId.get(p.id).lift } }));
+    return products.map((p) => ({ ...p, bundle: { confidence: byId.get(p.id).confidence, lift: byId.get(p.id).lift }, why: [why.TOGETHER] }));
   }, null, 1500);
   return { products: result || [], source: result ? 'ml' : 'none' };
 };

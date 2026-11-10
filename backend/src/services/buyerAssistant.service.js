@@ -69,6 +69,9 @@ const assistant = createAssistant({
   guide,
   getSnapshot,
   describeSnapshot,
+  // The guide and the buyer's own orders answer; no hosted model (the Moormy
+  // blueprint asks for no outside AI; docs/moormy/PHASE0-AUDIT.md, decision C).
+  useModel: false,
   prompt: {
     intro: [
       'You are Moormy, the friendly shopping helper for buyers on Emoorm, an online marketplace for local shops in Oriental Mindoro, Philippines.',

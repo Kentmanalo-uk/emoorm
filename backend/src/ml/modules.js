@@ -3,8 +3,8 @@
  * which phase builds it, and how often its job runs.
  *
  * A module whose `run` is missing (and is not onDemand) is not built yet:
- * its switch cannot be turned on and it never runs. All ten are built now
- * (phases 2-4). A phase that builds a module adds its `run`
+ * its switch cannot be turned on and it never runs. All are built now
+ * (phases 2-5). A phase that builds a module adds its `run`
  * (and its `minimum`, the data it needs before it shows anything).
  *
  * `run(ctx)` gets { timeLeft(), signal, version, trigger } and returns
@@ -75,6 +75,12 @@ const MODULES = [
     what: 'Checks a product photo\'s size, sharpness and brightness when it is uploaded.',
     every: null, // runs on upload, not on a schedule
     onDemand: true, // built: it answers POST /api/ml/images/analyze
+  },
+  {
+    key: 'categories', number: 11, phase: 5, name: 'Category suggestions',
+    what: 'Suggests a category while a seller names a new listing, learned from the listings already in each category.',
+    every: null, // answers as the seller types: GET /api/ml/categories/suggest
+    onDemand: true,
   },
 ];
 

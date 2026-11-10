@@ -32,7 +32,8 @@ import {
   HeartPulseIcon, HelpIcon, HistoryIcon, HomeIcon, IdCardIcon, ImageIcon, ImagesIcon, InboxIcon,
   InfoIcon, KeyIcon, LaptopIcon, LayoutGridIcon, LightbulbIcon, LineChartIcon, LinkIcon,
   ListChecksIcon, ListIcon, LoaderIcon, LockIcon, LogOutIcon, MailIcon, MailOpenIcon, MapIcon,
-  MapPinIcon, MaximizeIcon, MegaphoneIcon, MessageCircleIcon, MinimizeIcon, MinusIcon, MoneyIcon,
+  MapPinIcon, MaximizeIcon, MegaphoneIcon, MessageCircleIcon, MicrophoneIcon, MicrophoneOffIcon,
+  MinimizeIcon, MinusIcon, MoneyIcon, AudioLinesIcon, SquareIcon,
   MoonIcon, MoreIcon, MoreVerticalIcon, MotorcycleIcon, NavigationIcon, OrangeFruitIcon,
   PackageIcon, PaintRollerIcon, PaletteIcon, PaperPlaneTiltIcon, PaperclipIcon, PauseIcon, PawIcon,
   PaymentIcon, PencilLineIcon, PepperIcon, PercentIcon, PhoneIcon, PieChartIcon, PiggyBankIcon,
@@ -250,6 +251,8 @@ export const MagnifyingGlass = (props) => <Icon of={SearchIcon} {...props} />;
 export const MapPin = (props) => <Icon of={MapPinIcon} {...props} />;
 export const MapTrifold = (props) => <Icon of={MapIcon} {...props} />;
 export const Megaphone = (props) => <Icon of={MegaphoneIcon} {...props} />;
+export const Microphone = (props) => <Icon of={MicrophoneIcon} {...props} />;
+export const MicrophoneSlash = (props) => <Icon of={MicrophoneOffIcon} {...props} />;
 export const Minus = (props) => <Icon of={MinusIcon} {...props} />;
 export const MinusCircle = (props) => <Icon of={CircleMinusIcon} {...props} />;
 export const Money = (props) => <Icon of={MoneyIcon} {...props} />;
@@ -314,6 +317,7 @@ export const SpeakerSlash = (props) => <Icon of={VolumeOffIcon} {...props} />;
 export const SpinnerGap = (props) => <Icon of={LoaderIcon} {...props} />;
 export const SquaresFour = (props) => <Icon of={LayoutGridIcon} {...props} />;
 export const Star = (props) => <Icon of={StarIcon} {...props} />;
+export const Stop = (props) => <Icon of={SquareIcon} {...props} />;
 export const Storefront = (props) => <Icon of={StorefrontIcon} {...props} />;
 export const Sun = (props) => <Icon of={SunIcon} {...props} />;
 export const TShirt = (props) => <Icon of={ShirtIcon} {...props} />;
@@ -337,6 +341,7 @@ export const Users = (props) => <Icon of={UsersIcon} {...props} />;
 export const UsersThree = (props) => <Icon of={TeamIcon} {...props} />;
 export const Video = (props) => <Icon of={VideoIcon} {...props} />;
 export const VideoCamera = (props) => <Icon of={VideoIcon} {...props} />;
+export const Waveform = (props) => <Icon of={AudioLinesIcon} {...props} />;
 export const Wallet = (props) => <Icon of={WalletIcon} {...props} />;
 export const Warning = (props) => <Icon of={WarningIcon} {...props} />;
 export const WarningCircle = (props) => <Icon of={WarningIcon} {...props} />;

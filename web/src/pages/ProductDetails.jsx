@@ -37,6 +37,7 @@ import useAuthStore from '../store/authStore';
 import LivestockDeal from '../components/offers/LivestockDeal';
 import ShippingEstimate from '../components/orders/ShippingEstimate';
 import useWishlistStore from '../store/wishlistStore';
+import { useMoormyPage } from '../lib/moormy/pageContext';
 import useIdentityGate from '../hooks/useIdentityGate';
 import { usePhoneLayout } from '../hooks/useMobileNav';
 import MoreMenu from '../components/MoreMenu';
@@ -222,6 +223,8 @@ const ProductDetails = () => {
   // It could not be asked for (offline, the server busy) and no copy is
   // saved: "Couldn't load", not "Product not found" (it may well exist).
   const [loadFailed, setLoadFailed] = useState(false);
+  // Moormy knows the product in view ("is this good for gifts?").
+  useMoormyPage({ productId: product?.id || null, storeId: product?.storeId || product?.store?.id || null });
   const [selectedImage, setSelectedImage] = useState(0);
   const [quantity, setQuantity] = useState(1);
   const [selectedVariations, setSelectedVariations] = useState({});
@@ -1748,6 +1751,7 @@ const ProductDetails = () => {
                   <div key={p.id} className="pdp-m-shelf-card" {...peekProduct(p)}>
                     <Link to={`/product/${p.slug}`} className="pdp-m-shelf-img"><ProductImage src={parseImages(p.images)[0]} alt={p.name} /></Link>
                     <Link to={`/product/${p.slug}`} className="pdp-m-shelf-name"><ProductBadge product={p} /><BestSellerTag product={p} />{p.name}</Link>
+                    {Array.isArray(p.why) && p.why.length > 0 && <span className="pdp-m-shelf-why">{p.why[0]}</span>}
                     <span className="pdp-m-shelf-foot">
                       <b><KindPrice product={p}>{peso(saleInfo(p).price)}</KindPrice></b>
                       <button type="button" aria-label={`Add ${p.name} to cart`} onClick={() => quickAdd(p)}><Plus size={14} weight="bold" /></button>
@@ -1783,7 +1787,7 @@ const ProductDetails = () => {
               </div>
               <div className="pdp-shelf-row">
                 {togetherProducts.map((p) => (
-                  <ProductTile key={p.id} product={p} />
+                  <ProductTile key={p.id} product={p} why />
                 ))}
               </div>
             </div>
@@ -1800,7 +1804,7 @@ const ProductDetails = () => {
               </div>
               <div className="pdp-shelf-grid">
                 {relatedProducts.map((p) => (
-                  <ProductTile key={p.id} product={p} />
+                  <ProductTile key={p.id} product={p} why />
                 ))}
               </div>
             </div>

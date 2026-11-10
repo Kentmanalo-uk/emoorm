@@ -36,7 +36,7 @@ const setEngine = (enabled) => appSettings.update({ mlSettings: { enabled } });
 test('the engine and every module start off, and a module not built yet cannot be switched on', async () => {
   const fresh = mlSettings.read(null);
   assert.equal(fresh.enabled, false);
-  assert.equal(Object.keys(fresh.modules).length, 10);
+  assert.equal(Object.keys(fresh.modules).length, 11);
   assert.ok(Object.values(fresh.modules).every((on) => on === false));
   // Junk reads as off.
   assert.equal(mlSettings.read({ enabled: 'yes', modules: { search: 1 } }).enabled, false);
@@ -84,7 +84,7 @@ test('the ML admin API is for super admins only', async () => {
   }
   const res = await h.api('GET', '/ml/status', { token: h.token(admin) });
   assert.equal(res.status, 200);
-  assert.equal(res.body.data.modules.length, 10);
+  assert.equal(res.body.data.modules.length, 11);
   assert.ok(res.body.data.modules.every((m) => m.on === false));
   assert.deepEqual(res.body.data.modules.filter((m) => m.built).map((m) => m.key), MODULES.map((m) => m.key));
   assert.ok('cart_add' in res.body.data.week.events);

@@ -136,6 +136,20 @@ router.post('/images/analyze', authenticate, authorize('SELLER', 'SUPER_ADMIN', 
   return successResponse(res, { status: 'ok', ...result }, 'Photo checked');
 }));
 
+// Categories a new listing probably belongs in, learned from the listings
+// already on the site (the product form asks as the seller types the name).
+// Off or failing: an empty list, and the form keeps its own word-list hints.
+router.get('/categories/suggest', authenticate, authorize('SELLER', 'SUPER_ADMIN', 'MUNICIPAL_ADMIN'), textLimiter, asyncHandler(async (req, res) => {
+  const name = typeof req.query.name === 'string' ? req.query.name.slice(0, 200) : '';
+  const description = typeof req.query.description === 'string' ? req.query.description.slice(0, 600) : '';
+  if (!name.trim()) return successResponse(res, { suggestions: [], source: 'none' }, 'Category suggestions');
+  const suggestions = await guard('categories', async () => {
+    if (!(await settings.isOn('categories'))) return [];
+    return require('../ml/categories').suggest({ name, description });
+  }, [], 1500);
+  return successResponse(res, { suggestions, source: suggestions.length ? 'ml' : 'none' }, 'Category suggestions');
+}));
+
 // Unusual activity, for admins (a municipal admin: their own town's).
 const alerts = require('../ml/alerts');
 router.get('/fraud/alerts', authenticate, authorize('SUPER_ADMIN', 'MUNICIPAL_ADMIN'), asyncHandler(async (req, res) => {

@@ -47,7 +47,7 @@ const saveTucked = (on) => {
  * across, centred on 60, 60; the mascot stands 11 lower than in its own
  * drawing, so its shirt fills the disc's bottom.
  */
-function WavingMoormy() {
+export function WavingMoormy() {
   const m = useMascotPaint('mmd');
   const uid = useId().replace(/[^a-zA-Z0-9]/g, '');
   const id = (part) => `mmd${uid}${part}`;

@@ -59,8 +59,11 @@ function ProductStats({ product }) {
  * children: what a page adds on the photo (a Featured badge, a remove button).
  */
 export default memo(function ProductTile({
-  product, onAddToCart, store, preview = false, className = '', children,
+  product, onAddToCart, store, preview = false, className = '', children, why = false,
 }) {
+  // Why it is suggested ('Also honey · Lower price'), from the ML answers;
+  // only where a page asks for it (the product page's shelves).
+  const reasons = why && Array.isArray(product.why) ? product.why.filter(Boolean).slice(0, 2) : [];
   const peekProduct = useProductPeek();
   const cls = `product-card ${className}`.trim();
   const body = (
@@ -91,6 +94,7 @@ export default memo(function ProductTile({
         <span className="product-name"><ProductTodayTag product={product} /><ProductBadge product={product} /><BestSellerTag product={product} />{product.name}</span>
         <span className="product-price"><KindPrice product={product}>₱{saleInfo(product).price.toFixed(2)}</KindPrice> <SaleWas product={product} compact /></span>
         <ProductStats product={product} />
+        {reasons.length > 0 && <span className="product-why">{reasons.join(' · ')}</span>}
       </div>
     </>
   );

@@ -37,6 +37,7 @@ import PeekHost from './components/peek/PeekHost';
 import OfflineBanner from './components/ui/OfflineBanner';
 import ErrorBoundary from './components/ErrorBoundary';
 import NewAccountWelcome from './components/welcome/NewAccountWelcome';
+import MoormyGlobal from './components/moormy/MoormyGlobal';
 
 // Every page but Home loads when first opened, so a phone's first visit
 // downloads only what the page in front of it needs. The pages shoppers
@@ -516,6 +517,9 @@ function App() {
         <RoleGate>
           <AppRoutes />
         </RoleGate>
+        {/* Moormy, the shopping helper, on buyer pages (Seller Center and
+            admin keep their own dock). */}
+        <MoormyGlobal />
         {/* After the pages: it puts a page back where it was scrolled once
             the page has laid itself out (its body classes and all). */}
         <ScrollMemory />

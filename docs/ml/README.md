@@ -145,6 +145,27 @@ the Laplacian), and the size of the shorter side, with the website's ID-photo
 thresholds (600 px; dark < 60; bright > 235; blurry < 60; flat < 25). Advice
 only; it cannot tell whether a product is genuine or allowed.
 
+**11 Category suggestions** (`categories.js`, on request; Moormy blueprint
+12.7). While a seller types a new listing's name, the product form asks
+`GET /api/ml/categories/suggest`. The name (x3) and description are compared
+(TF-IDF, cosine) with every public listing's own name and description (their
+category names are left out: they would give the answer away); the 25 nearest
+vote for their categories, a listing name counted once per category. A
+category is suggested only with 2+ distinct listings behind it and a
+confidence of 0.3+, where confidence is its share of the votes times how much
+of the typed name the site has seen before (so "native chicken", with no
+chicken listed anywhere, gets nothing rather than Handicrafts). Under 30
+listings on the site: nothing. The form also keeps its own word-list hints
+(`web/.../formState.suggestCategories`); a category both agree on comes first.
+
+**"Why" lines** (`why.js`, no switch of their own). Each similar item says
+why it is shown, from the two cards as they are: a shared word of the name
+("Also honey"; sizes and describing words such as dried or native do not
+count) or the category ("Also in Fruits"), then "Lower price" (10%+ less) or
+"Similar price", then the town when there is room. Bought together:
+"Often bought together"; trending: "Trending now". The product page shows
+them under the cards; Home's trending row does not (its heading says it).
+
 **05 Purchase prediction** (`purchase.js`, weekly). Logistic regression on
 order history only (no per-person views are stored): for each past order,
 the product (1) and 3 random others (0), with features as they were just

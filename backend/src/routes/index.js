@@ -90,6 +90,8 @@ mount('/today', require('./availability.routes'));
 mount('/push', require('./push.routes'));
 // The ML engine's admin API (src/ml).
 mount('/ml', require('./ml.routes'));
+// Moormy, the shopping assistant (src/moormy).
+mount('/moormy', require('./moormy.routes'));
 mount('/auth/phone', require('./phoneVerify.routes'));
 mount('/municipalities', municipalityRoutes);
 mount('/categories', categoryRoutes);

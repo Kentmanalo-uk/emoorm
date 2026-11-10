@@ -2922,6 +2922,16 @@ div.pdp-store-followers {
     object-fit: cover;
   }
 
+  /* Why it is suggested ('Also honey', 'Lower price'), from the ML answers. */
+  .pdp-m-shelf-why {
+    overflow: hidden;
+    color: var(--t-primary-700, #047857);
+    font-size: 11.5px;
+    line-height: 1.3;
+    white-space: nowrap;
+    text-overflow: ellipsis;
+  }
+
   .pdp-m-shelf-name {
     display: -webkit-box;
     overflow: hidden;

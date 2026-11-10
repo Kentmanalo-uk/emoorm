@@ -10,6 +10,7 @@ import {
 import Layout from '../components/layout/Layout';
 import ProductTile from '../components/product/ProductTile';
 import useCartStore from '../store/cartStore';
+import { useMoormyPage } from '../lib/moormy/pageContext';
 import toast from 'react-hot-toast';
 import axios from '../lib/axios';
 import { saleInfo } from '../lib/variantPricing';
@@ -122,6 +123,8 @@ const Products = () => {
   const pathCategorySlug = categorySlug && !searchParams.get('category') ? categorySlug : '';
   const pathCategoryId = pathCategorySlug ? (categories.find((c) => c.slug === pathCategorySlug)?.id || '') : '';
   const activeCategory = selectedCategory || pathCategoryId;
+  // Moormy knows the category in view (a /category/<slug> address has no id).
+  useMoormyPage({ categoryId: activeCategory || null });
   const [searchQuery, setSearchQuery] = useState(searchParams.get('q') || '');
   const municipalityId = searchParams.get('municipalityId') || '';
   const imageSearch = searchParams.get('imageSearch') === '1';

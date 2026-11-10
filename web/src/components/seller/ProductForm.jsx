@@ -216,6 +216,25 @@ export default function ProductForm({
     return [...new Set([...readRecent(recentKey), ...fromProducts])].slice(0, RECENT_MAX);
   }, [recentProducts, recentKey]);
 
+  // Categories learned from the listings already on the site (the ML
+  // engine's "Category suggestions"), asked for a moment after the name stops
+  // changing. New listings, or any listing without a category yet. Off or
+  // failing: nothing, and the picker keeps its own word-list hints.
+  const [learnedFor, setLearnedFor] = useState({ name: '', list: [] });
+  const hintName = !product || !form.categoryId ? form.name.trim() : '';
+  useEffect(() => {
+    if (hintName.length < 3) return undefined;
+    let cancelled = false;
+    const timer = setTimeout(() => {
+      axios.get('/ml/categories/suggest', { params: { name: hintName } })
+        .then((res) => { if (!cancelled) setLearnedFor({ name: hintName, list: res.data?.suggestions || [] }); })
+        .catch(() => {});
+    }, 600);
+    return () => { cancelled = true; clearTimeout(timer); };
+  }, [hintName]);
+  // Only for the name as it is now: an older answer is not shown.
+  const learned = learnedFor.name === hintName ? learnedFor.list : [];
+
   /* ── kind ─────────────────────────────────────────────────────── */
   const originalKind = product ? productKind(product) : copyFrom ? productKind(copyFrom) : null;
   const optionsFor = (category) => kindOptions(category, originalKind)
@@ -799,6 +818,7 @@ export default function ProductForm({
             value={form.categoryId}
             onChange={onCategory}
             name={form.name}
+            learned={learned}
             recent={recent}
             invalid={!!errors.categoryId}
           />

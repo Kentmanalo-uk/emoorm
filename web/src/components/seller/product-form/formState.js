@@ -762,6 +762,25 @@ export const suggestCategories = (name, categories, limit = 3) => {
     .map((x) => x.c);
 };
 
+/**
+ * The word-list hints and the learned ones, three at most: a category both
+ * point to first, then a confident learned one, then the word list's, then
+ * the rest of the learned ones.
+ */
+export const mergeSuggestions = (fromWords, learned, categories, limit = 3) => {
+  const learnedCats = (learned || [])
+    .map((l) => ({ c: categories.find((c) => c.id === l.id), confidence: Number(l.confidence) || 0 }))
+    .filter((l) => l.c);
+  const wordIds = new Set(fromWords.map((c) => c.id));
+  const out = [
+    ...learnedCats.filter((l) => wordIds.has(l.c.id)).map((l) => l.c),
+    ...learnedCats.filter((l) => l.confidence >= 0.5).map((l) => l.c),
+    ...fromWords,
+    ...learnedCats.map((l) => l.c),
+  ];
+  return [...new Map(out.map((c) => [c.id, c])).values()].slice(0, limit);
+};
+
 // Names that say which kind a product is, where its group allows several.
 const KIND_GUESS = [
   { kind: 'COOK_TO_ORDER', words: ['paluto', 'order'] },

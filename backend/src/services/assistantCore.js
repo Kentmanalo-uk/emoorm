@@ -91,7 +91,16 @@ const cleanHistory = (history) => (Array.isArray(history) ? history : [])
  * @param {Object} options.prompt - the side's words in the model's instructions:
  *   { intro: [lines], subject, statusTitle, askInstead, placeExample }
  */
-const createAssistant = ({ guide, getSnapshot, describeSnapshot, prompt }) => {
+/**
+ * @param {Object} opts
+ * @param {boolean} [opts.useModel=true] - false: never ask the hosted model,
+ *   only the guide answers (the buyer side, since the Moormy blueprint asks
+ *   for no outside AI; the seller side keeps it).
+ */
+const createAssistant = ({
+  guide, getSnapshot, describeSnapshot, prompt, useModel = true,
+}) => {
+  const modelOn = () => useModel && Boolean(config.ai.hfToken);
   /** Whether a text mentions the subject at all. */
   const domainHits = (text) => {
     const padded = ` ${normalize(text)} `;
@@ -198,7 +207,7 @@ const createAssistant = ({ guide, getSnapshot, describeSnapshot, prompt }) => {
       lang: language,
       greeting: guide.greeting(firstName(user), language),
       presets: guide.PRESETS.map(({ id, question }) => ({ id, question: guide.pick(question, language) })),
-      ai: Boolean(config.ai.hfToken),
+      ai: modelOn(),
     };
   };
 
@@ -248,7 +257,7 @@ const createAssistant = ({ guide, getSnapshot, describeSnapshot, prompt }) => {
     const ranked = rankTopics(question);
     const best = ranked[0];
 
-    if (config.ai.hfToken) {
+    if (modelOn()) {
       // The model reads the topics the whole exchange is about.
       const context = followUp ? rankTopics(`${lastUser.content} ${question}`) : ranked;
       const answer = await askModel([

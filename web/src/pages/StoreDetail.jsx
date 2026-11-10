@@ -47,6 +47,7 @@ import {
   subscribeToFollowChanges,
 } from '../lib/follow';
 import useCartStore, { standaloneLine } from '../store/cartStore';
+import { useMoormyPage } from '../lib/moormy/pageContext';
 import { startBuyNow } from '../lib/buyNow';
 import useAuthStore from '../store/authStore';
 import { usePhoneLayout } from '../hooks/useMobileNav';
@@ -156,6 +157,8 @@ export default function StoreDetail() {
   // The shop and its products as they showed last time: shown at once while
   // they are asked for again.
   const [store, setStore] = useState(() => readCache(storeKey(slug)) || null);
+  // Moormy knows the shop in view.
+  useMoormyPage({ storeId: store?.id || null });
   const [isLoadingStore, setIsLoadingStore] = useState(() => !store);
   // The shop could not be asked for (offline, the server busy) and no copy
   // of it is saved: say so, with Try again, rather than a blank page.

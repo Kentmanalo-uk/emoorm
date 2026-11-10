@@ -1,7 +1,7 @@
 import { useState } from 'react';
 import { CaretDown, Check } from '../../../lib/icons';
 import { CATEGORY_ICONS, categoryIconKey } from '../../../lib/categoryIcons';
-import { suggestCategories } from './formState';
+import { suggestCategories, mergeSuggestions } from './formState';
 
 function CategoryIcon({ category, size = 20 }) {
   const { Icon } = CATEGORY_ICONS[categoryIconKey(category)] || CATEGORY_ICONS.shop;
@@ -16,13 +16,17 @@ function CategoryIcon({ category, size = 20 }) {
  * @param {String} value - the chosen category's id
  * @param {String} name - the product name, for the suggestions
  * @param {Array<String>} recent - ids of categories used before, newest first
+ * @param {Array} learned - [{ id, confidence }] from the listings already on
+ *   the site (GET /ml/categories/suggest), best first
  */
-export default function CategoryPicker({ categories, value, onChange, name, recent = [], invalid }) {
+export default function CategoryPicker({
+  categories, value, onChange, name, recent = [], learned = [], invalid,
+}) {
   // Changing a chosen category, and the full list open.
   const [changing, setChanging] = useState(false);
   const [listOpen, setListOpen] = useState(false);
   const chosen = categories.find((c) => c.id === value) || null;
-  const suggested = suggestCategories(name, categories);
+  const suggested = mergeSuggestions(suggestCategories(name, categories), learned, categories);
   const used = recent
     .map((id) => categories.find((c) => c.id === id))
     .filter((c) => c && !suggested.some((s) => s.id === c.id))

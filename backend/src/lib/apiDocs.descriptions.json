@@ -500,8 +500,10 @@
   "GET /api/ml/reviews/insights": "The signed-in seller's reviews, summarised: the split, what buyers praise and what they complain about.",
   "GET /api/ml/purchase-probability/:productId": "The chance the signed-in buyer orders this product within 14 days, once the engine has enough past purchases to learn from. Not used for prices or messages.",
   "POST /api/ml/images/analyze": "A product photo's quality (size, sharpness, brightness, contrast) with advice. Send the photo (image) or the url of an uploaded one. Advice only.",
+  "GET /api/ml/categories/suggest": "Categories a new listing probably belongs in (name, description), learned from the listings already in each category, with a confidence. Sellers and admins; an empty list while the module is off or unsure.",
   "GET /api/ml/fraud/alerts": "Unusual-activity flags for admins to look at (a municipal admin: their own town's), with the orders and people they are about.",
   "GET /api/ml/fraud/alerts/pending": "How many unusual-activity flags are waiting for this admin.",
   "PATCH /api/ml/fraud/alerts/:id": "Mark a flag after looking at it: PENDING_REVIEW, CONFIRMED_SUSPICIOUS, CLEARED or ESCALATED, with a note. Nothing else happens to the order or the account.",
-  "POST /api/ml/fraud/evaluate": "Check one order now against the unusual-activity rules (raising any flag it meets)."
+  "POST /api/ml/fraud/evaluate": "Check one order now against the unusual-activity rules (raising any flag it meets).",
+  "POST /api/moormy/turn": "One turn of a conversation with Moormy: { text, state, context } (the page in view, the cart ids), answered with words, real product cards, comparisons, the person's own orders, and actions the page may carry out (add to cart, remove with a yes, go to a page). No outside AI."
 }
